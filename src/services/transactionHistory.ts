@@ -13,7 +13,7 @@ export interface Transaction {
   planName: string;
   timestamp: number;
   description: string;
-  method: 'razorpay' | 'demo';
+  method: 'razorpay';
   receiptUrl?: string;
   metadata?: {
     email?: string;
@@ -55,7 +55,7 @@ class TransactionHistoryService {
             planName: txn.planName || (txn.plan === 'monthly_pro' ? 'Monthly Pro' : 'Yearly Pro'),
             timestamp: new Date(txn.createdAt).getTime(),
             description: txn.description || `${txn.planName} Subscription`,
-            method: txn.paymentMethod === 'razorpay' ? 'razorpay' : 'demo',
+            method: 'razorpay',
             metadata: txn.metadata ? JSON.parse(txn.metadata) : undefined
           }));
 
@@ -320,63 +320,6 @@ class TransactionHistoryService {
     }
   }
 
-  // Generate demo transactions for testing
-  async generateDemoTransactions(): Promise<void> {
-    const demoTransactions: Omit<Transaction, 'id' | 'timestamp'>[] = [
-      {
-        paymentId: 'pay_demo_001',
-        orderId: 'order_demo_001',
-        amount: 299,
-        currency: 'INR',
-        status: 'success',
-        plan: 'monthly',
-        planName: 'Monthly Pro',
-        description: 'Monthly Pro Subscription',
-        method: 'demo',
-        metadata: {
-          email: 'user@example.com',
-          contact: '9999999999',
-          name: 'Demo User',
-        },
-      },
-      {
-        paymentId: 'pay_demo_002',
-        orderId: 'order_demo_002',
-        amount: 1999,
-        currency: 'INR',
-        status: 'success',
-        plan: 'yearly',
-        planName: 'Yearly Pro',
-        description: 'Yearly Pro Subscription',
-        method: 'demo',
-        metadata: {
-          email: 'user@example.com',
-          contact: '9999999999',
-          name: 'Demo User',
-        },
-      },
-      {
-        paymentId: 'pay_demo_003',
-        orderId: 'order_demo_003',
-        amount: 299,
-        currency: 'INR',
-        status: 'failed',
-        plan: 'monthly',
-        planName: 'Monthly Pro',
-        description: 'Monthly Pro Subscription',
-        method: 'demo',
-        metadata: {
-          email: 'user@example.com',
-          contact: '9999999999',
-          name: 'Demo User',
-        },
-      },
-    ];
-
-    for (const transaction of demoTransactions) {
-      await this.addTransaction(transaction);
-    }
-  }
 }
 
 export default new TransactionHistoryService();

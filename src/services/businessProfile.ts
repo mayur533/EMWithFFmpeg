@@ -63,9 +63,9 @@ class BusinessProfileService {
         console.log('🎬 businessProfileService: Checking backend health...');
         await api.get('/health', { timeout: 5000 });
         console.log('🎬 businessProfileService: ✅ Backend server is available');
-      } catch (healthError) {
+      } catch (healthError: any) {
         console.log('🎬 businessProfileService: ⚠️ Backend server not available, will use mock data');
-        console.log('🎬 businessProfileService: ⚠️ Health check error:', healthError.message);
+        console.log('🎬 businessProfileService: ⚠️ Health check error:', healthError?.message || 'Unknown error');
         throw new Error('Backend server not available');
       }
       
@@ -131,9 +131,9 @@ class BusinessProfileService {
         console.log('🎬 businessProfileService: API returned unsuccessful response for user profiles');
         return [];
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('🎬 businessProfileService: ❌ Error fetching user-specific business profiles:', error);
-      console.error('🎬 businessProfileService: ❌ Error details:', error.response?.data);
+      console.error('🎬 businessProfileService: ❌ Error details:', error?.response?.data);
       
       // If it's a network/timeout error, throw it so the calling code can handle it
       if (error instanceof Error && (
@@ -206,13 +206,13 @@ class BusinessProfileService {
       }
     } catch (error) {
       console.error('❌ Error fetching business profiles from API:', error);
-      // Return cached data if available, otherwise mock data
+      // Return cached data if available, otherwise empty array
       if (this.profilesCache) {
         console.log('⚠️ Using cached profiles due to API error');
         return this.profilesCache;
       }
-      console.log('⚠️ Using mock profiles due to API error');
-      return this.getMockProfiles();
+      console.log('⚠️ No profiles available due to API error');
+      return [];
     }
   }
 
@@ -266,10 +266,9 @@ class BusinessProfileService {
       }
     } catch (error) {
       console.error('❌ Error fetching business profile from API:', error);
-      console.log('⚠️ Using mock profile due to API error');
-      // Fallback to mock data
-      const mockProfiles = this.getMockProfiles();
-      return mockProfiles.find(p => p.id === id) || mockProfiles[0];
+      console.log('⚠️ No profile available due to API error');
+      // Throw error instead of returning mock data
+      throw new Error(`Business profile with ID ${id} not found`);
     }
   }
 
@@ -342,45 +341,9 @@ class BusinessProfileService {
       }
     } catch (error) {
       console.error('❌ Error creating business profile via API:', error);
-      console.log('⚠️ Creating mock business profile due to API error');
-      
-      // Fallback to mock creation
-      const newProfile: BusinessProfile = {
-        id: Date.now().toString(),
-        name: data.name,
-        description: data.description || '',
-        category: data.category,
-        address: data.address,
-        phone: data.phone,
-        alternatePhone: data.alternatePhone || '',
-        email: data.email,
-        website: data.website || '',
-        companyLogo: data.companyLogo || '',
-        logo: data.companyLogo || '',
-        banner: '',
-        socialMedia: {
-          facebook: '',
-          instagram: '',
-          twitter: '',
-          linkedin: '',
-        },
-        services: [],
-        workingHours: {
-          monday: { open: '09:00', close: '18:00', isOpen: true },
-          tuesday: { open: '09:00', close: '18:00', isOpen: true },
-          wednesday: { open: '09:00', close: '18:00', isOpen: true },
-          thursday: { open: '09:00', close: '18:00', isOpen: true },
-          friday: { open: '09:00', close: '18:00', isOpen: true },
-          saturday: { open: '10:00', close: '16:00', isOpen: true },
-          sunday: { open: '00:00', close: '00:00', isOpen: false },
-        },
-        rating: 0,
-        reviewCount: 0,
-        isVerified: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      return newProfile;
+      console.log('⚠️ Business profile creation failed due to API error');
+      // Throw error instead of creating mock profile
+      throw new Error('Failed to create business profile');
     }
   }
 
@@ -456,44 +419,9 @@ class BusinessProfileService {
       }
     } catch (error) {
       console.error('❌ Error updating business profile via API:', error);
-      console.log('⚠️ Creating mock updated profile due to API error');
-      // Fallback to mock update
-      const updatedProfile: BusinessProfile = {
-        id,
-        name: data.name || '',
-        description: data.description || '',
-        category: data.category || '',
-        address: data.address || '',
-        phone: data.phone || '',
-        alternatePhone: data.alternatePhone || '',
-        email: data.email || '',
-        website: data.website || '',
-        companyLogo: data.companyLogo || '',
-        logo: data.companyLogo || '',
-        banner: '',
-        socialMedia: {
-          facebook: '',
-          instagram: '',
-          twitter: '',
-          linkedin: '',
-        },
-        services: [],
-        workingHours: {
-          monday: { open: '09:00', close: '18:00', isOpen: true },
-          tuesday: { open: '09:00', close: '18:00', isOpen: true },
-          wednesday: { open: '09:00', close: '18:00', isOpen: true },
-          thursday: { open: '09:00', close: '18:00', isOpen: true },
-          friday: { open: '09:00', close: '18:00', isOpen: true },
-          saturday: { open: '10:00', close: '16:00', isOpen: true },
-          sunday: { open: '00:00', close: '00:00', isOpen: false },
-        },
-        rating: 0,
-        reviewCount: 0,
-        isVerified: false,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-      return updatedProfile;
+      console.log('⚠️ Business profile update failed due to API error');
+      // Throw error instead of returning mock profile
+      throw new Error('Failed to update business profile');
     }
   }
 
@@ -513,9 +441,9 @@ class BusinessProfileService {
       }
     } catch (error) {
       console.error('❌ Error deleting business profile via API:', error);
-      console.log('⚠️ Mock deletion completed due to API error');
-      // Clear cache anyway for consistency
-      this.clearCache();
+      console.log('⚠️ Business profile deletion failed due to API error');
+      // Throw error instead of silently failing
+      throw new Error('Failed to delete business profile');
     }
   }
 
@@ -546,9 +474,9 @@ class BusinessProfileService {
       }
     } catch (error) {
       console.error('❌ Error uploading business profile image via API:', error);
-      console.log('⚠️ Returning mock URL due to API error');
-      // Fallback to mock URL
-      return { url: `https://images.unsplash.com/photo-1552664730-d307ca884978?w=200&h=200&fit=crop` };
+      console.log('⚠️ Image upload failed due to API error');
+      // Throw error instead of returning mock URL
+      throw new Error('Failed to upload image');
     }
   }
 
@@ -605,14 +533,9 @@ class BusinessProfileService {
       }
     } catch (error) {
       console.error('❌ Error searching business profiles via API:', error);
-      console.log('⚠️ Using mock search results due to API error');
-      // Fallback to mock data search
-      const mockProfiles = this.getMockProfiles();
-      return mockProfiles.filter(profile => 
-        profile.name.toLowerCase().includes(query.toLowerCase()) ||
-        profile.category.toLowerCase().includes(query.toLowerCase()) ||
-        profile.description.toLowerCase().includes(query.toLowerCase())
-      );
+      console.log('⚠️ No search results available due to API error');
+      // Return empty array instead of mock data
+      return [];
     }
   }
 
@@ -669,12 +592,9 @@ class BusinessProfileService {
       }
     } catch (error) {
       console.error('❌ Error fetching business profiles by category via API:', error);
-      console.log('⚠️ Using mock profiles by category due to API error');
-      // Fallback to mock data filtering
-      const mockProfiles = this.getMockProfiles();
-      return mockProfiles.filter(profile => 
-        profile.category.toLowerCase() === category.toLowerCase()
-      );
+      console.log('⚠️ No profiles available for category due to API error');
+      // Return empty array instead of mock data
+      return [];
     }
   }
 
@@ -682,13 +602,8 @@ class BusinessProfileService {
   async verifyBusinessProfile(id: string): Promise<BusinessProfile> {
     try {
       // This would need a specific verification endpoint
-      const mockProfiles = this.getMockProfiles();
-      const profile = mockProfiles.find(p => p.id === id);
-      if (profile) {
-        profile.isVerified = true;
-        profile.updatedAt = new Date().toISOString();
-      }
-      return profile || mockProfiles[0];
+      console.log('⚠️ Business profile verification not implemented - API endpoint needed');
+      throw new Error('Business profile verification not available');
     } catch (error) {
       console.error('Error verifying business profile:', error);
       throw error;
@@ -701,106 +616,7 @@ class BusinessProfileService {
     this.cacheTimestamp = 0;
   }
 
-  // Get mock profiles for development
-  private getMockProfiles(): BusinessProfile[] {
-    return [
-      {
-        id: '1',
-        name: 'Tech Solutions Inc.',
-        description: 'Leading technology solutions provider specializing in custom software development and digital transformation.',
-        category: 'Technology',
-        address: '123 Innovation Drive, Tech City, TC 12345',
-        phone: '+1 (555) 123-4567',
-        email: 'contact@techsolutions.com',
-        website: 'https://techsolutions.com',
-        logo: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=200&h=200&fit=crop',
-        banner: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=200&fit=crop',
-        socialMedia: {
-          facebook: 'https://facebook.com/techsolutions',
-          instagram: 'https://instagram.com/techsolutions',
-          linkedin: 'https://linkedin.com/company/techsolutions',
-        },
-        services: ['Custom Software Development', 'Web Development', 'Mobile Apps', 'Cloud Solutions'],
-        workingHours: {
-          monday: { open: '09:00', close: '18:00', isOpen: true },
-          tuesday: { open: '09:00', close: '18:00', isOpen: true },
-          wednesday: { open: '09:00', close: '18:00', isOpen: true },
-          thursday: { open: '09:00', close: '18:00', isOpen: true },
-          friday: { open: '09:00', close: '18:00', isOpen: true },
-          saturday: { open: '10:00', close: '16:00', isOpen: true },
-          sunday: { open: '00:00', close: '00:00', isOpen: false },
-        },
-        rating: 4.8,
-        reviewCount: 156,
-        isVerified: true,
-        createdAt: '2024-01-15T10:00:00Z',
-        updatedAt: '2024-01-20T14:30:00Z',
-      },
-      {
-        id: '2',
-        name: 'Creative Design Studio',
-        description: 'Award-winning design studio creating stunning visual experiences for brands worldwide.',
-        category: 'Design',
-        address: '456 Creative Avenue, Design District, DD 67890',
-        phone: '+1 (555) 987-6543',
-        email: 'hello@creativedesign.com',
-        website: 'https://creativedesign.com',
-        logo: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=200&h=200&fit=crop',
-        banner: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=400&h=200&fit=crop',
-        socialMedia: {
-          instagram: 'https://instagram.com/creativedesign',
-          twitter: 'https://twitter.com/creativedesign',
-          linkedin: 'https://linkedin.com/company/creativedesign',
-        },
-        services: ['Brand Identity', 'UI/UX Design', 'Print Design', 'Digital Marketing'],
-        workingHours: {
-          monday: { open: '10:00', close: '19:00', isOpen: true },
-          tuesday: { open: '10:00', close: '19:00', isOpen: true },
-          wednesday: { open: '10:00', close: '19:00', isOpen: true },
-          thursday: { open: '10:00', close: '19:00', isOpen: true },
-          friday: { open: '10:00', close: '19:00', isOpen: true },
-          saturday: { open: '11:00', close: '17:00', isOpen: true },
-          sunday: { open: '00:00', close: '00:00', isOpen: false },
-        },
-        rating: 4.9,
-        reviewCount: 89,
-        isVerified: true,
-        createdAt: '2024-01-10T09:00:00Z',
-        updatedAt: '2024-01-18T16:45:00Z',
-      },
-      {
-        id: '3',
-        name: 'Green Earth Restaurant',
-        description: 'Sustainable dining experience with farm-to-table organic ingredients and eco-friendly practices.',
-        category: 'Restaurant',
-        address: '789 Organic Street, Food District, FD 11111',
-        phone: '+1 (555) 456-7890',
-        email: 'info@greenearth.com',
-        website: 'https://greenearth.com',
-        logo: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=200&h=200&fit=crop',
-        banner: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=400&h=200&fit=crop',
-        socialMedia: {
-          facebook: 'https://facebook.com/greenearth',
-          instagram: 'https://instagram.com/greenearth',
-        },
-        services: ['Fine Dining', 'Catering', 'Private Events', 'Cooking Classes'],
-        workingHours: {
-          monday: { open: '11:00', close: '22:00', isOpen: true },
-          tuesday: { open: '11:00', close: '22:00', isOpen: true },
-          wednesday: { open: '11:00', close: '22:00', isOpen: true },
-          thursday: { open: '11:00', close: '22:00', isOpen: true },
-          friday: { open: '11:00', close: '23:00', isOpen: true },
-          saturday: { open: '10:00', close: '23:00', isOpen: true },
-          sunday: { open: '10:00', close: '21:00', isOpen: true },
-        },
-        rating: 4.7,
-        reviewCount: 234,
-        isVerified: false,
-        createdAt: '2024-01-05T12:00:00Z',
-        updatedAt: '2024-01-22T11:20:00Z',
-      },
-    ];
-  }
+  // Mock data method removed - using only API data
 }
 
 export default new BusinessProfileService(); 

@@ -90,7 +90,6 @@ export const getBusinessCategories = async () => {
 
 // User Registration (Installed Users)
 export const registerUser = async (userData: {
-  deviceId: string;
   name: string;
   email: string;
   phone: string;
@@ -109,9 +108,9 @@ export const registerUser = async (userData: {
 };
 
 // Get User Profile
-export const getUserProfile = async (deviceId: string) => {
+export const getUserProfile = async (userId: string) => {
   try {
-    const response = await eventMarketersApi.get(`/api/installed-users/profile/${deviceId}`);
+    const response = await eventMarketersApi.get(`/api/installed-users/profile/${userId}`);
     return response.data;
   } catch (error) {
     console.error('Failed to fetch user profile:', error);
@@ -120,13 +119,13 @@ export const getUserProfile = async (deviceId: string) => {
 };
 
 // Update User Profile
-export const updateUserProfile = async (deviceId: string, profileData: {
+export const updateUserProfile = async (userId: string, profileData: {
   name?: string;
   email?: string;
   phone?: string;
 }) => {
   try {
-    const response = await eventMarketersApi.put(`/api/installed-users/profile/${deviceId}`, profileData);
+    const response = await eventMarketersApi.put(`/api/installed-users/profile/${userId}`, profileData);
     return response.data;
   } catch (error) {
     console.error('Failed to update user profile:', error);
@@ -136,7 +135,7 @@ export const updateUserProfile = async (deviceId: string, profileData: {
 
 // Record User Activity
 export const recordUserActivity = async (activityData: {
-  deviceId: string;
+  userId: string;
   action: string;
   resourceType: string;
   resourceId: string;

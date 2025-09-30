@@ -4,14 +4,13 @@ import {
   getUserProfile, 
   updateUserProfile, 
   recordUserActivity,
-  generateDeviceId 
+  generateUserId 
 } from '../constants/api';
 import { User, UserActivity } from '../constants/api';
 
 class UserService {
   private static instance: UserService;
   private currentUser: User | null = null;
-  private deviceId: string | null = null;
 
   public static getInstance(): UserService {
     if (!UserService.instance) {
@@ -21,32 +20,19 @@ class UserService {
   }
 
   /**
-   * Initialize user service - get or create device ID
+   * Initialize user service
    */
-  async initialize(): Promise<string> {
+  async initialize(): Promise<void> {
     try {
-      // Try to get existing device ID
-      let storedDeviceId = await AsyncStorage.getItem('deviceId');
-      
-      if (!storedDeviceId) {
-        // Generate new device ID
-        storedDeviceId = generateDeviceId();
-        await AsyncStorage.setItem('deviceId', storedDeviceId);
+      // Load current user if available
+      const storedUser = await AsyncStorage.getItem('currentUser');
+      if (storedUser) {
+        this.currentUser = JSON.parse(storedUser);
       }
-      
-      this.deviceId = storedDeviceId;
-      return storedDeviceId;
     } catch (error) {
       console.error('Failed to initialize user service:', error);
       throw error;
     }
-  }
-
-  /**
-   * Get current device ID
-   */
-  getDeviceId(): string | null {
-    return this.deviceId;
   }
 
   /**
@@ -58,12 +44,9 @@ class UserService {
     phone: string;
   }): Promise<User> {
     try {
-      if (!this.deviceId) {
-        await this.initialize();
-      }
+      await this.initialize();
 
       const response = await registerUser({
-        deviceId: this.deviceId!,
         name: userData.name,
         email: userData.email,
         phone: userData.phone,
@@ -71,7 +54,7 @@ class UserService {
 
       if (response.success && response.user) {
         this.currentUser = response.user;
-        await AsyncStorage.setItem('user', JSON.stringify(response.user));
+        await AsyncStorage.setItem('currentUser', JSON.stringify(response.user));
         return response.user;
       } else {
         throw new Error(response.error || 'Registration failed');
@@ -87,15 +70,17 @@ class UserService {
    */
   async getUserProfile(): Promise<User | null> {
     try {
-      if (!this.deviceId) {
-        await this.initialize();
+      await this.initialize();
+
+      if (!this.currentUser) {
+        return null;
       }
 
-      const response = await getUserProfile(this.deviceId!);
+      const response = await getUserProfile(this.currentUser.id);
       
       if (response.success && response.user) {
         this.currentUser = response.user;
-        await AsyncStorage.setItem('user', JSON.stringify(response.user));
+        await AsyncStorage.setItem('currentUser', JSON.stringify(response.user));
         return response.user;
       } else {
         // User not found, return null
@@ -117,15 +102,15 @@ class UserService {
     phone?: string;
   }): Promise<User> {
     try {
-      if (!this.deviceId) {
-        throw new Error('Device ID not initialized');
+      if (!this.currentUser) {
+        throw new Error('User not initialized');
       }
 
-      const response = await updateUserProfile(this.deviceId, profileData);
+      const response = await updateUserProfile(this.currentUser.id, profileData);
       
       if (response.success && response.user) {
         this.currentUser = response.user;
-        await AsyncStorage.setItem('user', JSON.stringify(response.user));
+        await AsyncStorage.setItem('currentUser', JSON.stringify(response.user));
         return response.user;
       } else {
         throw new Error(response.error || 'Profile update failed');
@@ -147,8 +132,8 @@ class UserService {
     userId?: string;
   }): Promise<void> {
     try {
-      // Use provided userId or fallback to deviceId for backward compatibility
-      const identifier = activityData.userId || this.deviceId;
+      // Use provided userId or current user ID
+      const identifier = activityData.userId || this.currentUser?.id;
       
       if (!identifier) {
         console.warn('No user identifier available, skipping activity recording');
@@ -156,14 +141,13 @@ class UserService {
       }
 
       const activity: UserActivity = {
-        deviceId: identifier, // This will be userId if provided, deviceId as fallback
+        userId: identifier,
         action: activityData.action,
         resourceType: activityData.resourceType,
         resourceId: activityData.resourceId,
         metadata: {
           ...activityData.metadata,
-          userId: activityData.userId,
-          deviceId: this.deviceId,
+          userId: identifier,
         },
       };
 
@@ -212,7 +196,7 @@ class UserService {
    */
   async getCachedUser(): Promise<User | null> {
     try {
-      const userData = await AsyncStorage.getItem('user');
+      const userData = await AsyncStorage.getItem('currentUser');
       if (userData) {
         this.currentUser = JSON.parse(userData);
         return this.currentUser;
@@ -250,9 +234,7 @@ class UserService {
   async clearUserData(): Promise<void> {
     try {
       this.currentUser = null;
-      await AsyncStorage.removeItem('user');
-      await AsyncStorage.removeItem('deviceId');
-      this.deviceId = null;
+      await AsyncStorage.removeItem('currentUser');
     } catch (error) {
       console.error('Failed to clear user data:', error);
     }

@@ -1,7 +1,7 @@
 import api from './api';
 
 export interface UserActivityRequest {
-  deviceId: string;
+  userId: string;
   action: string;
   resourceType: string;
   resourceId: string;
@@ -16,7 +16,7 @@ export interface UserActivityResponse {
   success: boolean;
   activity: {
     id: string;
-    deviceId: string;
+    userId: string;
     action: string;
     resourceType: string;
     resourceId: string;
@@ -61,10 +61,10 @@ class UserActivityService {
   }
 
   // Record view activity
-  async recordView(deviceId: string, resourceType: string, resourceId: string, metadata?: any): Promise<void> {
+  async recordView(userId: string, resourceType: string, resourceId: string, metadata?: any): Promise<void> {
     try {
       await this.recordActivity({
-        deviceId,
+        userId,
         action: 'view',
         resourceType,
         resourceId,
@@ -76,10 +76,10 @@ class UserActivityService {
   }
 
   // Record download activity
-  async recordDownload(deviceId: string, resourceType: string, resourceId: string, metadata?: any): Promise<void> {
+  async recordDownload(userId: string, resourceType: string, resourceId: string, metadata?: any): Promise<void> {
     try {
       await this.recordActivity({
-        deviceId,
+        userId,
         action: 'download',
         resourceType,
         resourceId,
@@ -91,10 +91,10 @@ class UserActivityService {
   }
 
   // Record share activity
-  async recordShare(deviceId: string, resourceType: string, resourceId: string, metadata?: any): Promise<void> {
+  async recordShare(userId: string, resourceType: string, resourceId: string, metadata?: any): Promise<void> {
     try {
       await this.recordActivity({
-        deviceId,
+        userId,
         action: 'share',
         resourceType,
         resourceId,
@@ -106,10 +106,10 @@ class UserActivityService {
   }
 
   // Record like/favorite activity
-  async recordLike(deviceId: string, resourceType: string, resourceId: string, metadata?: any): Promise<void> {
+  async recordLike(userId: string, resourceType: string, resourceId: string, metadata?: any): Promise<void> {
     try {
       await this.recordActivity({
-        deviceId,
+        userId,
         action: 'like',
         resourceType,
         resourceId,
@@ -121,10 +121,10 @@ class UserActivityService {
   }
 
   // Record search activity
-  async recordSearch(deviceId: string, searchQuery: string, resultsCount: number): Promise<void> {
+  async recordSearch(userId: string, searchQuery: string, resultsCount: number): Promise<void> {
     try {
       await this.recordActivity({
-        deviceId,
+        userId,
         action: 'search',
         resourceType: 'search',
         resourceId: searchQuery,
@@ -139,10 +139,10 @@ class UserActivityService {
   }
 
   // Record time spent on content
-  async recordTimeSpent(deviceId: string, resourceType: string, resourceId: string, duration: number): Promise<void> {
+  async recordTimeSpent(userId: string, resourceType: string, resourceId: string, duration: number): Promise<void> {
     try {
       await this.recordActivity({
-        deviceId,
+        userId,
         action: 'time_spent',
         resourceType,
         resourceId,
@@ -196,7 +196,7 @@ class UserActivityService {
   }
 
   // Get activity analytics (mock implementation - would need backend support)
-  async getActivityAnalytics(deviceId: string): Promise<ActivityAnalytics> {
+  async getActivityAnalytics(userId: string): Promise<ActivityAnalytics> {
     try {
       // This would need a backend endpoint to get analytics
       // For now, return mock data

@@ -25,7 +25,26 @@ export class FFmpegVerificationService {
       // 1. Check FFmpeg version
       console.log("🔍 Checking FFmpeg version...");
       const versionSession = await FFmpegKit.executeAsync("-version");
-      const versionOutput = versionSession.getAllLogsAsString();
+      // Get logs using getAllLogs() and convert to string
+      let versionOutput = 'No logs available';
+      try {
+        const versionLogs = await versionSession.getAllLogs();
+        if (versionLogs && Array.isArray(versionLogs)) {
+          versionOutput = versionLogs.map(log => {
+            // Handle both string logs and log objects
+            if (typeof log === 'string') {
+              return log;
+            } else if (log && typeof log.getMessage === 'function') {
+              return log.getMessage();
+            } else if (log && typeof log === 'object') {
+              return JSON.stringify(log);
+            }
+            return String(log);
+          }).join('\n');
+        }
+      } catch (e) {
+        console.log('⚠️ Could not get version logs:', e);
+      }
       
       console.log("📋 FFmpeg Version Output:");
       console.log(versionOutput);
@@ -49,7 +68,26 @@ export class FFmpegVerificationService {
       // 2. Check drawtext availability
       console.log("🔍 Checking drawtext filter...");
       const filtersSession = await FFmpegKit.executeAsync("-filters");
-      const filtersOutput = filtersSession.getAllLogsAsString();
+      // Get logs using getAllLogs() and convert to string
+      let filtersOutput = 'No logs available';
+      try {
+        const filtersLogs = await filtersSession.getAllLogs();
+        if (filtersLogs && Array.isArray(filtersLogs)) {
+          filtersOutput = filtersLogs.map(log => {
+            // Handle both string logs and log objects
+            if (typeof log === 'string') {
+              return log;
+            } else if (log && typeof log.getMessage === 'function') {
+              return log.getMessage();
+            } else if (log && typeof log === 'object') {
+              return JSON.stringify(log);
+            }
+            return String(log);
+          }).join('\n');
+        }
+      } catch (e) {
+        console.log('⚠️ Could not get filters logs:', e);
+      }
       
       if (filtersOutput && filtersOutput.includes('drawtext')) {
         result.hasDrawtext = true;
@@ -65,8 +103,27 @@ export class FFmpegVerificationService {
         try {
           const testCommand = '-f lavfi -i testsrc=duration=1:size=320x240:rate=1 -vf "drawtext=text=\'FFmpeg 6.1.1 Test\':x=10:y=10:fontsize=24:color=white" -t 1 -f null -';
           const testSession = await FFmpegKit.executeAsync(testCommand);
-          const testOutput = testSession.getAllLogsAsString();
-          const returnCode = testSession.getReturnCode();
+          // Get logs using getAllLogs() and convert to string
+          let testOutput = 'No logs available';
+          try {
+            const testLogs = await testSession.getAllLogs();
+            if (testLogs && Array.isArray(testLogs)) {
+              testOutput = testLogs.map(log => {
+                // Handle both string logs and log objects
+                if (typeof log === 'string') {
+                  return log;
+                } else if (log && typeof log.getMessage === 'function') {
+                  return log.getMessage();
+                } else if (log && typeof log === 'object') {
+                  return JSON.stringify(log);
+                }
+                return String(log);
+              }).join('\n');
+            }
+          } catch (e) {
+            console.log('⚠️ Could not get test logs:', e);
+          }
+          const returnCode = await testSession.getReturnCode();
           
           console.log("🧪 Drawtext Test:");
           console.log("Return Code:", returnCode);
@@ -109,11 +166,14 @@ export class FFmpegVerificationService {
    */
   private static isReturnCodeSuccess(returnCode: any): boolean {
     try {
-      if (ReturnCode.isSuccess) {
-        return ReturnCode.isSuccess(returnCode);
-      }
-      
+      // First, try to get the value if it's a return code object
       if (returnCode && typeof returnCode === 'object') {
+        // Try getValue() method first
+        if (returnCode.getValue && typeof returnCode.getValue === 'function') {
+          const value = returnCode.getValue();
+          return value === 0;
+        }
+        // Check for other common properties
         if (returnCode._h !== undefined) {
           return returnCode._h === 0;
         }
@@ -122,13 +182,20 @@ export class FFmpegVerificationService {
         }
       }
       
+      // Try the standard ReturnCode.isSuccess method
+      if (ReturnCode.isSuccess && typeof ReturnCode.isSuccess === 'function') {
+        return ReturnCode.isSuccess(returnCode);
+      }
+      
+      // If it's a number, check if it's 0
       if (typeof returnCode === 'number') {
         return returnCode === 0;
       }
       
+      console.log("⚠️ Unknown return code format:", typeof returnCode, returnCode);
       return false;
     } catch (error) {
-      console.log("⚠️ Error checking return code:", error);
+      console.log("⚠️ Error checking return code:", error, "Return code:", returnCode);
       return false;
     }
   }

@@ -22,7 +22,6 @@ export interface UserRegistrationRequest {
   password: string;
   companyName: string;
   phoneNumber: string;
-  deviceId?: string; // Required by backend
   // Additional fields from registration form
   description?: string;
   category?: string;
@@ -41,7 +40,6 @@ export interface UserRegistrationRequest {
 export interface UserLoginRequest {
   email: string;
   password: string;
-  deviceId?: string; // Required by backend
   // Optional: Remember me functionality
   rememberMe?: boolean;
 }
@@ -132,33 +130,6 @@ export interface EmailVerificationRequest {
 class LoginAPIsService {
   
   // ========================================
-  // DEVICE ID MANAGEMENT
-  // ========================================
-  
-  /**
-   * Get or generate device ID
-   * Device ID is stored in AsyncStorage for persistence
-   */
-  private async getDeviceId(): Promise<string> {
-    try {
-      let deviceId = await AsyncStorage.getItem('deviceId');
-      
-      if (!deviceId) {
-        // Generate a new device ID
-        deviceId = 'device_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
-        await AsyncStorage.setItem('deviceId', deviceId);
-        console.log('Generated new device ID:', deviceId);
-      }
-      
-      return deviceId;
-    } catch (error) {
-      console.error('Error getting device ID:', error);
-      // Fallback to timestamp-based ID
-      return 'device_' + Date.now();
-    }
-  }
-  
-  // ========================================
   // REGISTRATION API
   // ========================================
   
@@ -172,15 +143,11 @@ class LoginAPIsService {
     try {
       console.log('📝 Registering new user:', data.email);
       
-      // Get or generate device ID if not provided
-      const deviceId = data.deviceId || await this.getDeviceId();
-      
       const response = await api.post('/api/mobile/auth/register', {
         email: data.email,
         password: data.password,
         companyName: data.companyName,
         phone: data.phoneNumber, // Backend expects 'phone', not 'phoneNumber'
-        deviceId: deviceId, // Include device ID
         // Additional fields from registration form
         description: data.description,
         category: data.category,
@@ -241,16 +208,12 @@ class LoginAPIsService {
     try {
       console.log('🔐 Logging in user:', data.email);
       
-      // Get or generate device ID if not provided
-      const deviceId = data.deviceId || await this.getDeviceId();
-      
       console.log('📡 Making API call to:', '/api/mobile/auth/login');
-      console.log('📡 Request data:', { email: data.email, deviceId, rememberMe: data.rememberMe || false });
+      console.log('📡 Request data:', { email: data.email, rememberMe: data.rememberMe || false });
       
       const response = await api.post('/api/mobile/auth/login', {
         email: data.email,
         password: data.password,
-        deviceId: deviceId, // Include device ID
         rememberMe: data.rememberMe || false,
       });
       
@@ -266,8 +229,8 @@ class LoginAPIsService {
         try {
           console.log('🔍 Fetching complete profile data from API after login...');
           
-          // Try to get complete profile using user ID and deviceId
-          const profileResponse = await authApi.getProfile(user.deviceId, user.id);
+          // Try to get complete profile using user ID
+          const profileResponse = await authApi.getProfile(undefined, user.id);
           if (profileResponse.success && profileResponse.data) {
             completeUserData = {
               ...user,

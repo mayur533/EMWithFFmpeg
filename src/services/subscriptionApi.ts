@@ -148,6 +148,7 @@ class SubscriptionApiService {
         };
       }
 
+
       console.log('🔍 Fetching subscription status for user:', userId);
       const response = await api.get('/api/mobile/subscriptions/status');
       
@@ -242,6 +243,7 @@ class SubscriptionApiService {
           planName: 'Monthly Pro',
           endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
           expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          autoRenew: true,
           status: 'active'
         },
         message: 'Subscription renewed successfully'
@@ -266,6 +268,7 @@ class SubscriptionApiService {
           message: 'No subscription history'
         };
       }
+
 
       const response = await api.get('/api/mobile/subscriptions/history');
       

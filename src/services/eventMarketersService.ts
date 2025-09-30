@@ -1,4 +1,5 @@
 import api from './api';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 // Types for API responses
 export interface HealthCheckResponse {
@@ -22,7 +23,6 @@ export interface BusinessCategoriesResponse {
 
 export interface InstalledUser {
   id: string;
-  deviceId: string;
   name: string;
   email: string;
   phone?: string;
@@ -34,7 +34,6 @@ export interface InstalledUser {
 }
 
 export interface RegisterUserRequest {
-  deviceId: string;
   name: string;
   email: string;
   phone: string;
@@ -53,7 +52,7 @@ export interface UpdateUserRequest {
 }
 
 export interface UserActivityRequest {
-  deviceId: string;
+  userId: string;
   action: string;
   resourceType: string;
   resourceId: string;
@@ -64,7 +63,7 @@ export interface UserActivityResponse {
   success: boolean;
   activity: {
     id: string;
-    deviceId: string;
+    userId: string;
     action: string;
     resourceType: string;
     resourceId: string;
@@ -257,9 +256,9 @@ class EventMarketersService {
   }
 
   // 4. Get User Profile
-  async getUserProfile(deviceId: string): Promise<{ success: boolean; user: InstalledUser }> {
+  async getUserProfile(userId: string): Promise<{ success: boolean; user: InstalledUser }> {
     try {
-      const response = await api.get(`/api/installed-users/profile/${deviceId}`);
+      const response = await api.get(`/api/installed-users/profile/${userId}`);
       return response.data;
     } catch (error) {
       console.error('Failed to get user profile:', error);
@@ -268,9 +267,9 @@ class EventMarketersService {
   }
 
   // 5. Update User Profile
-  async updateUserProfile(deviceId: string, userData: UpdateUserRequest): Promise<{ success: boolean; user: InstalledUser }> {
+  async updateUserProfile(userId: string, userData: UpdateUserRequest): Promise<{ success: boolean; user: InstalledUser }> {
     try {
-      const response = await api.put(`/api/installed-users/profile/${deviceId}`, userData);
+      const response = await api.put(`/api/installed-users/profile/${userId}`, userData);
       return response.data;
     } catch (error) {
       console.error('Failed to update user profile:', error);

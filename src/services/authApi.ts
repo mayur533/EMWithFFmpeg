@@ -97,7 +97,7 @@ class AuthApiService {
   }
 
   // Get user profile
-  async getProfile(deviceId?: string, userId?: string): Promise<ProfileResponse> {
+  async getProfile(userId?: string): Promise<ProfileResponse> {
     try {
       // Use the correct endpoint that we know works
       const endpoints = ['/api/mobile/auth/me'];

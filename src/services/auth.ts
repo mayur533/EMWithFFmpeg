@@ -20,20 +20,7 @@ class AuthService {
   // Load stored user from AsyncStorage
   private async loadStoredUser() {
     try {
-      // Check for demo user first
-      const isDemoUser = await AsyncStorage.getItem('isDemoUser');
-      if (isDemoUser === 'true') {
-        const storedUser = await AsyncStorage.getItem('user');
-        const authToken = await AsyncStorage.getItem('authToken');
-        if (storedUser && authToken) {
-          this.currentUser = JSON.parse(storedUser);
-          this.notifyAuthStateListeners(this.currentUser);
-          console.log('Loaded demo user:', this.currentUser.id);
-          return;
-        }
-      }
-
-      // Check for regular user
+      // Check for regular user only
       const storedUser = await AsyncStorage.getItem('currentUser');
       const authToken = await AsyncStorage.getItem('authToken');
       if (storedUser && authToken) {
@@ -181,22 +168,15 @@ class AuthService {
     try {
       console.log('Signing out user...');
       
-      // Check if this is a demo user
-      const isDemoUser = await AsyncStorage.getItem('isDemoUser');
-      
-      // Only try API logout for real users, not demo users
-      if (isDemoUser !== 'true') {
-        try {
-          console.log('Attempting API logout...');
-          await authApi.logout();
-          console.log('✅ API logout successful');
-        } catch (apiError: any) {
-          console.error('❌ API logout failed:', apiError);
-          // Continue with local cleanup even if API logout fails
-          // This ensures the user can still sign out locally
-        }
-      } else {
-        console.log('Demo user logout - skipping API call');
+      // Try API logout for all users
+      try {
+        console.log('Attempting API logout...');
+        await authApi.logout();
+        console.log('✅ API logout successful');
+      } catch (apiError: any) {
+        console.error('❌ API logout failed:', apiError);
+        // Continue with local cleanup even if API logout fails
+        // This ensures the user can still sign out locally
       }
       
       // Sign out from Google if user was signed in with Google
@@ -216,7 +196,7 @@ class AuthService {
       this.currentUser = null;
       await AsyncStorage.removeItem('currentUser');
       await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('user'); // Clear demo user data
+      await AsyncStorage.removeItem('user'); // Clear any demo user data
       await AsyncStorage.removeItem('isDemoUser'); // Clear demo flag
       
       // Clear any other user-related data

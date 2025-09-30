@@ -3,7 +3,6 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export interface InstalledUser {
   id: string;
-  deviceId: string;
   name: string;
   email: string;
   phone?: string;
@@ -15,7 +14,6 @@ export interface InstalledUser {
 }
 
 export interface RegisterUserRequest {
-  deviceId: string;
   name: string;
   email: string;
   phone: string;
@@ -60,11 +58,11 @@ class InstalledUsersService {
     }
   }
 
-  // Get user profile by device ID
-  async getUserProfile(deviceId: string): Promise<UserProfileResponse> {
+  // Get user profile by user ID
+  async getUserProfile(userId: string): Promise<UserProfileResponse> {
     try {
-      console.log('Fetching user profile for device:', deviceId);
-      const response = await api.get(`/api/installed-users/profile/${deviceId}`);
+      console.log('Fetching user profile for user:', userId);
+      const response = await api.get(`/api/installed-users/profile/${userId}`);
       
       if (response.data.success) {
         this.currentUser = response.data.user;
@@ -80,10 +78,10 @@ class InstalledUsersService {
   }
 
   // Update user profile
-  async updateUserProfile(deviceId: string, userData: UpdateUserRequest): Promise<UserProfileResponse> {
+  async updateUserProfile(userId: string, userData: UpdateUserRequest): Promise<UserProfileResponse> {
     try {
-      console.log('Updating user profile for device:', deviceId);
-      const response = await api.put(`/api/installed-users/profile/${deviceId}`, userData);
+      console.log('Updating user profile for user:', userId);
+      const response = await api.put(`/api/installed-users/profile/${userId}`, userData);
       
       if (response.data.success) {
         this.currentUser = response.data.user;
@@ -149,25 +147,6 @@ class InstalledUsersService {
     }
   }
 
-  // Get device ID (you might want to implement this using a device ID library)
-  async getDeviceId(): Promise<string> {
-    try {
-      // Try to get from storage first
-      let deviceId = await AsyncStorage.getItem('deviceId');
-      
-      if (!deviceId) {
-        // Generate a new device ID (in a real app, you'd use a proper device ID library)
-        deviceId = 'device-' + Date.now() + '-' + Math.random().toString(36).substr(2, 9);
-        await AsyncStorage.setItem('deviceId', deviceId);
-      }
-      
-      return deviceId;
-    } catch (error) {
-      console.error('Failed to get device ID:', error);
-      // Fallback device ID
-      return 'device-' + Date.now();
-    }
-  }
 
   // Get app version (you might want to implement this using a proper version library)
   getAppVersion(): string {
@@ -175,18 +154,16 @@ class InstalledUsersService {
     return '1.0.0';
   }
 
-  // Register current device user
-  async registerCurrentDeviceUser(userInfo: {
+  // Register current user
+  async registerCurrentUser(userInfo: {
     name: string;
     email: string;
     phone: string;
   }): Promise<RegisterUserResponse> {
     try {
-      const deviceId = await this.getDeviceId();
       const appVersion = this.getAppVersion();
       
       const userData: RegisterUserRequest = {
-        deviceId,
         name: userInfo.name,
         email: userInfo.email,
         phone: userInfo.phone,
@@ -195,7 +172,7 @@ class InstalledUsersService {
       
       return await this.registerUser(userData);
     } catch (error) {
-      console.error('Failed to register current device user:', error);
+      console.error('Failed to register current user:', error);
       throw error;
     }
   }
@@ -208,7 +185,7 @@ class InstalledUsersService {
         throw new Error('No current user found');
       }
       
-      return await this.updateUserProfile(currentUser.deviceId, userData);
+      return await this.updateUserProfile(currentUser.id, userData);
     } catch (error) {
       console.error('Failed to update current user profile:', error);
       throw error;

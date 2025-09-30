@@ -39,8 +39,27 @@ export class FFmpegRuntimeDebugger {
       console.log("🔍 Testing basic FFmpeg loading...");
       try {
         const testSession = await FFmpegKit.executeAsync("-version");
-        const testReturnCode = testSession.getReturnCode();
-        const testOutput = testSession.getAllLogsAsString();
+        const testReturnCode = await testSession.getReturnCode();
+        // Get logs using getAllLogs() and convert to string
+        let testOutput = 'No logs available';
+        try {
+          const testLogs = await testSession.getAllLogs();
+          if (testLogs && Array.isArray(testLogs)) {
+            testOutput = testLogs.map(log => {
+              // Handle both string logs and log objects
+              if (typeof log === 'string') {
+                return log;
+              } else if (log && typeof log.getMessage === 'function') {
+                return log.getMessage();
+              } else if (log && typeof log === 'object') {
+                return JSON.stringify(log);
+              }
+              return String(log);
+            }).join('\n');
+          }
+        } catch (e) {
+          console.log('⚠️ Could not get logs:', e);
+        }
         
         console.log("✅ FFmpeg basic test - Return Code:", testReturnCode);
         console.log("✅ FFmpeg basic test - Success:", this.isReturnCodeSuccess(testReturnCode));
@@ -60,8 +79,27 @@ export class FFmpegRuntimeDebugger {
       // 1. Test FFmpeg basic functionality
       console.log("🔍 Testing FFmpeg basic functionality...");
       const versionSession = await FFmpegKit.executeAsync("-version");
-      const versionOutput = versionSession.getAllLogsAsString();
-      const returnCode = versionSession.getReturnCode();
+      // Get logs using getAllLogs() and convert to string
+      let versionOutput = 'No logs available';
+      try {
+        const versionLogs = await versionSession.getAllLogs();
+        if (versionLogs && Array.isArray(versionLogs)) {
+          versionOutput = versionLogs.map(log => {
+            // Handle both string logs and log objects
+            if (typeof log === 'string') {
+              return log;
+            } else if (log && typeof log.getMessage === 'function') {
+              return log.getMessage();
+            } else if (log && typeof log === 'object') {
+              return JSON.stringify(log);
+            }
+            return String(log);
+          }).join('\n');
+        }
+      } catch (e) {
+        console.log('⚠️ Could not get version logs:', e);
+      }
+      const returnCode = await versionSession.getReturnCode();
       
       console.log("📋 FFmpeg Version Test:");
       console.log("Return Code:", returnCode);
@@ -93,8 +131,27 @@ export class FFmpegRuntimeDebugger {
       // 2. Check drawtext availability
       console.log("🔍 Checking drawtext filter availability...");
       const filtersSession = await FFmpegKit.executeAsync("-filters");
-      const filtersOutput = filtersSession.getAllLogsAsString();
-      const filtersReturnCode = filtersSession.getReturnCode();
+      // Get logs using getAllLogs() and convert to string
+      let filtersOutput = 'No logs available';
+      try {
+        const filtersLogs = await filtersSession.getAllLogs();
+        if (filtersLogs && Array.isArray(filtersLogs)) {
+          filtersOutput = filtersLogs.map(log => {
+            // Handle both string logs and log objects
+            if (typeof log === 'string') {
+              return log;
+            } else if (log && typeof log.getMessage === 'function') {
+              return log.getMessage();
+            } else if (log && typeof log === 'object') {
+              return JSON.stringify(log);
+            }
+            return String(log);
+          }).join('\n');
+        }
+      } catch (e) {
+        console.log('⚠️ Could not get filters logs:', e);
+      }
+      const filtersReturnCode = await filtersSession.getReturnCode();
       
       console.log("🎬 FFmpeg Filters Test:");
       console.log("Return Code:", filtersReturnCode);
@@ -116,7 +173,26 @@ export class FFmpegRuntimeDebugger {
       // 3. Get detailed build configuration
       console.log("🔍 Getting FFmpeg build configuration...");
       const configSession = await FFmpegKit.executeAsync("-buildconf");
-      const configOutput = configSession.getAllLogsAsString();
+      // Get logs using getAllLogs() and convert to string
+      let configOutput = 'No logs available';
+      try {
+        const configLogs = await configSession.getAllLogs();
+        if (configLogs && Array.isArray(configLogs)) {
+          configOutput = configLogs.map(log => {
+            // Handle both string logs and log objects
+            if (typeof log === 'string') {
+              return log;
+            } else if (log && typeof log.getMessage === 'function') {
+              return log.getMessage();
+            } else if (log && typeof log === 'object') {
+              return JSON.stringify(log);
+            }
+            return String(log);
+          }).join('\n');
+        }
+      } catch (e) {
+        console.log('⚠️ Could not get config logs:', e);
+      }
       
       console.log("⚙️ FFmpeg Build Configuration:");
       console.log(configOutput);
@@ -137,11 +213,13 @@ export class FFmpegRuntimeDebugger {
         try {
           const testCommand = '-f lavfi -i testsrc=duration=1:size=320x240:rate=1 -vf "drawtext=text=\'Test\':x=10:y=10:fontsize=24:color=white" -t 1 -f null -';
           const testSession = await FFmpegKit.executeAsync(testCommand);
-          const testOutput = testSession.getAllLogsAsString();
+          const testReturnCode = await testSession.getReturnCode();
+          const testLogs = await testSession.getAllLogs();
+          const testOutput = testLogs.map(log => log.getMessage()).join('\n');
           
           console.log("🧪 Drawtext Test Result:");
-          console.log("Return Code:", testSession.getReturnCode());
-          console.log("Success:", this.isReturnCodeSuccess(testSession.getReturnCode()));
+          console.log("Return Code:", testReturnCode);
+          console.log("Success:", this.isReturnCodeSuccess(testReturnCode));
           console.log("Output:", testOutput);
         } catch (error) {
           console.log("❌ Drawtext test failed:", error);
@@ -176,16 +254,14 @@ export class FFmpegRuntimeDebugger {
    */
   private static isReturnCodeSuccess(returnCode: any): boolean {
     try {
-      // Try the standard method first
-      if (ReturnCode.isSuccess) {
-        return ReturnCode.isSuccess(returnCode);
-      }
-      
-      // Fallback: check if return code is 0 or has value 0
+      // First, try to get the value if it's a return code object
       if (returnCode && typeof returnCode === 'object') {
+        // Try getValue() method first
         if (returnCode.getValue && typeof returnCode.getValue === 'function') {
-          return returnCode.getValue() === 0;
+          const value = returnCode.getValue();
+          return value === 0;
         }
+        // Check for other common properties
         if (returnCode._h !== undefined) {
           return returnCode._h === 0;
         }
@@ -194,14 +270,20 @@ export class FFmpegRuntimeDebugger {
         }
       }
       
+      // Try the standard ReturnCode.isSuccess method
+      if (ReturnCode.isSuccess && typeof ReturnCode.isSuccess === 'function') {
+        return ReturnCode.isSuccess(returnCode);
+      }
+      
       // If it's a number, check if it's 0
       if (typeof returnCode === 'number') {
         return returnCode === 0;
       }
       
+      console.log("⚠️ Unknown return code format:", typeof returnCode, returnCode);
       return false;
     } catch (error) {
-      console.log("⚠️ Error checking return code:", error);
+      console.log("⚠️ Error checking return code:", error, "Return code:", returnCode);
       return false;
     }
   }
@@ -317,7 +399,25 @@ export class FFmpegRuntimeDebugger {
   static async getFFmpegVersion(): Promise<string> {
     try {
       const session = await FFmpegKit.executeAsync("-version");
-      const output = session.getAllLogsAsString();
+      let output = 'No logs available';
+      try {
+        const logs = await session.getAllLogs();
+        if (logs && Array.isArray(logs)) {
+          output = logs.map(log => {
+            // Handle both string logs and log objects
+            if (typeof log === 'string') {
+              return log;
+            } else if (log && typeof log.getMessage === 'function') {
+              return log.getMessage();
+            } else if (log && typeof log === 'object') {
+              return JSON.stringify(log);
+            }
+            return String(log);
+          }).join('\n');
+        }
+      } catch (e) {
+        console.log('⚠️ Could not get version logs:', e);
+      }
       return this.extractVersion(output);
     } catch (error) {
       console.error("❌ Version check error:", error);
@@ -331,7 +431,25 @@ export class FFmpegRuntimeDebugger {
   static async isDrawtextAvailable(): Promise<boolean> {
     try {
       const session = await FFmpegKit.executeAsync("-filters");
-      const output = session.getAllLogsAsString();
+      let output = 'No logs available';
+      try {
+        const logs = await session.getAllLogs();
+        if (logs && Array.isArray(logs)) {
+          output = logs.map(log => {
+            // Handle both string logs and log objects
+            if (typeof log === 'string') {
+              return log;
+            } else if (log && typeof log.getMessage === 'function') {
+              return log.getMessage();
+            } else if (log && typeof log === 'object') {
+              return JSON.stringify(log);
+            }
+            return String(log);
+          }).join('\n');
+        }
+      } catch (e) {
+        console.log('⚠️ Could not get filters logs:', e);
+      }
       return output && output.includes('drawtext');
     } catch (error) {
       console.error("❌ Drawtext check error:", error);
