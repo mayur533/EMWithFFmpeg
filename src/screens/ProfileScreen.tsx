@@ -176,12 +176,18 @@ const ProfileScreen: React.FC = () => {
             recentCount: posterStats?.recentCount || 0,
           });
           
-          // Load business profile stats from backend
-          const businessStats = await userProfileService.getBusinessProfileStats(userId);
-          setBusinessProfileStats({
-            total: businessStats?.total || 0,
-            recentCount: businessStats?.recentCount || 0,
-          });
+          // Load business profile stats by fetching actual profiles
+          let businessStats = { total: 0, recentCount: 0 };
+          try {
+            businessStats = await userBusinessProfilesService.getBusinessProfileStats(userId);
+            setBusinessProfileStats({
+              total: businessStats?.total || 0,
+              recentCount: businessStats?.recentCount || 0,
+            });
+          } catch (error) {
+            console.log('⚠️ Failed to load business profile stats:', error);
+            setBusinessProfileStats({ total: 0, recentCount: 0 });
+          }
           
           // Load like stats from backend
           const likeStats = await userProfileService.getLikeStats(userId);

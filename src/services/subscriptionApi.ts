@@ -210,11 +210,15 @@ class SubscriptionApiService {
         message: 'Status fetched successfully'
       };
     } catch (error: any) {
-      console.error('Get subscription status error:', error);
+      // Silently handle 404 errors for unimplemented endpoints
+      if (error.response?.status === 404) {
+        console.log('ℹ️ Subscription endpoint not implemented, returning default free status');
+      } else {
+        console.error('Get subscription status error:', error);
+      }
       
-      // If it's a 401 error, return a default status instead of throwing
-      if (error.response?.status === 401) {
-        console.log('⚠️ Subscription status requires authentication, returning default status');
+      // If it's a 401 or 404 error, return a default status instead of throwing
+      if (error.response?.status === 401 || error.response?.status === 404) {
         return {
           success: true,
           data: {

@@ -86,8 +86,13 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         setIsSubscribed(false);
         setSubscriptionStatus(null);
       }
-    } catch (error) {
-      console.error('❌ Error refreshing subscription status:', error);
+    } catch (error: any) {
+      // Silently handle 404 errors for unimplemented subscription endpoints
+      if (error?.response?.status === 404) {
+        console.log('ℹ️ Subscription endpoint not implemented yet, defaulting to free tier');
+      } else {
+        console.error('❌ Error refreshing subscription status:', error);
+      }
       setIsSubscribed(false);
       setSubscriptionStatus(null);
     } finally {
