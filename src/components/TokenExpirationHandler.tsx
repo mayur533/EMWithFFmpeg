@@ -6,19 +6,20 @@ import {
   TouchableOpacity,
   StyleSheet,
   Dimensions,
+  DeviceEventEmitter,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
-import { tokenExpirationEmitter } from '../services/api';
+import { TOKEN_EXPIRED_EVENT } from '../services/api';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
+import { CommonActions } from '@react-navigation/native';
+import { navigationRef } from '../navigation/NavigationService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const TokenExpirationHandler: React.FC = () => {
   const [showModal, setShowModal] = useState(false);
   const { theme } = useTheme();
-  const navigation = useNavigation();
 
   useEffect(() => {
     const handleTokenExpiration = () => {
@@ -26,12 +27,15 @@ const TokenExpirationHandler: React.FC = () => {
       setShowModal(true);
     };
 
-    // Listen for token expiration events
-    tokenExpirationEmitter.on('tokenExpired', handleTokenExpiration);
+    // Listen for token expiration events using DeviceEventEmitter
+    const subscription = DeviceEventEmitter.addListener(
+      TOKEN_EXPIRED_EVENT,
+      handleTokenExpiration
+    );
 
     // Cleanup listener on unmount
     return () => {
-      tokenExpirationEmitter.off('tokenExpired', handleTokenExpiration);
+      subscription.remove();
     };
   }, []);
 
@@ -41,12 +45,15 @@ const TokenExpirationHandler: React.FC = () => {
     // Sign out user
     await authService.signOut();
     
-    // Navigate to login screen
-    // @ts-ignore - navigation typing issue
-    navigation.reset({
-      index: 0,
-      routes: [{ name: 'Login' }],
-    });
+    // Navigate to login screen using navigation ref
+    if (navigationRef.current) {
+      navigationRef.current.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Login' }],
+        })
+      );
+    }
   };
 
   return (

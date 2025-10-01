@@ -8,6 +8,7 @@ import { getTabBarStyle, getTabBarItemStyle, getTabBarLabelStyle } from '../util
 import authService from '../services/auth';
 import DebugInfo from '../components/DebugInfo';
 import { useTheme } from '../context/ThemeContext';
+import { navigationRef } from './NavigationService';
 
 // Define navigation types
 export type RootStackParamList = {
@@ -334,7 +335,7 @@ const AppNavigator = () => {
   if (isLoading) {
     console.log('AppNavigator: Showing splash screen');
     return (
-      <NavigationContainer>
+      <NavigationContainer ref={navigationRef}>
         <Stack.Navigator>
           <Stack.Screen 
             name="Splash" 
@@ -350,7 +351,7 @@ const AppNavigator = () => {
   console.log('AppNavigator: Showing main navigation, isAuthenticated:', isAuthenticated);
   
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef}>
       <Stack.Navigator>
         {isAuthenticated ? (
           // Authenticated user - show main app

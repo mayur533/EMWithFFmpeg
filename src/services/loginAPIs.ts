@@ -1,4 +1,4 @@
-import api from './api';
+import api, { resetTokenExpirationFlag } from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import authService from './auth';
 import authApi from './authApi';
@@ -189,6 +189,9 @@ class LoginAPIsService {
         await authService.saveUserToStorage(completeUserData, authTokenToSave);
         authService.setCurrentUser(completeUserData);
         
+        // Reset token expiration flag on successful login
+        resetTokenExpirationFlag();
+        
         // Notify auth state listeners (this will trigger navigation)
         authService.notifyAuthStateListeners(completeUserData);
         
@@ -242,6 +245,9 @@ class LoginAPIsService {
         // IMPORTANT: Save token to storage FIRST so it's available for subsequent API calls
         await authService.saveUserToStorage(user, authTokenToSave);
         authService.setCurrentUser(user);
+        
+        // Reset token expiration flag on successful login
+        resetTokenExpirationFlag();
         
         // Now fetch complete profile data from API (token is now available in AsyncStorage)
         let completeUserData = user;

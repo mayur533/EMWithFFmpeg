@@ -1,9 +1,17 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { EventEmitter } from 'events';
+import { DeviceEventEmitter } from 'react-native';
 
-// Event emitter for token expiration
-export const tokenExpirationEmitter = new EventEmitter();
+// Event name for token expiration
+export const TOKEN_EXPIRED_EVENT = 'TOKEN_EXPIRED';
+
+// Flag to prevent multiple token expiration events
+let hasEmittedTokenExpiration = false;
+
+// Function to reset the token expiration flag (call this after successful login)
+export const resetTokenExpirationFlag = () => {
+  hasEmittedTokenExpiration = false;
+};
 
 // Create axios instance with the EventMarketers backend URL
 const api = axios.create({
@@ -62,12 +70,26 @@ api.interceptors.response.use(
     
     // Handle authentication errors (token expired or invalid)
     if (error.response?.status === 401) {
-      console.log('🔴 Token expired or invalid, clearing auth data');
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('currentUser');
+      // Check if this is a login/register endpoint (don't show modal for login failures)
+      const isLoginEndpoint = error.config?.url?.includes('/auth/login') || 
+                             error.config?.url?.includes('/auth/register') ||
+                             error.config?.url?.includes('/auth/google');
       
-      // Emit token expiration event
-      tokenExpirationEmitter.emit('tokenExpired');
+      // Only show token expiration modal if NOT a login endpoint and user was authenticated
+      if (!isLoginEndpoint) {
+        const hasToken = await AsyncStorage.getItem('authToken');
+        
+        // Only emit once to prevent multiple modals, and only if user had a token
+        if (!hasEmittedTokenExpiration && hasToken) {
+          hasEmittedTokenExpiration = true;
+          console.log('🔴 Token expired or invalid, clearing auth data');
+          await AsyncStorage.removeItem('authToken');
+          await AsyncStorage.removeItem('currentUser');
+          
+          // Emit token expiration event using React Native's DeviceEventEmitter
+          DeviceEventEmitter.emit(TOKEN_EXPIRED_EVENT);
+        }
+      }
     }
 
     // Handle server errors
