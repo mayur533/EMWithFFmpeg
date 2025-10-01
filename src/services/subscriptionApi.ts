@@ -67,15 +67,27 @@ class SubscriptionApiService {
     try {
       const response = await api.get('/api/mobile/subscriptions/plans');
       
+      // Check if response has the expected structure
+      const plans = response.data?.data?.plans || response.data?.plans || [];
+      
+      if (!Array.isArray(plans)) {
+        console.warn('Plans data is not an array, returning empty array');
+        return {
+          success: true,
+          data: [],
+          message: 'No plans available'
+        };
+      }
+      
       // Transform the response to match expected format
-      const transformedData = response.data.data.plans.map((plan: any) => ({
+      const transformedData = plans.map((plan: any) => ({
         id: plan.id,
         name: plan.name,
-        description: plan.features.join(', '),
+        description: plan.features?.join(', ') || plan.description || '',
         price: plan.price,
         currency: 'INR',
-        duration: plan.period,
-        features: plan.features,
+        duration: plan.period || plan.duration,
+        features: plan.features || [],
         isPopular: plan.id === 'yearly_pro'
       }));
 
