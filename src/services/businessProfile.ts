@@ -83,11 +83,11 @@ class BusinessProfileService {
           
           // Convert backend profiles to frontend format
           const businessProfiles: BusinessProfile[] = profiles.map((profile: any) => {
-            console.log('🎬 businessProfileService: Processing profile:', profile.businessName, 'Category:', profile.category);
+            console.log('🎬 businessProfileService: Processing profile:', profile.name, 'Category:', profile.category);
             
             return {
               id: profile.id,
-              name: profile.businessName,
+              name: profile.name || profile.businessName,
               description: profile.description || '',
               category: profile.category,
               address: profile.address || '',

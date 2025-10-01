@@ -11,6 +11,7 @@ import {
   Dimensions,
   Alert,
   Image,
+  Modal,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -90,10 +91,13 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
   const [emailFocused, setEmailFocused] = useState(false);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   const handleSignIn = useCallback(async () => {
     if (!email || !password) {
-      Alert.alert('Error', 'Please fill in all fields');
+      setErrorMessage('Please fill in all fields');
+      setShowErrorModal(true);
       return;
     }
 
@@ -112,8 +116,9 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
       console.error('❌ Sign in error:', error);
       console.error('❌ Error response:', error.response?.data);
       console.error('❌ Error status:', error.response?.status);
-      const errorMessage = error.response?.data?.message || error.message || 'Sign in failed. Please try again.';
-      Alert.alert('Error', errorMessage);
+      const errorMsg = error.response?.data?.message || error.message || 'Sign in failed. Please try again.';
+      setErrorMessage(errorMsg);
+      setShowErrorModal(true);
     } finally {
       setIsLoading(false);
     }
@@ -212,6 +217,59 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
           </View>
         </KeyboardAvoidingView>
       </LinearGradient>
+
+      {/* Error Modal */}
+      <Modal
+        visible={showErrorModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}
+        statusBarTranslucent={true}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowErrorModal(false)}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            onPress={() => {}} // Prevent closing when tapping inside modal
+          >
+            <View style={[styles.errorModalContainer, { backgroundColor: theme.colors.surface }]}>
+              <View style={styles.errorModalHeader}>
+                <View style={[styles.errorIconContainer, { backgroundColor: '#ff444420' }]}>
+                  <Icon name="error-outline" size={Math.min(screenWidth * 0.08, 32)} color="#ff4444" />
+                </View>
+                <Text 
+                  style={[styles.errorModalTitle, { color: theme.colors.text }]}
+                >
+                  Error
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.closeModalButton, { backgroundColor: theme.colors.inputBackground }]}
+                  onPress={() => setShowErrorModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="close" size={Math.min(screenWidth * 0.06, 24)} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.errorModalContent}>
+                <Text style={[styles.errorModalMessage, { color: theme.colors.text }]}>
+                  {errorMessage}
+                </Text>
+              </View>
+              
+              <TouchableOpacity 
+                style={[styles.errorModalButton, { backgroundColor: '#ff4444' }]}
+                onPress={() => setShowErrorModal(false)}
+              >
+                <Text style={styles.errorModalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -317,6 +375,82 @@ const styles = StyleSheet.create({
   },
   footerLink: {
     fontSize: Math.min(screenWidth * 0.035, 14),
+    fontWeight: '600',
+  },
+
+  // Error Modal Styles
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorModalContainer: {
+    width: screenWidth * 0.85,
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: screenWidth * 0.06,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  errorModalHeader: {
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.02,
+    position: 'relative',
+  },
+  errorIconContainer: {
+    width: Math.min(screenWidth * 0.18, 72),
+    height: Math.min(screenWidth * 0.18, 72),
+    borderRadius: Math.min(screenWidth * 0.09, 36),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.015,
+  },
+  errorModalTitle: {
+    fontSize: Math.min(screenWidth * 0.06, 24),
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  closeModalButton: {
+    position: 'absolute',
+    top: -screenHeight * 0.01,
+    right: -screenWidth * 0.02,
+    width: Math.min(screenWidth * 0.08, 32),
+    height: Math.min(screenWidth * 0.08, 32),
+    borderRadius: Math.min(screenWidth * 0.04, 16),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  errorModalContent: {
+    marginBottom: screenHeight * 0.025,
+  },
+  errorModalMessage: {
+    fontSize: Math.min(screenWidth * 0.04, 16),
+    textAlign: 'center',
+    lineHeight: Math.min(screenWidth * 0.06, 24),
+  },
+  errorModalButton: {
+    paddingVertical: screenHeight * 0.018,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  errorModalButtonText: {
+    color: '#FFFFFF',
+    fontSize: Math.min(screenWidth * 0.042, 17),
     fontWeight: '600',
   },
 });

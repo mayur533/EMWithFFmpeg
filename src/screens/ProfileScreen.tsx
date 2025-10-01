@@ -85,6 +85,7 @@ const ProfileScreen: React.FC = () => {
   const [userPreferences, setUserPreferences] = useState<any>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
+  const [showSignOutModal, setShowSignOutModal] = useState(false);
   const { isDarkMode, toggleDarkMode, theme } = useTheme();
   const { isSubscribed, transactionStats } = useSubscription();
   const insets = useSafeAreaInsets();
@@ -159,7 +160,7 @@ const ProfileScreen: React.FC = () => {
             
             // Update profile image from companyLogo
             if (completeUserData?.companyLogo || completeUserData?.logo) {
-              setProfileImageUri(completeUserData?.companyLogo || completeUserData?.logo);
+              setProfileImageUri(completeUserData?.companyLogo || completeUserData?.logo || null);
             }
             
             console.log('✅ User profile data loaded and updated');
@@ -200,44 +201,29 @@ const ProfileScreen: React.FC = () => {
     }, [])
   );
 
-  const handleSignOut = async () => {
-    Alert.alert(
-      'Sign Out',
-      'Are you sure you want to sign out? This will clear all your local data.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Sign Out',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('ProfileScreen: Starting sign out process...');
-              
-              // Show loading state or disable UI during signout
-              // You could add a loading spinner here if needed
-              
-              await authService.signOut();
-              
-              console.log('ProfileScreen: Sign out completed successfully');
-              
-              // Navigate to login screen or show success message
-              // The navigation will be handled by the auth state change listener
-              
-            } catch (error) {
-              console.error('ProfileScreen: Sign out error:', error);
-              Alert.alert(
-                'Sign Out Error', 
-                'There was an issue signing out. Your local data has been cleared, but you may need to sign in again.',
-                [{ text: 'OK' }]
-              );
-            }
-          },
-        },
-      ]
-    );
+  const handleSignOut = () => {
+    setShowSignOutModal(true);
+  };
+
+  const confirmSignOut = async () => {
+    try {
+      setShowSignOutModal(false);
+      console.log('ProfileScreen: Starting sign out process...');
+      
+      await authService.signOut();
+      
+      console.log('ProfileScreen: Sign out completed successfully');
+      
+      // Navigation will be handled by the auth state change listener
+      
+    } catch (error) {
+      console.error('ProfileScreen: Sign out error:', error);
+      Alert.alert(
+        'Sign Out Error', 
+        'There was an issue signing out. Your local data has been cleared, but you may need to sign in again.',
+        [{ text: 'OK' }]
+      );
+    }
   };
 
 
@@ -1222,6 +1208,68 @@ const ProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </Modal>
 
+      {/* Sign Out Confirmation Modal */}
+      <Modal
+        visible={showSignOutModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSignOutModal(false)}
+        statusBarTranslucent={true}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowSignOutModal(false)}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            onPress={() => {}} // Prevent closing when tapping inside modal
+          >
+            <View style={[styles.signOutModalContainer, { backgroundColor: theme.colors.surface }]}>
+              <View style={styles.signOutModalHeader}>
+                <View style={[styles.signOutIconContainer, { backgroundColor: '#ff444420' }]}>
+                  <Icon name="logout" size={Math.min(screenWidth * 0.08, 32)} color="#ff4444" />
+                </View>
+                <Text 
+                  style={[styles.signOutModalTitle, { color: theme.colors.text }]}
+                >
+                  Sign Out
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.closeModalButton, { backgroundColor: theme.colors.inputBackground }]}
+                  onPress={() => setShowSignOutModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="close" size={Math.min(screenWidth * 0.06, 24)} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.signOutModalContent}>
+                <Text style={[styles.signOutModalMessage, { color: theme.colors.text }]}>
+                  Are you sure you want to sign out? This will clear all your local data.
+                </Text>
+              </View>
+              
+              <View style={styles.signOutModalButtons}>
+                <TouchableOpacity 
+                  style={[styles.signOutCancelButton, { backgroundColor: theme.colors.inputBackground }]}
+                  onPress={() => setShowSignOutModal(false)}
+                >
+                  <Text style={[styles.signOutCancelButtonText, { color: theme.colors.text }]}>Cancel</Text>
+                </TouchableOpacity>
+                
+                <TouchableOpacity 
+                  style={[styles.signOutConfirmButton, { backgroundColor: '#ff4444' }]}
+                  onPress={confirmSignOut}
+                >
+                  <Text style={styles.signOutConfirmButtonText}>Sign Out</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
+
       {/* Image Picker Modal */}
       <ImagePickerModal
         visible={showImagePickerModal}
@@ -1952,6 +2000,89 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   successModalButtonText: {
+    color: '#FFFFFF',
+    fontSize: Math.min(screenWidth * 0.042, 17),
+    fontWeight: '600',
+  },
+  
+  // Sign Out Modal Styles
+  signOutModalContainer: {
+    width: screenWidth * 0.85,
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: screenWidth * 0.06,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  signOutModalHeader: {
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.02,
+    position: 'relative',
+  },
+  signOutIconContainer: {
+    width: Math.min(screenWidth * 0.18, 72),
+    height: Math.min(screenWidth * 0.18, 72),
+    borderRadius: Math.min(screenWidth * 0.09, 36),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.015,
+  },
+  signOutModalTitle: {
+    fontSize: Math.min(screenWidth * 0.06, 24),
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  signOutModalContent: {
+    marginBottom: screenHeight * 0.025,
+  },
+  signOutModalMessage: {
+    fontSize: Math.min(screenWidth * 0.04, 16),
+    textAlign: 'center',
+    lineHeight: Math.min(screenWidth * 0.06, 24),
+  },
+  signOutModalButtons: {
+    flexDirection: 'row',
+    gap: screenWidth * 0.03,
+  },
+  signOutCancelButton: {
+    flex: 1,
+    paddingVertical: screenHeight * 0.018,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  signOutCancelButtonText: {
+    fontSize: Math.min(screenWidth * 0.042, 17),
+    fontWeight: '600',
+  },
+  signOutConfirmButton: {
+    flex: 1,
+    paddingVertical: screenHeight * 0.018,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  signOutConfirmButtonText: {
     color: '#FFFFFF',
     fontSize: Math.min(screenWidth * 0.042, 17),
     fontWeight: '600',
