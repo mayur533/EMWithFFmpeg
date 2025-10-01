@@ -1,5 +1,9 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { EventEmitter } from 'events';
+
+// Event emitter for token expiration
+export const tokenExpirationEmitter = new EventEmitter();
 
 // Create axios instance with the EventMarketers backend URL
 const api = axios.create({
@@ -56,12 +60,14 @@ api.interceptors.response.use(
       return Promise.reject(new Error('TIMEOUT'));
     }
     
-    // Handle authentication errors
+    // Handle authentication errors (token expired or invalid)
     if (error.response?.status === 401) {
-      console.log('Authentication failed, clearing tokens');
+      console.log('🔴 Token expired or invalid, clearing auth data');
       await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('user');
-      // You can add navigation logic here to redirect to login
+      await AsyncStorage.removeItem('currentUser');
+      
+      // Emit token expiration event
+      tokenExpirationEmitter.emit('tokenExpired');
     }
 
     // Handle server errors

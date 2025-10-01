@@ -11,6 +11,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { SubscriptionProvider } from './src/contexts/SubscriptionContext';
+import TokenExpirationHandler from './src/components/TokenExpirationHandler';
 import FFmpegRuntimeDebugger from './src/services/FFmpegRuntimeDebugger';
 import FFmpegVerificationService from './src/services/FFmpegVerificationService';
 
@@ -100,6 +101,7 @@ const App: React.FC = () => {
         <ThemeProvider>
           <SubscriptionProvider>
             <AppNavigator />
+            <TokenExpirationHandler />
           </SubscriptionProvider>
         </ThemeProvider>
       </SafeAreaProvider>
