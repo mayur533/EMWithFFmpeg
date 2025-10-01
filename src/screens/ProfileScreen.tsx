@@ -22,6 +22,7 @@ import authService from '../services/auth';
 import authApi from '../services/authApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import userBusinessProfilesService from '../services/userBusinessProfiles';
+import businessProfileService from '../services/businessProfile';
 import userLikesService from '../services/userLikes';
 import userPreferencesService from '../services/userPreferences';
 import userProfileService from '../services/userProfile';
@@ -176,14 +177,23 @@ const ProfileScreen: React.FC = () => {
             recentCount: posterStats?.recentCount || 0,
           });
           
-          // Load business profile stats by fetching actual profiles
+          // Load business profile stats by fetching actual profiles from backend
           let businessStats = { total: 0, recentCount: 0 };
           try {
-            businessStats = await userBusinessProfilesService.getBusinessProfileStats(userId);
-            setBusinessProfileStats({
-              total: businessStats?.total || 0,
-              recentCount: businessStats?.recentCount || 0,
-            });
+            const profiles = await businessProfileService.getUserBusinessProfiles(userId);
+            const oneWeekAgo = new Date();
+            oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+            const recentCount = profiles.filter(profile => 
+              new Date(profile.createdAt) > oneWeekAgo
+            ).length;
+            
+            businessStats = {
+              total: profiles.length,
+              recentCount: recentCount,
+            };
+            
+            setBusinessProfileStats(businessStats);
+            console.log('📊 Business profile stats loaded:', businessStats);
           } catch (error) {
             console.log('⚠️ Failed to load business profile stats:', error);
             setBusinessProfileStats({ total: 0, recentCount: 0 });
