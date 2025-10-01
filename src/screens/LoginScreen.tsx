@@ -121,38 +121,6 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
 
 
 
-  const handleDevelopmentSignIn = useCallback(async () => {
-    console.log('Demo access clicked');
-    setIsLoading(true);
-    try {
-      // Create demo user session
-      const demoUser = {
-        id: 'demo-user-' + Date.now(),
-        email: 'demo@eventmarketers.com',
-        name: 'Demo User',
-        companyName: 'Demo Company',
-        phoneNumber: '+1234567890',
-        isDemo: true,
-        createdAt: new Date().toISOString(),
-      };
-
-      // Store demo user in AsyncStorage
-      await AsyncStorage.setItem('user', JSON.stringify(demoUser));
-      await AsyncStorage.setItem('authToken', 'demo-token-' + Date.now());
-      await AsyncStorage.setItem('isDemoUser', 'true');
-
-      console.log('Demo user created:', demoUser);
-      
-      // Navigate directly to main app without alert
-      console.log('Demo access successful, navigating to main app');
-      
-    } catch (error) {
-      console.error('Demo access error:', error);
-      Alert.alert('Error', 'Demo access failed. Please try again.');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
 
 
@@ -229,22 +197,6 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
 
 
 
-              <TouchableOpacity 
-                style={[
-                  styles.developmentButton, 
-                  { 
-                    backgroundColor: `${theme.colors.primary}20`,
-                    borderColor: `${theme.colors.primary}30`
-                  },
-                  isLoading && styles.buttonDisabled
-                ]} 
-                onPress={handleDevelopmentSignIn}
-                disabled={isLoading}
-              >
-                <Text style={[styles.developmentButtonText, { color: theme.colors.primary }]}>
-                  QUICK DEMO ACCESS
-                </Text>
-              </TouchableOpacity>
 
               <View style={styles.footer}>
                 <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
@@ -355,17 +307,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
 
-  developmentButton: {
-    borderRadius: 12,
-    paddingVertical: screenHeight * 0.015,
-    alignItems: 'center',
-    marginBottom: screenHeight * 0.02,
-    borderWidth: 1,
-  },
-  developmentButtonText: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
-    fontWeight: '600',
-  },
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',

@@ -116,57 +116,18 @@ android {
         }
     }
     
-    // Source sets to include native libraries
-    sourceSets {
-        main {
-            jniLibs.srcDirs = ['src/main/jniLibs']
-        }
-    }
-    
-    // Packaging options to force use of custom FFmpeg 6.1.1 libraries
+    // Standard packaging options for React Native with ffmpeg-kit
     packagingOptions {
-        // Force pickFirst for all .so files to prioritize custom jniLibs
-        jniLibs {
-            pickFirsts += ['**/*.so']
-        }
-        
-        // Exclude ALL prebuilt FFmpeg libraries from any source
-        exclude '**/libavcodec.so'
-        exclude '**/libavfilter.so'
-        exclude '**/libavformat.so'
-        exclude '**/libavutil.so'
-        exclude '**/libpostproc.so'
-        exclude '**/libswresample.so'
-        exclude '**/libswscale.so'
-        exclude '**/libavdevice.so'
-        
-        // Exclude from specific problematic paths
-        exclude '**/ffmpeg-kit*/**/*.so'
-        exclude '**/node_modules/**/*.so'
-        exclude '**/prebuilt/**/*.so'
-        exclude '**/android-arm*/**/*.so'
-        exclude '**/android-x86*/**/*.so'
-        
-        // Keep only essential non-FFmpeg libraries
         pickFirst '**/libc++_shared.so'
         pickFirst '**/libjsc.so'
-        pickFirst '**/libffmpegkit.so'
-        pickFirst '**/libffmpegkit_abidetect.so'
-        
-        // Exclude problematic libraries
-        exclude '**/libreactnativejni.so'
-        exclude '**/libhermes.so'
+        pickFirst '**/libfbjni.so'
+        pickFirst '**/libreactnativejni.so'
+        pickFirst '**/libhermes.so'
     }
 }
 
-// Exclude ffmpeg-kit prebuilt libraries globally
-configurations.all {
-    exclude group: 'com.arthenica', module: 'ffmpeg-kit-full'
-    exclude group: 'com.arthenica', module: 'ffmpeg-kit-min'
-    exclude group: 'com.arthenica', module: 'ffmpeg-kit-min-gpl'
-    exclude group: 'com.arthenica', module: 'ffmpeg-kit-min-lts'
-    exclude group: 'com.arthenica', module: 'ffmpeg-kit-min-lts-gpl'
-}
+// Allow ffmpeg-kit-react-native-full-gpl to include its native libraries
+// No exclusions needed - let the package handle its own dependencies
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin

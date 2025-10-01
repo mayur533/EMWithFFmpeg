@@ -90,326 +90,190 @@ const HomeScreen: React.FC = React.memo(() => {
 
 
 
-  // Memoized mock data to prevent recreation on every render
-  const mockBanners: Banner[] = useMemo(() => [
-    {
-      id: '1',
-      title: 'Professional Event Planning',
-      imageUrl: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=400&h=200&fit=crop',
-      link: '#',
-    },
-    {
-      id: '2',
-      title: 'Creative Decorations',
-      imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=400&h=200&fit=crop',
-      link: '#',
-    },
-    {
-      id: '3',
-      title: 'Sound & Light Solutions',
-      imageUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400&h=200&fit=crop',
-      link: '#',
-    },
-  ], []);
+  // Mock data removed - using only API data
 
-  // Separate video templates array with actual video URLs and language metadata
-  const mockVideoTemplates: Template[] = useMemo(() => [
-    {
-      id: 'video-1',
-      name: 'Event Promo Video',
-      thumbnail: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-      category: 'Video',
-      likes: 234,
-      downloads: 156,
-      isLiked: false,
-      isDownloaded: false,
-      languages: ['english', 'hindi', 'marathi'],
-    },
-    {
-      id: 'video-2',
-      name: 'Wedding Highlight Video',
-      thumbnail: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-      category: 'Video',
-      likes: 189,
-      downloads: 123,
-      isLiked: false,
-      isDownloaded: false,
-      languages: ['english', 'hindi'],
-    },
-    {
-      id: 'video-3',
-      name: 'Corporate Event Video',
-      thumbnail: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4',
-      category: 'Video',
-      likes: 167,
-      downloads: 98,
-      isLiked: false,
-      isDownloaded: false,
-      languages: ['english', 'marathi'],
-    },
-    {
-      id: 'video-4',
-      name: 'Birthday Celebration Video',
-      thumbnail: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerEscapes.mp4',
-      category: 'Video',
-      likes: 145,
-      downloads: 87,
-      isLiked: false,
-      isDownloaded: false,
-      languages: ['english'],
-    },
-    {
-      id: 'video-5',
-      name: 'Music Festival Video',
-      thumbnail: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerFun.mp4',
-      category: 'Video',
-      likes: 298,
-      downloads: 201,
-      isLiked: false,
-      isDownloaded: false,
-      languages: ['hindi', 'marathi'],
-    },
-    {
-      id: 'video-6',
-      name: 'Conference Highlights Video',
-      thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerJoyrides.mp4',
-      category: 'Video',
-      likes: 178,
-      downloads: 134,
-      isLiked: false,
-      isDownloaded: false,
-      languages: ['hindi'],
-    },
-    {
-      id: 'video-7',
-      name: 'Product Launch Video',
-      thumbnail: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ForBiggerMeltdowns.mp4',
-      category: 'Video',
-      likes: 223,
-      downloads: 167,
-      isLiked: false,
-      isDownloaded: false,
-      languages: ['marathi'],
-    },
-    {
-      id: 'video-8',
-      name: 'Award Ceremony Video',
-      thumbnail: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/Sintel.mp4',
-      category: 'Video',
-      likes: 156,
-      downloads: 98,
-      isLiked: false,
-      isDownloaded: false,
-      languages: ['hindi', 'marathi'],
-    },
-    {
-      id: 'video-9',
-      name: 'Team Building Video',
-      thumbnail: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/SubaruOutbackOnStreetAndDirt.mp4',
-      category: 'Video',
-      likes: 134,
-      downloads: 76,
-      isLiked: false,
-      isDownloaded: false,
-      languages: ['english', 'hindi'],
-    },
-    {
-      id: 'video-10',
-      name: 'Gala Dinner Video',
-      thumbnail: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=300&h=200&fit=crop',
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/TearsOfSteel.mp4',
-      category: 'Video',
-      likes: 189,
-      downloads: 123,
-      isLiked: false,
-      isDownloaded: false,
-    },
-  ], []);
+  // Mock video templates removed - using only API data
+  // const mockVideoTemplates: Template[] = useMemo(() => [
+  // All mock video template data removed
 
-  const mockTemplates: Template[] = useMemo(() => [
-    {
-      id: '1',
-      name: 'Wedding Planning',
-      thumbnail: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop',
-      category: 'Event Planners',
-      likes: 156,
-      downloads: 89,
-      isLiked: false,
-      isDownloaded: false,
-    },
-    {
-      id: '2',
-      name: 'Corporate Event Setup',
-      thumbnail: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=300&h=200&fit=crop',
-      category: 'Event Planners',
-      likes: 234,
-      downloads: 167,
-      isLiked: false,
-      isDownloaded: false,
-    },
-    {
-      id: '3',
-      name: 'Birthday Celebration',
-      thumbnail: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop',
-      category: 'Event Planners',
-      likes: 89,
-      downloads: 45,
-      isLiked: false,
-      isDownloaded: true,
-    },
-    {
-      id: '4',
-      name: 'Floral Decorations',
-      thumbnail: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop',
-      category: 'Decorators',
-      likes: 312,
-      downloads: 198,
-      isLiked: false,
-      isDownloaded: false,
-    },
-    {
-      id: '5',
-      name: 'Balloon Arrangements',
-      thumbnail: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop',
-      category: 'Decorators',
-      likes: 178,
-      downloads: 123,
-      isLiked: false,
-      isDownloaded: false,
-    },
-    {
-      id: '6',
-      name: 'Table Settings',
-      thumbnail: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=300&h=200&fit=crop',
-      category: 'Decorators',
-      likes: 145,
-      downloads: 87,
-      isLiked: false,
-      isDownloaded: false,
-    },
-    {
-      id: '7',
-      name: 'Stage Lighting',
-      thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=300&h=200&fit=crop',
-      category: 'Light Suppliers',
-      likes: 203,
-      downloads: 134,
-      isLiked: false,
-      isDownloaded: false,
-    },
-    {
-      id: '8',
-      name: 'Sound System Setup',
-      thumbnail: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=300&h=200&fit=crop',
-      category: 'Sound Suppliers',
-      likes: 167,
-      downloads: 98,
-      isLiked: false,
-      isDownloaded: false,
-    },
-    {
-      id: '9',
-      name: 'DJ Equipment',
-      thumbnail: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&h=200&fit=crop',
-      category: 'Sound Suppliers',
-      likes: 145,
-      downloads: 76,
-      isLiked: false,
-      isDownloaded: true,
-    },
-    {
-      id: '10',
-      name: 'LED Displays',
-      thumbnail: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=300&h=200&fit=crop',
-      category: 'Light Suppliers',
-      likes: 189,
-      downloads: 112,
-      isLiked: false,
-      isDownloaded: false,
-    },
-    {
-      id: '11',
-      name: 'Conference Setup',
-      thumbnail: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=300&h=200&fit=crop',
-      category: 'Event Planners',
-      likes: 234,
-      downloads: 156,
-      isLiked: false,
-      isDownloaded: false,
-    },
-    {
-      id: '12',
-      name: 'Wedding Decor',
-      thumbnail: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
-      category: 'Decorators',
-      likes: 178,
-      downloads: 89,
-      isLiked: false,
-      isDownloaded: false,
-    },
-  ], []);
+  // Mock templates removed - using only API data
+  // const mockTemplates: Template[] = useMemo(() => [
+  //   {
+  //     id: '1',
+  //     name: 'Wedding Planning',
+  //     thumbnail: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop',
+  //     category: 'Event Planners',
+  //     likes: 156,
+  //     downloads: 89,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  //   {
+  //     id: '2',
+  //     name: 'Corporate Event Setup',
+  //     thumbnail: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=300&h=200&fit=crop',
+  //     category: 'Event Planners',
+  //     likes: 234,
+  //     downloads: 167,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  //   {
+  //     id: '3',
+  //     name: 'Birthday Celebration',
+  //     thumbnail: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop',
+  //     category: 'Event Planners',
+  //     likes: 89,
+  //     downloads: 45,
+  //     isLiked: false,
+  //     isDownloaded: true,
+  //   },
+  //   {
+  //     id: '4',
+  //     name: 'Floral Decorations',
+  //     thumbnail: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop',
+  //     category: 'Decorators',
+  //     likes: 312,
+  //     downloads: 198,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  //   {
+  //     id: '5',
+  //     name: 'Balloon Arrangements',
+  //     thumbnail: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop',
+  //     category: 'Decorators',
+  //     likes: 178,
+  //     downloads: 123,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  //   {
+  //     id: '6',
+  //     name: 'Table Settings',
+  //     thumbnail: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=300&h=200&fit=crop',
+  //     category: 'Decorators',
+  //     likes: 145,
+  //     downloads: 87,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  //   {
+  //     id: '7',
+  //     name: 'Stage Lighting',
+  //     thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=300&h=200&fit=crop',
+  //     category: 'Light Suppliers',
+  //     likes: 203,
+  //     downloads: 134,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  //   {
+  //     id: '8',
+  //     name: 'Sound System Setup',
+  //     thumbnail: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=300&h=200&fit=crop',
+  //     category: 'Sound Suppliers',
+  //     likes: 167,
+  //     downloads: 98,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  //   {
+  //     id: '9',
+  //     name: 'DJ Equipment',
+  //     thumbnail: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&h=200&fit=crop',
+  //     category: 'Sound Suppliers',
+  //     likes: 145,
+  //     downloads: 76,
+  //     isLiked: false,
+  //     isDownloaded: true,
+  //   },
+  //   {
+  //     id: '10',
+  //     name: 'LED Displays',
+  //     thumbnail: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=300&h=200&fit=crop',
+  //     category: 'Light Suppliers',
+  //     likes: 189,
+  //     downloads: 112,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  //   {
+  //     id: '11',
+  //     name: 'Conference Setup',
+  //     thumbnail: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=300&h=200&fit=crop',
+  //     category: 'Event Planners',
+  //     likes: 234,
+  //     downloads: 156,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  //   {
+  //     id: '12',
+  //     name: 'Wedding Decor',
+  //     thumbnail: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
+  //     category: 'Decorators',
+  //     likes: 178,
+  //     downloads: 89,
+  //     isLiked: false,
+  //     isDownloaded: false,
+  //   },
+  // ], []);
 
-  const mockCategories: Category[] = useMemo(() => [
-    { id: 'all', name: 'All' },
-    { id: 'event-planners', name: 'Event Planners' },
-    { id: 'decorators', name: 'Decorators' },
-    { id: 'sound-suppliers', name: 'Sound Suppliers' },
-    { id: 'light-suppliers', name: 'Light Suppliers' },
-  ], []);
+  // Mock categories removed - using only API data
+  // const mockCategories: Category[] = useMemo(() => [
+  //   { id: 'all', name: 'All' },
+  //   { id: 'event-planners', name: 'Event Planners' },
+  //   { id: 'decorators', name: 'Decorators' },
+  //   { id: 'sound-suppliers', name: 'Sound Suppliers' },
+  //   { id: 'light-suppliers', name: 'Light Suppliers' },
+  // ], []);
 
 
 
-  const mockUpcomingEvents = useMemo(() => [
-    {
-      id: '1',
-      title: 'Tech Conference 2024',
-      date: 'Dec 15, 2024',
-      time: '9:00 AM',
-      location: 'Convention Center',
-      imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=150&fit=crop',
-      attendees: 250,
-      category: 'Conference',
-    },
-    {
-      id: '2',
-      title: 'Wedding Expo',
-      date: 'Dec 20, 2024',
-      time: '2:00 PM',
-      location: 'Grand Hotel',
-      imageUrl: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=150&fit=crop',
-      attendees: 180,
-      category: 'Wedding',
-    },
-    {
-      id: '3',
-      title: 'Corporate Gala',
-      date: 'Dec 25, 2024',
-      time: '7:00 PM',
-      location: 'Business Center',
-      imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=300&h=150&fit=crop',
-      attendees: 120,
-      category: 'Corporate',
-    },
-    {
-      id: '4',
-      title: 'Music Festival',
-      date: 'Dec 30, 2024',
-      time: '6:00 PM',
-      location: 'City Park',
-      imageUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=150&fit=crop',
-      attendees: 500,
-      category: 'Festival',
-    },
-  ], []);
+  // Mock upcoming events removed - using only API data
+  // const mockUpcomingEvents = useMemo(() => [
+  //   {
+  //     id: '1',
+  //     title: 'Tech Conference 2024',
+  //     date: 'Dec 15, 2024',
+  //     time: '9:00 AM',
+  //     location: 'Convention Center',
+  //     imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=150&fit=crop',
+  //     attendees: 250,
+  //     category: 'Conference',
+  //   },
+  //   {
+  //     id: '2',
+  //     title: 'Wedding Expo',
+  //     date: 'Dec 20, 2024',
+  //     time: '2:00 PM',
+  //     location: 'Grand Hotel',
+  //     imageUrl: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=150&fit=crop',
+  //     attendees: 180,
+  //     category: 'Wedding',
+  //   },
+  //   {
+  //     id: '3',
+  //     title: 'Corporate Gala',
+  //     date: 'Dec 25, 2024',
+  //     time: '7:00 PM',
+  //     location: 'Business Center',
+  //     imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=300&h=150&fit=crop',
+  //     attendees: 120,
+  //     category: 'Corporate',
+  //   },
+  //   {
+  //     id: '4',
+  //     title: 'Music Festival',
+  //     date: 'Dec 30, 2024',
+  //     time: '6:00 PM',
+  //     location: 'City Park',
+  //     imageUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=150&fit=crop',
+  //     attendees: 500,
+  //     category: 'Festival',
+  //   },
+  // ], []);
 
 
 
@@ -418,25 +282,19 @@ const HomeScreen: React.FC = React.memo(() => {
       setLoading(true);
       
       try {
-        // Use mock data only
-        setBanners(mockBanners);
-        
-        // Apply user-specific like status to templates
-        const templatesWithUserLikes = await applyUserLikeStatus(mockTemplates);
-        setTemplates(templatesWithUserLikes);
-        
-        setCategories(mockCategories);
+        // Load data from APIs only - no mock data
+        await loadApiData();
       } catch (error) {
-        console.log('Error loading mock data:', error);
+        console.log('Error loading API data:', error);
       } finally {
         setLoading(false);
       }
     };
     
     loadInitialData();
-  }, [activeTab, applyUserLikeStatus]);
+  }, [activeTab, loadApiData]);
 
-  // Load data from APIs with mock data fallback
+  // Load data from APIs only - no mock data fallback
   const loadApiData = useCallback(async () => {
     setApiLoading(true);
     setApiError(null);
@@ -457,7 +315,7 @@ const HomeScreen: React.FC = React.memo(() => {
         setFeaturedContent(featuredResponse.value.data);
         console.log('✅ Featured content loaded:', featuredResponse.value.data.length, 'items');
       } else {
-        console.log('⚠️ Featured content API failed, using mock data');
+        console.log('⚠️ Featured content API failed');
         setFeaturedContent([]);
       }
 
@@ -466,7 +324,7 @@ const HomeScreen: React.FC = React.memo(() => {
         setUpcomingEvents(eventsResponse.value.data);
         console.log('✅ Upcoming events loaded:', eventsResponse.value.data.length, 'items');
       } else {
-        console.log('⚠️ Upcoming events API failed, using mock data');
+        console.log('⚠️ Upcoming events API failed');
         setUpcomingEvents([]);
       }
 
@@ -475,7 +333,7 @@ const HomeScreen: React.FC = React.memo(() => {
         setProfessionalTemplates(templatesResponse.value.data);
         console.log('✅ Professional templates loaded:', templatesResponse.value.data.length, 'items');
       } else {
-        console.log('⚠️ Professional templates API failed, using mock data');
+        console.log('⚠️ Professional templates API failed');
         setProfessionalTemplates([]);
       }
 
@@ -484,7 +342,7 @@ const HomeScreen: React.FC = React.memo(() => {
         setVideoContent(videosResponse.value.data);
         console.log('✅ Video content loaded:', videosResponse.value.data.length, 'items');
       } else {
-        console.log('⚠️ Video content API failed, using mock data');
+        console.log('⚠️ Video content API failed');
         setVideoContent([]);
       }
 
@@ -529,60 +387,50 @@ const HomeScreen: React.FC = React.memo(() => {
     loadBusinessCategoryPosters();
   }, [loadBusinessCategoryPosters]);
 
-  // Handle search query changes and apply user-specific like status
+  // Handle search query changes - using API data only
   useEffect(() => {
     const handleSearchQueryChange = async () => {
       if (searchQuery.trim() === '') {
-        // Reset to show all templates with user-specific likes
-        const templatesWithUserLikes = await applyUserLikeStatus(mockTemplates);
-        setTemplates(templatesWithUserLikes);
+        // Reset to show all professional templates from API
+        setTemplates(professionalTemplates);
       }
     };
 
     handleSearchQueryChange();
-  }, [searchQuery, applyUserLikeStatus]);
+  }, [searchQuery, professionalTemplates]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     
     try {
-      // Refresh both mock data and API data
-      setBanners(mockBanners);
-      
-      // Apply user-specific like status to templates
-      const templatesWithUserLikes = await applyUserLikeStatus(mockTemplates);
-      setTemplates(templatesWithUserLikes);
-      
-      setCategories(mockCategories);
-      
-      // Also refresh API data
+      // Refresh API data only
       await loadApiData();
     } catch (error) {
       console.log('Error refreshing data:', error);
     } finally {
       setRefreshing(false);
     }
-  }, [mockBanners, mockTemplates, mockCategories, loadApiData, applyUserLikeStatus]);
+  }, [loadApiData]);
 
   const handleTabChange = useCallback(async (tab: string) => {
     setActiveTab(tab);
     setSelectedCategory('all'); // Reset category when changing tabs
     setIsSearching(false); // Reset search state
     
-    // Use mock data for different tabs
+    // Use API data for different tabs
     try {
-      // Filter mock templates based on tab
-      const filteredTemplates = mockTemplates.filter(template => {
-        if (tab === 'daily') return template.category.toLowerCase().includes('daily');
-        if (tab === 'festival') return template.category.toLowerCase().includes('festival');
-        if (tab === 'special') return template.category.toLowerCase().includes('special');
+      // Filter professional templates based on tab
+      const filteredTemplates = professionalTemplates.filter(template => {
+        if (tab === 'daily') return template.category?.toLowerCase().includes('daily');
+        if (tab === 'festival') return template.category?.toLowerCase().includes('festival');
+        if (tab === 'special') return template.category?.toLowerCase().includes('special');
         return true; // 'all' tab shows all templates
       });
       setTemplates(filteredTemplates);
     } catch (error) {
       console.log('Error filtering templates for tab:', tab, error);
     }
-  }, [mockTemplates]);
+  }, [professionalTemplates]);
 
   // Apply user-specific like status to templates
   const applyUserLikeStatus = useCallback(async (templates: Template[]) => {
@@ -699,11 +547,11 @@ const HomeScreen: React.FC = React.memo(() => {
     if (!searchQuery.trim()) {
       setIsSearching(false);
       setDisableBackgroundUpdates(false); // Re-enable background updates when clearing search
-      // Reset to current tab and category state
+      // Reset to current tab and category state using API data
       if (selectedCategory === 'all') {
-        setTemplates(mockTemplates);
+        setTemplates(professionalTemplates);
       } else {
-        const filtered = mockTemplates.filter(template => {
+        const filtered = professionalTemplates.filter(template => {
           const categoryMap: { [key: string]: string } = {
             'event-planners': 'Event Planners',
             'decorators': 'Decorators',
@@ -743,10 +591,10 @@ const HomeScreen: React.FC = React.memo(() => {
     
     setIsSearching(true);
     setDisableBackgroundUpdates(true); // Disable background updates when searching
-    // Use local search immediately for better performance
-    const filtered = mockTemplates.filter(template => 
-      template.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      template.category.toLowerCase().includes(searchQuery.toLowerCase())
+    // Use local search immediately for better performance with API data
+    const filtered = professionalTemplates.filter(template => 
+      template.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      template.category?.toLowerCase().includes(searchQuery.toLowerCase())
     );
     setTemplates(filtered);
     
@@ -765,7 +613,7 @@ const HomeScreen: React.FC = React.memo(() => {
         console.error('Search error:', error);
       }
     }, 100);
-  }, [searchQuery, selectedCategory, activeTab, mockTemplates, currentRequestId, isSearching]);
+  }, [searchQuery, selectedCategory, activeTab, professionalTemplates, currentRequestId, isSearching]);
 
   const handleCategorySelect = useCallback(async (categoryId: string) => {
     setSelectedCategory(categoryId);
@@ -776,8 +624,8 @@ const HomeScreen: React.FC = React.memo(() => {
     setCurrentRequestId(requestId);
     
     if (categoryId === 'all') {
-      // Use mock data immediately for better performance
-      setTemplates(mockTemplates);
+      // Use API data immediately for better performance
+      setTemplates(professionalTemplates);
       
       // Try API call in background
       setTimeout(async () => {
@@ -791,14 +639,14 @@ const HomeScreen: React.FC = React.memo(() => {
             setTemplates(templatesData);
           }
         } catch (error) {
-          console.log('Using mock data for all category:', error);
+          console.log('Using API data for all category:', error);
         }
       }, 100);
       return;
     }
     
-    // Use local filtering immediately for better performance
-    const filtered = mockTemplates.filter(template => {
+    // Use local filtering immediately for better performance with API data
+    const filtered = professionalTemplates.filter(template => {
       const categoryMap: { [key: string]: string } = {
         'event-planners': 'Event Planners',
         'decorators': 'Decorators',
@@ -824,7 +672,7 @@ const HomeScreen: React.FC = React.memo(() => {
         console.error('Category filter error:', error);
       }
     }, 100);
-  }, [activeTab, mockTemplates, currentRequestId, selectedCategory]);
+  }, [activeTab, professionalTemplates, currentRequestId, selectedCategory]);
 
 
 
@@ -834,20 +682,20 @@ const HomeScreen: React.FC = React.memo(() => {
     
     if (isVideoTemplate) {
       // Navigate to VideoPlayer screen for video templates
-      const related = mockVideoTemplates.filter(video => video.id !== template.id);
+      const related = videoContent.filter(video => video.id !== template.id);
       navigation.navigate('VideoPlayer', {
         selectedVideo: template,
         relatedVideos: related,
       });
     } else {
       // Navigate to PosterPlayer screen for regular templates
-      const related = mockTemplates.filter(poster => poster.id !== template.id);
+      const related = professionalTemplates.filter(poster => poster.id !== template.id);
       navigation.navigate('PosterPlayer', {
         selectedPoster: template,
         relatedPosters: related,
       });
     }
-  }, [mockVideoTemplates, mockTemplates, navigation]);
+  }, [videoContent, professionalTemplates, navigation]);
 
   const closeModal = useCallback(() => {
     setIsModalVisible(false);
@@ -885,7 +733,7 @@ const HomeScreen: React.FC = React.memo(() => {
           };
           navigation.navigate('PosterPlayer', {
             selectedPoster: bannerTemplate,
-            relatedPosters: mockTemplates.slice(0, 6), // Show first 6 templates as related
+            relatedPosters: professionalTemplates.slice(0, 6), // Show first 6 templates as related
           });
         }}
       >
@@ -913,7 +761,7 @@ const HomeScreen: React.FC = React.memo(() => {
                  };
                  navigation.navigate('PosterPlayer', {
                    selectedPoster: bannerTemplate,
-                   relatedPosters: mockTemplates.slice(0, 6), // Show first 6 templates as related
+                   relatedPosters: professionalTemplates.slice(0, 6), // Show first 6 templates as related
                  });
                }}
              >
@@ -923,7 +771,7 @@ const HomeScreen: React.FC = React.memo(() => {
          </View>
       </TouchableOpacity>
     );
-  }, [theme, navigation, mockTemplates]);
+  }, [theme, navigation, professionalTemplates]);
 
                                        
 
@@ -1352,7 +1200,7 @@ const HomeScreen: React.FC = React.memo(() => {
                 contentContainerStyle={styles.upcomingEventsList}
                 nestedScrollEnabled={true}
               >
-                {mockUpcomingEvents.map((event) => (
+                {upcomingEvents.map((event) => (
                   <TouchableOpacity
                     key={event.id}
                     activeOpacity={0.8}
@@ -1371,7 +1219,7 @@ const HomeScreen: React.FC = React.memo(() => {
                       };
                       navigation.navigate('PosterPlayer', {
                         selectedPoster: eventTemplate,
-                        relatedPosters: mockTemplates.slice(0, 6), // Show first 6 templates as related
+                        relatedPosters: professionalTemplates.slice(0, 6), // Show first 6 templates as related
                       });
                     }}
                   >
@@ -1463,7 +1311,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.videoSection}>
             <Text style={styles.sectionTitle}>Video Content</Text>
             <FlatList
-              data={mockVideoTemplates}
+              data={videoContent}
               renderItem={renderVideoTemplate}
               keyExtractor={keyExtractor}
               numColumns={3}
@@ -1587,7 +1435,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  data={mockUpcomingEvents}
+                  data={upcomingEvents}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={3}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -1611,7 +1459,7 @@ const HomeScreen: React.FC = React.memo(() => {
                         };
                         navigation.navigate('PosterPlayer', {
                           selectedPoster: eventTemplate,
-                          relatedPosters: mockTemplates.slice(0, 6), // Show first 6 templates as related
+                          relatedPosters: professionalTemplates.slice(0, 6), // Show first 6 templates as related
                         });
                       }}
                     >

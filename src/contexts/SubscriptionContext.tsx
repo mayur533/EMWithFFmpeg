@@ -21,7 +21,6 @@ interface SubscriptionContextType {
   refreshSubscription: () => Promise<void>;
   refreshTransactions: () => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'timestamp'>) => Promise<Transaction>;
-  generateDemoTransactions: () => Promise<void>;
   clearTransactions: () => Promise<void>;
   checkPremiumAccess: (feature: string) => boolean;
 }
@@ -123,15 +122,6 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     }
   };
 
-  // Generate demo transactions
-  const generateDemoTransactions = async () => {
-    try {
-      await transactionHistoryService.generateDemoTransactions();
-      await refreshTransactions();
-    } catch (error) {
-      console.error('Error generating demo transactions:', error);
-    }
-  };
 
   // Clear all transactions
   const clearTransactions = async () => {
@@ -177,7 +167,6 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       refreshSubscription,
       refreshTransactions,
       addTransaction,
-      generateDemoTransactions,
       clearTransactions,
       checkPremiumAccess,
     }}>

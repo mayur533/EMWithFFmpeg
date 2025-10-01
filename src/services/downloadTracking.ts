@@ -255,17 +255,18 @@ class DownloadTrackingService {
   }
 
   private getMockDownloadStats(): DownloadStats {
+    // Return empty stats for new users instead of mock data
     return {
-      total: 15,
-      recent: 3,
+      total: 0,
+      recent: 0,
       byType: {
-        templates: 8,
-        videos: 4,
-        greetings: 2,
-        content: 1
+        templates: 0,
+        videos: 0,
+        greetings: 0,
+        content: 0
       },
-      mostDownloadedType: 'TEMPLATE',
-      mostDownloadedCount: 8
+      mostDownloadedType: null,
+      mostDownloadedCount: 0
     };
   }
 }

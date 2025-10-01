@@ -1,6 +1,7 @@
 import api from './api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import authService from './auth';
+import authApi from './authApi';
 
 // ========================================
 // LOGIN APIs - Backend Implementation Guide
@@ -160,7 +161,14 @@ class LoginAPIsService {
       
       if (response.data.success) {
         // Store user data and token in auth service
-        const { user, accessToken } = response.data.data;
+        console.log('🔍 Registration response data structure:', JSON.stringify(response.data.data, null, 2));
+        const { user, accessToken, token } = response.data.data;
+        const authTokenToSave = accessToken || token; // Backend might return 'token' or 'accessToken'
+        
+        console.log('🔑 accessToken value:', accessToken);
+        console.log('🔑 token value:', token);
+        console.log('🔑 Extracted token from response:', authTokenToSave ? 'YES' : 'NO');
+        console.log('🔑 Token length:', authTokenToSave?.length || 0);
         
         // Create complete user data by merging backend response with registration data
         const completeUserData = {
@@ -177,9 +185,9 @@ class LoginAPIsService {
           companyLogo: data.companyLogo,
         };
         
-        // Update auth service with complete user data
+        // IMPORTANT: Save token to storage FIRST
+        await authService.saveUserToStorage(completeUserData, authTokenToSave);
         authService.setCurrentUser(completeUserData);
-        await authService.saveUserToStorage(completeUserData, accessToken);
         
         // Notify auth state listeners (this will trigger navigation)
         authService.notifyAuthStateListeners(completeUserData);
@@ -222,15 +230,26 @@ class LoginAPIsService {
       
       if (response.data.success) {
         // Store user data and token in auth service
-        const { user, accessToken } = response.data.data;
+        console.log('🔍 Response data structure:', JSON.stringify(response.data.data, null, 2));
+        const { user, accessToken, token } = response.data.data;
+        const authTokenToSave = accessToken || token; // Backend might return 'token' or 'accessToken'
         
-        // Fetch complete profile data from API after login
+        console.log('🔑 accessToken value:', accessToken);
+        console.log('🔑 token value:', token);
+        console.log('🔑 Extracted token from response:', authTokenToSave ? 'YES' : 'NO');
+        console.log('🔑 Token length:', authTokenToSave?.length || 0);
+        
+        // IMPORTANT: Save token to storage FIRST so it's available for subsequent API calls
+        await authService.saveUserToStorage(user, authTokenToSave);
+        authService.setCurrentUser(user);
+        
+        // Now fetch complete profile data from API (token is now available in AsyncStorage)
         let completeUserData = user;
         try {
           console.log('🔍 Fetching complete profile data from API after login...');
           
           // Try to get complete profile using user ID
-          const profileResponse = await authApi.getProfile(undefined, user.id);
+          const profileResponse = await authApi.getProfile(user.id);
           if (profileResponse.success && profileResponse.data) {
             completeUserData = {
               ...user,
@@ -238,17 +257,17 @@ class LoginAPIsService {
             };
             console.log('✅ Complete profile data fetched from API and merged');
             console.log('🔍 Complete profile data:', JSON.stringify(completeUserData, null, 2));
+            
+            // Update storage with complete profile data
+            await authService.saveUserToStorage(completeUserData, authTokenToSave);
+            authService.setCurrentUser(completeUserData);
           } else {
             console.log('⚠️ Profile API returned no data, using basic user data');
           }
-        } catch (profileError) {
+        } catch (profileError: any) {
           console.log('⚠️ Failed to fetch complete profile from API, using basic user data:', profileError.message);
           // Continue with basic user data - the profile will be fetched later when needed
         }
-        
-        // Update auth service with complete user data
-        authService.setCurrentUser(completeUserData);
-        await authService.saveUserToStorage(completeUserData, accessToken);
         
         // Notify auth state listeners (this will trigger navigation)
         authService.notifyAuthStateListeners(completeUserData);

@@ -105,9 +105,8 @@ const BusinessProfilesScreen: React.FC = () => {
       console.log('🔍 BusinessProfilesScreen - User ID:', userId);
       
       if (!userId) {
-        console.log('⚠️ No user ID available, using mock business profiles');
-        const mockProfiles = businessProfileService.getMockProfiles();
-        setProfiles(mockProfiles);
+        console.log('⚠️ No user ID available, no profiles to load');
+        setProfiles([]);
         return;
       }
       
@@ -121,16 +120,14 @@ const BusinessProfilesScreen: React.FC = () => {
         console.log('✅ Loaded user-specific business profiles from API:', apiProfiles.length);
         console.log('🔍 Loaded profiles:', JSON.stringify(apiProfiles, null, 2));
       } else {
-        // Fallback to mock data
-        const mockProfiles = businessProfileService.getMockProfiles();
-        setProfiles(mockProfiles);
-        console.log('📋 Using mock business profiles');
+        // No profiles found from API
+        setProfiles([]);
+        console.log('📋 No business profiles found for user');
       }
     } catch (error) {
       console.error('Error loading business profiles:', error);
-      // Fallback to mock data
-      const mockProfiles = businessProfileService.getMockProfiles();
-      setProfiles(mockProfiles);
+      // No profiles available due to error
+      setProfiles([]);
     } finally {
       setLoading(false);
     }
@@ -161,14 +158,8 @@ const BusinessProfilesScreen: React.FC = () => {
       console.log('✅ Search results:', results.length, 'profiles found');
     } catch (error) {
       console.error('Error searching profiles:', error);
-      // Fallback to mock data search
-      const mockProfiles = businessProfileService.getMockProfiles();
-      const filtered = mockProfiles.filter(profile => 
-        profile.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        profile.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        profile.category.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-      setProfiles(filtered);
+      // No search results available due to error
+      setProfiles([]);
     }
   }, [searchQuery, loadBusinessProfiles]);
 

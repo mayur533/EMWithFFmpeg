@@ -45,38 +45,6 @@ export interface UserStats {
 }
 
 class UserProfileService {
-  // Get user preferences from backend
-  async getUserPreferences(userId: string): Promise<UserPreferences> {
-    try {
-      console.log('🔍 Fetching user preferences from backend for user:', userId);
-      const response = await api.get(`/api/mobile/users/${userId}/preferences`);
-      
-      if (response.data.success) {
-        console.log('✅ User preferences fetched from backend');
-        return response.data.data;
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
-    } catch (error) {
-      console.error('❌ Error fetching user preferences from backend:', error);
-      console.log('⚠️ Returning default preferences due to API error');
-      
-      // Return default preferences
-      return {
-        userId,
-        notificationsEnabled: true,
-        darkModeEnabled: false,
-        defaultViewMode: 'grid',
-        preferredCategories: [],
-        language: 'en',
-        autoSave: true,
-        highQualityDownloads: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-    }
-  }
-
   // Update user preferences in backend
   async updateUserPreferences(userId: string, preferences: PreferenceUpdate): Promise<UserPreferences> {
     try {
@@ -171,13 +139,13 @@ class UserProfileService {
     try {
       const stats = await this.getUserStats(userId);
       return {
-        total: stats.likes.total,
-        recentCount: stats.likes.recentCount,
+        total: stats?.likes?.total || 0,
+        recentCount: stats?.likes?.recentCount || 0,
         byType: {
-          template: stats.likes.byType.template,
-          video: stats.likes.byType.video,
-          poster: stats.likes.byType.greeting, // Map greeting to poster for compatibility
-          businessProfile: stats.likes.byType.businessProfile
+          template: stats?.likes?.byType?.template || 0,
+          video: stats?.likes?.byType?.video || 0,
+          poster: stats?.likes?.byType?.greeting || 0, // Map greeting to poster for compatibility
+          businessProfile: stats?.likes?.byType?.businessProfile || 0
         }
       };
     } catch (error) {

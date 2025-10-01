@@ -51,7 +51,7 @@ type FilterType = 'all' | 'success' | 'failed' | 'pending';
 const TransactionHistoryScreen: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { transactions, transactionStats, refreshTransactions, generateDemoTransactions, clearTransactions } = useSubscription();
+  const { transactions, transactionStats, refreshTransactions, clearTransactions } = useSubscription();
   const { theme } = useTheme();
   
   const [refreshing, setRefreshing] = useState(false);
@@ -115,23 +115,6 @@ const TransactionHistoryScreen: React.FC = () => {
     }
   };
 
-  // Handle demo data generation
-  const handleGenerateDemoData = () => {
-    Alert.alert(
-      'Generate Demo Data',
-      'This will add sample transactions for testing. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Generate', 
-          onPress: async () => {
-            await generateDemoTransactions();
-            Alert.alert('Success', 'Demo transactions generated successfully!');
-          }
-        },
-      ]
-    );
-  };
 
   // Handle clear transactions
   const handleClearTransactions = () => {
@@ -299,12 +282,6 @@ const TransactionHistoryScreen: React.FC = () => {
         <View style={styles.headerActions}>
           <TouchableOpacity
             style={styles.headerActionButton}
-            onPress={handleGenerateDemoData}
-          >
-            <Icon name="add" size={20} color="#ffffff" />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.headerActionButton}
             onPress={handleClearTransactions}
           >
             <Icon name="delete" size={20} color="#ffffff" />
@@ -339,14 +316,6 @@ const TransactionHistoryScreen: React.FC = () => {
                   : `No ${filter} transactions found.`
                 }
               </Text>
-              {filter === 'all' && (
-                <TouchableOpacity
-                  style={[styles.generateDemoButton, { backgroundColor: '#667eea' }]}
-                  onPress={handleGenerateDemoData}
-                >
-                  <Text style={styles.generateDemoButtonText}>Generate Demo Data</Text>
-                </TouchableOpacity>
-              )}
             </View>
           ) : (
             <FlatList
@@ -554,16 +523,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize.sm,
     textAlign: 'center',
     marginBottom: responsiveSpacing.lg,
-  },
-  generateDemoButton: {
-    paddingHorizontal: responsiveSpacing.lg,
-    paddingVertical: responsiveSpacing.sm,
-    borderRadius: responsiveSpacing.md,
-  },
-  generateDemoButtonText: {
-    color: '#ffffff',
-    fontSize: responsiveFontSize.sm,
-    fontWeight: '600',
   },
 });
 

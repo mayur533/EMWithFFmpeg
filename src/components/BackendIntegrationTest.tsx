@@ -66,8 +66,8 @@ const BackendIntegrationTest: React.FC = () => {
     // Test 3: User Service Initialization
     addTestResult('User Service Init', 'pending', 'Initializing user service...');
     try {
-      const deviceId = await userService.initialize();
-      updateTestResult('User Service Init', 'success', `Device ID: ${deviceId}`, { deviceId });
+      await userService.initialize();
+      updateTestResult('User Service Init', 'success', `User service initialized successfully`);
     } catch (error) {
       updateTestResult('User Service Init', 'error', `User service init failed: ${error}`, error);
     }

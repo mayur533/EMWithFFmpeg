@@ -21,7 +21,7 @@ export const API_ENDPOINTS = {
   // Installed Users (App Users)
   INSTALLED_USERS: {
     REGISTER: '/api/installed-users/register',
-    PROFILE: (deviceId: string) => `/api/installed-users/profile/${deviceId}`,
+    PROFILE: (userId: string) => `/api/installed-users/profile/${userId}`,
     ACTIVITY: '/api/installed-users/activity',
   },
   
@@ -93,7 +93,6 @@ export interface BusinessCategory {
 
 export interface User {
   id: string;
-  deviceId: string;
   name: string;
   email: string;
   phone: string;
@@ -105,7 +104,7 @@ export interface User {
 }
 
 export interface UserActivity {
-  deviceId: string;
+  userId: string;
   action: string;
   resourceType: string;
   resourceId: string;
@@ -197,9 +196,9 @@ export const RATE_LIMIT = {
   WINDOW_MS: 15 * 60 * 1000, // 15 minutes
 };
 
-// Device ID Generation
-export const generateDeviceId = (): string => {
-  return `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+// User ID Generation (for activities)
+export const generateUserId = (): string => {
+  return `user_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 };
 
 // API Helper Functions

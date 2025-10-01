@@ -37,12 +37,20 @@ class AuthService {
   // Save user to AsyncStorage
   async saveUserToStorage(user: any, token?: string) {
     try {
+      console.log('💾 Saving user to AsyncStorage...', user.id);
       await AsyncStorage.setItem('currentUser', JSON.stringify(user));
       if (token) {
+        console.log('🔐 Saving auth token to AsyncStorage...');
         await AsyncStorage.setItem('authToken', token);
+        console.log('✅ Auth token saved successfully');
+        
+        // Verify token was saved
+        const savedToken = await AsyncStorage.getItem('authToken');
+        console.log('🔍 Verified token in storage:', savedToken ? 'YES' : 'NO');
       }
+      console.log('✅ User data saved to AsyncStorage successfully');
     } catch (error) {
-      console.error('Error saving user to storage:', error);
+      console.error('❌ Error saving user to storage:', error);
     }
   }
 

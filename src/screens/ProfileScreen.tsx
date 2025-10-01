@@ -83,6 +83,8 @@ const ProfileScreen: React.FC = () => {
     currentUser?.companyLogo || currentUser?.businessLogo || currentUser?.logo || null
   );
   const [userPreferences, setUserPreferences] = useState<any>(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
   const { isDarkMode, toggleDarkMode, theme } = useTheme();
   const { isSubscribed, transactionStats } = useSubscription();
   const insets = useSafeAreaInsets();
@@ -124,11 +126,24 @@ const ProfileScreen: React.FC = () => {
             return;
           }
 
+          // Wait for token to be available in AsyncStorage (with retry)
+          let token = await AsyncStorage.getItem('authToken');
+          if (!token) {
+            console.log('⏳ Token not yet in storage, waiting...');
+            await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+            token = await AsyncStorage.getItem('authToken');
+            if (!token) {
+              console.log('⚠️ Token still not available after wait, API calls may fail');
+            } else {
+              console.log('✅ Token now available in storage');
+            }
+          }
+
           console.log('🔍 Loading complete user profile data for user:', userId);
 
           // Load complete user profile from backend
           try {
-            const profileResponse = await authApi.getProfile(currentUser?.deviceId, userId);
+            const profileResponse = await authApi.getProfile(userId);
             const completeUserData = profileResponse.data;
             
             console.log('🔍 Complete Profile Data from API:', JSON.stringify(completeUserData, null, 2));
@@ -156,35 +171,26 @@ const ProfileScreen: React.FC = () => {
           // Load poster stats
           const posterStats = await downloadedPostersService.getPosterStats(userId);
           setPosterStats({
-            total: posterStats.total,
-            recentCount: posterStats.recentCount,
+            total: posterStats?.total || 0,
+            recentCount: posterStats?.recentCount || 0,
           });
           
           // Load business profile stats from backend
           const businessStats = await userProfileService.getBusinessProfileStats(userId);
           setBusinessProfileStats({
-            total: businessStats.total,
-            recentCount: businessStats.recentCount,
+            total: businessStats?.total || 0,
+            recentCount: businessStats?.recentCount || 0,
           });
           
           // Load like stats from backend
           const likeStats = await userProfileService.getLikeStats(userId);
           setLikeStats({
-            total: likeStats.total,
-            recentCount: likeStats.recentCount,
-            byType: likeStats.byType,
+            total: likeStats?.total || 0,
+            recentCount: likeStats?.recentCount || 0,
+            byType: likeStats?.byType || {},
           });
           
-          // Load user preferences from backend
-          const preferences = await userProfileService.getUserPreferences(userId);
-          setUserPreferences(preferences);
-          
-          // Set preferences state
-          if (preferences) {
-            setNotificationsEnabled(preferences.notificationsEnabled);
-          }
-          
-          console.log('📊 Loaded stats for user:', userId, 'Posters:', posterStats.total, 'Business Profiles:', businessStats.total, 'Likes:', likeStats.total, 'Preferences:', preferences?.notificationsEnabled);
+          console.log('📊 Loaded stats for user:', userId, 'Posters:', posterStats?.total || 0, 'Business Profiles:', businessStats?.total || 0, 'Likes:', likeStats?.total || 0);
         } catch (error) {
           console.error('Error loading user profile data:', error);
         }
@@ -366,16 +372,42 @@ const ProfileScreen: React.FC = () => {
       // Only fetch from API if we don't have complete data
       console.log('🔍 Fetching complete profile data from API...');
       
-      const deviceId = currentUser?.deviceId;
       const userId = currentUser?.id;
       
-      if (!deviceId && !userId) {
-        throw new Error('No user identifiers available');
+      if (!userId) {
+        throw new Error('No user ID available');
       }
       
-      console.log('🔍 Fetching profile using deviceId:', deviceId, 'userId:', userId);
+      // Wait for token to be available before fetching profile
+      let token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        console.log('⏳ Token not yet in storage, waiting...');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+        token = await AsyncStorage.getItem('authToken');
+        if (!token) {
+          console.log('⚠️ Token still not available, skipping API fetch and using current user data');
+          // Use current user data instead of failing
+          setEditFormData({
+            name: currentUser?.displayName || currentUser?.companyName || '',
+            description: currentUser?.description || '',
+            category: currentUser?.category || '',
+            address: currentUser?.address || '',
+            phone: currentUser?.phoneNumber || '',
+            alternatePhone: currentUser?.alternatePhone || '',
+            email: currentUser?.email || '',
+            website: currentUser?.website || '',
+            companyLogo: currentUser?.companyLogo || '',
+          });
+          setShowEditProfileModal(true);
+          return;
+        } else {
+          console.log('✅ Token now available in storage');
+        }
+      }
       
-      const profileResponse = await authApi.getProfile(deviceId, userId);
+      console.log('🔍 Fetching profile using userId:', userId);
+      
+      const profileResponse = await authApi.getProfile(userId);
       const completeUserData = profileResponse.data;
       
       console.log('🔍 Complete Profile Data from API:', JSON.stringify(completeUserData, null, 2));
@@ -457,6 +489,22 @@ const ProfileScreen: React.FC = () => {
         return;
       }
 
+      // Wait for token to be available before updating profile
+      let token = await AsyncStorage.getItem('authToken');
+      if (!token) {
+        console.log('⏳ Token not yet in storage, waiting...');
+        await new Promise(resolve => setTimeout(resolve, 500)); // Wait 500ms
+        token = await AsyncStorage.getItem('authToken');
+        if (!token) {
+          console.log('⚠️ Token still not available, cannot update profile');
+          Alert.alert('Error', 'Authentication token not available. Please try again.');
+          setIsUpdating(false);
+          return;
+        } else {
+          console.log('✅ Token now available in storage');
+        }
+      }
+
       // Update profile via backend API
       const updateData = {
         name: editFormData.name.trim(),
@@ -495,7 +543,8 @@ const ProfileScreen: React.FC = () => {
         authService.setCurrentUser(updatedUser);
         
         setShowEditProfileModal(false);
-        Alert.alert('Success', 'Profile updated successfully!');
+        setSuccessMessage('Profile updated successfully!');
+        setShowSuccessModal(true);
       } else {
         throw new Error('API returned unsuccessful response');
       }
@@ -535,7 +584,8 @@ const ProfileScreen: React.FC = () => {
       currentUser.profileImage = imageUri;
       currentUser.companyLogo = imageUri; // Also update companyLogo field
     }
-    Alert.alert('Success', 'Profile picture updated successfully!');
+    setSuccessMessage('Profile picture updated successfully!');
+    setShowSuccessModal(true);
   };
 
   const handleCloseImagePicker = () => {
@@ -1117,6 +1167,59 @@ const ProfileScreen: React.FC = () => {
             </View>
           </View>
         </View>
+      </Modal>
+
+      {/* Success Modal */}
+      <Modal
+        visible={showSuccessModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowSuccessModal(false)}
+        statusBarTranslucent={true}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowSuccessModal(false)}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            onPress={() => {}} // Prevent closing when tapping inside modal
+          >
+            <View style={[styles.successModalContainer, { backgroundColor: theme.colors.surface }]}>
+              <View style={styles.successModalHeader}>
+                <View style={[styles.successIconContainer, { backgroundColor: `${theme.colors.primary}20` }]}>
+                  <Icon name="check-circle" size={Math.min(screenWidth * 0.08, 32)} color={theme.colors.primary} />
+                </View>
+                <Text 
+                  style={[styles.successModalTitle, { color: theme.colors.text }]}
+                >
+                  Success
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.closeModalButton, { backgroundColor: theme.colors.inputBackground }]}
+                  onPress={() => setShowSuccessModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="close" size={Math.min(screenWidth * 0.06, 24)} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.successModalContent}>
+                <Text style={[styles.successModalMessage, { color: theme.colors.text }]}>
+                  {successMessage}
+                </Text>
+              </View>
+              
+              <TouchableOpacity 
+                style={[styles.successModalButton, { backgroundColor: theme.colors.primary }]}
+                onPress={() => setShowSuccessModal(false)}
+              >
+                <Text style={styles.successModalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
       </Modal>
 
       {/* Image Picker Modal */}
@@ -1782,6 +1885,75 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   categoryOptionTextSelected: {
+    fontWeight: '600',
+  },
+  // Success Modal Styles
+  successModalContainer: {
+    width: screenWidth * 0.85,
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: screenWidth * 0.06,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  successModalHeader: {
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.02,
+    position: 'relative',
+  },
+  successIconContainer: {
+    width: Math.min(screenWidth * 0.18, 72),
+    height: Math.min(screenWidth * 0.18, 72),
+    borderRadius: Math.min(screenWidth * 0.09, 36),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.015,
+  },
+  successModalTitle: {
+    fontSize: Math.min(screenWidth * 0.06, 24),
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  closeModalButton: {
+    position: 'absolute',
+    top: -screenHeight * 0.01,
+    right: -screenWidth * 0.02,
+    width: Math.min(screenWidth * 0.08, 32),
+    height: Math.min(screenWidth * 0.08, 32),
+    borderRadius: Math.min(screenWidth * 0.04, 16),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  successModalContent: {
+    marginBottom: screenHeight * 0.025,
+  },
+  successModalMessage: {
+    fontSize: Math.min(screenWidth * 0.04, 16),
+    textAlign: 'center',
+    lineHeight: Math.min(screenWidth * 0.06, 24),
+  },
+  successModalButton: {
+    paddingVertical: screenHeight * 0.018,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  successModalButtonText: {
+    color: '#FFFFFF',
+    fontSize: Math.min(screenWidth * 0.042, 17),
     fontWeight: '600',
   },
 });

@@ -109,10 +109,13 @@ class DownloadedPostersService {
       // Fallback to local storage
       const allPosters = await this.getAllDownloadedPosters();
       
-      // Filter by user ID if provided
+      // IMPORTANT: Only return posters that have a userId and match the current user
+      // This prevents showing downloads from other users or old anonymous downloads
       const userPosters = userId 
-        ? allPosters.filter(poster => poster.userId === userId)
-        : allPosters.filter(poster => !poster.userId || poster.userId === 'anonymous');
+        ? allPosters.filter(poster => poster.userId === userId) // Strict match for logged-in users
+        : []; // Return empty array if no userId (don't show anonymous downloads)
+      
+      console.log(`📊 Local storage: Total posters: ${allPosters.length}, User-specific: ${userPosters.length} for userId: ${userId}`);
       
       // Sort by download date (newest first)
       return userPosters.sort((a, b) => new Date(b.downloadDate).getTime() - new Date(a.downloadDate).getTime());

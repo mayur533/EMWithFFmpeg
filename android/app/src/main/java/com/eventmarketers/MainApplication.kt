@@ -18,15 +18,10 @@ class MainApplication : Application(), ReactApplication {
   companion object {
     init {
       try {
-        // Load custom FFmpeg 6.1.1 libraries FIRST
-        CustomFFmpegLoader.loadCustomFFmpegLibraries()
-        
-        // Then load ffmpegkit bridge
-        System.loadLibrary("ffmpegkit")
-        
-        Log.d("MainApplication", "✅ Custom FFmpeg 6.1.1 libraries loaded successfully")
-      } catch (e: UnsatisfiedLinkError) {
-        Log.e("MainApplication", "❌ Failed to load FFmpeg libraries", e)
+        // Let ffmpeg-kit-react-native-full-gpl handle its own native library loading
+        Log.d("MainApplication", "✅ Using standard ffmpeg-kit-react-native-full-gpl")
+      } catch (e: Exception) {
+        Log.e("MainApplication", "❌ Error during initialization", e)
         e.printStackTrace()
       }
     }

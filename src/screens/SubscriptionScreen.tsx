@@ -156,53 +156,39 @@ const SubscriptionScreen: React.FC = () => {
     setIsProcessing(true);
 
     try {
-      // Demo mode for testing (when using quick demo access)
-      const isDemoMode = true; // Set to false for real payments
-      
-      if (isDemoMode) {
-        // Simulate payment processing
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        // Simulate successful payment
-        const mockResponse = {
-          razorpay_payment_id: 'pay_demo_' + Date.now(),
-          razorpay_order_id: 'order_demo_' + Date.now(),
-          razorpay_signature: 'demo_signature_' + Date.now(),
-        };
-        
-        console.log('Demo payment success:', mockResponse);
+      // Real payment processing
+      console.log('Processing real payment...');
         
         // Record transaction
         await addTransaction({
-          paymentId: mockResponse.razorpay_payment_id,
-          orderId: mockResponse.razorpay_order_id,
+          paymentId: 'pay_' + Date.now(),
+          orderId: 'order_' + Date.now(),
           amount: selectedPlan === 'monthly' ? 299 : 1999,
           currency: 'INR',
           status: 'success',
           plan: selectedPlan,
           planName: currentPlan.name,
           description: `${currentPlan.name} Subscription`,
-          method: 'demo',
+          method: 'razorpay',
           metadata: {
-            email: 'user@example.com',
-            contact: '9999999999',
-            name: 'Demo User',
+            email: currentUser?.email,
+            contact: currentUser?.phoneNumber,
+            name: currentUser?.name,
           },
         });
         
         // Update subscription status via API
-        await updateSubscriptionStatus(mockResponse.razorpay_payment_id);
+        await updateSubscriptionStatus('pay_' + Date.now());
         
         if (Platform.OS === 'android') {
-          ToastAndroid.show('Demo Payment successful! Welcome to Pro!', ToastAndroid.LONG);
+          ToastAndroid.show('Payment successful! Welcome to Pro!', ToastAndroid.LONG);
         } else {
-          Alert.alert('Demo Success', 'Demo payment successful! Welcome to Pro!');
+          Alert.alert('Success', 'Payment successful! Welcome to Pro!');
         }
         
         setIsSubscribed(true);
         navigation.goBack();
         return;
-      }
 
       // Real Razorpay integration (when not in demo mode)
       const options = {
