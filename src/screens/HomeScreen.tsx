@@ -1187,7 +1187,7 @@ const HomeScreen: React.FC = React.memo(() => {
                                 {/* Upcoming Events */}
             <View style={styles.upcomingEventsSection}>
                              <View style={styles.sectionHeader}>
-                 <Text style={styles.sectionTitle}>Upcoming Events</Text>
+                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Upcoming Events</Text>
                  <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllUpcomingEvents}>
                    <Text style={styles.viewAllButtonText}>Browse All</Text>
                  </TouchableOpacity>
@@ -1628,7 +1628,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     color: '#ffffff',
     marginBottom: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : screenHeight * 0.015,
-    paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : screenWidth * 0.05,
+    paddingHorizontal: screenWidth < 480 ? 16 : screenWidth < 768 ? 20 : 24,
   },
   bannerList: {
     paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : screenWidth * 0.05,
@@ -1685,7 +1685,7 @@ const styles = StyleSheet.create({
      flexDirection: 'row',
      justifyContent: 'space-between',
      alignItems: 'center',
-     paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : screenWidth * 0.05,
+     paddingHorizontal: screenWidth < 480 ? 16 : screenWidth < 768 ? 20 : 24,
      marginBottom: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : screenHeight * 0.015,
    },
    viewAllButton: {
