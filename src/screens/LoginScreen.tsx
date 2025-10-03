@@ -124,6 +124,49 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
     }
   }, [email, password]);
 
+  const handleDemoLogin = useCallback(async () => {
+    console.log('🎮 Demo login initiated');
+    setIsLoading(true);
+    try {
+      // Create a demo user object
+      const demoUser = {
+        id: 'demo-user-123',
+        uid: 'demo-user-123',
+        email: 'demo@eventmarketers.com',
+        name: 'Demo User',
+        displayName: 'Demo User',
+        companyName: 'Demo Company',
+        phoneNumber: '+1234567890',
+        userType: 'MOBILE_USER',
+        isDemoUser: true,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
+      // Create a demo token
+      const demoToken = 'demo-token-' + Date.now();
+
+      // Import auth service
+      const authService = (await import('../services/auth')).default;
+      
+      // Save demo user to storage
+      await authService.saveUserToStorage(demoUser, demoToken);
+      
+      // Set current user and notify listeners
+      authService.setCurrentUser(demoUser);
+      authService.notifyAuthStateListeners(demoUser);
+      
+      console.log('✅ Demo login successful');
+      // Navigation will be handled automatically by auth state change
+    } catch (error: any) {
+      console.error('❌ Demo login error:', error);
+      setErrorMessage('Demo login failed. Please try again.');
+      setShowErrorModal(true);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
 
 
 
@@ -199,6 +242,26 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
                   {isLoading ? 'SIGNING IN...' : 'SIGN IN'}
                 </Text>
               </TouchableOpacity>
+
+              {/* Demo Button for Development */}
+              <View style={styles.demoButtonContainer}>
+                <Text style={[styles.demoLabel, { color: theme.colors.textSecondary }]}>
+                  Development Only
+                </Text>
+                <TouchableOpacity 
+                  style={[
+                    styles.demoButton, 
+                    { backgroundColor: '#6c757d' },
+                    isLoading && styles.buttonDisabled
+                  ]} 
+                  onPress={handleDemoLogin}
+                  disabled={isLoading}
+                >
+                  <Text style={[styles.demoButtonText, { color: '#ffffff' }]}>
+                    {isLoading ? 'LOADING...' : '🎮 DEMO LOGIN'}
+                  </Text>
+                </TouchableOpacity>
+              </View>
 
 
 
@@ -361,6 +424,25 @@ const styles = StyleSheet.create({
     opacity: 0.6,
   },
   signInButtonText: {
+    fontSize: Math.min(screenWidth * 0.04, 16),
+    fontWeight: '600',
+  },
+  demoButtonContainer: {
+    marginBottom: Math.max(responsiveSpacing.md, screenHeight * 0.015),
+  },
+  demoLabel: {
+    fontSize: Math.min(screenWidth * 0.03, 12),
+    textAlign: 'center',
+    marginBottom: screenHeight * 0.005,
+    fontStyle: 'italic',
+  },
+  demoButton: {
+    borderRadius: responsiveSize.buttonBorderRadius,
+    paddingVertical: responsiveSize.buttonPaddingVertical,
+    alignItems: 'center',
+    ...responsiveShadow.large,
+  },
+  demoButtonText: {
     fontSize: Math.min(screenWidth * 0.04, 16),
     fontWeight: '600',
   },
