@@ -224,22 +224,22 @@ const ProfileScreen: React.FC = () => {
   const confirmSignOut = async () => {
     try {
       setShowSignOutModal(false);
-      console.log('ProfileScreen: Starting sign out process...');
-      
-      await authService.signOut();
-      
-      console.log('ProfileScreen: Sign out completed successfully');
-      
+              console.log('ProfileScreen: Starting sign out process...');
+              
+              await authService.signOut();
+              
+              console.log('ProfileScreen: Sign out completed successfully');
+              
       // Navigation will be handled by the auth state change listener
-      
-    } catch (error) {
-      console.error('ProfileScreen: Sign out error:', error);
-      Alert.alert(
-        'Sign Out Error', 
-        'There was an issue signing out. Your local data has been cleared, but you may need to sign in again.',
-        [{ text: 'OK' }]
-      );
-    }
+              
+            } catch (error) {
+              console.error('ProfileScreen: Sign out error:', error);
+              Alert.alert(
+                'Sign Out Error', 
+                'There was an issue signing out. Your local data has been cleared, but you may need to sign in again.',
+                [{ text: 'OK' }]
+              );
+            }
   };
 
 

@@ -35,6 +35,7 @@ import businessCategoryPostersApi, { BusinessCategoryPoster } from '../services/
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 import userLikesService from '../services/userLikes';
+import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -1120,6 +1121,11 @@ const HomeScreen: React.FC = React.memo(() => {
             </View>
           </View>
 
+          {/* Festival Calendar */}
+          <View style={styles.calendarSection}>
+            <SimpleFestivalCalendar />
+          </View>
+
           {/* Tabs - All tabs commented out */}
           {/* <View style={styles.tabsContainer}>
             <TouchableOpacity
@@ -1260,6 +1266,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.templatesSection}>
             <Text style={styles.sectionTitle}>Professional Templates</Text>
             <FlatList
+              key={`templates-${templates.length}-${selectedCategory}`}
               data={templates}
               renderItem={renderTemplate}
               keyExtractor={keyExtractor}
@@ -1291,6 +1298,7 @@ const HomeScreen: React.FC = React.memo(() => {
                 )}
               </View>
               <FlatList
+                key={`business-posters-${businessCategoryPosters.length}`}
                 data={businessCategoryPosters}
                 renderItem={renderBusinessCategoryPoster}
                 keyExtractor={(item) => item.id}
@@ -1311,6 +1319,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.videoSection}>
             <Text style={styles.sectionTitle}>Video Content</Text>
             <FlatList
+              key={`video-content-${videoContent.length}`}
               data={videoContent}
               renderItem={renderVideoTemplate}
               keyExtractor={keyExtractor}
@@ -1435,6 +1444,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
+                  key={`upcoming-events-modal-${upcomingEvents.length}`}
                   data={upcomingEvents}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={3}
@@ -1567,6 +1577,10 @@ const styles = StyleSheet.create({
   searchContainer: {
     paddingHorizontal: 16,
     marginBottom: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : responsiveSpacing.sm,
+  },
+  calendarSection: {
+    marginHorizontal: 16,
+    marginBottom: screenWidth < 480 ? 12 : screenWidth < 768 ? 16 : responsiveSpacing.md,
   },
   searchBar: {
     flexDirection: 'row',
