@@ -34,6 +34,10 @@ export type MainStackParamList = {
     selectedPoster: any;
     relatedPosters: any[];
   };
+  MyBusinessPlayer: {
+    selectedPoster: any;
+    relatedPosters: any[];
+  };
   PosterPreview: {
     capturedImageUri: string;
     selectedImage: {
@@ -123,6 +127,7 @@ import LikedItemsScreen from '../screens/LikedItemsScreen';
 import ApiTestScreen from '../screens/ApiTestScreen';
 import FFmpegTestScreen from '../screens/FFmpegTestScreen';
 import MyBusinessScreen from '../screens/MyBusinessScreen';
+import MyBusinessPlayerScreen from '../screens/MyBusinessPlayerScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const MainStack = createStackNavigator<MainStackParamList>();
@@ -147,6 +152,11 @@ const TabNavigator = () => {
       <MainStack.Screen 
         name="PosterPlayer" 
         component={PosterPlayerScreen}
+        options={{ headerShown: false }}
+      />
+      <MainStack.Screen 
+        name="MyBusinessPlayer" 
+        component={MyBusinessPlayerScreen}
         options={{ headerShown: false }}
       />
       <MainStack.Screen 
