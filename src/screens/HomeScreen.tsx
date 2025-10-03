@@ -36,6 +36,7 @@ import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 import userLikesService from '../services/userLikes';
 import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
+import ComingSoonModal from '../components/ComingSoonModal';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -88,6 +89,9 @@ const HomeScreen: React.FC = React.memo(() => {
   const [businessCategoryPosters, setBusinessCategoryPosters] = useState<BusinessCategoryPoster[]>([]);
   const [postersLoading, setPostersLoading] = useState(false);
   const [userBusinessCategory, setUserBusinessCategory] = useState<string>('General');
+  
+  // Coming Soon Modal state
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
 
 
@@ -982,18 +986,8 @@ const HomeScreen: React.FC = React.memo(() => {
     };
 
     const handleCardPress = () => {
-      // Convert VideoContent to Template format for navigation
-      const templateItem: Template = {
-        id: item.id,
-        name: item.title,
-        thumbnail: item.thumbnail,
-        category: item.category || 'Video',
-        likes: item.likes || 0,
-        downloads: item.downloads || 0,
-        isLiked: item.isLiked || false,
-        isDownloaded: item.isDownloaded || false,
-      };
-      handleTemplatePress(templateItem);
+      // Show Coming Soon modal for video content
+      setShowComingSoonModal(true);
     };
 
 
@@ -1505,8 +1499,13 @@ const HomeScreen: React.FC = React.memo(() => {
           </View>
         </Modal>
 
-
-
+        {/* Coming Soon Modal for Video Content */}
+        <ComingSoonModal
+          visible={showComingSoonModal}
+          onClose={() => setShowComingSoonModal(false)}
+          title="Video Editor Coming Soon!"
+          subtitle="We're working hard to bring you an amazing video editing experience. Stay tuned for updates!"
+        />
 
       </SafeAreaView>
     );
