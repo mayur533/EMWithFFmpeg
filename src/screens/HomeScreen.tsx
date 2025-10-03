@@ -278,23 +278,6 @@ const HomeScreen: React.FC = React.memo(() => {
 
 
 
-  useEffect(() => {
-    const loadInitialData = async () => {
-      setLoading(true);
-      
-      try {
-        // Load data from APIs only - no mock data
-        await loadApiData();
-      } catch (error) {
-        console.log('Error loading API data:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-    
-    loadInitialData();
-  }, [activeTab, loadApiData]);
-
   // Load data from APIs only - no mock data fallback
   const loadApiData = useCallback(async () => {
     setApiLoading(true);
@@ -354,6 +337,23 @@ const HomeScreen: React.FC = React.memo(() => {
       setApiLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const loadInitialData = async () => {
+      setLoading(true);
+      
+      try {
+        // Load data from APIs only - no mock data
+        await loadApiData();
+      } catch (error) {
+        console.log('Error loading API data:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadInitialData();
+  }, [activeTab, loadApiData]);
 
   // Load API data on component mount
   useEffect(() => {
@@ -890,7 +890,11 @@ const HomeScreen: React.FC = React.memo(() => {
     const handleCardPress = () => {
       // Navigate to poster editor with the selected poster
       navigation.navigate('PosterEditor', {
-        selectedPoster: item,
+        selectedImage: {
+          uri: item.thumbnail,
+          title: item.title,
+          description: item.description
+        },
         selectedLanguage: 'en',
         selectedTemplateId: item.id,
       });
@@ -958,7 +962,7 @@ const HomeScreen: React.FC = React.memo(() => {
     );
   }, [navigation, theme]);
 
-  const renderVideoTemplate = useCallback(({ item }: { item: Template }) => {
+  const renderVideoTemplate = useCallback(({ item }: { item: VideoContent }) => {
     const scaleAnim = new Animated.Value(1);
 
     const handlePressIn = () => {
@@ -978,8 +982,18 @@ const HomeScreen: React.FC = React.memo(() => {
     };
 
     const handleCardPress = () => {
-      // Open the video template
-      handleTemplatePress(item);
+      // Convert VideoContent to Template format for navigation
+      const templateItem: Template = {
+        id: item.id,
+        name: item.title,
+        thumbnail: item.thumbnail,
+        category: item.category || 'Video',
+        likes: item.likes || 0,
+        downloads: item.downloads || 0,
+        isLiked: item.isLiked || false,
+        isDownloaded: item.isDownloaded || false,
+      };
+      handleTemplatePress(templateItem);
     };
 
 
@@ -1015,7 +1029,7 @@ const HomeScreen: React.FC = React.memo(() => {
                 ]}
                 onPress={(e) => {
                   e.stopPropagation();
-                  handleLikeTemplate(item.id);
+                  handleLikeVideoContent(item.id);
                 }}
               >
                 <Icon 
@@ -1028,7 +1042,7 @@ const HomeScreen: React.FC = React.memo(() => {
         </Animated.View>
       </TouchableOpacity>
     );
-  }, [handleLikeTemplate, handleTemplatePress, theme]);
+  }, [handleLikeVideoContent, handleTemplatePress, theme]);
 
   // Memoized key extractors
   const keyExtractor = useCallback((item: any) => item.id, []);

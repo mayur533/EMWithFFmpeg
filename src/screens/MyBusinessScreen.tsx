@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -7,264 +7,212 @@ import {
   TouchableOpacity,
   Image,
   Dimensions,
-  Alert,
+  FlatList,
+  ActivityIndicator,
+  RefreshControl,
+  StatusBar,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import { useNavigation } from '@react-navigation/native';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import LinearGradient from 'react-native-linear-gradient';
+import businessCategoryPostersApi, { BusinessCategoryPoster } from '../services/businessCategoryPostersApi';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-interface BusinessInfo {
-  name: string;
-  category: string;
-  description: string;
-  location: string;
-  phone: string;
-  email: string;
-  website: string;
-  logo: string;
-  coverImage: string;
-  rating: number;
-  reviews: number;
-  followers: number;
-  posts: number;
-}
-
 const MyBusinessScreen: React.FC = () => {
   const { theme } = useTheme();
-  const navigation = useNavigation();
-  const [businessInfo, setBusinessInfo] = useState<BusinessInfo | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const navigation = useNavigation<any>();
+  const insets = useSafeAreaInsets();
+  
+  // Business category posters state
+  const [businessCategoryPosters, setBusinessCategoryPosters] = useState<BusinessCategoryPoster[]>([]);
+  const [postersLoading, setPostersLoading] = useState(false);
+  const [userBusinessCategory, setUserBusinessCategory] = useState<string>('General');
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    // Simulate loading business data
-    setTimeout(() => {
-      setBusinessInfo({
-        name: 'My Business',
-        category: 'Event Management',
-        description: 'Professional event management services for all occasions',
-        location: 'New York, NY',
-        phone: '+1 (555) 123-4567',
-        email: 'contact@mybusiness.com',
-        website: 'www.mybusiness.com',
-        logo: 'https://via.placeholder.com/150',
-        coverImage: 'https://via.placeholder.com/400x200',
-        rating: 4.8,
-        reviews: 127,
-        followers: 1250,
-        posts: 45,
-      });
-      setIsLoading(false);
-    }, 1000);
+  // Load business category posters
+  const loadBusinessCategoryPosters = useCallback(async () => {
+    setPostersLoading(true);
+    try {
+      console.log('🎯 Loading business category posters...');
+      const response = await businessCategoryPostersApi.getUserCategoryPosters();
+      
+      if (response.success) {
+        setBusinessCategoryPosters(response.data.posters);
+        setUserBusinessCategory(response.data.category);
+        console.log('✅ Business category posters loaded:', response.data.posters.length, 'posters for category:', response.data.category);
+      } else {
+        console.log('⚠️ Failed to load business category posters');
+        setBusinessCategoryPosters([]);
+      }
+    } catch (error) {
+      console.error('❌ Error loading business category posters:', error);
+      setBusinessCategoryPosters([]);
+    } finally {
+      setPostersLoading(false);
+    }
   }, []);
 
-  const handleEditProfile = () => {
-    Alert.alert('Edit Profile', 'Edit profile functionality will be implemented');
+  useEffect(() => {
+    loadBusinessCategoryPosters();
+  }, [loadBusinessCategoryPosters]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      await loadBusinessCategoryPosters();
+    } catch (error) {
+      console.log('Error refreshing posters:', error);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [loadBusinessCategoryPosters]);
+
+  const handlePosterPress = (poster: BusinessCategoryPoster) => {
+    // Navigate to poster editor with the selected poster
+    navigation.navigate('PosterEditor', {
+      selectedImage: {
+        uri: poster.thumbnail,
+        title: poster.title,
+        description: poster.description
+      },
+      selectedLanguage: 'en',
+      selectedTemplateId: poster.id,
+    });
   };
 
-  const handleViewAnalytics = () => {
-    Alert.alert('Analytics', 'Analytics view will be implemented');
+  const handleLikePoster = async (posterId: string) => {
+    try {
+      const result = await businessCategoryPostersApi.likePoster(posterId);
+      if (result.success) {
+        // Update local state to reflect the like
+        setBusinessCategoryPosters(prev => 
+          prev.map(poster => 
+            poster.id === posterId 
+              ? { ...poster, likes: poster.likes + 1 }
+              : poster
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error liking poster:', error);
+    }
   };
 
-  const handleManagePosts = () => {
-    Alert.alert('Manage Posts', 'Post management will be implemented');
-  };
-
-  const handleViewReviews = () => {
-    Alert.alert('Reviews', 'Reviews view will be implemented');
-  };
-
-  if (isLoading) {
+  const renderPoster = useCallback(({ item }: { item: BusinessCategoryPoster }) => {
     return (
-      <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <View style={styles.loadingContainer}>
-          <Text style={[styles.loadingText, { color: theme.colors.text }]}>
-            Loading business information...
-          </Text>
+      <TouchableOpacity
+        style={styles.posterCard}
+        onPress={() => handlePosterPress(item)}
+        activeOpacity={0.8}
+      >
+        <Image source={{ uri: item.thumbnail }} style={styles.posterImage} />
+        <View style={styles.posterOverlay}>
+          <TouchableOpacity
+            style={styles.posterLikeButton}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleLikePoster(item.id);
+            }}
+          >
+            <Icon name="favorite-border" size={16} color="#E74C3C" />
+          </TouchableOpacity>
         </View>
-      </View>
+      </TouchableOpacity>
     );
-  }
+  }, [theme, navigation]);
+
+  const keyExtractor = useCallback((item: BusinessCategoryPoster) => item.id, []);
 
   return (
-    <ScrollView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      {/* Header */}
-      <View style={[styles.header, { backgroundColor: theme.colors.surface }]}>
-        <View style={styles.headerContent}>
-          <TouchableOpacity
-            style={styles.backButton}
-            onPress={() => navigation.goBack()}
-          >
-            <Icon name="arrow-back" size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-            My Business
-          </Text>
-          <TouchableOpacity
-            style={styles.editButton}
-            onPress={handleEditProfile}
-          >
-            <Icon name="edit" size={24} color={theme.colors.primary} />
-          </TouchableOpacity>
+    <SafeAreaView 
+      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      edges={['top', 'left', 'right']}
+    >
+      <StatusBar 
+        barStyle="light-content"
+        backgroundColor="transparent" 
+        translucent={true}
+      />
+      
+      <LinearGradient
+        colors={theme.colors.gradient}
+        style={styles.gradientBackground}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        {/* Header */}
+        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+          <View style={styles.headerContent}>
+            <TouchableOpacity
+              style={styles.backButton}
+              onPress={() => navigation.goBack()}
+            >
+              <Icon name="arrow-back" size={24} color="#ffffff" />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>
+              My Business Posters
+            </Text>
+            <View style={styles.headerSpacer} />
+          </View>
         </View>
-      </View>
 
-      {/* Cover Image */}
-      <View style={styles.coverImageContainer}>
-        <Image
-          source={{ uri: businessInfo?.coverImage }}
-          style={styles.coverImage}
-          resizeMode="cover"
-        />
-        <View style={styles.coverOverlay} />
-      </View>
-
-      {/* Business Info */}
-      <View style={[styles.businessInfoContainer, { backgroundColor: theme.colors.surface }]}>
-        <View style={styles.businessHeader}>
-          <Image
-            source={{ uri: businessInfo?.logo }}
-            style={styles.businessLogo}
-            resizeMode="cover"
-          />
-          <View style={styles.businessDetails}>
-            <Text style={[styles.businessName, { color: theme.colors.text }]}>
-              {businessInfo?.name}
+        {/* Posters Section */}
+        <ScrollView 
+          style={styles.scrollView}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
+          refreshControl={
+            <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          }
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews={true}
+          nestedScrollEnabled={true}
+          scrollEventThrottle={16}
+          bounces={true}
+        >
+          <View style={styles.postersHeader}>
+            <Text style={styles.sectionTitle}>
+              {userBusinessCategory} Posters
             </Text>
-            <Text style={[styles.businessCategory, { color: theme.colors.primary }]}>
-              {businessInfo?.category}
-            </Text>
-            <View style={styles.ratingContainer}>
-              <Icon name="star" size={16} color="#FFD700" />
-              <Text style={[styles.ratingText, { color: theme.colors.text }]}>
-                {businessInfo?.rating} ({businessInfo?.reviews} reviews)
+            {postersLoading && (
+              <ActivityIndicator 
+                size="small" 
+                color="#ffffff" 
+                style={styles.loadingIndicator}
+              />
+            )}
+          </View>
+          
+          {businessCategoryPosters.length > 0 ? (
+            <FlatList
+              data={businessCategoryPosters}
+              renderItem={renderPoster}
+              keyExtractor={keyExtractor}
+              numColumns={3}
+              columnWrapperStyle={styles.posterRow}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={false}
+              contentContainerStyle={styles.postersList}
+            />
+          ) : (
+            <View style={styles.emptyPostersContainer}>
+              <Icon name="image" size={48} color="rgba(255,255,255,0.7)" />
+              <Text style={styles.emptyPostersText}>
+                No posters available for {userBusinessCategory} category
               </Text>
+              <TouchableOpacity
+                style={styles.refreshButton}
+                onPress={loadBusinessCategoryPosters}
+              >
+                <Text style={styles.refreshButtonText}>Refresh</Text>
+              </TouchableOpacity>
             </View>
-          </View>
-        </View>
-
-        <Text style={[styles.businessDescription, { color: theme.colors.textSecondary }]}>
-          {businessInfo?.description}
-        </Text>
-
-        {/* Contact Info */}
-        <View style={styles.contactInfo}>
-          <View style={styles.contactItem}>
-            <Icon name="location-on" size={20} color={theme.colors.primary} />
-            <Text style={[styles.contactText, { color: theme.colors.text }]}>
-              {businessInfo?.location}
-            </Text>
-          </View>
-          <View style={styles.contactItem}>
-            <Icon name="phone" size={20} color={theme.colors.primary} />
-            <Text style={[styles.contactText, { color: theme.colors.text }]}>
-              {businessInfo?.phone}
-            </Text>
-          </View>
-          <View style={styles.contactItem}>
-            <Icon name="email" size={20} color={theme.colors.primary} />
-            <Text style={[styles.contactText, { color: theme.colors.text }]}>
-              {businessInfo?.email}
-            </Text>
-          </View>
-          <View style={styles.contactItem}>
-            <Icon name="language" size={20} color={theme.colors.primary} />
-            <Text style={[styles.contactText, { color: theme.colors.text }]}>
-              {businessInfo?.website}
-            </Text>
-          </View>
-        </View>
-      </View>
-
-      {/* Stats */}
-      <View style={[styles.statsContainer, { backgroundColor: theme.colors.surface }]}>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: theme.colors.primary }]}>
-            {businessInfo?.followers}
-          </Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-            Followers
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: theme.colors.primary }]}>
-            {businessInfo?.posts}
-          </Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-            Posts
-          </Text>
-        </View>
-        <View style={styles.statItem}>
-          <Text style={[styles.statNumber, { color: theme.colors.primary }]}>
-            {businessInfo?.reviews}
-          </Text>
-          <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>
-            Reviews
-          </Text>
-        </View>
-      </View>
-
-      {/* Action Buttons */}
-      <View style={[styles.actionsContainer, { backgroundColor: theme.colors.surface }]}>
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
-          onPress={handleViewAnalytics}
-        >
-          <Icon name="analytics" size={24} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Analytics</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
-          onPress={handleManagePosts}
-        >
-          <Icon name="post-add" size={24} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Manage Posts</Text>
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          style={[styles.actionButton, { backgroundColor: theme.colors.primary }]}
-          onPress={handleViewReviews}
-        >
-          <Icon name="rate-review" size={24} color="#FFFFFF" />
-          <Text style={styles.actionButtonText}>Reviews</Text>
-        </TouchableOpacity>
-      </View>
-
-      {/* Quick Actions */}
-      <View style={[styles.quickActionsContainer, { backgroundColor: theme.colors.surface }]}>
-        <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-          Quick Actions
-        </Text>
-        <View style={styles.quickActionsGrid}>
-          <TouchableOpacity style={styles.quickActionItem}>
-            <Icon name="add-business" size={32} color={theme.colors.primary} />
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>
-              Add Branch
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionItem}>
-            <Icon name="event" size={32} color={theme.colors.primary} />
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>
-              Create Event
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionItem}>
-            <Icon name="campaign" size={32} color={theme.colors.primary} />
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>
-              Marketing
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.quickActionItem}>
-            <Icon name="settings" size={32} color={theme.colors.primary} />
-            <Text style={[styles.quickActionText, { color: theme.colors.text }]}>
-              Settings
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    </ScrollView>
+          )}
+        </ScrollView>
+      </LinearGradient>
+    </SafeAreaView>
   );
 };
 
@@ -272,24 +220,12 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  loadingContainer: {
+  gradientBackground: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    fontSize: 16,
-    fontWeight: '500',
   },
   header: {
-    paddingTop: 50,
     paddingBottom: 16,
     paddingHorizontal: 16,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
   },
   headerContent: {
     flexDirection: 'row',
@@ -304,165 +240,96 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
+    color: '#ffffff',
   },
-  editButton: {
-    padding: 8,
+  headerSpacer: {
+    width: 40, // Same width as back button to center the title
   },
-  coverImageContainer: {
-    height: 200,
-    position: 'relative',
-  },
-  coverImage: {
-    width: '100%',
-    height: '100%',
-  },
-  coverOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0, 0, 0, 0.3)',
-  },
-  businessInfoContainer: {
-    margin: 16,
-    padding: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  businessHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-  },
-  businessLogo: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    marginRight: 16,
-  },
-  businessDetails: {
+  scrollView: {
     flex: 1,
   },
-  businessName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
+  scrollContent: {
+    paddingBottom: 100,
   },
-  businessCategory: {
-    fontSize: 16,
-    fontWeight: '600',
-    marginBottom: 8,
-  },
-  ratingContainer: {
+  postersHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-  },
-  ratingText: {
-    fontSize: 14,
-    marginLeft: 4,
-  },
-  businessDescription: {
-    fontSize: 16,
-    lineHeight: 24,
-    marginBottom: 20,
-  },
-  contactInfo: {
-    gap: 12,
-  },
-  contactItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  contactText: {
-    fontSize: 16,
-    marginLeft: 12,
-  },
-  statsContainer: {
-    margin: 16,
-    padding: 20,
-    borderRadius: 12,
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  statItem: {
-    alignItems: 'center',
-  },
-  statNumber: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  statLabel: {
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  actionsContainer: {
-    margin: 16,
-    padding: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
-  },
-  actionButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 16,
-    borderRadius: 8,
-    marginBottom: 12,
-  },
-  actionButtonText: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: '600',
-    marginLeft: 8,
-  },
-  quickActionsContainer: {
-    margin: 16,
-    padding: 20,
-    borderRadius: 12,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    justifyContent: 'space-between',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 16,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 16,
+    color: '#ffffff',
   },
-  quickActionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
+  loadingIndicator: {
+    marginLeft: 8,
   },
-  quickActionItem: {
-    width: '48%',
-    alignItems: 'center',
-    padding: 16,
-    marginBottom: 16,
+  postersList: {
+    paddingHorizontal: 16,
+    paddingBottom: 20,
+  },
+  posterRow: {
+    justifyContent: 'flex-start',
+    marginBottom: 8,
+    gap: 8,
+  },
+  posterCard: {
+    width: (screenWidth - 32 - 16) / 3, // 3 columns with proper spacing
+    height: screenHeight * 0.15, // Match HomeScreen proportions
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
     borderRadius: 8,
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+    position: 'relative',
   },
-  quickActionText: {
-    fontSize: 14,
-    fontWeight: '500',
-    marginTop: 8,
+  posterImage: {
+    width: '100%',
+    height: '100%',
+  },
+  posterOverlay: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  posterLikeButton: {
+    backgroundColor: 'rgba(255, 255, 255, 0.9)',
+    borderRadius: 15,
+    padding: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  emptyPostersContainer: {
+    alignItems: 'center',
+    paddingVertical: 40,
+  },
+  emptyPostersText: {
+    fontSize: 16,
     textAlign: 'center',
+    marginTop: 16,
+    marginBottom: 20,
+    lineHeight: 22,
+    color: 'rgba(255, 255, 255, 0.7)',
+  },
+  refreshButton: {
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  refreshButtonText: {
+    color: '#FFFFFF',
+    fontSize: 14,
+    fontWeight: '600',
   },
 });
 
