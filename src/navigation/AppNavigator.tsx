@@ -9,6 +9,7 @@ import authService from '../services/auth';
 import DebugInfo from '../components/DebugInfo';
 import { useTheme } from '../context/ThemeContext';
 import { navigationRef } from './NavigationService';
+import { Image, View, Text, TouchableOpacity } from 'react-native';
 
 // Define navigation types
 export type RootStackParamList = {
@@ -91,6 +92,7 @@ export type MainStackParamList = {
 export type TabParamList = {
   Home: undefined;
   Templates: undefined;
+  MyBusiness: undefined;
   Greetings: undefined;
   Profile: undefined;
 };
@@ -120,6 +122,7 @@ import MyPostersScreen from '../screens/MyPostersScreen';
 import LikedItemsScreen from '../screens/LikedItemsScreen';
 import ApiTestScreen from '../screens/ApiTestScreen';
 import FFmpegTestScreen from '../screens/FFmpegTestScreen';
+import MyBusinessScreen from '../screens/MyBusinessScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const MainStack = createStackNavigator<MainStackParamList>();
@@ -220,6 +223,145 @@ const TabNavigator = () => {
   );
 };
 
+// Custom Tab Bar Component with Overlapping Logo
+const CustomTabBar = (props: any) => {
+  const { theme } = useTheme();
+  const insets = useSafeAreaInsets();
+  
+  return (
+    <View style={{
+      backgroundColor: theme.colors.surface,
+      borderTopWidth: 1,
+      borderTopColor: theme.colors.border,
+      paddingTop: 8,
+      paddingBottom: Math.max(12, insets.bottom + 4),
+      shadowColor: theme.colors.shadow,
+      shadowOffset: { width: 0, height: -2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 8,
+      position: 'relative',
+    }}>
+      {/* Background overlay to hide any squares behind the circle */}
+      <View style={{
+        position: 'absolute',
+        top: -35,
+        left: '50%',
+        marginLeft: -35,
+        zIndex: 999,
+        backgroundColor: theme.colors.surface,
+        width: 70,
+        height: 70,
+        borderRadius: 35,
+      }} />
+      
+      {/* Logo positioned to overlap with screen content */}
+      <View style={{
+        position: 'absolute',
+        top: -35, // Half logo above the tab bar
+        left: '50%',
+        marginLeft: -35, // Center the circular container (70px width / 2)
+        zIndex: 1000,
+        backgroundColor: theme.colors.surface,
+        width: 70,
+        height: 70,
+        borderRadius: 35, // Perfect circle
+        justifyContent: 'center',
+        alignItems: 'center',
+        shadowColor: theme.colors.shadow,
+        shadowOffset: { width: 0, height: 2 },
+        shadowOpacity: 0.15,
+        shadowRadius: 8,
+        elevation: 8,
+        borderWidth: 2,
+        borderColor: theme.colors.border,
+        // Ensure the circle completely covers any background elements
+        overflow: 'hidden',
+      }}>
+        <Image
+          source={require('../assets/MainLogo/MB.png')}
+          style={{
+            width: 50,
+            height: 50,
+            resizeMode: 'contain',
+          }}
+        />
+      </View>
+      
+      {/* Tab Bar */}
+      <View style={{
+        flexDirection: 'row',
+        justifyContent: 'space-around',
+        alignItems: 'center',
+        height: 50,
+        marginTop: 20, // Add space for the circular overlapping logo
+      }}>
+        {props.state.routes.map((route: any, index: number) => {
+          const { options } = props.descriptors[route.key];
+          const label = options.tabBarLabel !== undefined
+            ? options.tabBarLabel
+            : options.title !== undefined
+            ? options.title
+            : route.name;
+
+          const isFocused = props.state.index === index;
+
+          const onPress = () => {
+            const event = props.navigation.emit({
+              type: 'tabPress',
+              target: route.key,
+              canPreventDefault: true,
+            });
+
+            if (!isFocused && !event.defaultPrevented) {
+              props.navigation.navigate(route.name);
+            }
+          };
+
+          const onLongPress = () => {
+            props.navigation.emit({
+              type: 'tabLongPress',
+              target: route.key,
+            });
+          };
+
+          return (
+            <TouchableOpacity
+              key={route.key}
+              accessibilityRole="button"
+              accessibilityState={isFocused ? { selected: true } : {}}
+              accessibilityLabel={options.tabBarAccessibilityLabel}
+              testID={options.tabBarTestID}
+              onPress={onPress}
+              onLongPress={onLongPress}
+              style={{
+                flex: 1,
+                alignItems: 'center',
+                justifyContent: 'center',
+                paddingVertical: 4,
+              }}
+            >
+              {options.tabBarIcon && options.tabBarIcon({
+                focused: isFocused,
+                color: isFocused ? theme.colors.primary : theme.colors.textSecondary,
+                size: 24,
+              })}
+              <Text style={{
+                fontSize: 10,
+                fontWeight: '600',
+                marginTop: 2,
+                color: isFocused ? theme.colors.primary : theme.colors.textSecondary,
+              }}>
+                {label}
+              </Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+    </View>
+  );
+};
+
 // Main tab navigator
 const MainTabNavigator = () => {
   const insets = useSafeAreaInsets();
@@ -228,33 +370,8 @@ const MainTabNavigator = () => {
   return (
     <Tab.Navigator
       safeAreaInsets={{ bottom: 0 }}
+      tabBar={(props) => <CustomTabBar {...props} />}
       screenOptions={{
-        tabBarStyle: {
-          backgroundColor: theme.colors.surface,
-          borderTopWidth: 1,
-          borderTopColor: theme.colors.border,
-          paddingTop: 8,
-          paddingBottom: Math.max(12, insets.bottom + 4),
-          height: 60 + insets.bottom + 8,
-          shadowColor: theme.colors.shadow,
-          shadowOffset: {
-            width: 0,
-            height: -2,
-          },
-          shadowOpacity: 0.1,
-          shadowRadius: 4,
-          elevation: 8,
-        },
-        tabBarActiveTintColor: theme.colors.primary,
-        tabBarInactiveTintColor: theme.colors.textSecondary,
-        tabBarLabelStyle: {
-          fontSize: 12,
-          fontWeight: '600',
-          marginTop: 4,
-        },
-        tabBarItemStyle: {
-          paddingVertical: 4,
-        },
         headerShown: false,
       }}
     >
@@ -275,6 +392,16 @@ const MainTabNavigator = () => {
           title: 'Templates',
           tabBarIcon: ({ color, size }) => (
             <Icon name="dashboard" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tab.Screen 
+        name="MyBusiness" 
+        component={MyBusinessScreen}
+        options={{
+          title: 'My Business',
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="business" size={size} color={color} />
           ),
         }}
       />
