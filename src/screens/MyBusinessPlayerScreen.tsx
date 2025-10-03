@@ -19,6 +19,9 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import { BusinessCategoryPoster } from '../services/businessCategoryPostersApi';
 import { useTheme } from '../context/ThemeContext';
 
+// Get screen dimensions
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 // Enhanced responsive design helpers with more granular breakpoints
 const isUltraSmallScreen = screenWidth < 360;
 const isSmallScreen = screenWidth >= 360 && screenWidth < 375;

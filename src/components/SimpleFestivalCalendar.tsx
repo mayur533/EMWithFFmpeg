@@ -7,11 +7,12 @@ import {
   ScrollView,
   TouchableOpacity,
   Animated,
+  Image,
+  FlatList,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../context/ThemeContext';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Festival data structure
 interface FestivalData {
@@ -23,6 +24,20 @@ interface FestivalData {
 
 interface FestivalDays {
   [date: string]: FestivalData;
+}
+
+// Poster data structures
+interface DatePoster {
+  id: string;
+  title: string;
+  thumbnail: string;
+  category: string;
+  likes: number;
+  isLiked: boolean;
+}
+
+interface DatePosters {
+  [date: string]: DatePoster[];
 }
 
 // Festival data with correct dates from Google Calendar 2025
@@ -244,13 +259,110 @@ const festivalDays: FestivalDays = {
   },
 };
 
+// Mock poster data for demonstration
+const datePosters: DatePosters = {
+  '2025-01-01': [
+    {
+      id: '1',
+      title: 'New Year Celebration',
+      thumbnail: 'https://picsum.photos/300/400?random=1',
+      category: 'New Year',
+      likes: 45,
+      isLiked: false,
+    },
+    {
+      id: '2',
+      title: 'Happy New Year 2025',
+      thumbnail: 'https://picsum.photos/300/400?random=2',
+      category: 'Celebration',
+      likes: 32,
+      isLiked: true,
+    },
+  ],
+  '2025-01-14': [
+    {
+      id: '3',
+      title: 'Makar Sankranti Wishes',
+      thumbnail: 'https://picsum.photos/300/400?random=3',
+      category: 'Festival',
+      likes: 28,
+      isLiked: false,
+    },
+  ],
+  '2025-01-26': [
+    {
+      id: '4',
+      title: 'Republic Day Pride',
+      thumbnail: 'https://picsum.photos/300/400?random=4',
+      category: 'National',
+      likes: 67,
+      isLiked: true,
+    },
+    {
+      id: '5',
+      title: 'Jai Hind',
+      thumbnail: 'https://picsum.photos/300/400?random=5',
+      category: 'Patriotic',
+      likes: 41,
+      isLiked: false,
+    },
+  ],
+  '2025-03-02': [
+    {
+      id: '6',
+      title: 'Holi Colors',
+      thumbnail: 'https://picsum.photos/300/400?random=6',
+      category: 'Festival',
+      likes: 89,
+      isLiked: true,
+    },
+    {
+      id: '7',
+      title: 'Festival of Colors',
+      thumbnail: 'https://picsum.photos/300/400?random=7',
+      category: 'Holi',
+      likes: 56,
+      isLiked: false,
+    },
+  ],
+  '2025-10-20': [
+    {
+      id: '8',
+      title: 'Diwali Lights',
+      thumbnail: 'https://picsum.photos/300/400?random=8',
+      category: 'Festival',
+      likes: 92,
+      isLiked: true,
+    },
+    {
+      id: '9',
+      title: 'Festival of Lights',
+      thumbnail: 'https://picsum.photos/300/400?random=9',
+      category: 'Diwali',
+      likes: 78,
+      isLiked: false,
+    },
+  ],
+  '2025-12-25': [
+    {
+      id: '10',
+      title: 'Merry Christmas',
+      thumbnail: 'https://picsum.photos/300/400?random=10',
+      category: 'Christmas',
+      likes: 85,
+      isLiked: true,
+    },
+  ],
+};
+
 // Custom animated gradient border component for festival dates
 const AnimatedGradientBorder: React.FC<{ 
   children: React.ReactNode; 
   festivalColor: string;
   isSelected: boolean;
   isCurrentDay: boolean;
-}> = ({ children, festivalColor, isSelected, isCurrentDay }) => {
+  dynamicStyles: any;
+}> = ({ children, festivalColor, isSelected, isCurrentDay, dynamicStyles }) => {
   const animatedValue = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
@@ -282,11 +394,11 @@ const AnimatedGradientBorder: React.FC<{
   });
 
   return (
-    <View style={styles.movingBorderContainer}>
+    <View style={dynamicStyles.movingBorderContainer}>
       {/* Outer glow effect */}
       <Animated.View
         style={[
-          styles.outerGlow,
+          dynamicStyles.outerGlow,
           {
             borderColor: gradientColors,
             shadowColor: gradientColors,
@@ -297,7 +409,7 @@ const AnimatedGradientBorder: React.FC<{
       {/* Main border */}
       <Animated.View
         style={[
-          styles.gradientBorder,
+          dynamicStyles.gradientBorder,
           {
             borderColor: gradientColors,
             borderWidth: isSelected ? 3 : 2.5,
@@ -319,7 +431,295 @@ const SimpleFestivalCalendar: React.FC = () => {
   const { theme } = useTheme();
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedFestival, setSelectedFestival] = useState<FestivalData | null>(null);
+  const [selectedDatePosters, setSelectedDatePosters] = useState<DatePoster[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
+  
+  // Get current screen dimensions
+  const { width: currentScreenWidth, height: currentScreenHeight } = Dimensions.get('window');
+
+  // Enhanced responsive design helpers with more granular breakpoints
+  const isUltraSmallScreen = currentScreenWidth < 360;
+  const isSmallScreen = currentScreenWidth >= 360 && currentScreenWidth < 375;
+  const isMediumScreen = currentScreenWidth >= 375 && currentScreenWidth < 414;
+  const isLargeScreen = currentScreenWidth >= 414 && currentScreenWidth < 480;
+  const isXLargeScreen = currentScreenWidth >= 480;
+
+  // Orientation detection
+  const isPortrait = currentScreenHeight > currentScreenWidth;
+  const isLandscape = currentScreenWidth > currentScreenHeight;
+
+  // Device type detection
+  const isTablet = Math.min(currentScreenWidth, currentScreenHeight) >= 768;
+  const isPhone = !isTablet;
+
+  // Enhanced responsive spacing and sizing system
+  const responsiveSpacing = {
+    xs: isUltraSmallScreen ? 2 : isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : 10,
+    sm: isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12,
+    md: isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14,
+    lg: isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16,
+    xl: isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : 18,
+    xxl: isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : 20,
+    xxxl: isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 24,
+  };
+
+  const responsiveFontSize = {
+    xs: isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12,
+    sm: isUltraSmallScreen ? 9 : isSmallScreen ? 10 : isMediumScreen ? 11 : isLargeScreen ? 12 : 13,
+    md: isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14,
+    lg: isUltraSmallScreen ? 11 : isSmallScreen ? 12 : isMediumScreen ? 13 : isLargeScreen ? 14 : 15,
+    xl: isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16,
+    xxl: isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : isLargeScreen ? 16 : 17,
+    xxxl: isUltraSmallScreen ? 14 : isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : 18,
+    xxxxl: isUltraSmallScreen ? 15 : isSmallScreen ? 16 : isMediumScreen ? 17 : isLargeScreen ? 18 : 20,
+    xxxxxl: isUltraSmallScreen ? 16 : isSmallScreen ? 17 : isMediumScreen ? 18 : isLargeScreen ? 19 : 22,
+  };
+
+  // Create styles with current screen dimensions
+  const dynamicStyles = StyleSheet.create({
+    container: {
+      // Match HomeScreen section styling - transparent background
+    },
+    header: {
+      marginBottom: currentScreenHeight * 0.02,
+    },
+    sectionTitle: {
+      fontSize: currentScreenWidth < 480 ? 14 : currentScreenWidth < 768 ? 16 : Math.min(currentScreenWidth * 0.045, 18),
+      fontWeight: 'bold',
+      color: '#ffffff',
+      marginBottom: currentScreenWidth < 480 ? 6 : currentScreenWidth < 768 ? 8 : currentScreenHeight * 0.015,
+      paddingHorizontal: currentScreenWidth < 480 ? 16 : currentScreenWidth < 768 ? 20 : 24,
+    },
+    subtitle: {
+      fontSize: Math.min(currentScreenWidth * 0.04, 16),
+      color: '#ffffff',
+      textAlign: 'center',
+      opacity: 0.8,
+      marginBottom: currentScreenHeight * 0.01,
+    },
+    calendarContainer: {
+      marginBottom: currentScreenHeight * 0.02,
+      paddingHorizontal: currentScreenWidth < 480 ? 8 : currentScreenWidth < 768 ? 12 : currentScreenWidth * 0.05,
+    },
+    horizontalCalendarScroll: {
+      maxHeight: isTablet ? 120 : 100,
+    },
+    horizontalCalendarContainer: {
+      paddingHorizontal: currentScreenWidth * 0.02,
+      alignItems: 'center',
+    },
+    horizontalDayCell: {
+      width: isTablet ? 70 : 60,
+      height: isTablet ? 90 : 80,
+      justifyContent: 'center',
+      alignItems: 'center',
+      borderRadius: isTablet ? 14 : 12,
+      marginHorizontal: isTablet ? 6 : 4,
+      position: 'relative',
+      paddingVertical: isTablet ? 10 : 8,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+    },
+    movingBorderContainer: {
+      position: 'relative',
+      width: isTablet ? 70 : 60,
+      height: isTablet ? 90 : 80,
+      marginHorizontal: isTablet ? 6 : 4,
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    outerGlow: {
+      position: 'absolute',
+      width: isTablet ? 76 : 66,
+      height: isTablet ? 96 : 86,
+      borderRadius: isTablet ? 17 : 15,
+      borderWidth: 1,
+      shadowOffset: { width: 0, height: 0 },
+      shadowRadius: 12,
+      elevation: 8,
+      zIndex: 1,
+    },
+    gradientBorder: {
+      width: isTablet ? 70 : 60,
+      height: isTablet ? 90 : 80,
+      borderRadius: isTablet ? 14 : 12,
+      borderWidth: 2.5,
+      justifyContent: 'center',
+      alignItems: 'center',
+      backgroundColor: 'transparent',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 4,
+      zIndex: 2,
+    },
+    dayNameText: {
+      fontSize: Math.min(currentScreenWidth * 0.03, 12),
+      fontWeight: '500',
+      marginBottom: 2,
+      color: '#ffffff',
+      opacity: 0.8,
+    },
+    horizontalDayText: {
+      fontSize: Math.min(currentScreenWidth * 0.04, 16),
+      fontWeight: '600',
+      color: '#ffffff',
+    },
+    festivalDot: {
+      position: 'absolute',
+      bottom: 2,
+      width: isTablet ? 8 : 6,
+      height: isTablet ? 8 : 6,
+      borderRadius: isTablet ? 4 : 3,
+    },
+    infoContainer: {
+      borderRadius: isTablet ? 16 : 12,
+      padding: currentScreenWidth * 0.04,
+      marginBottom: currentScreenHeight * 0.02,
+      backgroundColor: 'rgba(255, 255, 255, 0.1)',
+      borderWidth: 1,
+      borderColor: 'rgba(255, 255, 255, 0.2)',
+      marginHorizontal: currentScreenWidth < 480 ? 8 : currentScreenWidth < 768 ? 12 : currentScreenWidth * 0.05,
+    },
+    selectedDateText: {
+      fontSize: Math.min(currentScreenWidth * 0.045, 18),
+      fontWeight: '600',
+      textAlign: 'center',
+      marginBottom: currentScreenHeight * 0.015,
+      color: '#ffffff',
+    },
+    festivalInfo: {
+      alignItems: 'center',
+    },
+    festivalEmojiContainer: {
+      marginBottom: currentScreenHeight * 0.01,
+    },
+    festivalEmoji: {
+      fontSize: currentScreenWidth * 0.12,
+    },
+    festivalDetails: {
+      alignItems: 'center',
+    },
+    festivalName: {
+      fontSize: Math.min(currentScreenWidth * 0.05, 20),
+      fontWeight: 'bold',
+      marginBottom: currentScreenHeight * 0.005,
+      textAlign: 'center',
+      color: '#ffffff',
+    },
+    festivalDescription: {
+      fontSize: Math.min(currentScreenWidth * 0.035, 14),
+      textAlign: 'center',
+      lineHeight: Math.min(currentScreenWidth * 0.05, 20),
+      color: '#ffffff',
+      opacity: 0.8,
+    },
+    noFestivalContainer: {
+      alignItems: 'center',
+      paddingVertical: currentScreenHeight * 0.02,
+    },
+    noFestivalText: {
+      fontSize: Math.min(currentScreenWidth * 0.045, 18),
+      fontWeight: '600',
+      marginBottom: currentScreenHeight * 0.005,
+      color: '#ffffff',
+    },
+    noFestivalSubtext: {
+      fontSize: Math.min(currentScreenWidth * 0.035, 14),
+      textAlign: 'center',
+      color: '#ffffff',
+      opacity: 0.8,
+    },
+    // Poster section styles
+    postersSection: {
+      marginTop: currentScreenHeight * 0.02,
+      paddingHorizontal: currentScreenWidth < 480 ? 8 : currentScreenWidth < 768 ? 12 : currentScreenWidth * 0.05,
+    },
+    postersHeader: {
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      marginBottom: responsiveSpacing.md,
+    },
+    postersSectionTitle: {
+      fontSize: responsiveFontSize.lg,
+      fontWeight: '700',
+      color: '#ffffff',
+      letterSpacing: 0.5,
+    },
+    postersCount: {
+      fontSize: responsiveFontSize.sm,
+      color: 'rgba(255,255,255,0.7)',
+      fontWeight: '500',
+    },
+    postersList: {
+      paddingVertical: responsiveSpacing.sm,
+    },
+    postersFlatList: {
+      maxHeight: isTablet ? 250 : 200,
+    },
+    posterCard: {
+      width: isTablet ? 140 : 120,
+      height: isTablet ? 180 : 160,
+      backgroundColor: 'rgba(255,255,255,0.1)',
+      borderRadius: isTablet ? 16 : 12,
+      marginRight: responsiveSpacing.md,
+      overflow: 'hidden',
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 6,
+      borderWidth: 1,
+      borderColor: 'rgba(255,255,255,0.2)',
+    },
+    posterImage: {
+      width: '100%',
+      height: '70%',
+      resizeMode: 'cover',
+    },
+    posterOverlay: {
+      position: 'absolute',
+      top: responsiveSpacing.sm,
+      right: responsiveSpacing.sm,
+    },
+    posterLikeButton: {
+      width: isTablet ? 32 : 28,
+      height: isTablet ? 32 : 28,
+      borderRadius: isTablet ? 16 : 14,
+      backgroundColor: 'rgba(0,0,0,0.6)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    posterInfo: {
+      padding: responsiveSpacing.sm,
+      height: '30%',
+      justifyContent: 'space-between',
+    },
+    posterTitle: {
+      fontSize: responsiveFontSize.sm,
+      fontWeight: '600',
+      color: '#ffffff',
+      marginBottom: 2,
+    },
+    posterCategory: {
+      fontSize: responsiveFontSize.xs,
+      color: 'rgba(255,255,255,0.7)',
+      marginBottom: responsiveSpacing.xs,
+    },
+    posterStats: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 4,
+    },
+    posterLikes: {
+      fontSize: responsiveFontSize.xs,
+      color: 'rgba(255,255,255,0.8)',
+      fontWeight: '500',
+    },
+  });
 
   // Get month name
   const monthNames = [
@@ -360,7 +760,60 @@ const SimpleFestivalCalendar: React.FC = () => {
     // Check if selected date has a festival
     const festival = festivalDays[dateString];
     setSelectedFestival(festival || null);
+    
+    // Get posters for the selected date
+    const posters = datePosters[dateString] || [];
+    setSelectedDatePosters(posters);
   }, [currentMonth, currentYear]);
+
+  // Handle poster like
+  const handlePosterLike = useCallback((posterId: string) => {
+    setSelectedDatePosters(prevPosters => 
+      prevPosters.map(poster => 
+        poster.id === posterId 
+          ? { 
+              ...poster, 
+              isLiked: !poster.isLiked,
+              likes: poster.isLiked ? poster.likes - 1 : poster.likes + 1
+            }
+          : poster
+      )
+    );
+  }, []);
+
+  // Render poster card
+  const renderPosterCard = useCallback(({ item }: { item: DatePoster }) => (
+    <TouchableOpacity
+      style={dynamicStyles.posterCard}
+      activeOpacity={0.8}
+    >
+      <Image source={{ uri: item.thumbnail }} style={dynamicStyles.posterImage} />
+      <View style={dynamicStyles.posterOverlay}>
+        <TouchableOpacity
+          style={dynamicStyles.posterLikeButton}
+          onPress={() => handlePosterLike(item.id)}
+        >
+          <Icon 
+            name={item.isLiked ? "favorite" : "favorite-border"} 
+            size={isTablet ? 16 : 14} 
+            color={item.isLiked ? "#E74C3C" : "#E74C3C"} 
+          />
+        </TouchableOpacity>
+      </View>
+      <View style={dynamicStyles.posterInfo}>
+        <Text style={dynamicStyles.posterTitle} numberOfLines={1}>
+          {item.title}
+        </Text>
+        <Text style={dynamicStyles.posterCategory} numberOfLines={1}>
+          {item.category}
+        </Text>
+        <View style={dynamicStyles.posterStats}>
+          <Icon name="favorite" size={isTablet ? 12 : 10} color="#E74C3C" />
+          <Text style={dynamicStyles.posterLikes}>{item.likes}</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  ), [handlePosterLike, dynamicStyles, isTablet]);
 
   // Check if date is today
   const isToday = useCallback((day: number) => {
@@ -385,8 +838,8 @@ const SimpleFestivalCalendar: React.FC = () => {
     const today = new Date().getDate();
     const scrollToToday = () => {
       if (scrollViewRef.current) {
-        const itemWidth = 68; // 60 width + 8 margin
-        const scrollPosition = (today - 1) * itemWidth - screenWidth / 2 + itemWidth / 2;
+        const itemWidth = isTablet ? 82 : 68; // width + margin
+        const scrollPosition = (today - 1) * itemWidth - currentScreenWidth / 2 + itemWidth / 2;
         scrollViewRef.current.scrollTo({
           x: Math.max(0, scrollPosition),
           animated: true,
@@ -396,28 +849,28 @@ const SimpleFestivalCalendar: React.FC = () => {
     
     // Delay to ensure the component is fully rendered
     setTimeout(scrollToToday, 100);
-  }, []);
+  }, [currentScreenWidth, isTablet]);
 
   return (
-    <View style={styles.container}>
+    <View style={dynamicStyles.container}>
       {/* Header */}
-      <View style={styles.header}>
-        <Text style={styles.sectionTitle}>
+      <View style={dynamicStyles.header}>
+        <Text style={dynamicStyles.sectionTitle}>
           Festival Calendar
         </Text>
-        <Text style={styles.subtitle}>
+        <Text style={dynamicStyles.subtitle}>
           {monthNames[currentMonth]} {currentYear}
         </Text>
       </View>
 
       {/* Horizontal Scrollable Calendar */}
-      <View style={styles.calendarContainer}>
+      <View style={dynamicStyles.calendarContainer}>
         <ScrollView
           ref={scrollViewRef}
           horizontal
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalCalendarContainer}
-          style={styles.horizontalCalendarScroll}
+          contentContainerStyle={dynamicStyles.horizontalCalendarContainer}
+          style={dynamicStyles.horizontalCalendarScroll}
         >
           {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
             const isSelected = selectedDate === `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -433,21 +886,22 @@ const SimpleFestivalCalendar: React.FC = () => {
                     festivalColor={festival.color}
                     isSelected={isSelected}
                     isCurrentDay={isCurrentDay}
+                    dynamicStyles={dynamicStyles}
                   >
                     <TouchableOpacity
                       style={[
-                        styles.horizontalDayCell,
+                        dynamicStyles.horizontalDayCell,
                         isSelected && { backgroundColor: '#007AFF' },
                         isCurrentDay && !isSelected && { backgroundColor: 'rgba(0, 122, 255, 0.2)' },
                       ]}
                       onPress={() => handleDateSelect(day)}
                     >
-                      <Text style={styles.dayNameText}>
+                      <Text style={dynamicStyles.dayNameText}>
                         {dayNames[dayOfWeek]}
                       </Text>
                       <Text
                         style={[
-                          styles.horizontalDayText,
+                          dynamicStyles.horizontalDayText,
                           isSelected && { color: '#FFFFFF', fontWeight: 'bold' },
                           isCurrentDay && !isSelected && { color: '#FFD700', fontWeight: 'bold' },
                           { fontWeight: 'bold' },
@@ -455,24 +909,24 @@ const SimpleFestivalCalendar: React.FC = () => {
                       >
                         {day}
                       </Text>
-                      <View style={[styles.festivalDot, { backgroundColor: festival.color }]} />
+                      <View style={[dynamicStyles.festivalDot, { backgroundColor: festival.color }]} />
                     </TouchableOpacity>
                   </AnimatedGradientBorder>
                 ) : (
                   <TouchableOpacity
                     style={[
-                      styles.horizontalDayCell,
+                      dynamicStyles.horizontalDayCell,
                       isSelected && { backgroundColor: '#007AFF' },
                       isCurrentDay && !isSelected && { backgroundColor: 'rgba(0, 122, 255, 0.2)' },
                     ]}
                     onPress={() => handleDateSelect(day)}
                   >
-                    <Text style={styles.dayNameText}>
+                    <Text style={dynamicStyles.dayNameText}>
                       {dayNames[dayOfWeek]}
                     </Text>
                     <Text
                       style={[
-                        styles.horizontalDayText,
+                        dynamicStyles.horizontalDayText,
                         isSelected && { color: '#FFFFFF', fontWeight: 'bold' },
                         isCurrentDay && !isSelected && { color: '#FFD700', fontWeight: 'bold' },
                       ]}
@@ -489,8 +943,8 @@ const SimpleFestivalCalendar: React.FC = () => {
 
       {/* Selected Date Information */}
       {selectedDate && (
-        <View style={styles.infoContainer}>
-          <Text style={styles.selectedDateText}>
+        <View style={dynamicStyles.infoContainer}>
+          <Text style={dynamicStyles.selectedDateText}>
             {new Date(selectedDate).toLocaleDateString('en-US', {
               weekday: 'long',
               year: 'numeric',
@@ -500,25 +954,25 @@ const SimpleFestivalCalendar: React.FC = () => {
           </Text>
 
           {selectedFestival ? (
-            <View style={styles.festivalInfo}>
-              <View style={styles.festivalEmojiContainer}>
-                <Text style={styles.festivalEmoji}>{selectedFestival.emoji}</Text>
+            <View style={dynamicStyles.festivalInfo}>
+              <View style={dynamicStyles.festivalEmojiContainer}>
+                <Text style={dynamicStyles.festivalEmoji}>{selectedFestival.emoji}</Text>
               </View>
-              <View style={styles.festivalDetails}>
-                <Text style={styles.festivalName}>
+              <View style={dynamicStyles.festivalDetails}>
+                <Text style={dynamicStyles.festivalName}>
                   {selectedFestival.name}
                 </Text>
-                <Text style={styles.festivalDescription}>
+                <Text style={dynamicStyles.festivalDescription}>
                   {selectedFestival.description}
                 </Text>
               </View>
             </View>
           ) : (
-            <View style={styles.noFestivalContainer}>
-              <Text style={styles.noFestivalText}>
+            <View style={dynamicStyles.noFestivalContainer}>
+              <Text style={dynamicStyles.noFestivalText}>
                 No festival today 🎉
               </Text>
-              <Text style={styles.noFestivalSubtext}>
+              <Text style={dynamicStyles.noFestivalSubtext}>
                 Enjoy a peaceful day!
               </Text>
             </View>
@@ -526,166 +980,32 @@ const SimpleFestivalCalendar: React.FC = () => {
         </View>
       )}
 
+      {/* Horizontal Scrollable Posters Section */}
+      {selectedDate && selectedDatePosters.length > 0 && (
+        <View style={dynamicStyles.postersSection}>
+          <View style={dynamicStyles.postersHeader}>
+            <Text style={dynamicStyles.postersSectionTitle}>
+              Posters for {new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+            </Text>
+            <Text style={dynamicStyles.postersCount}>
+              {selectedDatePosters.length} poster{selectedDatePosters.length !== 1 ? 's' : ''}
+            </Text>
+          </View>
+          
+          <FlatList
+            data={selectedDatePosters}
+            renderItem={renderPosterCard}
+            keyExtractor={(item) => item.id}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={dynamicStyles.postersList}
+            style={dynamicStyles.postersFlatList}
+          />
+        </View>
+      )}
+
     </View>
   );
 };
-
-const styles = StyleSheet.create({
-  container: {
-    // Match HomeScreen section styling - transparent background
-  },
-  header: {
-    marginBottom: screenHeight * 0.02,
-  },
-  sectionTitle: {
-    fontSize: screenWidth < 480 ? 14 : screenWidth < 768 ? 16 : Math.min(screenWidth * 0.045, 18),
-    fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : screenHeight * 0.015,
-    paddingHorizontal: screenWidth < 480 ? 16 : screenWidth < 768 ? 20 : 24,
-  },
-  subtitle: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
-    color: '#ffffff',
-    textAlign: 'center',
-    opacity: 0.8,
-    marginBottom: screenHeight * 0.01,
-  },
-  calendarContainer: {
-    marginBottom: screenHeight * 0.02,
-    paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : screenWidth * 0.05,
-  },
-  horizontalCalendarScroll: {
-    maxHeight: 100,
-  },
-  horizontalCalendarContainer: {
-    paddingHorizontal: screenWidth * 0.02,
-    alignItems: 'center',
-  },
-  horizontalDayCell: {
-    width: 60,
-    height: 80,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderRadius: 12,
-    marginHorizontal: 4,
-    position: 'relative',
-    paddingVertical: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  movingBorderContainer: {
-    position: 'relative',
-    width: 60,
-    height: 80,
-    marginHorizontal: 4,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  outerGlow: {
-    position: 'absolute',
-    width: 66,
-    height: 86,
-    borderRadius: 15,
-    borderWidth: 1,
-    shadowOffset: { width: 0, height: 0 },
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 1,
-  },
-  gradientBorder: {
-    width: 60,
-    height: 80,
-    borderRadius: 12,
-    borderWidth: 2.5,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'transparent',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 4,
-    zIndex: 2,
-  },
-  dayNameText: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    fontWeight: '500',
-    marginBottom: 2,
-    color: '#ffffff',
-    opacity: 0.8,
-  },
-  horizontalDayText: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
-    fontWeight: '600',
-    color: '#ffffff',
-  },
-  festivalDot: {
-    position: 'absolute',
-    bottom: 2,
-    width: 6,
-    height: 6,
-    borderRadius: 3,
-  },
-  infoContainer: {
-    borderRadius: 12,
-    padding: screenWidth * 0.04,
-    marginBottom: screenHeight * 0.02,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    marginHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : screenWidth * 0.05,
-  },
-  selectedDateText: {
-    fontSize: Math.min(screenWidth * 0.045, 18),
-    fontWeight: '600',
-    textAlign: 'center',
-    marginBottom: screenHeight * 0.015,
-    color: '#ffffff',
-  },
-  festivalInfo: {
-    alignItems: 'center',
-  },
-  festivalEmojiContainer: {
-    marginBottom: screenHeight * 0.01,
-  },
-  festivalEmoji: {
-    fontSize: screenWidth * 0.12,
-  },
-  festivalDetails: {
-    alignItems: 'center',
-  },
-  festivalName: {
-    fontSize: Math.min(screenWidth * 0.05, 20),
-    fontWeight: 'bold',
-    marginBottom: screenHeight * 0.005,
-    textAlign: 'center',
-    color: '#ffffff',
-  },
-  festivalDescription: {
-    fontSize: Math.min(screenWidth * 0.035, 14),
-    textAlign: 'center',
-    lineHeight: Math.min(screenWidth * 0.05, 20),
-    color: '#ffffff',
-    opacity: 0.8,
-  },
-  noFestivalContainer: {
-    alignItems: 'center',
-    paddingVertical: screenHeight * 0.02,
-  },
-  noFestivalText: {
-    fontSize: Math.min(screenWidth * 0.045, 18),
-    fontWeight: '600',
-    marginBottom: screenHeight * 0.005,
-    color: '#ffffff',
-  },
-  noFestivalSubtext: {
-    fontSize: Math.min(screenWidth * 0.035, 14),
-    textAlign: 'center',
-    color: '#ffffff',
-    opacity: 0.8,
-  },
-});
 
 export default SimpleFestivalCalendar;
