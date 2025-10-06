@@ -35,7 +35,7 @@ import businessCategoryPostersApi, { BusinessCategoryPoster } from '../services/
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 import userLikesService from '../services/userLikes';
-import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
+// import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
 import ComingSoonModal from '../components/ComingSoonModal';
 import responsiveUtils, { 
   responsiveSpacing, 
@@ -1129,10 +1129,10 @@ const HomeScreen: React.FC = React.memo(() => {
             </View>
           </View>
 
-          {/* Festival Calendar */}
-          <View style={styles.calendarSection}>
+          {/* Festival Calendar - Commented out for now */}
+          {/* <View style={styles.calendarSection}>
             <SimpleFestivalCalendar />
-          </View>
+          </View> */}
 
           {/* Tabs - All tabs commented out */}
           {/* <View style={styles.tabsContainer}>

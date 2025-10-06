@@ -52,10 +52,18 @@ const SplashScreen: React.FC = () => {
   // Video state
   const [showVideo, setShowVideo] = React.useState(true);
   const [videoEnded, setVideoEnded] = React.useState(false);
+  const [videoTimeout, setVideoTimeout] = React.useState<NodeJS.Timeout | null>(null);
+  const [videoReady, setVideoReady] = React.useState(false);
 
   // Video event handlers
   const onVideoEnd = () => {
+    console.log('✅ Video ended successfully');
     setVideoEnded(true);
+    // Clear timeout if video ends successfully
+    if (videoTimeout) {
+      clearTimeout(videoTimeout);
+      setVideoTimeout(null);
+    }
     // Fade out video
     Animated.timing(videoOpacity, {
       toValue: 0,
@@ -68,10 +76,50 @@ const SplashScreen: React.FC = () => {
   };
 
   const onVideoError = (error: any) => {
-    console.log('Video error:', error);
+    console.log('❌ Video error:', error);
+    console.log('❌ Video path: file:///android_asset/intro.mp4');
+    console.log('❌ Error details:', JSON.stringify(error, null, 2));
+    // Clear timeout on error
+    if (videoTimeout) {
+      clearTimeout(videoTimeout);
+      setVideoTimeout(null);
+    }
     // If video fails to load, show regular splash screen
     setShowVideo(false);
     startAnimations();
+  };
+
+  const onVideoLoad = () => {
+    console.log('✅ Video loaded successfully: intro.mp4');
+    setVideoReady(true);
+    // Clear timeout on successful load
+    if (videoTimeout) {
+      clearTimeout(videoTimeout);
+      setVideoTimeout(null);
+    }
+  };
+
+  const onVideoReadyForDisplay = () => {
+    console.log('🎬 Video ready for display: intro.mp4');
+  };
+
+  const onVideoProgress = (data: any) => {
+    console.log('📊 Video progress:', data);
+  };
+
+  const onVideoBuffer = (data: any) => {
+    console.log('🔄 Video buffer:', data);
+  };
+
+  const onVideoLoadStart = () => {
+    console.log('🔄 Video loading started: intro.mp4');
+    // Set a timeout to fallback if video doesn't load within 5 seconds
+    const timeout = setTimeout(() => {
+      console.log('⏰ Video loading timeout - falling back to regular splash');
+      setShowVideo(false);
+      startAnimations();
+    }, 5000);
+    setVideoTimeout(timeout);
   };
 
   // Memoized animation sequence
@@ -135,14 +183,33 @@ const SplashScreen: React.FC = () => {
       {showVideo && (
         <Animated.View style={[styles.videoContainer, { opacity: videoOpacity }]}>
           <Video
-            source={{ uri: 'file:///android_asset/intro.mp4' }}
+            source={{ uri: 'file:///android_asset/intro2.mp4' }}
             style={styles.video}
             resizeMode="cover"
             onEnd={onVideoEnd}
             onError={onVideoError}
+            onLoad={onVideoLoad}
+            onLoadStart={onVideoLoadStart}
+            onReadyForDisplay={onVideoReadyForDisplay}
+            onProgress={onVideoProgress}
+            onBuffer={onVideoBuffer}
             repeat={false}
             muted={false}
             volume={1.0}
+            playInBackground={false}
+            playWhenInactive={false}
+            paused={false}
+            ignoreSilentSwitch="ignore"
+            mixWithOthers="mix"
+            progressUpdateInterval={1000}
+            bufferConfig={{
+              minBufferMs: 15000,
+              maxBufferMs: 50000,
+              bufferForPlaybackMs: 2500,
+              bufferForPlaybackAfterRebufferMs: 5000,
+            }}
+            maxBitRate={2000000}
+            allowsExternalPlayback={false}
           />
         </Animated.View>
       )}

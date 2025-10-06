@@ -319,9 +319,6 @@ const ProfileScreen: React.FC = () => {
     navigation.navigate('LikedItems' as never);
   };
 
-  const handleBackendTest = () => {
-    navigation.navigate('ApiTest' as never);
-  };
 
   const handleShareApp = async () => {
     try {
@@ -804,31 +801,6 @@ const ProfileScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
 
-          {/* Backend Test Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Backend Integration</Text>
-            <TouchableOpacity 
-              style={[styles.backendTestCard, { backgroundColor: theme.colors.cardBackground }]}
-              onPress={handleBackendTest}
-            >
-              <View style={styles.backendTestContent}>
-                <View style={styles.backendTestLeft}>
-                  <View style={[styles.backendTestIcon, { backgroundColor: '#2196F320' }]}>
-                    <Icon name="api" size={24} color="#2196F3" />
-                  </View>
-                  <View style={styles.backendTestInfo}>
-                    <Text style={[styles.backendTestTitle, { color: theme.colors.text }]}>
-                      Backend API Test
-                    </Text>
-                    <Text style={[styles.backendTestSubtitle, { color: theme.colors.textSecondary }]}>
-                      Test all backend endpoints and integration
-                    </Text>
-                  </View>
-                </View>
-                <Icon name="chevron-right" size={24} color={theme.colors.textSecondary} />
-              </View>
-            </TouchableOpacity>
-          </View>
 
           {/* Subscription Section */}
           <View style={styles.section}>
@@ -1696,51 +1668,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   likedItemsSubtitle: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    marginTop: 2,
-  },
-  // Backend Test Section Styles
-  backendTestCard: {
-    marginHorizontal: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.01,
-    paddingVertical: screenHeight * 0.015,
-    paddingHorizontal: screenWidth * 0.05,
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  backendTestContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  backendTestLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  backendTestIcon: {
-    width: screenWidth * 0.08,
-    height: screenWidth * 0.08,
-    borderRadius: screenWidth * 0.04,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: screenWidth * 0.04,
-  },
-  backendTestInfo: {
-    flex: 1,
-  },
-  backendTestTitle: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
-    fontWeight: '600',
-  },
-  backendTestSubtitle: {
     fontSize: Math.min(screenWidth * 0.03, 12),
     marginTop: 2,
   },

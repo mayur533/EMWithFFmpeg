@@ -5,7 +5,6 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
-  Alert,
   StatusBar,
   ScrollView,
   Platform,
@@ -51,7 +50,7 @@ type FilterType = 'all' | 'success' | 'failed' | 'pending';
 const TransactionHistoryScreen: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
-  const { transactions, transactionStats, refreshTransactions, clearTransactions } = useSubscription();
+  const { transactions, transactionStats, refreshTransactions } = useSubscription();
   const { theme } = useTheme();
   
   const [refreshing, setRefreshing] = useState(false);
@@ -116,24 +115,6 @@ const TransactionHistoryScreen: React.FC = () => {
   };
 
 
-  // Handle clear transactions
-  const handleClearTransactions = () => {
-    Alert.alert(
-      'Clear All Transactions',
-      'This will permanently delete all transaction history. This action cannot be undone. Continue?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Clear All', 
-          style: 'destructive',
-          onPress: async () => {
-            await clearTransactions();
-            Alert.alert('Success', 'All transactions cleared successfully!');
-          }
-        },
-      ]
-    );
-  };
 
   // Render transaction item
   const renderTransactionItem = ({ item }: { item: Transaction }) => (
@@ -279,14 +260,6 @@ const TransactionHistoryScreen: React.FC = () => {
             {filteredTransactions.length} transactions found
           </Text>
         </View>
-        <View style={styles.headerActions}>
-          <TouchableOpacity
-            style={styles.headerActionButton}
-            onPress={handleClearTransactions}
-          >
-            <Icon name="delete" size={20} color="#ffffff" />
-          </TouchableOpacity>
-        </View>
       </LinearGradient>
 
       <ScrollView 
@@ -367,15 +340,6 @@ const styles = StyleSheet.create({
     fontSize: responsiveFontSize.sm,
     color: 'rgba(255, 255, 255, 0.8)',
     marginTop: 2,
-  },
-  headerActions: {
-    flexDirection: 'row',
-    gap: responsiveSpacing.xs,
-  },
-  headerActionButton: {
-    padding: 10,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   scrollView: {
     flex: 1,

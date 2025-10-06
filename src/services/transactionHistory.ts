@@ -1,4 +1,3 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
 import authService from './auth';
 
@@ -9,7 +8,7 @@ export interface Transaction {
   amount: number;
   currency: string;
   status: 'success' | 'failed' | 'pending' | 'cancelled';
-  plan: 'monthly' | 'yearly';
+  plan: 'quarterly' | 'yearly';
   planName: string;
   timestamp: number;
   description: string;
@@ -23,119 +22,93 @@ export interface Transaction {
 }
 
 class TransactionHistoryService {
-  private readonly STORAGE_KEY = 'transaction_history';
 
-  // Get all transactions (with backend integration)
+  // Get all transactions from backend API only
   async getTransactions(): Promise<Transaction[]> {
     try {
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
       
       if (!userId) {
-        console.log('⚠️ No user ID available, using local storage');
-        return await this.getLocalTransactions();
+        console.log('⚠️ No user ID available, cannot fetch transactions');
+        return [];
       }
 
-      // Try to get transactions from backend first
-      try {
-        const response = await api.get(`/api/mobile/transactions/user/${userId}`);
+      // Get transactions from backend API
+      const response = await api.get(`/api/mobile/transactions/user/${userId}`);
+      
+      if (response.data.success) {
+        const backendTransactions = response.data.data.transactions;
         
-        if (response.data.success) {
-          const backendTransactions = response.data.data.transactions;
-          
-          // Transform backend transactions to frontend format
-          const transformedTransactions = backendTransactions.map((txn: any) => ({
-            id: txn.id,
-            paymentId: txn.paymentId || txn.transactionId,
-            orderId: txn.orderId || txn.transactionId,
-            amount: txn.amount,
-            currency: txn.currency || 'INR',
-            status: txn.status.toLowerCase(),
-            plan: txn.plan === 'monthly_pro' ? 'monthly' : 'yearly',
-            planName: txn.planName || (txn.plan === 'monthly_pro' ? 'Monthly Pro' : 'Yearly Pro'),
-            timestamp: new Date(txn.createdAt).getTime(),
-            description: txn.description || `${txn.planName} Subscription`,
-            method: 'razorpay',
-            metadata: txn.metadata ? JSON.parse(txn.metadata) : undefined
-          }));
+        // Transform backend transactions to frontend format
+        const transformedTransactions = backendTransactions.map((txn: any) => ({
+          id: txn.id,
+          paymentId: txn.paymentId || txn.transactionId,
+          orderId: txn.orderId || txn.transactionId,
+          amount: txn.amount,
+          currency: txn.currency || 'INR',
+          status: txn.status.toLowerCase(),
+          plan: txn.plan === 'quarterly_pro' ? 'quarterly' : 'yearly',
+          planName: txn.planName || (txn.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro'),
+          timestamp: new Date(txn.createdAt).getTime(),
+          description: txn.description || `${txn.planName} Subscription`,
+          method: 'razorpay',
+          metadata: txn.metadata ? JSON.parse(txn.metadata) : undefined
+        }));
 
-          console.log('✅ Retrieved transactions from backend:', transformedTransactions.length);
-          return transformedTransactions;
-        }
-      } catch (error) {
-        console.log('⚠️ Failed to get transactions from backend, using local storage:', error);
+        console.log('✅ Retrieved transactions from backend:', transformedTransactions.length);
+        return transformedTransactions;
+      } else {
+        console.log('⚠️ Backend returned unsuccessful response');
+        return [];
       }
-
-      // Fallback to local storage
-      return await this.getLocalTransactions();
     } catch (error) {
-      console.error('Error getting transactions:', error);
-      return await this.getLocalTransactions();
-    }
-  }
-
-  // Get transactions from local storage
-  private async getLocalTransactions(): Promise<Transaction[]> {
-    try {
-      const transactionsJson = await AsyncStorage.getItem(this.STORAGE_KEY);
-      if (transactionsJson) {
-        const transactions = JSON.parse(transactionsJson);
-        return Array.isArray(transactions) ? transactions : [];
-      }
-      return [];
-    } catch (error) {
-      console.error('Error getting local transactions:', error);
+      console.error('Error getting transactions from backend:', error);
       return [];
     }
   }
 
-  // Add a new transaction (with backend integration)
+
+  // Add a new transaction to backend API only
   async addTransaction(transaction: Omit<Transaction, 'id' | 'timestamp'>): Promise<Transaction> {
     try {
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
       
+      if (!userId) {
+        throw new Error('No user ID available, cannot save transaction');
+      }
+
       const newTransaction: Transaction = {
         ...transaction,
         id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         timestamp: Date.now(),
       };
 
-      // Try to save to backend first
-      if (userId) {
-        try {
-          const backendData = {
-            transactionId: newTransaction.paymentId,
-            orderId: newTransaction.orderId,
-            amount: newTransaction.amount,
-            currency: newTransaction.currency,
-            plan: newTransaction.plan === 'monthly' ? 'monthly_pro' : 'yearly_pro',
-            planName: newTransaction.planName,
-            description: newTransaction.description,
-            paymentMethod: newTransaction.method,
-            paymentId: newTransaction.paymentId,
-            metadata: newTransaction.metadata
-          };
+      // Save to backend API
+      const backendData = {
+        transactionId: newTransaction.paymentId,
+        orderId: newTransaction.orderId,
+        amount: newTransaction.amount,
+        currency: newTransaction.currency,
+        plan: newTransaction.plan === 'quarterly' ? 'quarterly_pro' : 'yearly_pro',
+        planName: newTransaction.planName,
+        description: newTransaction.description,
+        paymentMethod: newTransaction.method,
+        paymentId: newTransaction.paymentId,
+        metadata: newTransaction.metadata
+      };
 
-          const response = await api.post('/api/mobile/transactions', backendData);
-          
-          if (response.data.success) {
-            console.log('✅ Transaction saved to backend:', response.data.data.id);
-            // Update the transaction ID with backend ID
-            newTransaction.id = response.data.data.id;
-          }
-        } catch (error) {
-          console.log('⚠️ Failed to save transaction to backend, using local storage:', error);
-        }
-      }
-
-      // Always save to local storage as backup
-      const existingTransactions = await this.getLocalTransactions();
-      const updatedTransactions = [newTransaction, ...existingTransactions];
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedTransactions));
+      const response = await api.post('/api/mobile/transactions', backendData);
       
-      console.log('Transaction added:', newTransaction);
-      return newTransaction;
+      if (response.data.success) {
+        console.log('✅ Transaction saved to backend:', response.data.data.id);
+        // Update the transaction ID with backend ID
+        newTransaction.id = response.data.data.id;
+        return newTransaction;
+      } else {
+        throw new Error('Failed to save transaction to backend');
+      }
     } catch (error) {
       console.error('Error adding transaction:', error);
       throw error;
@@ -153,37 +126,29 @@ class TransactionHistoryService {
     }
   }
 
-  // Update transaction status (with backend integration)
+  // Update transaction status in backend API only
   async updateTransactionStatus(id: string, status: Transaction['status']): Promise<boolean> {
     try {
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
       
-      // Try to update in backend first
-      if (userId) {
-        try {
-          const response = await api.put(`/api/mobile/transactions/${id}/status`, {
-            status: status.toUpperCase()
-          });
-          
-          if (response.data.success) {
-            console.log('✅ Transaction status updated in backend');
-          }
-        } catch (error) {
-          console.log('⚠️ Failed to update transaction status in backend:', error);
-        }
+      if (!userId) {
+        console.log('⚠️ No user ID available, cannot update transaction status');
+        return false;
       }
 
-      // Update in local storage
-      const transactions = await this.getLocalTransactions();
-      const transactionIndex = transactions.findIndex(txn => txn.id === id);
+      // Update in backend API
+      const response = await api.put(`/api/mobile/transactions/${id}/status`, {
+        status: status.toUpperCase()
+      });
       
-      if (transactionIndex !== -1) {
-        transactions[transactionIndex].status = status;
-        await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(transactions));
+      if (response.data.success) {
+        console.log('✅ Transaction status updated in backend');
         return true;
+      } else {
+        console.log('⚠️ Failed to update transaction status in backend');
+        return false;
       }
-      return false;
     } catch (error) {
       console.error('Error updating transaction status:', error);
       return false;
@@ -214,25 +179,39 @@ class TransactionHistoryService {
     }
   }
 
-  // Clear all transactions (for testing/reset)
+  // Clear all transactions from backend API only
   async clearTransactions(): Promise<void> {
     try {
-      await AsyncStorage.removeItem(this.STORAGE_KEY);
-      console.log('All transactions cleared');
+      const currentUser = authService.getCurrentUser();
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        console.log('⚠️ No user ID available, cannot clear transactions');
+        return;
+      }
+
+      // Clear from backend API
+      const response = await api.delete(`/api/mobile/transactions/user/${userId}`);
+      
+      if (response.data.success) {
+        console.log('✅ All transactions cleared for current user from backend');
+      } else {
+        console.log('⚠️ Failed to clear transactions from backend');
+      }
     } catch (error) {
       console.error('Error clearing transactions:', error);
       throw error;
     }
   }
 
-  // Get transaction statistics (with backend integration)
+  // Get transaction statistics from backend API only
   async getTransactionStats(): Promise<{
     total: number;
     successful: number;
     failed: number;
     pending: number;
     totalAmount: number;
-    monthlySubscriptions: number;
+    quarterlySubscriptions: number;
     yearlySubscriptions: number;
   }> {
     try {
@@ -240,85 +219,62 @@ class TransactionHistoryService {
       const userId = currentUser?.id;
       
       if (!userId) {
-        console.log('⚠️ No user ID available, using local storage stats');
-        return await this.getLocalTransactionStats();
+        console.log('⚠️ No user ID available, cannot fetch transaction stats');
+        return {
+          total: 0,
+          successful: 0,
+          failed: 0,
+          pending: 0,
+          totalAmount: 0,
+          quarterlySubscriptions: 0,
+          yearlySubscriptions: 0,
+        };
       }
 
-      // Try to get stats from backend first
-      try {
-        const response = await api.get(`/api/mobile/transactions/user/${userId}/summary`);
-        
-        if (response.data.success) {
-          const backendStats = response.data.data;
-          
-          const transformedStats = {
-            total: backendStats.totalTransactions,
-            successful: backendStats.successfulTransactions,
-            failed: backendStats.failedTransactions,
-            pending: backendStats.pendingTransactions,
-            totalAmount: backendStats.successfulAmount,
-            monthlySubscriptions: 0, // Will be calculated from transactions
-            yearlySubscriptions: 0, // Will be calculated from transactions
-          };
-
-          console.log('✅ Retrieved transaction stats from backend');
-          return transformedStats;
-        }
-      } catch (error) {
-        console.log('⚠️ Failed to get transaction stats from backend, using local storage:', error);
-      }
-
-      // Fallback to local storage calculation
-      return await this.getLocalTransactionStats();
-    } catch (error) {
-      console.error('Error getting transaction stats:', error);
-      return await this.getLocalTransactionStats();
-    }
-  }
-
-  // Get transaction stats from local storage
-  private async getLocalTransactionStats(): Promise<{
-    total: number;
-    successful: number;
-    failed: number;
-    pending: number;
-    totalAmount: number;
-    monthlySubscriptions: number;
-    yearlySubscriptions: number;
-  }> {
-    try {
-      const transactions = await this.getLocalTransactions();
+      // Get stats from backend API
+      const response = await api.get(`/api/mobile/transactions/user/${userId}/summary`);
       
-      const stats = {
-        total: transactions.length,
-        successful: transactions.filter(txn => txn.status === 'success').length,
-        failed: transactions.filter(txn => txn.status === 'failed').length,
-        pending: transactions.filter(txn => txn.status === 'pending').length,
-        totalAmount: transactions
-          .filter(txn => txn.status === 'success')
-          .reduce((sum, txn) => sum + txn.amount, 0),
-        monthlySubscriptions: transactions.filter(txn => 
-          txn.status === 'success' && txn.plan === 'monthly'
-        ).length,
-        yearlySubscriptions: transactions.filter(txn => 
-          txn.status === 'success' && txn.plan === 'yearly'
-        ).length,
-      };
+      if (response.data.success) {
+        const backendStats = response.data.data;
+        
+        const transformedStats = {
+          total: backendStats.totalTransactions,
+          successful: backendStats.successfulTransactions,
+          failed: backendStats.failedTransactions,
+          pending: backendStats.pendingTransactions,
+          totalAmount: backendStats.successfulAmount,
+          quarterlySubscriptions: 0, // Will be calculated from transactions
+          yearlySubscriptions: 0, // Will be calculated from transactions
+        };
 
-      return stats;
+        console.log('✅ Retrieved transaction stats from backend');
+        return transformedStats;
+      } else {
+        console.log('⚠️ Backend returned unsuccessful response for stats');
+        return {
+          total: 0,
+          successful: 0,
+          failed: 0,
+          pending: 0,
+          totalAmount: 0,
+          quarterlySubscriptions: 0,
+          yearlySubscriptions: 0,
+        };
+      }
     } catch (error) {
-      console.error('Error getting local transaction stats:', error);
+      console.error('Error getting transaction stats from backend:', error);
       return {
         total: 0,
         successful: 0,
         failed: 0,
         pending: 0,
         totalAmount: 0,
-        monthlySubscriptions: 0,
+        quarterlySubscriptions: 0,
         yearlySubscriptions: 0,
       };
     }
   }
+
 
 }
 

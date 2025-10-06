@@ -8,7 +8,7 @@ export interface SubscriptionPlan {
   description: string;
   price: number;
   currency: string;
-  duration: string; // monthly, yearly
+  duration: string; // quarterly, yearly
   features: string[];
   isPopular?: boolean;
 }
@@ -124,10 +124,10 @@ class SubscriptionApiService {
         data: {
           isActive: true,
           planId: data.planId,
-          planName: data.planId === 'monthly_pro' ? 'Monthly Pro' : 'Yearly Pro',
+          planName: data.planId === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro',
           startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + (data.planId === 'monthly_pro' ? 30 : 365) * 24 * 60 * 60 * 1000).toISOString(),
-          expiryDate: new Date(Date.now() + (data.planId === 'monthly_pro' ? 30 : 365) * 24 * 60 * 60 * 1000).toISOString(),
+          endDate: new Date(Date.now() + (data.planId === 'quarterly_pro' ? 90 : 365) * 24 * 60 * 60 * 1000).toISOString(),
+          expiryDate: new Date(Date.now() + (data.planId === 'quarterly_pro' ? 90 : 365) * 24 * 60 * 60 * 1000).toISOString(),
           autoRenew: data.autoRenew,
           status: 'active'
         },
@@ -190,17 +190,17 @@ class SubscriptionApiService {
         data: {
           isActive: subscriptionData.isActive || (subscriptionData.status === 'active' && subscriptionData.daysRemaining > 0),
           plan: subscriptionData.plan && subscriptionData.plan !== 'free' ? {
-            id: subscriptionData.plan === 'monthly_pro' ? 'monthly_pro' : 'yearly_pro',
-            name: subscriptionData.plan === 'monthly_pro' ? 'Monthly Pro' : 'Yearly Pro',
+            id: subscriptionData.plan === 'quarterly_pro' ? 'quarterly_pro' : 'yearly_pro',
+            name: subscriptionData.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro',
             description: 'Premium subscription',
-            price: subscriptionData.plan === 'monthly_pro' ? 299 : 1999,
+            price: subscriptionData.plan === 'quarterly_pro' ? 499 : 1999,
             currency: 'INR',
-            duration: subscriptionData.plan === 'monthly_pro' ? 'monthly' : 'yearly',
+            duration: subscriptionData.plan === 'quarterly_pro' ? 'quarterly' : 'yearly',
             features: [],
             isPopular: subscriptionData.plan === 'yearly_pro'
           } : null,
           planId: subscriptionData.planId || (subscriptionData.plan !== 'free' ? subscriptionData.plan : null),
-          planName: subscriptionData.planName || (subscriptionData.plan !== 'free' ? (subscriptionData.plan === 'monthly_pro' ? 'Monthly Pro' : 'Yearly Pro') : null),
+          planName: subscriptionData.planName || (subscriptionData.plan !== 'free' ? (subscriptionData.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro') : null),
           startDate: subscriptionData.startDate,
           endDate: subscriptionData.endDate,
           expiryDate: subscriptionData.expiryDate || subscriptionData.endDate,
@@ -255,10 +255,10 @@ class SubscriptionApiService {
         success: true,
         data: {
           isActive: true,
-          planId: 'monthly_pro',
-          planName: 'Monthly Pro',
-          endDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
-          expiryDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+          planId: 'quarterly_pro',
+          planName: 'Quarterly Pro',
+          endDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
+          expiryDate: new Date(Date.now() + 90 * 24 * 60 * 60 * 1000).toISOString(),
           autoRenew: true,
           status: 'active'
         },
@@ -292,7 +292,7 @@ class SubscriptionApiService {
       const transformedData = response.data.data.payments.map((payment: any) => ({
         id: payment.id,
         planId: payment.plan,
-        planName: payment.plan === 'monthly_pro' ? 'Monthly Pro' : 'Yearly Pro',
+        planName: payment.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro',
         amount: payment.amount,
         currency: payment.currency,
         status: payment.status.toLowerCase(),

@@ -39,6 +39,7 @@ import { GOOGLE_FONTS, getFontsByCategory, SYSTEM_FONTS, getFontFamily } from '.
 import { useSubscription } from '../contexts/SubscriptionContext';
 import Watermark from '../components/Watermark';
 import { useTheme } from '../context/ThemeContext';
+import ComingSoonModal from '../components/ComingSoonModal';
 
 
 
@@ -744,6 +745,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [isCapturing, setIsCapturing] = useState(false);
   const [currentPositions, setCurrentPositions] = useState<{ [key: string]: { x: number; y: number } }>({});
   const currentPositionsRef = useRef<{ [key: string]: { x: number; y: number } }>({});
+  
+  // State for Coming Soon modal
+  const [showFrameComingSoonModal, setShowFrameComingSoonModal] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -2150,7 +2154,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             
             <TouchableOpacity
               style={styles.toolbarButton}
-              onPress={() => setShowFrameSelector(!showFrameSelector)}
+              onPress={() => setShowFrameComingSoonModal(true)}
             >
               <LinearGradient
                 colors={['#667eea', '#764ba2']}
@@ -3105,6 +3109,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Frame Coming Soon Modal */}
+      <ComingSoonModal
+        visible={showFrameComingSoonModal}
+        onClose={() => setShowFrameComingSoonModal(false)}
+        title="Frame Editor Coming Soon!"
+        subtitle="We're working hard to bring you amazing frame templates and customization options. Stay tuned for updates!"
+      />
     </Animated.View>
   );
 };
