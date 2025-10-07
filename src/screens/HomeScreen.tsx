@@ -76,6 +76,8 @@ const HomeScreen: React.FC = React.memo(() => {
   const [currentRequestId, setCurrentRequestId] = useState(0);
   const [disableBackgroundUpdates, setDisableBackgroundUpdates] = useState(false);
   const [isUpcomingEventsModalVisible, setIsUpcomingEventsModalVisible] = useState(false);
+  const [isTemplatesModalVisible, setIsTemplatesModalVisible] = useState(false);
+  const [isVideosModalVisible, setIsVideosModalVisible] = useState(false);
 
   // New API data states
   const [featuredContent, setFeaturedContent] = useState<FeaturedContent[]>([]);
@@ -715,6 +717,22 @@ const HomeScreen: React.FC = React.memo(() => {
     setIsUpcomingEventsModalVisible(false);
   }, []);
 
+  const handleViewAllTemplates = useCallback(() => {
+    setIsTemplatesModalVisible(true);
+  }, []);
+
+  const closeTemplatesModal = useCallback(() => {
+    setIsTemplatesModalVisible(false);
+  }, []);
+
+  const handleViewAllVideos = useCallback(() => {
+    setIsVideosModalVisible(true);
+  }, []);
+
+  const closeVideosModal = useCallback(() => {
+    setIsVideosModalVisible(false);
+  }, []);
+
 
 
 
@@ -1272,7 +1290,12 @@ const HomeScreen: React.FC = React.memo(() => {
 
           {/* Templates Grid */}
           <View style={styles.templatesSection}>
-            <Text style={styles.sectionTitle}>Professional Templates</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Professional Templates</Text>
+              <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllTemplates}>
+                <Text style={styles.viewAllButtonText}>Browse All</Text>
+              </TouchableOpacity>
+            </View>
             <FlatList
               key={`templates-${templates.length}-${selectedCategory}`}
               data={templates}
@@ -1325,7 +1348,12 @@ const HomeScreen: React.FC = React.memo(() => {
 
           {/* Video Section */}
           <View style={styles.videoSection}>
-            <Text style={styles.sectionTitle}>Video Content</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Video Content</Text>
+              <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllVideos}>
+                <Text style={styles.viewAllButtonText}>Browse All</Text>
+              </TouchableOpacity>
+            </View>
             <FlatList
               key={`video-content-${videoContent.length}`}
               data={videoContent}
@@ -1489,6 +1517,156 @@ const HomeScreen: React.FC = React.memo(() => {
                         />
                         <View style={styles.upcomingEventModalBadge}>
                           <Text style={styles.upcomingEventModalBadgeText}>{event.category}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Professional Templates Modal */}
+        <Modal
+          visible={isTemplatesModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeTemplatesModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.upcomingEventsModalGradient}
+              >
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Professional Templates</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all available templates</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upcomingEventsCloseButton}
+                    onPress={closeTemplatesModal}
+                  >
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`templates-modal-${professionalTemplates.length}`}
+                  data={professionalTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.upcomingEventModalCard}
+                      onPress={() => {
+                        closeTemplatesModal();
+                        const templateData: Template = {
+                          id: template.id,
+                          name: template.name,
+                          thumbnail: template.thumbnail,
+                          category: template.category,
+                          likes: 0,
+                          downloads: 0,
+                          isLiked: false,
+                          isDownloaded: false,
+                        };
+                        navigation.navigate('PosterPlayer', {
+                          selectedPoster: templateData,
+                          relatedPosters: professionalTemplates.slice(0, 6),
+                        });
+                      }}
+                    >
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <Image source={{ uri: template.thumbnail }} style={styles.upcomingEventModalImage} />
+                        <LinearGradient
+                          colors={['transparent', 'rgba(0,0,0,0.8)']}
+                          style={styles.upcomingEventModalOverlay}
+                        />
+                        <View style={styles.upcomingEventModalBadge}>
+                          <Text style={styles.upcomingEventModalBadgeText}>{template.category}</Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Video Content Modal */}
+        <Modal
+          visible={isVideosModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeVideosModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.upcomingEventsModalGradient}
+              >
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Video Content</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all available videos</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upcomingEventsCloseButton}
+                    onPress={closeVideosModal}
+                  >
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`videos-modal-${videoContent.length}`}
+                  data={videoContent}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: video }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.upcomingEventModalCard}
+                      onPress={() => {
+                        closeVideosModal();
+                        const videoData: Template = {
+                          id: video.id,
+                          name: video.title,
+                          thumbnail: video.thumbnail,
+                          category: video.category,
+                          likes: 0,
+                          downloads: 0,
+                          isLiked: false,
+                          isDownloaded: false,
+                        };
+                        navigation.navigate('VideoPlayer', {
+                          selectedVideo: videoData,
+                          relatedVideos: videoContent.slice(0, 6),
+                        });
+                      }}
+                    >
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <Image source={{ uri: video.thumbnail }} style={styles.upcomingEventModalImage} />
+                        <LinearGradient
+                          colors={['transparent', 'rgba(0,0,0,0.8)']}
+                          style={styles.upcomingEventModalOverlay}
+                        />
+                        <View style={styles.upcomingEventModalBadge}>
+                          <Text style={styles.upcomingEventModalBadgeText}>{video.category}</Text>
                         </View>
                       </View>
                     </TouchableOpacity>
