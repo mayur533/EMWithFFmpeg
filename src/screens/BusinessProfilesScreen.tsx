@@ -9,7 +9,6 @@ import {
   TextInput,
   StatusBar,
   Dimensions,
-  Alert,
   Image,
   Modal,
 } from 'react-native';
@@ -56,6 +55,8 @@ const BusinessProfilesScreen: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
 
   // Memoized mock data for immediate loading
   const mockProfiles = useMemo(() => [
@@ -101,7 +102,6 @@ const BusinessProfilesScreen: React.FC = () => {
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
       
-      console.log('🔍 BusinessProfilesScreen - Current User:', JSON.stringify(currentUser, null, 2));
       console.log('🔍 BusinessProfilesScreen - User ID:', userId);
       
       if (!userId) {
@@ -184,7 +184,8 @@ const BusinessProfilesScreen: React.FC = () => {
       }, 1000);
     } catch (error) {
       console.error('Error deleting profile:', error);
-      Alert.alert('Error', 'Failed to delete profile');
+      setErrorMessage('Failed to delete profile. Please try again.');
+      setShowErrorModal(true);
     } finally {
       setShowDeleteModal(false);
       setProfileToDelete(null);
@@ -246,7 +247,8 @@ const BusinessProfilesScreen: React.FC = () => {
       setEditingProfile(null);
     } catch (error) {
       console.error('Error saving profile:', error);
-      Alert.alert('Error', 'Failed to save profile');
+      setErrorMessage('Failed to save profile. Please try again.');
+      setShowErrorModal(true);
     } finally {
       setFormLoading(false);
     }
@@ -529,8 +531,8 @@ const BusinessProfilesScreen: React.FC = () => {
             >
               <View style={[styles.deleteModalContainer, { backgroundColor: theme.colors.surface }]}>
                 <View style={styles.deleteModalHeader}>
-                  <View style={[styles.deleteIconContainer, { backgroundColor: `${theme.colors.error}20` }]}>
-                    <Icon name="warning" size={Math.min(screenWidth * 0.08, 32)} color={theme.colors.error} />
+                  <View style={[styles.deleteIconContainer, { backgroundColor: '#ff444420' }]}>
+                    <Icon name="warning" size={Math.min(screenWidth * 0.08, 32)} color="#ff4444" />
                   </View>
                   <Text 
                     style={[styles.deleteModalTitle, { color: theme.colors.text }]}
@@ -561,12 +563,65 @@ const BusinessProfilesScreen: React.FC = () => {
                   </TouchableOpacity>
                   
                   <TouchableOpacity 
-                    style={[styles.deleteModalDeleteButton, { backgroundColor: theme.colors.error }]}
+                    style={[styles.deleteModalDeleteButton, { backgroundColor: '#ff4444' }]}
                     onPress={confirmDeleteProfile}
                   >
                     <Text style={styles.deleteModalDeleteText}>Delete</Text>
                   </TouchableOpacity>
                 </View>
+              </View>
+            </TouchableOpacity>
+          </TouchableOpacity>
+        </Modal>
+
+        {/* Error Modal */}
+        <Modal
+          visible={showErrorModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={() => setShowErrorModal(false)}
+          statusBarTranslucent={true}
+        >
+          <TouchableOpacity 
+            style={styles.modalOverlay}
+            activeOpacity={1}
+            onPress={() => setShowErrorModal(false)}
+          >
+            <TouchableOpacity 
+              activeOpacity={1}
+              onPress={() => {}} // Prevent closing when tapping inside modal
+            >
+              <View style={[styles.errorModalContainer, { backgroundColor: theme.colors.surface }]}>
+                <View style={styles.errorModalHeader}>
+                  <View style={[styles.errorIconContainer, { backgroundColor: '#ff444420' }]}>
+                    <Icon name="error-outline" size={Math.min(screenWidth * 0.08, 32)} color="#ff4444" />
+                  </View>
+                  <Text 
+                    style={[styles.errorModalTitle, { color: theme.colors.text }]}
+                  >
+                    Error
+                  </Text>
+                  <TouchableOpacity 
+                    style={[styles.closeModalButton, { backgroundColor: theme.colors.inputBackground }]}
+                    onPress={() => setShowErrorModal(false)}
+                    activeOpacity={0.7}
+                  >
+                    <Icon name="close" size={Math.min(screenWidth * 0.06, 24)} color={theme.colors.textSecondary} />
+                  </TouchableOpacity>
+                </View>
+                
+                <View style={styles.errorModalContent}>
+                  <Text style={[styles.errorModalMessage, { color: theme.colors.text }]}>
+                    {errorMessage}
+                  </Text>
+                </View>
+                
+                <TouchableOpacity 
+                  style={[styles.errorModalButton, { backgroundColor: '#ff4444' }]}
+                  onPress={() => setShowErrorModal(false)}
+                >
+                  <Text style={styles.errorModalButtonText}>OK</Text>
+                </TouchableOpacity>
               </View>
             </TouchableOpacity>
           </TouchableOpacity>
@@ -728,10 +783,9 @@ const styles = StyleSheet.create({
   // Success Modal Styles
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: Math.min(screenWidth * 0.05, 20),
   },
   successModalContainer: {
     borderRadius: Math.min(screenWidth * 0.06, 24),
@@ -801,56 +855,56 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#ffffff',
   },
-  // Delete Modal Styles
+  // Delete Modal Styles (matching login screen error modal)
   deleteModalContainer: {
-    borderRadius: Math.min(screenWidth * 0.06, 24),
-    padding: Math.min(screenWidth * 0.05, 20),
-    width: '100%',
-    maxWidth: Math.min(screenWidth * 0.9, 400),
-    minWidth: Math.min(screenWidth * 0.8, 320),
+    width: screenWidth * 0.85,
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: screenWidth * 0.06,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 20,
+      height: 4,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 40,
-    elevation: 25,
-    alignSelf: 'center',
+    shadowRadius: 8,
+    elevation: 8,
   },
   deleteModalHeader: {
-    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: Math.min(screenHeight * 0.02, 16),
-    paddingBottom: Math.min(screenHeight * 0.015, 12),
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.1)',
-    minHeight: Math.min(screenWidth * 0.12, 48),
+    marginBottom: screenHeight * 0.02,
+    position: 'relative',
   },
   deleteIconContainer: {
-    width: Math.min(screenWidth * 0.12, 48),
-    height: Math.min(screenWidth * 0.12, 48),
-    borderRadius: Math.min(screenWidth * 0.06, 24),
-    alignItems: 'center',
+    width: Math.min(screenWidth * 0.18, 72),
+    height: Math.min(screenWidth * 0.18, 72),
+    borderRadius: Math.min(screenWidth * 0.09, 36),
     justifyContent: 'center',
-    marginRight: Math.min(screenWidth * 0.04, 16),
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.015,
   },
   deleteModalTitle: {
-    fontSize: Math.min(screenWidth * 0.05, 20),
+    fontSize: Math.min(screenWidth * 0.06, 24),
     fontWeight: '700',
-    flex: 1,
-    marginHorizontal: Math.min(screenWidth * 0.02, 8),
     textAlign: 'center',
   },
+  closeModalButton: {
+    position: 'absolute',
+    top: -screenHeight * 0.01,
+    right: -screenWidth * 0.02,
+    width: Math.min(screenWidth * 0.08, 32),
+    height: Math.min(screenWidth * 0.08, 32),
+    borderRadius: Math.min(screenWidth * 0.04, 16),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
   deleteModalContent: {
-    paddingVertical: Math.min(screenHeight * 0.01, 8),
-    marginBottom: Math.min(screenHeight * 0.02, 16),
+    marginBottom: screenHeight * 0.025,
   },
   deleteModalMessage: {
     fontSize: Math.min(screenWidth * 0.04, 16),
-    lineHeight: Math.min(screenWidth * 0.05, 20),
     textAlign: 'center',
-    opacity: 0.9,
+    lineHeight: Math.min(screenWidth * 0.06, 24),
   },
   deleteModalButtons: {
     flexDirection: 'row',
@@ -858,8 +912,8 @@ const styles = StyleSheet.create({
   },
   deleteModalCancelButton: {
     flex: 1,
-    borderRadius: Math.min(screenWidth * 0.03, 12),
-    paddingVertical: Math.min(screenHeight * 0.018, 14),
+    paddingVertical: screenHeight * 0.018,
+    borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
@@ -868,7 +922,7 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   deleteModalCancelText: {
     fontSize: Math.min(screenWidth * 0.042, 17),
@@ -876,8 +930,8 @@ const styles = StyleSheet.create({
   },
   deleteModalDeleteButton: {
     flex: 1,
-    borderRadius: Math.min(screenWidth * 0.03, 12),
-    paddingVertical: Math.min(screenHeight * 0.018, 14),
+    paddingVertical: screenHeight * 0.018,
+    borderRadius: 12,
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
@@ -886,12 +940,71 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.1,
     shadowRadius: 4,
-    elevation: 2,
+    elevation: 3,
   },
   deleteModalDeleteText: {
     fontSize: Math.min(screenWidth * 0.042, 17),
     fontWeight: '600',
     color: '#ffffff',
+  },
+  // Error Modal Styles (matching login screen)
+  errorModalContainer: {
+    width: screenWidth * 0.85,
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: screenWidth * 0.06,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  errorModalHeader: {
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.02,
+    position: 'relative',
+  },
+  errorIconContainer: {
+    width: Math.min(screenWidth * 0.18, 72),
+    height: Math.min(screenWidth * 0.18, 72),
+    borderRadius: Math.min(screenWidth * 0.09, 36),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.015,
+  },
+  errorModalTitle: {
+    fontSize: Math.min(screenWidth * 0.06, 24),
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  errorModalContent: {
+    marginBottom: screenHeight * 0.025,
+  },
+  errorModalMessage: {
+    fontSize: Math.min(screenWidth * 0.04, 16),
+    textAlign: 'center',
+    lineHeight: Math.min(screenWidth * 0.06, 24),
+  },
+  errorModalButton: {
+    paddingVertical: screenHeight * 0.018,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  errorModalButtonText: {
+    color: '#FFFFFF',
+    fontSize: Math.min(screenWidth * 0.042, 17),
+    fontWeight: '600',
   },
 });
 

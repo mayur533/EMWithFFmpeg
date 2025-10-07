@@ -201,11 +201,11 @@ const PrivacyPolicyScreen = () => {
       borderRadius: isTablet ? 19 : 15,
     },
     section: {
-      backgroundColor: 'rgba(255, 255, 255, 0.08)',
+      backgroundColor: '#ffffff',
       borderRadius: isTablet ? 16 : 12,
       padding: isTablet ? responsiveSpacing.xxl : (isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
       borderWidth: 1,
-      borderColor: 'rgba(255, 255, 255, 0.15)',
+      borderColor: 'rgba(255, 255, 255, 0.3)',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 4 },
       shadowOpacity: 0.2,
@@ -213,7 +213,7 @@ const PrivacyPolicyScreen = () => {
       elevation: isTablet ? 6 : 4,
     },
     sectionHovered: {
-      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+      backgroundColor: '#ffffff',
       borderColor: 'transparent',
       borderWidth: 0,
       shadowOpacity: 0.3,
@@ -223,17 +223,14 @@ const PrivacyPolicyScreen = () => {
     sectionTitle: {
       fontSize: isTablet ? responsiveFontSize.xxl : responsiveFontSize.xl,
       fontWeight: '700',
-      color: '#ffffff',
+      color: '#667eea',
       marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
-      textShadowColor: 'rgba(0, 0, 0, 0.3)',
-      textShadowOffset: { width: 0, height: 2 },
-      textShadowRadius: 4,
       letterSpacing: 0.5,
     },
     sectionContent: {
       fontSize: isTablet ? responsiveFontSize.lg : (isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
       lineHeight: isTablet ? responsiveFontSize.lg * 1.6 : (isSmallScreen ? responsiveFontSize.sm * 1.5 : responsiveFontSize.md * 1.5),
-      color: 'rgba(255, 255, 255, 0.9)',
+      color: '#555555',
       marginBottom: responsiveSpacing.sm,
     },
     bulletPoint: {
@@ -241,14 +238,14 @@ const PrivacyPolicyScreen = () => {
       marginBottom: responsiveSpacing.sm,
       paddingVertical: isSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm,
       paddingHorizontal: isTablet ? responsiveSpacing.md : responsiveSpacing.sm,
-      backgroundColor: 'rgba(255, 255, 255, 0.05)',
+      backgroundColor: 'rgba(102, 126, 234, 0.08)',
       borderRadius: responsiveSize.sm,
       borderLeftWidth: isTablet ? 4 : 3,
-      borderLeftColor: 'rgba(255, 255, 255, 0.4)',
+      borderLeftColor: '#667eea',
     },
     bullet: {
       fontSize: isTablet ? responsiveFontSize.xl : responsiveFontSize.lg,
-      color: '#ffffff',
+      color: '#667eea',
       marginRight: responsiveSpacing.sm,
       marginTop: 2,
       fontWeight: '600',
@@ -256,21 +253,21 @@ const PrivacyPolicyScreen = () => {
     bulletText: {
       fontSize: isTablet ? responsiveFontSize.lg : (isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
       lineHeight: isTablet ? responsiveFontSize.lg * 1.6 : (isSmallScreen ? responsiveFontSize.sm * 1.6 : responsiveFontSize.md * 1.6),
-      color: 'rgba(255, 255, 255, 0.95)',
+      color: '#555555',
       flex: 1,
     },
     highlight: {
       fontWeight: '600',
-      color: '#ffffff',
+      color: '#333333',
     },
     contactSection: {
-      backgroundColor: 'rgba(255, 255, 255, 0.12)',
+      backgroundColor: '#ffffff',
       padding: isTablet ? responsiveSpacing.xxxl : responsiveSpacing.xl,
       borderRadius: isTablet ? 20 : responsiveSize.lg,
       marginTop: isTablet ? responsiveSpacing.xl : responsiveSpacing.lg,
       marginBottom: isTablet ? responsiveSpacing.xxxl : responsiveSpacing.xl,
       borderWidth: 2,
-      borderColor: 'rgba(255, 255, 255, 0.25)',
+      borderColor: 'rgba(255, 255, 255, 0.5)',
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 6 },
       shadowOpacity: 0.3,
@@ -280,29 +277,23 @@ const PrivacyPolicyScreen = () => {
     contactTitle: {
       fontSize: isTablet ? responsiveFontSize.xxxl : responsiveFontSize.xxl,
       fontWeight: '700',
-      color: '#ffffff',
+      color: '#667eea',
       marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
       textAlign: 'center',
-      textShadowColor: 'rgba(0, 0, 0, 0.3)',
-      textShadowOffset: { width: 0, height: 2 },
-      textShadowRadius: 4,
       letterSpacing: 0.5,
     },
     contactText: {
       fontSize: isTablet ? responsiveFontSize.lg : (isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
-      color: 'rgba(255, 255, 255, 0.95)',
+      color: '#555555',
       textAlign: 'center',
       lineHeight: isTablet ? responsiveFontSize.lg * 1.6 : (isSmallScreen ? responsiveFontSize.sm * 1.6 : responsiveFontSize.md * 1.6),
       marginBottom: responsiveSpacing.sm,
     },
     emailLink: {
-      color: '#00E5FF',
+      color: '#667eea',
       textDecorationLine: 'underline',
       fontWeight: '700',
       fontSize: isTablet ? responsiveFontSize.xl : responsiveFontSize.lg,
-      textShadowColor: 'rgba(0, 0, 0, 0.5)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 2,
     },
     heroSection: {
       alignItems: 'center',
@@ -640,7 +631,7 @@ const PrivacyPolicyScreen = () => {
 
           {/* Contact Information */}
           <View style={styles.contactSection}>
-            <Icon name="contact-support" size={responsiveSize.iconXLarge} color="#ffffff" style={{ alignSelf: 'center', marginBottom: responsiveSpacing.sm }} />
+            <Icon name="contact-support" size={responsiveSize.iconXLarge} color="#667eea" style={{ alignSelf: 'center', marginBottom: responsiveSpacing.sm }} />
             <Text style={styles.contactTitle}>Contact Us</Text>
             <Text style={styles.contactText}>
               If you have any questions about this Privacy Policy or our data practices, 

@@ -719,11 +719,6 @@ const ProfileScreen: React.FC = () => {
                 )}
                 <View style={styles.profileStats}>
                   <View style={styles.statItem}>
-                    <Text style={[styles.statNumber, { color: theme.colors.primary }]}>24</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Templates</Text>
-                  </View>
-                  <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
-                  <View style={styles.statItem}>
                     <Text style={[styles.statNumber, { color: theme.colors.primary }]}>{posterStats.total}</Text>
                     <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Downloads</Text>
                   </View>
