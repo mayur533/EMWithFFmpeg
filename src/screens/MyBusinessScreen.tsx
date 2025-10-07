@@ -117,54 +117,123 @@ const MyBusinessScreen: React.FC = () => {
 
   // Load business category posters
   const loadBusinessCategoryPosters = useCallback(async () => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🚀 MY BUSINESS SCREEN - Loading Category Posters');
+    console.log('═══════════════════════════════════════════════════════');
+    
     setPostersLoading(true);
     try {
-      console.log('🎯 Loading business category posters...');
+      console.log('🎯 Step 1: Calling getUserCategoryPosters API...');
       const response = await businessCategoryPostersApi.getUserCategoryPosters();
       
+      console.log('📦 Step 2: API Response received:');
+      console.log('  - Success:', response.success);
+      console.log('  - Category:', response.data.category);
+      console.log('  - Total posters:', response.data.total);
+      console.log('  - Posters count:', response.data.posters.length);
+      
       if (response.success) {
+        console.log('✅ Step 3: Processing successful response');
+        
+        // Log detailed poster information
+        if (response.data.posters.length > 0) {
+          console.log('📋 Poster Details:');
+          response.data.posters.forEach((poster, index) => {
+            console.log(`  ${index + 1}. ID: ${poster.id}`);
+            console.log(`     Title: ${poster.title}`);
+            console.log(`     Category: ${poster.category}`);
+            console.log(`     Premium: ${poster.isPremium ? 'Yes' : 'No'}`);
+            console.log('     ---');
+          });
+          
+          // Check if all posters match the user's category
+          const categoriesInResponse = [...new Set(response.data.posters.map(p => p.category))];
+          console.log('📊 Unique categories in response:', categoriesInResponse);
+          
+          if (categoriesInResponse.length === 1 && categoriesInResponse[0] === response.data.category) {
+            console.log('✅ VERIFICATION PASSED: All posters match user category!');
+          } else {
+            console.log('⚠️ VERIFICATION WARNING: Mixed categories detected!');
+            console.log('   Expected:', response.data.category);
+            console.log('   Found:', categoriesInResponse);
+          }
+        } else {
+          console.log('⚠️ No posters found for category:', response.data.category);
+        }
+        
         setBusinessCategoryPosters(response.data.posters);
         setUserBusinessCategory(response.data.category);
-        console.log('✅ Business category posters loaded:', response.data.posters.length, 'posters for category:', response.data.category);
+        
+        console.log('✅ Step 4: State updated successfully');
+        console.log('  - businessCategoryPosters state set with', response.data.posters.length, 'posters');
+        console.log('  - userBusinessCategory state set to:', response.data.category);
       } else {
-        console.log('⚠️ Failed to load business category posters');
+        console.log('⚠️ API returned unsuccessful response');
+        console.log('  - Message:', response.message);
         setBusinessCategoryPosters([]);
       }
     } catch (error) {
       console.error('❌ Error loading business category posters:', error);
+      console.error('Error details:', JSON.stringify(error, null, 2));
       setBusinessCategoryPosters([]);
     } finally {
       setPostersLoading(false);
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('🏁 MY BUSINESS SCREEN - Loading Complete');
+      console.log('═══════════════════════════════════════════════════════');
     }
   }, []);
 
   useEffect(() => {
+    console.log('🎬 MyBusinessScreen mounted - Component initialized');
     loadBusinessCategoryPosters();
   }, [loadBusinessCategoryPosters]);
 
+  // Log state changes for debugging
+  useEffect(() => {
+    console.log('📊 State Updated:');
+    console.log('  - Current category:', userBusinessCategory);
+    console.log('  - Posters in state:', businessCategoryPosters.length);
+    console.log('  - Loading:', postersLoading);
+  }, [businessCategoryPosters, userBusinessCategory, postersLoading]);
+
   const onRefresh = useCallback(async () => {
+    console.log('🔄 User triggered manual refresh');
     setRefreshing(true);
     try {
       await loadBusinessCategoryPosters();
+      console.log('✅ Manual refresh completed successfully');
     } catch (error) {
-      console.log('Error refreshing posters:', error);
+      console.error('❌ Error refreshing posters:', error);
     } finally {
       setRefreshing(false);
     }
   }, [loadBusinessCategoryPosters]);
 
   const handlePosterPress = (poster: BusinessCategoryPoster) => {
+    console.log('👆 Poster pressed:');
+    console.log('  - Poster ID:', poster.id);
+    console.log('  - Title:', poster.title);
+    console.log('  - Category:', poster.category);
+    console.log('  - Related posters count:', businessCategoryPosters.filter(p => p.id !== poster.id).length);
+    
     // Navigate to MyBusinessPlayer with the selected poster and related posters
     navigation.navigate('MyBusinessPlayer', {
       selectedPoster: poster,
       relatedPosters: businessCategoryPosters.filter(p => p.id !== poster.id),
     });
+    
+    console.log('✅ Navigated to MyBusinessPlayer');
   };
 
   const handleLikePoster = async (posterId: string) => {
+    console.log('❤️ Like button pressed for poster:', posterId);
     try {
       const result = await businessCategoryPostersApi.likePoster(posterId);
+      console.log('Like API response:', result);
+      
       if (result.success) {
+        console.log('✅ Poster liked successfully');
         // Update local state to reflect the like
         setBusinessCategoryPosters(prev => 
           prev.map(poster => 
@@ -173,9 +242,12 @@ const MyBusinessScreen: React.FC = () => {
               : poster
           )
         );
+        console.log('✅ Local state updated with new like count');
+      } else {
+        console.log('⚠️ Like failed:', result.message);
       }
     } catch (error) {
-      console.error('Error liking poster:', error);
+      console.error('❌ Error liking poster:', error);
     }
   };
 
