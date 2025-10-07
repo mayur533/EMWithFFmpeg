@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Video from 'react-native-video';
+// import Video from 'react-native-video';
 import { useTheme } from '../context/ThemeContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -47,15 +47,16 @@ const SplashScreen: React.FC = () => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const videoOpacity = useRef(new Animated.Value(1)).current;
+  // const videoOpacity = useRef(new Animated.Value(1)).current;
   
   // Video state
-  const [showVideo, setShowVideo] = React.useState(true);
-  const [videoEnded, setVideoEnded] = React.useState(false);
-  const [videoTimeout, setVideoTimeout] = React.useState<NodeJS.Timeout | null>(null);
-  const [videoReady, setVideoReady] = React.useState(false);
+  // const [showVideo, setShowVideo] = React.useState(true);
+  // const [videoEnded, setVideoEnded] = React.useState(false);
+  // const [videoTimeout, setVideoTimeout] = React.useState<NodeJS.Timeout | null>(null);
+  // const [videoReady, setVideoReady] = React.useState(false);
 
   // Video event handlers
+  /* 
   const onVideoEnd = () => {
     console.log('✅ Video ended successfully');
     setVideoEnded(true);
@@ -121,6 +122,7 @@ const SplashScreen: React.FC = () => {
     }, 5000);
     setVideoTimeout(timeout);
   };
+  */
 
   // Memoized animation sequence
   const startAnimations = useMemo(() => () => {
@@ -157,11 +159,9 @@ const SplashScreen: React.FC = () => {
   }, [fadeAnim, scaleAnim, slideAnim, rotateAnim]);
 
   useEffect(() => {
-    // Start animations only if video is not showing or has ended
-    if (!showVideo) {
-      startAnimations();
-    }
-  }, [startAnimations, showVideo]);
+    // Start animations directly (video is commented out)
+    startAnimations();
+  }, [startAnimations]);
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -179,11 +179,11 @@ const SplashScreen: React.FC = () => {
         translucent={true}
       />
       
-      {/* Video Background */}
+      {/* Video Background - COMMENTED OUT 
       {showVideo && (
         <Animated.View style={[styles.videoContainer, { opacity: videoOpacity }]}>
           <Video
-            source={{ uri: 'file:///android_asset/intro2.mp4' }}
+            source={{ uri: 'file:///android_asset/intro.mp4' }}
             style={styles.video}
             resizeMode="cover"
             onEnd={onVideoEnd}
@@ -210,9 +210,12 @@ const SplashScreen: React.FC = () => {
             }}
             maxBitRate={2000000}
             allowsExternalPlayback={false}
+            hideShutterView={false}
+            automaticallyWaitsToMinimizeStalling={false}
           />
         </Animated.View>
       )}
+      */}
       
       <LinearGradient
         colors={theme.colors.gradient}
@@ -282,6 +285,18 @@ const SplashScreen: React.FC = () => {
               <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
             </View>
           </Animated.View>
+
+          {/* Powered By Text */}
+          <Animated.View
+            style={[
+              styles.poweredByContainer,
+              {
+                opacity: fadeAnim,
+              },
+            ]}
+          >
+            <Text style={styles.poweredByText}>Powered by RSL Solution Private Limited</Text>
+          </Animated.View>
         </View>
       </LinearGradient>
     </SafeAreaView>
@@ -292,6 +307,7 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  /* Video styles - COMMENTED OUT
   videoContainer: {
     position: 'absolute',
     top: 0,
@@ -304,6 +320,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
+  */
   gradientBackground: {
     flex: 1,
   },
@@ -380,6 +397,18 @@ const styles = StyleSheet.create({
     height: 8,
     borderRadius: 4,
     marginHorizontal: 4,
+  },
+  poweredByContainer: {
+    position: 'absolute',
+    bottom: screenHeight * 0.06,
+    alignItems: 'center',
+    width: '100%',
+  },
+  poweredByText: {
+    fontSize: Math.min(screenWidth * 0.03, 12),
+    color: 'rgba(255,255,255,0.6)',
+    textAlign: 'center',
+    letterSpacing: 0.5,
   },
 });
 
