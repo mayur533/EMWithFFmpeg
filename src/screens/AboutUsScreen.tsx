@@ -307,6 +307,26 @@ const AboutUsScreen: React.FC = () => {
       fontSize: responsiveText.caption,
       color: theme.colors.textSecondary,
       textAlign: 'center',
+      marginBottom: responsiveSpacing.sm,
+    },
+    privacyLink: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: responsiveSpacing.md,
+      paddingHorizontal: responsiveSpacing.lg,
+      backgroundColor: theme.colors.primary,
+      borderRadius: responsiveSize.cardBorderRadius,
+      borderWidth: 0,
+      marginTop: responsiveSpacing.md,
+      ...responsiveShadow.medium,
+    },
+    privacyLinkText: {
+      fontSize: responsiveText.body,
+      color: '#ffffff',
+      fontWeight: '700',
+      marginHorizontal: responsiveSpacing.sm,
+      letterSpacing: 0.5,
     },
   });
 
@@ -474,6 +494,17 @@ const AboutUsScreen: React.FC = () => {
           <Text style={dynamicStyles.versionText}>
             Version 1.0.0 • Founded 2024
           </Text>
+          
+          {/* Privacy Policy Link */}
+          <TouchableOpacity
+            style={dynamicStyles.privacyLink}
+            onPress={() => navigation.navigate('PrivacyPolicy' as never)}
+            activeOpacity={0.7}
+          >
+            <Icon name="privacy-tip" size={responsiveSize.iconSmall} color="#ffffff" />
+            <Text style={dynamicStyles.privacyLinkText}>Privacy Policy</Text>
+            <Icon name="chevron-right" size={responsiveSize.iconSmall} color="#ffffff" />
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </SafeAreaView>
