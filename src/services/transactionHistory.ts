@@ -29,41 +29,57 @@ class TransactionHistoryService {
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
       
+      console.log('🔍 getTransactions - Current user ID:', userId);
+      
       if (!userId) {
         console.log('⚠️ No user ID available, cannot fetch transactions');
         return [];
       }
 
-      // Get transactions from backend API
-      const response = await api.get(`/api/mobile/transactions/user/${userId}`);
+      // Get transactions from backend API (using authenticated endpoint)
+      console.log('📡 Fetching transactions from:', `/api/mobile/transactions`);
+      const response = await api.get(`/api/mobile/transactions`);
+      
+      console.log('📊 Transactions API response:', response.data);
       
       if (response.data.success) {
         const backendTransactions = response.data.data.transactions;
+        console.log('📦 Backend transactions count:', backendTransactions.length);
+        console.log('📦 Backend transactions raw:', JSON.stringify(backendTransactions, null, 2));
         
         // Transform backend transactions to frontend format
-        const transformedTransactions = backendTransactions.map((txn: any) => ({
-          id: txn.id,
-          paymentId: txn.paymentId || txn.transactionId,
-          orderId: txn.orderId || txn.transactionId,
-          amount: txn.amount,
-          currency: txn.currency || 'INR',
-          status: txn.status.toLowerCase(),
-          plan: txn.plan === 'quarterly_pro' ? 'quarterly' : 'yearly',
-          planName: txn.planName || (txn.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro'),
-          timestamp: new Date(txn.createdAt).getTime(),
-          description: txn.description || `${txn.planName} Subscription`,
-          method: 'razorpay',
-          metadata: txn.metadata ? JSON.parse(txn.metadata) : undefined
-        }));
+        const transformedTransactions = backendTransactions.map((txn: any) => {
+          const planName = txn.planName || (txn.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro');
+          return {
+            id: txn.id,
+            paymentId: txn.paymentId || txn.transactionId,
+            orderId: txn.orderId || txn.transactionId || 'N/A',
+            amount: txn.amount,
+            currency: txn.currency || 'INR',
+            status: txn.status.toLowerCase(),
+            plan: txn.plan === 'quarterly_pro' ? 'quarterly' : 'yearly',
+            planName: planName,
+            timestamp: new Date(txn.createdAt).getTime(),
+            description: txn.description || `${planName} Subscription`,
+            method: 'razorpay',
+            metadata: txn.metadata ? JSON.parse(txn.metadata) : undefined
+          };
+        });
 
-        console.log('✅ Retrieved transactions from backend:', transformedTransactions.length);
+        console.log('✅ Retrieved and transformed transactions:', transformedTransactions.length);
+        console.log('📦 Transformed transactions:', JSON.stringify(transformedTransactions, null, 2));
         return transformedTransactions;
       } else {
-        console.log('⚠️ Backend returned unsuccessful response');
+        console.log('⚠️ Backend returned unsuccessful response:', response.data);
         return [];
       }
-    } catch (error) {
-      console.error('Error getting transactions from backend:', error);
+    } catch (error: any) {
+      console.error('❌ Error getting transactions from backend:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       return [];
     }
   }
@@ -74,6 +90,9 @@ class TransactionHistoryService {
     try {
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
+      
+      console.log('💳 addTransaction - User ID:', userId);
+      console.log('💳 addTransaction - Transaction data:', transaction);
       
       if (!userId) {
         throw new Error('No user ID available, cannot save transaction');
@@ -86,12 +105,14 @@ class TransactionHistoryService {
       };
 
       // Save to backend API
+      // Note: Frontend uses 'quarterly' plan, backend uses 'quarterly_pro'
       const backendData = {
         transactionId: newTransaction.paymentId,
         orderId: newTransaction.orderId,
         amount: newTransaction.amount,
         currency: newTransaction.currency,
-        plan: newTransaction.plan === 'quarterly' ? 'quarterly_pro' : 'yearly_pro',
+        status: newTransaction.status, // Include status field
+        plan: newTransaction.plan === 'quarterly' ? 'quarterly_pro' : 'yearly_pro', // Fixed: Use quarterly_pro for Quarterly Pro plan
         planName: newTransaction.planName,
         description: newTransaction.description,
         paymentMethod: newTransaction.method,
@@ -99,18 +120,27 @@ class TransactionHistoryService {
         metadata: newTransaction.metadata
       };
 
+      console.log('📤 Sending transaction to backend:', backendData);
       const response = await api.post('/api/mobile/transactions', backendData);
       
+      console.log('📨 Backend response:', response.data);
+      
       if (response.data.success) {
-        console.log('✅ Transaction saved to backend:', response.data.data.id);
+        console.log('✅ Transaction saved to backend with ID:', response.data.data.id);
         // Update the transaction ID with backend ID
         newTransaction.id = response.data.data.id;
         return newTransaction;
       } else {
+        console.error('❌ Backend returned unsuccessful response:', response.data);
         throw new Error('Failed to save transaction to backend');
       }
-    } catch (error) {
-      console.error('Error adding transaction:', error);
+    } catch (error: any) {
+      console.error('❌ Error adding transaction:', error);
+      console.error('❌ Error details:', {
+        message: error.message,
+        status: error.response?.status,
+        data: error.response?.data
+      });
       throw error;
     }
   }
@@ -191,7 +221,7 @@ class TransactionHistoryService {
       }
 
       // Clear from backend API
-      const response = await api.delete(`/api/mobile/transactions/user/${userId}`);
+      const response = await api.delete(`/api/mobile/transactions`);
       
       if (response.data.success) {
         console.log('✅ All transactions cleared for current user from backend');
@@ -231,36 +261,58 @@ class TransactionHistoryService {
         };
       }
 
-      // Get stats from backend API
-      const response = await api.get(`/api/mobile/transactions/user/${userId}/summary`);
-      
-      if (response.data.success) {
-        const backendStats = response.data.data;
+      // Try to get stats from backend API, if not available, calculate from transactions
+      try {
+        const response = await api.get(`/api/mobile/transactions/summary`);
         
-        const transformedStats = {
-          total: backendStats.totalTransactions,
-          successful: backendStats.successfulTransactions,
-          failed: backendStats.failedTransactions,
-          pending: backendStats.pendingTransactions,
-          totalAmount: backendStats.successfulAmount,
-          quarterlySubscriptions: 0, // Will be calculated from transactions
-          yearlySubscriptions: 0, // Will be calculated from transactions
+        if (response.data.success) {
+          const backendStats = response.data.data;
+          
+          const transformedStats = {
+            total: backendStats.totalTransactions,
+            successful: backendStats.successfulTransactions,
+            failed: backendStats.failedTransactions,
+            pending: backendStats.pendingTransactions,
+            totalAmount: backendStats.successfulAmount,
+            quarterlySubscriptions: 0,
+            yearlySubscriptions: 0,
+          };
+
+          console.log('✅ Retrieved transaction stats from backend');
+          return transformedStats;
+        }
+      } catch (summaryError: any) {
+        console.log('⚠️ Summary endpoint not available, calculating stats from transactions');
+        
+        // Fallback: Calculate stats from transactions
+        const transactions = await this.getTransactions();
+        
+        const stats = {
+          total: transactions.length,
+          successful: transactions.filter(t => t.status === 'success').length,
+          failed: transactions.filter(t => t.status === 'failed').length,
+          pending: transactions.filter(t => t.status === 'pending').length,
+          totalAmount: transactions
+            .filter(t => t.status === 'success')
+            .reduce((sum, t) => sum + t.amount, 0),
+          quarterlySubscriptions: transactions.filter(t => t.plan === 'quarterly' && t.status === 'success').length,
+          yearlySubscriptions: transactions.filter(t => t.plan === 'yearly' && t.status === 'success').length,
         };
 
-        console.log('✅ Retrieved transaction stats from backend');
-        return transformedStats;
-      } else {
-        console.log('⚠️ Backend returned unsuccessful response for stats');
-        return {
-          total: 0,
-          successful: 0,
-          failed: 0,
-          pending: 0,
-          totalAmount: 0,
-          quarterlySubscriptions: 0,
-          yearlySubscriptions: 0,
-        };
+        console.log('✅ Calculated stats from transactions:', stats);
+        return stats;
       }
+      
+      // If we get here, return default stats
+      return {
+        total: 0,
+        successful: 0,
+        failed: 0,
+        pending: 0,
+        totalAmount: 0,
+        quarterlySubscriptions: 0,
+        yearlySubscriptions: 0,
+      };
     } catch (error) {
       console.error('Error getting transaction stats from backend:', error);
       return {

@@ -114,25 +114,31 @@ class SubscriptionApiService {
 
       console.log('Creating subscription for user:', userId, 'Plan:', data.planId);
       
-      // For now, we'll simulate a successful subscription since the backend
-      // requires proper JWT authentication which we need to implement
-      console.log('Simulating subscription:', data);
-      
-      // Return a mock successful response
-      return {
-        success: true,
-        data: {
-          isActive: true,
+      // Try to call the backend API first
+      try {
+        const response = await api.post('/api/mobile/subscriptions/subscribe', {
           planId: data.planId,
-          planName: data.planId === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro',
-          startDate: new Date().toISOString(),
-          endDate: new Date(Date.now() + (data.planId === 'quarterly_pro' ? 90 : 365) * 24 * 60 * 60 * 1000).toISOString(),
-          expiryDate: new Date(Date.now() + (data.planId === 'quarterly_pro' ? 90 : 365) * 24 * 60 * 60 * 1000).toISOString(),
+          paymentMethod: data.paymentMethod,
           autoRenew: data.autoRenew,
-          status: 'active'
-        },
-        message: 'Subscription created successfully'
-      };
+        });
+        
+        if (response.data.success) {
+          console.log('✅ Subscription created via backend API:', response.data);
+          return response.data;
+        }
+      } catch (backendError: any) {
+        console.log('⚠️ Backend subscription API not available, using local activation');
+        
+        // If backend is not available, we'll still activate the subscription locally
+        // This ensures the user gets immediate access to pro features
+        if (backendError.response?.status !== 404) {
+          console.error('Backend subscription error:', backendError);
+        }
+      }
+      
+      // Backend is not available - throw error instead of storing locally
+      console.error('❌ Backend subscription API is required but not available');
+      throw new Error('Subscription service is unavailable. Please ensure the backend is running.');
     } catch (error) {
       console.error('Subscribe error:', error);
       throw error;
@@ -146,7 +152,7 @@ class SubscriptionApiService {
       const userId = currentUser?.id;
       
       if (!userId) {
-        console.log('⚠️ No user ID available, returning default status');
+        console.log('⚠️ No user ID available, cannot check subscription status');
         return {
           success: true,
           data: {
@@ -156,83 +162,82 @@ class SubscriptionApiService {
             autoRenew: false,
             status: 'inactive'
           },
-          message: 'No active subscription'
+          message: 'User not authenticated'
         };
       }
-
 
       console.log('🔍 Fetching subscription status for user:', userId);
-      const response = await api.get('/api/mobile/subscriptions/status');
       
-      console.log('📊 Subscription API response:', response.data);
-      
-      // Check if response has the expected structure
-      if (!response.data.success) {
-        console.log('⚠️ Subscription API returned unsuccessful response');
-        return {
-          success: true,
-          data: {
-            isActive: false,
-            plan: null,
-            expiryDate: null,
-            autoRenew: false,
-            status: 'inactive'
-          },
-          message: 'No active subscription'
-        };
+      // Try to get status from backend first
+      try {
+        const response = await api.get('/api/mobile/subscriptions/status');
+        
+        console.log('📊 Subscription API response:', response.data);
+        
+        // Check if response has the expected structure
+        if (response.data.success) {
+          // Transform the response to match expected format
+          const subscriptionData = response.data.data;
+          
+          return {
+            success: true,
+            data: {
+              isActive: subscriptionData.isActive || (subscriptionData.status === 'active' && subscriptionData.daysRemaining > 0),
+              plan: subscriptionData.plan && subscriptionData.plan !== 'free' ? {
+                id: subscriptionData.plan === 'quarterly_pro' ? 'quarterly_pro' : 'yearly_pro',
+                name: subscriptionData.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro',
+                description: 'Premium subscription',
+                price: subscriptionData.plan === 'quarterly_pro' ? 499 : 1999,
+                currency: 'INR',
+                duration: subscriptionData.plan === 'quarterly_pro' ? 'quarterly' : 'yearly',
+                features: [],
+                isPopular: subscriptionData.plan === 'yearly_pro'
+              } : null,
+              planId: subscriptionData.planId || (subscriptionData.plan !== 'free' ? subscriptionData.plan : null),
+              planName: subscriptionData.planName || (subscriptionData.plan !== 'free' ? (subscriptionData.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro') : null),
+              startDate: subscriptionData.startDate,
+              endDate: subscriptionData.endDate,
+              expiryDate: subscriptionData.expiryDate || subscriptionData.endDate,
+              autoRenew: subscriptionData.autoRenew || true,
+              status: subscriptionData.status
+            },
+            message: 'Status fetched successfully'
+          };
+        }
+      } catch (backendError: any) {
+        console.log('⚠️ Backend subscription status API error:', backendError.message);
+        
+        if (backendError.response?.status !== 404) {
+          console.error('Backend subscription status error:', backendError);
+        }
       }
-      
-      // Transform the response to match expected format
-      const subscriptionData = response.data.data;
       
       return {
         success: true,
         data: {
-          isActive: subscriptionData.isActive || (subscriptionData.status === 'active' && subscriptionData.daysRemaining > 0),
-          plan: subscriptionData.plan && subscriptionData.plan !== 'free' ? {
-            id: subscriptionData.plan === 'quarterly_pro' ? 'quarterly_pro' : 'yearly_pro',
-            name: subscriptionData.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro',
-            description: 'Premium subscription',
-            price: subscriptionData.plan === 'quarterly_pro' ? 499 : 1999,
-            currency: 'INR',
-            duration: subscriptionData.plan === 'quarterly_pro' ? 'quarterly' : 'yearly',
-            features: [],
-            isPopular: subscriptionData.plan === 'yearly_pro'
-          } : null,
-          planId: subscriptionData.planId || (subscriptionData.plan !== 'free' ? subscriptionData.plan : null),
-          planName: subscriptionData.planName || (subscriptionData.plan !== 'free' ? (subscriptionData.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro') : null),
-          startDate: subscriptionData.startDate,
-          endDate: subscriptionData.endDate,
-          expiryDate: subscriptionData.expiryDate || subscriptionData.endDate,
-          autoRenew: subscriptionData.autoRenew || true,
-          status: subscriptionData.status
+          isActive: false,
+          plan: null,
+          expiryDate: null,
+          autoRenew: false,
+          status: 'inactive'
         },
-        message: 'Status fetched successfully'
+        message: 'No active subscription'
       };
     } catch (error: any) {
-      // Silently handle 404 errors for unimplemented endpoints
-      if (error.response?.status === 404) {
-        console.log('ℹ️ Subscription endpoint not implemented, returning default free status');
-      } else {
-        console.error('Get subscription status error:', error);
-      }
+      console.error('Get subscription status error:', error);
       
-      // If it's a 401 or 404 error, return a default status instead of throwing
-      if (error.response?.status === 401 || error.response?.status === 404) {
-        return {
-          success: true,
-          data: {
-            isActive: false,
-            plan: null,
-            expiryDate: null,
-            autoRenew: false,
-            status: 'inactive'
-          },
-          message: 'No active subscription'
-        };
-      }
-      
-      throw error;
+      // Return default status instead of throwing
+      return {
+        success: true,
+        data: {
+          isActive: false,
+          plan: null,
+          expiryDate: null,
+          autoRenew: false,
+          status: 'inactive'
+        },
+        message: 'No active subscription'
+      };
     }
   }
 
