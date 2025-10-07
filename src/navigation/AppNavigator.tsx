@@ -17,6 +17,7 @@ export type RootStackParamList = {
   Login: undefined;
   Registration: undefined;
   Splash: undefined;
+  PrivacyPolicy: undefined;
 };
 
 export type MainStackParamList = {
@@ -38,6 +39,8 @@ export type MainStackParamList = {
     selectedPoster: any;
     relatedPosters: any[];
   };
+  AboutUs: undefined;
+  PrivacyPolicy: undefined;
   PosterPreview: {
     capturedImageUri: string;
     selectedImage: {
@@ -91,6 +94,7 @@ export type MainStackParamList = {
   LikedItems: undefined;
   ApiTest: undefined;
   FFmpegTest: undefined;
+  HelpSupport: undefined;
 };
 
 export type TabParamList = {
@@ -128,6 +132,9 @@ import ApiTestScreen from '../screens/ApiTestScreen';
 import FFmpegTestScreen from '../screens/FFmpegTestScreen';
 import MyBusinessScreen from '../screens/MyBusinessScreen';
 import MyBusinessPlayerScreen from '../screens/MyBusinessPlayerScreen';
+import AboutUsScreen from '../screens/AboutUsScreen';
+import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
+import HelpSupportScreen from '../screens/HelpSupportScreen';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const MainStack = createStackNavigator<MainStackParamList>();
@@ -227,6 +234,21 @@ const TabNavigator = () => {
       <MainStack.Screen 
         name="FFmpegTest" 
         component={FFmpegTestScreen}
+        options={{ headerShown: false }}
+      />
+      <MainStack.Screen 
+        name="AboutUs" 
+        component={AboutUsScreen}
+        options={{ headerShown: false }}
+      />
+      <MainStack.Screen 
+        name="PrivacyPolicy" 
+        component={PrivacyPolicyScreen}
+        options={{ headerShown: false }}
+      />
+      <MainStack.Screen 
+        name="HelpSupport" 
+        component={HelpSupportScreen}
         options={{ headerShown: false }}
       />
     </MainStack.Navigator>
@@ -514,6 +536,12 @@ const AppNavigator = () => {
             />
           </>
         )}
+        {/* Privacy Policy - accessible from both authenticated and unauthenticated states */}
+        <Stack.Screen 
+          name="PrivacyPolicy" 
+          component={PrivacyPolicyScreen}
+          options={{ headerShown: false }}
+        />
       </Stack.Navigator>
     </NavigationContainer>
   );

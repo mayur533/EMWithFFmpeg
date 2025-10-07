@@ -1111,7 +1111,7 @@ const HomeScreen: React.FC = React.memo(() => {
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={[styles.searchBar, { backgroundColor: theme.colors.cardBackground }]}>
-              <Text style={[styles.searchIcon, { color: theme.colors.primary }]}>SEARCH</Text>
+              <Icon name="search" size={screenWidth < 480 ? 18 : screenWidth < 768 ? 20 : 22} color={theme.colors.primary} style={styles.searchIcon} />
               <TextInput
                 style={[styles.searchInput, { color: theme.colors.text }]}
                 placeholder="Search templates and services..."
@@ -1123,7 +1123,7 @@ const HomeScreen: React.FC = React.memo(() => {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Text style={[styles.clearIcon, { color: theme.colors.textSecondary }]}>CLEAR</Text>
+                  <Icon name="close" size={screenWidth < 480 ? 18 : screenWidth < 768 ? 20 : 22} color={theme.colors.textSecondary} style={styles.clearIcon} />
                 </TouchableOpacity>
               )}
             </View>
@@ -1611,9 +1611,8 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   searchIcon: {
-    fontSize: screenWidth < 480 ? 10 : screenWidth < 768 ? 12 : Math.min(screenWidth * 0.035, 14),
-    marginRight: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : screenWidth * 0.03,
-    fontWeight: '600',
+    marginLeft: screenWidth < 480 ? 4 : screenWidth < 768 ? 6 : 8,
+    marginRight: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : 10,
   },
   searchInput: {
     flex: 1,
@@ -1621,9 +1620,9 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
   clearIcon: {
-    fontSize: screenWidth < 480 ? 10 : screenWidth < 768 ? 12 : Math.min(screenWidth * 0.035, 14),
+    marginLeft: screenWidth < 480 ? 4 : screenWidth < 768 ? 6 : 8,
+    marginRight: screenWidth < 480 ? 4 : screenWidth < 768 ? 6 : 8,
     padding: screenWidth < 480 ? 2 : screenWidth < 768 ? 3 : 5,
-    fontWeight: '600',
   },
   tabsContainer: {
     flexDirection: 'row',

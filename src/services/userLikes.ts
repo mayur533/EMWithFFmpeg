@@ -21,18 +21,23 @@ export interface LikeStats {
 }
 
 class UserLikesService {
-  private readonly STORAGE_KEY = 'user_likes';
+  private readonly STORAGE_KEY_PREFIX = 'user_likes_';
+
+  // Get user-specific storage key
+  private getUserStorageKey(userId?: string): string {
+    return `${this.STORAGE_KEY_PREFIX}${userId || 'anonymous'}`;
+  }
 
   // Like content for specific user
   async likeContent(contentId: string, contentType: 'template' | 'video' | 'poster' | 'business-profile', userId?: string): Promise<boolean> {
     try {
-      const allLikes = await this.getAllLikes();
+      const storageKey = this.getUserStorageKey(userId);
+      const userLikes = await this.getUserLikesFromStorage(userId);
       
       // Check if already liked
-      const existingLike = allLikes.find(like => 
+      const existingLike = userLikes.find(like => 
         like.contentId === contentId && 
-        like.contentType === contentType && 
-        like.userId === userId
+        like.contentType === contentType
       );
       
       if (existingLike) {
@@ -49,8 +54,8 @@ class UserLikesService {
         createdAt: new Date().toISOString(),
       };
       
-      const updatedLikes = [...allLikes, newLike];
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedLikes));
+      const updatedLikes = [...userLikes, newLike];
+      await AsyncStorage.setItem(storageKey, JSON.stringify(updatedLikes));
       
       console.log('✅ Content liked by user:', userId, 'Content:', contentId);
       return true;
@@ -63,16 +68,15 @@ class UserLikesService {
   // Unlike content for specific user
   async unlikeContent(contentId: string, contentType: 'template' | 'video' | 'poster' | 'business-profile', userId?: string): Promise<boolean> {
     try {
-      const allLikes = await this.getAllLikes();
+      const storageKey = this.getUserStorageKey(userId);
+      const userLikes = await this.getUserLikesFromStorage(userId);
       
       // Remove the like
-      const updatedLikes = allLikes.filter(like => 
-        !(like.contentId === contentId && 
-          like.contentType === contentType && 
-          like.userId === userId)
+      const updatedLikes = userLikes.filter(like => 
+        !(like.contentId === contentId && like.contentType === contentType)
       );
       
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedLikes));
+      await AsyncStorage.setItem(storageKey, JSON.stringify(updatedLikes));
       
       console.log('✅ Content unliked by user:', userId, 'Content:', contentId);
       return true;
@@ -111,16 +115,17 @@ class UserLikesService {
     }
   }
 
-  // Get all likes (internal method - no filtering)
-  private async getAllLikes(): Promise<UserLike[]> {
+  // Get likes from storage for specific user (internal method)
+  private async getUserLikesFromStorage(userId?: string): Promise<UserLike[]> {
     try {
-      const likesJson = await AsyncStorage.getItem(this.STORAGE_KEY);
+      const storageKey = this.getUserStorageKey(userId);
+      const likesJson = await AsyncStorage.getItem(storageKey);
       if (!likesJson) {
         return [];
       }
       return JSON.parse(likesJson);
     } catch (error) {
-      console.error('Error getting all likes:', error);
+      console.error('Error getting user likes from storage:', error);
       return [];
     }
   }
@@ -139,13 +144,8 @@ class UserLikesService {
         }
       }
 
-      // Fallback to local storage
-      const allLikes = await this.getAllLikes();
-      
-      // Filter by user ID if provided
-      const userLikes = userId 
-        ? allLikes.filter(like => like.userId === userId)
-        : allLikes.filter(like => !like.userId || like.userId === 'anonymous');
+      // Fallback to local storage (now user-specific)
+      const userLikes = await this.getUserLikesFromStorage(userId);
       
       // Sort by creation date (newest first)
       return userLikes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -242,19 +242,9 @@ class UserLikesService {
   // Clear all likes for specific user
   async clearAllLikes(userId?: string): Promise<boolean> {
     try {
-      if (userId) {
-        // Clear only user-specific likes
-        const allLikes = await this.getAllLikes();
-        const otherUsersLikes = allLikes.filter(like => like.userId !== userId);
-        await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(otherUsersLikes));
-        console.log('✅ Cleared all likes for user:', userId);
-      } else {
-        // Clear all likes (for anonymous users)
-        const allLikes = await this.getAllLikes();
-        const nonAnonymousLikes = allLikes.filter(like => like.userId && like.userId !== 'anonymous');
-        await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(nonAnonymousLikes));
-        console.log('✅ Cleared all anonymous likes');
-      }
+      const storageKey = this.getUserStorageKey(userId);
+      await AsyncStorage.removeItem(storageKey);
+      console.log('✅ Cleared all likes for user:', userId || 'anonymous');
       return true;
     } catch (error) {
       console.error('Error clearing all likes:', error);

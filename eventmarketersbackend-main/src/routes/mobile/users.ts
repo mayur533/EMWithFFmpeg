@@ -1,4 +1,5 @@
 import { Router, Request, Response } from 'express';
+import { body, validationResult } from 'express-validator';
 import { PrismaClient } from '@prisma/client';
 
 const router = Router();
@@ -490,10 +491,11 @@ router.get('/:id/preferences', async (req: Request, res: Response) => {
     }
 
     // Return default preferences for now (until UserPreferences model is created)
+    // Note: darkModeEnabled is NOT included as it's stored locally per device
     const defaultPreferences = {
       userId: id,
       notificationsEnabled: true,
-      darkModeEnabled: false,
+      // darkModeEnabled: false, // REMOVED - Dark mode is now device-specific and stored locally
       defaultViewMode: 'grid',
       preferredCategories: [],
       language: 'en',
@@ -527,7 +529,7 @@ router.put('/:id/preferences', async (req: Request, res: Response) => {
     const { id } = req.params;
     const {
       notificationsEnabled,
-      darkModeEnabled,
+      // darkModeEnabled, // REMOVED - Dark mode is now device-specific and stored locally
       defaultViewMode,
       preferredCategories,
       language,
@@ -548,10 +550,11 @@ router.put('/:id/preferences', async (req: Request, res: Response) => {
     }
 
     // Return updated preferences for now (until UserPreferences model is created)
+    // Note: darkModeEnabled is NOT included as it's stored locally per device
     const updatedPreferences = {
       userId: id,
       notificationsEnabled: notificationsEnabled ?? true,
-      darkModeEnabled: darkModeEnabled ?? false,
+      // darkModeEnabled: darkModeEnabled ?? false, // REMOVED - Dark mode is now device-specific
       defaultViewMode: defaultViewMode ?? 'grid',
       preferredCategories: preferredCategories ?? [],
       language: language ?? 'en',
@@ -706,6 +709,110 @@ router.get('/:id/stats', async (req: Request, res: Response) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch user statistics'
+    });
+  }
+});
+
+/**
+ * GET /api/mobile/users/profile
+ * Get current user profile (requires authentication)
+ */
+router.get('/profile', async (req: Request, res: Response) => {
+  try {
+    // This would typically get the user ID from the authenticated token
+    // For now, we'll use a placeholder user ID
+    const userId = req.query.userId as string || 'default_user_id';
+    
+    const user = await prisma.mobileUser.findUnique({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        deviceId: true,
+        isActive: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        error: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      data: { user }
+    });
+
+  } catch (error) {
+    console.error('Get user profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get user profile'
+    });
+  }
+});
+
+/**
+ * PUT /api/mobile/users/profile
+ * Update current user profile (requires authentication)
+ */
+router.put('/profile', [
+  body('name').optional().isLength({ min: 2 }).withMessage('Name must be at least 2 characters'),
+  body('phone').optional().isMobilePhone('any').withMessage('Valid phone number required'),
+  body('email').optional().isEmail().withMessage('Valid email required')
+], async (req: Request, res: Response) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    // This would typically get the user ID from the authenticated token
+    // For now, we'll use a placeholder user ID
+    const userId = req.body.userId || 'default_user_id';
+    
+    const { name, phone, email } = req.body;
+    
+    const updateData: any = {};
+    if (name) updateData.name = name;
+    if (phone) updateData.phone = phone;
+    if (email) updateData.email = email;
+
+    const user = await prisma.mobileUser.update({
+      where: { id: userId },
+      data: updateData,
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        phone: true,
+        deviceId: true,
+        isActive: true,
+        updatedAt: true
+      }
+    });
+
+    res.json({
+      success: true,
+      data: { user },
+      message: 'Profile updated successfully'
+    });
+
+  } catch (error) {
+    console.error('Update user profile error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update user profile'
     });
   }
 });

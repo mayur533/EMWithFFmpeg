@@ -93,6 +93,7 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
   const [isLoading, setIsLoading] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSignIn = useCallback(async () => {
     if (!email || !password) {
@@ -123,49 +124,6 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
       setIsLoading(false);
     }
   }, [email, password]);
-
-  const handleDemoLogin = useCallback(async () => {
-    console.log('🎮 Demo login initiated');
-    setIsLoading(true);
-    try {
-      // Create a demo user object
-      const demoUser = {
-        id: 'demo-user-123',
-        uid: 'demo-user-123',
-        email: 'demo@eventmarketers.com',
-        name: 'Demo User',
-        displayName: 'Demo User',
-        companyName: 'Demo Company',
-        phoneNumber: '+1234567890',
-        userType: 'MOBILE_USER',
-        isDemoUser: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      };
-
-      // Create a demo token
-      const demoToken = 'demo-token-' + Date.now();
-
-      // Import auth service
-      const authService = (await import('../services/auth')).default;
-      
-      // Save demo user to storage
-      await authService.saveUserToStorage(demoUser, demoToken);
-      
-      // Set current user and notify listeners
-      authService.setCurrentUser(demoUser);
-      authService.notifyAuthStateListeners(demoUser);
-      
-      console.log('✅ Demo login successful');
-      // Navigation will be handled automatically by auth state change
-    } catch (error: any) {
-      console.error('❌ Demo login error:', error);
-      setErrorMessage('Demo login failed. Please try again.');
-      setShowErrorModal(true);
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
 
 
 
@@ -218,16 +176,49 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
                 keyboardType="email-address"
               />
 
-              <FloatingInput
-                label="Password"
-                value={password}
-                onChangeText={setPassword}
-                onFocus={() => setPasswordFocused(true)}
-                onBlur={() => setPasswordFocused(false)}
-                isFocused={passwordFocused}
-                theme={theme}
-                secureTextEntry={true}
-              />
+              {/* Password Input with Eye Button */}
+              <View style={styles.inputContainer}>
+                <Text style={[
+                  styles.floatingLabel, 
+                  { color: (passwordFocused || password) ? theme.colors.primary : theme.colors.textSecondary },
+                  (passwordFocused || password) && styles.floatingLabelFocused
+                ]}>
+                  Password
+                </Text>
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.passwordInput, 
+                      { 
+                        borderColor: (passwordFocused || password) ? theme.colors.primary : theme.colors.border,
+                        backgroundColor: theme.colors.inputBackground,
+                        color: theme.colors.text
+                      },
+                      (passwordFocused || password) && styles.inputFocused
+                    ]}
+                    value={password}
+                    onChangeText={setPassword}
+                    onFocus={() => setPasswordFocused(true)}
+                    onBlur={() => setPasswordFocused(false)}
+                    secureTextEntry={!showPassword}
+                    placeholderTextColor={theme.colors.textSecondary}
+                    blurOnSubmit={false}
+                    returnKeyType="next"
+                    autoCorrect={false}
+                    autoCapitalize="none"
+                  />
+                  <TouchableOpacity 
+                    style={styles.eyeButton}
+                    onPress={() => setShowPassword(!showPassword)}
+                  >
+                    <Icon 
+                      name={showPassword ? "visibility" : "visibility-off"} 
+                      size={22} 
+                      color={theme.colors.textSecondary} 
+                    />
+                  </TouchableOpacity>
+                </View>
+              </View>
 
               <TouchableOpacity 
                 style={[
@@ -243,29 +234,6 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
                 </Text>
               </TouchableOpacity>
 
-              {/* Demo Button for Development */}
-              <View style={styles.demoButtonContainer}>
-                <Text style={[styles.demoLabel, { color: theme.colors.textSecondary }]}>
-                  Development Only
-                </Text>
-                <TouchableOpacity 
-                  style={[
-                    styles.demoButton, 
-                    { backgroundColor: '#6c757d' },
-                    isLoading && styles.buttonDisabled
-                  ]} 
-                  onPress={handleDemoLogin}
-                  disabled={isLoading}
-                >
-                  <Text style={[styles.demoButtonText, { color: '#ffffff' }]}>
-                    {isLoading ? 'LOADING...' : '🎮 DEMO LOGIN'}
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-
-
-
               <View style={styles.footer}>
                 <Text style={[styles.footerText, { color: theme.colors.textSecondary }]}>
                   Don't have an account?{' '}
@@ -273,6 +241,18 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
                 <TouchableOpacity onPress={() => navigation.navigate('Registration')}>
                   <Text style={[styles.footerLink, { color: theme.colors.primary }]}>
                     Sign Up
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              
+              {/* Privacy Policy Link */}
+              <View style={styles.privacyFooter}>
+                <Text style={[styles.privacyFooterText, { color: theme.colors.textSecondary }]}>
+                  By signing in, you agree to our{' '}
+                </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
+                  <Text style={[styles.privacyFooterLink, { color: theme.colors.primary }]}>
+                    Privacy Policy
                   </Text>
                 </TouchableOpacity>
               </View>
@@ -413,6 +393,25 @@ const styles = StyleSheet.create({
   inputFocused: {
     borderWidth: 2,
   },
+  passwordContainer: {
+    position: 'relative',
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderRadius: responsiveSize.inputBorderRadius,
+    paddingHorizontal: responsiveSize.inputPaddingHorizontal,
+    paddingVertical: responsiveSize.buttonPaddingVertical,
+    paddingRight: screenWidth * 0.12,
+    fontSize: responsiveText.body,
+    fontWeight: '500',
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: screenWidth * 0.03,
+    top: '50%',
+    transform: [{ translateY: -11 }],
+    padding: 5,
+  },
   signInButton: {
     borderRadius: responsiveSize.buttonBorderRadius,
     paddingVertical: responsiveSize.buttonPaddingVertical,
@@ -427,26 +426,6 @@ const styles = StyleSheet.create({
     fontSize: Math.min(screenWidth * 0.04, 16),
     fontWeight: '600',
   },
-  demoButtonContainer: {
-    marginBottom: Math.max(responsiveSpacing.md, screenHeight * 0.015),
-  },
-  demoLabel: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    textAlign: 'center',
-    marginBottom: screenHeight * 0.005,
-    fontStyle: 'italic',
-  },
-  demoButton: {
-    borderRadius: responsiveSize.buttonBorderRadius,
-    paddingVertical: responsiveSize.buttonPaddingVertical,
-    alignItems: 'center',
-    ...responsiveShadow.large,
-  },
-  demoButtonText: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
-    fontWeight: '600',
-  },
-
   footer: {
     flexDirection: 'row',
     justifyContent: 'center',
@@ -458,6 +437,22 @@ const styles = StyleSheet.create({
   footerLink: {
     fontSize: Math.min(screenWidth * 0.035, 14),
     fontWeight: '600',
+  },
+  privacyFooter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: screenHeight * 0.02,
+    paddingHorizontal: screenWidth * 0.05,
+  },
+  privacyFooterText: {
+    fontSize: Math.min(screenWidth * 0.032, 12),
+    textAlign: 'center',
+  },
+  privacyFooterLink: {
+    fontSize: Math.min(screenWidth * 0.032, 12),
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
 
   // Error Modal Styles

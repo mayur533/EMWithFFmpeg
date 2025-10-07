@@ -24,19 +24,23 @@ export interface PreferenceUpdate {
 }
 
 class UserPreferencesService {
-  private readonly STORAGE_KEY = 'user_preferences';
+  private readonly STORAGE_KEY_PREFIX = 'user_preferences_';
+
+  // Get user-specific storage key
+  private getUserStorageKey(userId?: string): string {
+    return `${this.STORAGE_KEY_PREFIX}${userId || 'anonymous'}`;
+  }
 
   // Get user preferences
   async getUserPreferences(userId?: string): Promise<UserPreferences | null> {
     try {
-      const allPreferences = await this.getAllPreferences();
+      const storageKey = this.getUserStorageKey(userId);
+      const preferencesJson = await AsyncStorage.getItem(storageKey);
       
-      if (userId) {
-        const userPrefs = allPreferences.find(prefs => prefs.userId === userId);
-        if (userPrefs) {
-          console.log('✅ Found user preferences for user:', userId);
-          return userPrefs;
-        }
+      if (preferencesJson) {
+        const userPrefs = JSON.parse(preferencesJson);
+        console.log('✅ Found user preferences for user:', userId);
+        return userPrefs;
       }
       
       // Return default preferences if user not found
@@ -50,42 +54,27 @@ class UserPreferencesService {
   // Save user preferences
   async saveUserPreferences(userId: string, preferences: PreferenceUpdate): Promise<UserPreferences> {
     try {
-      const allPreferences = await this.getAllPreferences();
-      
-      // Check if user preferences exist
-      const existingIndex = allPreferences.findIndex(prefs => prefs.userId === userId);
+      const storageKey = this.getUserStorageKey(userId);
+      const existingPrefs = await this.getUserPreferences(userId);
       
       const now = new Date().toISOString();
       
-      if (existingIndex >= 0) {
-        // Update existing preferences
-        const updatedPreferences: UserPreferences = {
-          ...allPreferences[existingIndex],
-          ...preferences,
-          updatedAt: now,
-        };
-        
-        allPreferences[existingIndex] = updatedPreferences;
-        await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(allPreferences));
-        
-        console.log('✅ Updated user preferences for user:', userId);
-        return updatedPreferences;
-      } else {
-        // Create new preferences
-        const newPreferences: UserPreferences = {
-          ...this.getDefaultPreferences(userId),
-          ...preferences,
-          userId,
-          createdAt: now,
-          updatedAt: now,
-        };
-        
-        const updatedPreferences = [...allPreferences, newPreferences];
-        await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(updatedPreferences));
-        
-        console.log('✅ Created new user preferences for user:', userId);
-        return newPreferences;
+      const updatedPreferences: UserPreferences = {
+        ...(existingPrefs || this.getDefaultPreferences(userId)),
+        ...preferences,
+        userId,
+        updatedAt: now,
+      };
+      
+      // If creating new preferences, set createdAt
+      if (!existingPrefs) {
+        updatedPreferences.createdAt = now;
       }
+      
+      await AsyncStorage.setItem(storageKey, JSON.stringify(updatedPreferences));
+      
+      console.log('✅ Saved user preferences for user:', userId);
+      return updatedPreferences;
     } catch (error) {
       console.error('Error saving user preferences:', error);
       throw error;
@@ -108,19 +97,6 @@ class UserPreferencesService {
     }
   }
 
-  // Get all preferences (internal method)
-  private async getAllPreferences(): Promise<UserPreferences[]> {
-    try {
-      const preferencesJson = await AsyncStorage.getItem(this.STORAGE_KEY);
-      if (!preferencesJson) {
-        return [];
-      }
-      return JSON.parse(preferencesJson);
-    } catch (error) {
-      console.error('Error getting all preferences:', error);
-      return [];
-    }
-  }
 
   // Get default preferences
   private getDefaultPreferences(userId: string): UserPreferences {
@@ -142,10 +118,8 @@ class UserPreferencesService {
   // Clear user preferences
   async clearUserPreferences(userId: string): Promise<boolean> {
     try {
-      const allPreferences = await this.getAllPreferences();
-      const filteredPreferences = allPreferences.filter(prefs => prefs.userId !== userId);
-      
-      await AsyncStorage.setItem(this.STORAGE_KEY, JSON.stringify(filteredPreferences));
+      const storageKey = this.getUserStorageKey(userId);
+      await AsyncStorage.removeItem(storageKey);
       console.log('✅ Cleared preferences for user:', userId);
       return true;
     } catch (error) {
@@ -154,7 +128,7 @@ class UserPreferencesService {
     }
   }
 
-  // Get preference statistics
+  // Get preference statistics (no longer supported with user-specific storage)
   async getPreferenceStats(): Promise<{
     totalUsers: number;
     notificationsEnabled: number;
@@ -162,28 +136,14 @@ class UserPreferencesService {
     gridViewUsers: number;
     listViewUsers: number;
   }> {
-    try {
-      const allPreferences = await this.getAllPreferences();
-      
-      const stats = {
-        totalUsers: allPreferences.length,
-        notificationsEnabled: allPreferences.filter(p => p.notificationsEnabled).length,
-        darkModeEnabled: allPreferences.filter(p => p.darkModeEnabled).length,
-        gridViewUsers: allPreferences.filter(p => p.defaultViewMode === 'grid').length,
-        listViewUsers: allPreferences.filter(p => p.defaultViewMode === 'list').length,
-      };
-      
-      return stats;
-    } catch (error) {
-      console.error('Error getting preference stats:', error);
-      return {
-        totalUsers: 0,
-        notificationsEnabled: 0,
-        darkModeEnabled: 0,
-        gridViewUsers: 0,
-        listViewUsers: 0,
-      };
-    }
+    console.log('⚠️ getPreferenceStats is no longer supported with user-specific storage');
+    return {
+      totalUsers: 0,
+      notificationsEnabled: 0,
+      darkModeEnabled: 0,
+      gridViewUsers: 0,
+      listViewUsers: 0,
+    };
   }
 
   // Export user preferences (for backup)

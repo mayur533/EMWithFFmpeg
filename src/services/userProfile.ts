@@ -3,7 +3,7 @@ import api from './api';
 export interface UserPreferences {
   userId: string;
   notificationsEnabled: boolean;
-  darkModeEnabled: boolean;
+  // darkModeEnabled: boolean; // REMOVED - Dark mode is now device-specific and stored locally
   defaultViewMode: 'grid' | 'list';
   preferredCategories: string[];
   language: string;
@@ -15,7 +15,7 @@ export interface UserPreferences {
 
 export interface PreferenceUpdate {
   notificationsEnabled?: boolean;
-  darkModeEnabled?: boolean;
+  // darkModeEnabled?: boolean; // REMOVED - Dark mode is now device-specific and stored locally
   defaultViewMode?: 'grid' | 'list';
   preferredCategories?: string[];
   language?: string;

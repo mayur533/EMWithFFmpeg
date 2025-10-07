@@ -18,6 +18,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import authService from '../services/auth';
 import authApi from '../services/authApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -28,6 +29,9 @@ import userPreferencesService from '../services/userPreferences';
 import userProfileService from '../services/userProfile';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import { MainStackParamList } from '../navigation/AppNavigator';
+
+type ProfileScreenNavigationProp = StackNavigationProp<MainStackParamList>;
 import downloadedPostersService from '../services/downloadedPosters';
 import ImagePickerModal from '../components/ImagePickerModal';
 
@@ -60,8 +64,8 @@ const responsiveFontSize = {
 const ProfileScreen: React.FC = () => {
   const currentUser = authService.getCurrentUser();
   
-  // Debug: Log current user data to see what fields are available
-  console.log('🔍 ProfileScreen - Current User Data:', JSON.stringify(currentUser, null, 2));
+  // Debug: Log current user ID only
+  console.log('🔍 ProfileScreen - User ID:', currentUser?.id);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -88,9 +92,9 @@ const ProfileScreen: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState('');
   const [showSignOutModal, setShowSignOutModal] = useState(false);
   const { isDarkMode, toggleDarkMode, theme } = useTheme();
-  const { isSubscribed, transactionStats } = useSubscription();
+  const { isSubscribed, subscriptionStatus, transactionStats, clearSubscriptionData } = useSubscription();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<ProfileScreenNavigationProp>();
 
   // Business categories (same as registration)
   const categories = [
@@ -224,11 +228,15 @@ const ProfileScreen: React.FC = () => {
   const confirmSignOut = async () => {
     try {
       setShowSignOutModal(false);
-              console.log('ProfileScreen: Starting sign out process...');
-              
-              await authService.signOut();
-              
-              console.log('ProfileScreen: Sign out completed successfully');
+      console.log('ProfileScreen: Starting sign out process...');
+      
+      // Clear subscription data FIRST before signing out
+      console.log('🧹 Clearing subscription data before sign out...');
+      clearSubscriptionData();
+      
+      await authService.signOut();
+      
+      console.log('ProfileScreen: Sign out completed successfully');
               
       // Navigation will be handled by the auth state change listener
               
@@ -280,17 +288,11 @@ const ProfileScreen: React.FC = () => {
 
   const handleDarkModeToggle = async () => {
     try {
-      const currentUser = authService.getCurrentUser();
-      const userId = currentUser?.id;
-      
       const newValue = !isDarkMode;
       toggleDarkMode();
       
-      // Save to user preferences via backend
-      if (userId) {
-        await userProfileService.updatePreference(userId, 'darkModeEnabled', newValue);
-        console.log('✅ Dark mode preference updated for user:', userId, 'Value:', newValue);
-      }
+      // Dark mode is now stored locally per device, not synced with backend
+      console.log('✅ Dark mode toggled locally:', newValue);
       
       // Animate the toggle
       Animated.timing(darkModeAnimation, {
@@ -820,10 +822,21 @@ const ProfileScreen: React.FC = () => {
                   </View>
                   <View style={styles.subscriptionInfo}>
                     <Text style={[styles.subscriptionTitle, { color: theme.colors.text }]}>
-                      {isSubscribed ? 'Pro Subscription' : 'Upgrade to Pro'}
+                      {isSubscribed 
+                        ? (subscriptionStatus?.planName || 'Pro Subscription')
+                        : 'Upgrade to Pro'}
                     </Text>
                     <Text style={[styles.subscriptionSubtitle, { color: theme.colors.textSecondary }]}>
-                      {isSubscribed ? 'Active • Unlimited features' : 'Unlock unlimited possibilities'}
+                      {isSubscribed 
+                        ? (() => {
+                            const expiryDate = subscriptionStatus?.expiryDate || subscriptionStatus?.endDate;
+                            if (expiryDate) {
+                              const daysRemaining = Math.ceil((new Date(expiryDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+                              return `Active • ${daysRemaining} days remaining`;
+                            }
+                            return 'Active • Unlimited features';
+                          })()
+                        : 'Unlock unlimited possibilities'}
                     </Text>
                   </View>
                 </View>
@@ -864,9 +877,9 @@ const ProfileScreen: React.FC = () => {
           {/* Support & Legal */}
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Support & Legal</Text>
-            {renderMenuItem('help', 'Help & Support', 'Get help and contact support', () => Alert.alert('Help', 'Help center will be implemented soon.'))}
-            {renderMenuItem('privacy-tip', 'Privacy Policy', 'Read our privacy policy', () => Alert.alert('Privacy Policy', 'Privacy policy will be implemented soon.'))}
-            {renderMenuItem('info', 'About App', 'Version 1.0.0', () => Alert.alert('About', 'About app information will be implemented soon.'))}
+            {renderMenuItem('help', 'Help & Support', 'Get help and contact support', () => navigation.navigate('HelpSupport' as never))}
+            {renderMenuItem('privacy-tip', 'Privacy Policy', 'Read our privacy policy', () => navigation.navigate('PrivacyPolicy' as never))}
+            {renderMenuItem('info', 'About App', 'Version 1.0.0', () => navigation.navigate('AboutUs'))}
           </View>
 
           {/* Share App Section */}
@@ -1257,6 +1270,7 @@ const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
 
       {/* Image Picker Modal */}
       <ImagePickerModal

@@ -101,86 +101,6 @@ const LikedItemsScreen: React.FC = () => {
   const responsiveValues = useMemo(() => getResponsiveValues(), []);
   const { responsiveSpacing, responsiveFontSize, cardHeight, cardWidth, gridColumns, isTablet, isLandscape } = responsiveValues;
 
-  // Mock data for liked items
-  const mockLikedItems: LikedItem[] = useMemo(() => [
-    // Liked Posters
-    {
-      id: 'poster-1',
-      name: 'Wedding Invitation',
-      thumbnail: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop',
-      type: 'poster',
-      category: 'Wedding',
-      likes: 156,
-      downloads: 89,
-    },
-    {
-      id: 'poster-2',
-      name: 'Corporate Event',
-      thumbnail: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=300&h=200&fit=crop',
-      type: 'poster',
-      category: 'Corporate',
-      likes: 234,
-      downloads: 167,
-    },
-    // Liked Videos
-    {
-      id: 'video-1',
-      name: 'Event Promo Video',
-      thumbnail: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop',
-      type: 'video',
-      category: 'Promo',
-      likes: 189,
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
-    },
-    {
-      id: 'video-2',
-      name: 'Wedding Highlight',
-      thumbnail: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop',
-      type: 'video',
-      category: 'Wedding',
-      likes: 145,
-      videoUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
-    },
-    // Liked Templates
-    {
-      id: 'template-1',
-      name: 'Birthday Template',
-      thumbnail: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=300&h=200&fit=crop',
-      type: 'template',
-      category: 'Birthday',
-      likes: 178,
-      downloads: 123,
-    },
-    {
-      id: 'template-2',
-      name: 'Conference Template',
-      thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=300&h=200&fit=crop',
-      type: 'template',
-      category: 'Conference',
-      likes: 203,
-      downloads: 134,
-    },
-    // Liked Greetings
-    {
-      id: 'greeting-1',
-      name: 'Festival Greeting',
-      thumbnail: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=300&h=200&fit=crop',
-      type: 'greeting',
-      category: 'Festival',
-      likes: 167,
-      downloads: 98,
-    },
-    {
-      id: 'greeting-2',
-      name: 'Business Greeting',
-      thumbnail: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&h=200&fit=crop',
-      type: 'greeting',
-      category: 'Business',
-      likes: 145,
-      downloads: 76,
-    },
-  ], []);
-
   const tabs = useMemo(() => [
     { id: 'all', label: 'All', icon: 'favorite' },
     { id: 'poster', label: 'Posters', icon: 'image' },
@@ -199,8 +119,8 @@ const LikedItemsScreen: React.FC = () => {
       console.log('🔍 Loading liked items for user:', userId);
       
       if (!userId) {
-        console.log('⚠️ No user ID available, using mock data');
-        setLikedItems(mockLikedItems);
+        console.log('⚠️ No user ID available, showing empty list');
+        setLikedItems([]);
         return;
       }
       
@@ -269,8 +189,8 @@ const LikedItemsScreen: React.FC = () => {
       console.log('✅ Loaded user-specific liked items from backend:', userLikedItems.length);
     } catch (error) {
       console.error('❌ Error loading user liked items from backend:', error);
-      // Fallback to mock data if there's an error
-      setLikedItems(mockLikedItems);
+      // Show empty list if there's an error
+      setLikedItems([]);
     } finally {
       setLoading(false);
     }

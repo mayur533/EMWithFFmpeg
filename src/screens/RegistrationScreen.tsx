@@ -131,6 +131,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
   const [showValidationSummary, setShowValidationSummary] = useState(false);
   const [modalDimensions, setModalDimensions] = useState(getModalDimensions());
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const categories = [
     'Event Planners',
@@ -558,27 +560,65 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
             <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: theme.theme.colors.text }]}>Account Security</Text>
               
-              <FloatingInput
+              <View style={styles.passwordContainer}>
+                <TextInput
+                  style={[
+                    styles.passwordInput,
+                    { 
+                      color: theme.theme.colors.text,
+                      borderColor: focusedField === 'password' ? theme.theme.colors.primary : theme.theme.colors.border,
+                      backgroundColor: theme.theme.colors.inputBackground,
+                    }
+                  ]}
                   value={formData.password}
-                onChangeText={(value) => handleInputChange('password', value)}
-                  field="password"
-                placeholder="Enter password"
-                secureTextEntry={true}
-                  focusedField={focusedField}
-                  setFocusedField={setFocusedField}
-                  theme={theme}
+                  onChangeText={(value) => handleInputChange('password', value)}
+                  onFocus={() => setFocusedField('password')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Enter password"
+                  placeholderTextColor={theme.theme.colors.textSecondary}
+                  secureTextEntry={!showPassword}
                 />
+                <TouchableOpacity 
+                  style={styles.eyeButton}
+                  onPress={() => setShowPassword(!showPassword)}
+                >
+                  <Icon 
+                    name={showPassword ? "visibility" : "visibility-off"} 
+                    size={22} 
+                    color={theme.theme.colors.textSecondary} 
+                  />
+                </TouchableOpacity>
+              </View>
 
-                <FloatingInput
-                  value={formData.confirmPassword}
-                onChangeText={(value) => handleInputChange('confirmPassword', value)}
-                  field="confirmPassword"
-                placeholder="Confirm password"
-                secureTextEntry={true}
-                  focusedField={focusedField}
-                  setFocusedField={setFocusedField}
-                  theme={theme}
-                />
+                <View style={styles.passwordContainer}>
+                  <TextInput
+                    style={[
+                      styles.passwordInput,
+                      { 
+                        color: theme.theme.colors.text,
+                        borderColor: focusedField === 'confirmPassword' ? theme.theme.colors.primary : theme.theme.colors.border,
+                        backgroundColor: theme.theme.colors.inputBackground,
+                      }
+                    ]}
+                    value={formData.confirmPassword}
+                    onChangeText={(value) => handleInputChange('confirmPassword', value)}
+                    onFocus={() => setFocusedField('confirmPassword')}
+                    onBlur={() => setFocusedField(null)}
+                    placeholder="Confirm password"
+                    placeholderTextColor={theme.theme.colors.textSecondary}
+                    secureTextEntry={!showConfirmPassword}
+                  />
+                  <TouchableOpacity 
+                    style={styles.eyeButton}
+                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                  >
+                    <Icon 
+                      name={showConfirmPassword ? "visibility" : "visibility-off"} 
+                      size={22} 
+                      color={theme.theme.colors.textSecondary} 
+                    />
+                  </TouchableOpacity>
+                </View>
             </View>
 
               {/* Register Button */}
@@ -604,6 +644,18 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   <Text style={[styles.loginLink, { color: theme.theme.colors.primary }]}>Sign In</Text>
                   </TouchableOpacity>
                     </View>
+                    
+              {/* Privacy Policy Link */}
+              <View style={styles.privacyFooter}>
+                <Text style={[styles.privacyFooterText, { color: theme.theme.colors.textSecondary }]}>
+                  By creating an account, you agree to our{' '}
+                </Text>
+                <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
+                  <Text style={[styles.privacyFooterLink, { color: theme.theme.colors.primary }]}>
+                    Privacy Policy
+                  </Text>
+                </TouchableOpacity>
+              </View>
                 </View>
               </ScrollView>
                    </KeyboardAvoidingView>
@@ -751,6 +803,26 @@ const styles = StyleSheet.create({
   multilineInput: {
     minHeight: isSmallScreen ? 80 : 100,
     textAlignVertical: 'top',
+  },
+  passwordContainer: {
+    position: 'relative',
+    marginBottom: screenHeight * 0.015,
+  },
+  passwordInput: {
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: screenWidth * 0.04,
+    paddingVertical: screenHeight * 0.015,
+    paddingRight: screenWidth * 0.12,
+    fontSize: isSmallScreen ? 14 : 16,
+    minHeight: isSmallScreen ? 48 : 52,
+  },
+  eyeButton: {
+    position: 'absolute',
+    right: screenWidth * 0.03,
+    top: '50%',
+    transform: [{ translateY: -11 }],
+    padding: 5,
   },
   logoSection: {
     marginBottom: screenHeight * 0.03,
@@ -910,6 +982,22 @@ const styles = StyleSheet.create({
   loginLink: {
     fontSize: isSmallScreen ? 14 : 16,
     fontWeight: '600',
+  },
+  privacyFooter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: screenHeight * 0.02,
+    paddingHorizontal: screenWidth * 0.05,
+  },
+  privacyFooterText: {
+    fontSize: isSmallScreen ? 12 : 14,
+    textAlign: 'center',
+  },
+  privacyFooterLink: {
+    fontSize: isSmallScreen ? 12 : 14,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
   },
   modalOverlay: {
     flex: 1,
