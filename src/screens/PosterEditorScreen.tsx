@@ -1225,8 +1225,17 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         if (!currentLayer) return;
         
         // Calculate new position with boundaries
-        const newX = Math.max(0, Math.min(canvasWidth - currentLayer.size.width, currentLayer.position.x + translationX));
-        const newY = Math.max(0, Math.min(canvasHeight - currentLayer.size.height, currentLayer.position.y + translationY));
+        // For text layers, don't constrain based on size since they shrink-wrap
+        let newX, newY;
+        if (currentLayer.type === 'text') {
+          // Text layers can move freely within canvas
+          newX = Math.max(0, Math.min(canvasWidth, currentLayer.position.x + translationX));
+          newY = Math.max(0, Math.min(canvasHeight, currentLayer.position.y + translationY));
+        } else {
+          // Image layers need size-based constraints
+          newX = Math.max(0, Math.min(canvasWidth - currentLayer.size.width, currentLayer.position.x + translationX));
+          newY = Math.max(0, Math.min(canvasHeight - currentLayer.size.height, currentLayer.position.y + translationY));
+        }
         
         // Debug: Log the current position and field type
         console.log(`🎯 DEBUG: ${currentLayer.fieldType || 'Unknown Field'} moved to position:`);
@@ -1754,6 +1763,17 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       ],
     };
 
+    // Text layer style without fixed dimensions
+    const textLayerStyle = {
+      position: 'absolute' as const,
+      zIndex: layer.zIndex,
+      transform: [
+        { translateX: layerAnimations[layer.id].x },
+        { translateY: layerAnimations[layer.id].y },
+        { rotate: `${layer.rotation}deg` }
+      ],
+    };
+
     const handleLayerPress = () => {
       setSelectedLayer(layer.id);
     };
@@ -1788,9 +1808,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         
         return (
           <Animated.View
+            key={layer.id}
             style={[
-              styles.layer,
-              layerStyle,
+              textLayerStyle,
               isSelected && styles.selectedLayer,
               draggedLayer === layer.id && styles.draggedLayer,
               draggedLayer === layer.id && {
@@ -1803,15 +1823,18 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             ]}
           >
             <TouchableOpacity
-              style={styles.layerTouchable}
+              activeOpacity={1}
               onPress={handleLayerPress}
+              style={{ alignSelf: 'flex-start' }}
             >
-              <Text style={[styles.layerText, {
+              <Text style={{
                 fontSize: layer.style?.fontSize,
                 color: layer.style?.color,
                 fontFamily: layer.style?.fontFamily,
                 fontWeight: layer.style?.fontWeight as any,
-              }]} numberOfLines={0}>
+                padding: 0,
+                margin: 0,
+              }}>
                 {layer.content}
               </Text>
             </TouchableOpacity>
@@ -3215,12 +3238,47 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   setFrameContent({});
                   // Restore original layers and template to their original state
                   if (originalLayers.length > 0) {
+                    // Update animation values for all original layers
+                    originalLayers.forEach(layer => {
+                      // Update position animations
+                      if (layerAnimations[layer.id]) {
+                        layerAnimations[layer.id].x.setValue(layer.position.x);
+                        layerAnimations[layer.id].y.setValue(layer.position.y);
+                      } else {
+                        layerAnimations[layer.id] = {
+                          x: new Animated.Value(layer.position.x),
+                          y: new Animated.Value(layer.position.y)
+                        };
+                      }
+                      
+                      // Reset translation values
+                      if (translationValues[layer.id]) {
+                        translationValues[layer.id].x.setValue(0);
+                        translationValues[layer.id].y.setValue(0);
+                      } else {
+                        translationValues[layer.id] = {
+                          x: new Animated.Value(0),
+                          y: new Animated.Value(0)
+                        };
+                      }
+                      
+                      // Reset scale values
+                      if (scaleValues[layer.id]) {
+                        scaleValues[layer.id].setValue(1);
+                      } else {
+                        scaleValues[layer.id] = new Animated.Value(1);
+                      }
+                      
+                      console.log(`♻️ Restored animation values for layer ${layer.id} to position (${layer.position.x}, ${layer.position.y})`);
+                    });
+                    
                     setLayers(originalLayers);
                     setOriginalLayers([]); // Clear stored original layers
                     // Restore original template
                     setSelectedTemplate(originalTemplate);
                     // Re-apply the template to restore footer colors and styles
                     applyTemplate(originalTemplate);
+                    console.log('✅ Frame removed and original layout restored');
                   } else if (selectedBusinessProfile) {
                     // Fallback to business profile if no original layers stored
                     applyBusinessProfileToPoster(selectedBusinessProfile);
@@ -3412,9 +3470,11 @@ const styles = StyleSheet.create({
   layerText: {
     fontSize: 16,
     color: '#000000',
-    textAlign: 'center',
+    textAlign: 'left',
     flexWrap: 'wrap', // Allow text to wrap
-    textAlignVertical: 'center', // Center text vertically
+    textAlignVertical: 'top', // Align text to top
+    padding: 0,
+    margin: 0,
   },
   layerImage: {
     width: '100%',
@@ -3669,8 +3729,8 @@ const styles = StyleSheet.create({
   layerTouchable: {
     width: '100%',
     height: '100%',
-    justifyContent: 'center',
-    alignItems: 'center',
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
   draggedLayer: {
     zIndex: 100, // Ensure dragged layer is on top
