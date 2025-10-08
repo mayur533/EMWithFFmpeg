@@ -262,51 +262,75 @@ export const frames: Frame[] = [
     placeholders: [
       {
         type: 'text',
-        key: 'brandName',
-        x: 60,
-        y: 80,
+        key: 'companyName',
+        x: 100,
+        y: 42,
         fontSize: 26,
         color: '#FFFFFF',
         fontFamily: 'System',
         fontWeight: 'bold',
         textAlign: 'left',
-        maxWidth: 320
+        maxWidth: 300
       },
       {
         type: 'image',
         key: 'logo',
-        x: 60,
-        y: 130,
+        x: 19,
+        y: 45,
         width: 90,
         height: 90
       },
       {
         type: 'text',
-        key: 'slogan',
-        x: 60,
-        y: 240,
-        fontSize: 16,
+        key: 'phone',
+        x: 21,
+        y: 490,
+        fontSize: 12,
         color: '#FFFFFF',
         fontFamily: 'System',
         fontWeight: 'normal',
         textAlign: 'left',
-        maxWidth: 320
+        maxWidth: 150
       },
       {
         type: 'text',
-        key: 'contact',
-        x: 60,
-        y: 280,
-        fontSize: 14,
+        key: 'website',
+        x: 225,
+        y: 499,
+        fontSize: 12,
         color: '#FFFFFF',
         fontFamily: 'System',
         fontWeight: 'normal',
         textAlign: 'left',
-        maxWidth: 320
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 45,
+        y: 522,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 126,
+        y: 524,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
       }
     ],
-    category: 'creative',
-    description: 'Bold creative template with dynamic positioning'
+    category: 'business',
+    description: 'Modern business frame with creative layout'
   },
   {
     id: 'frame5',
@@ -393,8 +417,8 @@ export const frames: Frame[] = [
       {
         type: 'text',
         key: 'companyName',
-        x: 60,
-        y: 100,
+        x: 0,
+        y: 39,
         fontSize: 26,
         color: '#FFFFFF',
         fontFamily: 'System',
@@ -405,22 +429,58 @@ export const frames: Frame[] = [
       {
         type: 'image',
         key: 'logo',
-        x: 280,
-        y: 40,
+        x: 305,
+        y: 73,
         width: 80,
         height: 80
       },
       {
         type: 'text',
-        key: 'tagline',
-        x: 60,
-        y: 150,
-        fontSize: 16,
+        key: 'phone',
+        x: 84,
+        y: 499,
+        fontSize: 12,
         color: '#FFFFFF',
         fontFamily: 'System',
         fontWeight: 'normal',
         textAlign: 'left',
-        maxWidth: 300
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 220,
+        y: 501,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 0,
+        y: 472,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 153,
+        y: 500,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
       }
     ],
     category: 'business',
@@ -434,38 +494,74 @@ export const frames: Frame[] = [
       {
         type: 'text',
         key: 'companyName',
-        x: 50,
-        y: 80,
+        x: 31,
+        y: 24,
         fontSize: 30,
         color: '#FFFFFF',
         fontFamily: 'System',
         fontWeight: 'bold',
-        textAlign: 'center',
-        maxWidth: 350
+        textAlign: 'left',
+        maxWidth: 300
       },
       {
         type: 'image',
         key: 'logo',
-        x: 160,
-        y: 140,
+        x: 293,
+        y: 41,
         width: 90,
         height: 90
       },
       {
         type: 'text',
-        key: 'contact',
-        x: 50,
-        y: 450,
-        fontSize: 14,
+        key: 'phone',
+        x: 0,
+        y: 507,
+        fontSize: 12,
         color: '#FFFFFF',
         fontFamily: 'System',
         fontWeight: 'normal',
-        textAlign: 'center',
-        maxWidth: 350
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 197,
+        y: 522,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 0,
+        y: 537,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 118,
+        y: 522,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
       }
     ],
-    category: 'creative',
-    description: 'Creative frame with center focus'
+    category: 'business',
+    description: 'Modern business frame with center focus'
   }
 ];
 

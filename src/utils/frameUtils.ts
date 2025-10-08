@@ -12,8 +12,7 @@ export const mapBusinessProfileToFrameContent = (profile: BusinessProfile): Fram
     brandName: profile.name || 'Your Brand',
     name: profile.name || 'Your Name',
     
-    // Descriptions and taglines (removed tagline field)
-    slogan: profile.description || 'Your slogan here',
+    // Descriptions
     companyDescription: profile.description || 'Company description',
     
     // Logo and images
