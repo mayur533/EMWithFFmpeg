@@ -1226,6 +1226,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         const newX = Math.max(0, Math.min(canvasWidth - currentLayer.size.width, currentLayer.position.x + translationX));
         const newY = Math.max(0, Math.min(canvasHeight - currentLayer.size.height, currentLayer.position.y + translationY));
         
+        // Debug: Log the current position and field type
+        console.log(`🎯 DEBUG: ${currentLayer.fieldType || 'Unknown Field'} moved to position:`);
+        console.log(`   📍 X: ${newX.toFixed(1)}, Y: ${newY.toFixed(1)}`);
+        console.log(`   📏 Canvas Size: ${canvasWidth}x${canvasHeight}`);
+        console.log(`   🏷️ Field Type: ${currentLayer.fieldType || 'Unknown'}`);
+        console.log(`   📝 Content: ${currentLayer.content || 'No content'}`);
+        console.log(`   🔧 For frame1.png, use: x: ${newX.toFixed(0)}, y: ${newY.toFixed(0)}`);
+        
         // Update the animated position values directly
         if (layerAnimations[layerId]) {
           layerAnimations[layerId].x.setValue(newX);

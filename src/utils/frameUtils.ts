@@ -6,22 +6,13 @@ export interface FrameContent {
 }
 
 export const mapBusinessProfileToFrameContent = (profile: BusinessProfile): FrameContent => {
-  // Create comprehensive contact information
-  const contactInfo = [
-    profile.phone ? `📞 ${profile.phone}` : '',
-    profile.email ? `📧 ${profile.email}` : '',
-    profile.website ? `🌐 ${profile.website}` : '',
-    profile.address ? `📍 ${profile.address}` : '',
-  ].filter(Boolean).join('\n');
-
   const content: FrameContent = {
     // Company/Brand identifiers
     companyName: profile.name || 'Your Company',
     brandName: profile.name || 'Your Brand',
     name: profile.name || 'Your Name',
     
-    // Descriptions and taglines
-    tagline: profile.description || 'Your tagline here',
+    // Descriptions and taglines (removed tagline field)
     slogan: profile.description || 'Your slogan here',
     companyDescription: profile.description || 'Company description',
     
@@ -30,14 +21,19 @@ export const mapBusinessProfileToFrameContent = (profile: BusinessProfile): Fram
     companyLogo: profile.companyLogo || profile.logo || '',
     profileImage: profile.companyLogo || profile.logo || '',
     
-    // Contact information (combined)
-    contact: contactInfo || 'Contact information',
+    // Individual contact fields with icons
+    companyPhone: profile.phone ? `📞 ${profile.phone}` : '',
+    companyEmail: profile.email ? `📧 ${profile.email}` : '',
+    companyWebsite: profile.website ? `🌐 ${profile.website}` : '',
+    companyAddress: profile.address ? `📍 ${profile.address}` : '',
     
-    // Individual contact fields
-    companyPhone: profile.phone || '',
-    companyEmail: profile.email || '',
-    companyWebsite: profile.website || '',
-    companyAddress: profile.address || '',
+    // Legacy contact field (for backward compatibility)
+    contact: [
+      profile.phone ? `📞 ${profile.phone}` : '',
+      profile.email ? `📧 ${profile.email}` : '',
+      profile.website ? `🌐 ${profile.website}` : '',
+      profile.address ? `📍 ${profile.address}` : '',
+    ].filter(Boolean).join('\n'),
     
     // Category and title
     title: profile.category || 'Business',
@@ -50,6 +46,10 @@ export const mapBusinessProfileToFrameContent = (profile: BusinessProfile): Fram
   };
 
   console.log('📋 Mapped business profile to frame content:', Object.keys(content).length, 'fields');
+  console.log('📞 Phone:', content.companyPhone);
+  console.log('📧 Email:', content.companyEmail);
+  console.log('🌐 Website:', content.companyWebsite);
+  console.log('📍 Address:', content.companyAddress);
   return content;
 };
 

@@ -51,27 +51,51 @@ export const frames: Frame[] = [
       },
       {
         type: 'text',
-        key: 'tagline',
-        x: 280,
-        y: 70,
-        fontSize: 14,
+        key: 'companyPhone',
+        x: 176,
+        y: 450,
+        fontSize: 12,
         color: '#FFFFFF',
         fontFamily: 'System',
         fontWeight: 'normal',
-        textAlign: 'right',
-        maxWidth: 100
+        textAlign: 'left',
+        maxWidth: 150
       },
       {
         type: 'text',
-        key: 'contact',
-        x: 280,
+        key: 'companyWebsite',
+        x: 252,
         y: 450,
         fontSize: 12,
         color: '#FFFFFF',
         fontFamily: 'System',
         fontWeight: 'normal',
         textAlign: 'right',
-        maxWidth: 100
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'companyEmail',
+        x: 141,
+        y: 502,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'companyAddress',
+        x: 230,
+        y: 508,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'right',
+        maxWidth: 150
       }
     ],
     category: 'business',
