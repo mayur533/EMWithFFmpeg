@@ -562,6 +562,314 @@ export const frames: Frame[] = [
     ],
     category: 'business',
     description: 'Modern business frame with center focus'
+  },
+  {
+    id: 'frame8',
+    name: 'Frame 8',
+    background: require('../assets/frames/frame8.png'),
+    placeholders: [
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 0,
+        y: 9,
+        fontSize: 28,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'left',
+        maxWidth: 300
+      },
+      {
+        type: 'image',
+        key: 'logo',
+        x: 293,
+        y: 10,
+        width: 100,
+        height: 100
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 61,
+        y: 475,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 190,
+        y: 475,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 0,
+        y: 474,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 122,
+        y: 475,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      }
+    ],
+    category: 'business',
+    description: 'Modern business frame 8'
+  },
+  {
+    id: 'frame9',
+    name: 'Frame 9',
+    background: require('../assets/frames/frame9.png'),
+    placeholders: [
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 66,
+        y: 33,
+        fontSize: 28,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'left',
+        maxWidth: 300
+      },
+      {
+        type: 'image',
+        key: 'logo',
+        x: 12,
+        y: 39,
+        width: 100,
+        height: 100
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 0,
+        y: 498,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 231,
+        y: 530,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 38,
+        y: 530,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 131,
+        y: 531,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      }
+    ],
+    category: 'business',
+    description: 'Modern business frame 9'
+  },
+  {
+    id: 'frame10',
+    name: 'Frame 10',
+    background: require('../assets/frames/frame10.png'),
+    placeholders: [
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 11,
+        y: 57,
+        fontSize: 28,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'left',
+        maxWidth: 300
+      },
+      {
+        type: 'image',
+        key: 'logo',
+        x: 279,
+        y: 49,
+        width: 100,
+        height: 100
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 0,
+        y: 441,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 107,
+        y: 441,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 0,
+        y: 480,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 208,
+        y: 439,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      }
+    ],
+    category: 'business',
+    description: 'Modern business frame 10'
+  },
+  {
+    id: 'frame11',
+    name: 'Frame 11',
+    background: require('../assets/frames/frame11.png'),
+    placeholders: [
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 55,
+        y: 38,
+        fontSize: 28,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'left',
+        maxWidth: 300
+      },
+      {
+        type: 'image',
+        key: 'logo',
+        x: 13,
+        y: 46,
+        width: 100,
+        height: 100
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 52,
+        y: 487,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 239,
+        y: 515,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 57,
+        y: 517,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 243,
+        y: 485,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      }
+    ],
+    category: 'business',
+    description: 'Modern business frame 11'
   }
 ];
 

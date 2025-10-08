@@ -9,19 +9,30 @@ import {
   Dimensions,
 } from 'react-native';
 import { Frame } from '../data/frames';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Responsive breakpoints
+const isUltraSmallScreen = screenWidth < 360;
+const isSmallScreen = screenWidth >= 360 && screenWidth < 375;
+const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
+const isLargeScreen = screenWidth >= 414 && screenWidth < 768;
+const isTablet = screenWidth >= 768;
+const isLandscape = screenWidth > screenHeight;
 
 interface FrameSelectorProps {
   frames: Frame[];
   selectedFrameId: string;
   onFrameSelect: (frame: Frame) => void;
+  onClose?: () => void;
 }
 
 const FrameSelector: React.FC<FrameSelectorProps> = ({
   frames,
   selectedFrameId,
   onFrameSelect,
+  onClose,
 }) => {
 
 
@@ -71,8 +82,17 @@ const FrameSelector: React.FC<FrameSelectorProps> = ({
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Choose Frame</Text>
-        <Text style={styles.subtitle}>Select a frame for your poster</Text>
+        <View style={styles.headerContent}>
+          <View style={styles.headerText}>
+            <Text style={styles.title}>Choose Frame</Text>
+            <Text style={styles.subtitle}>Select a frame for your poster</Text>
+          </View>
+          {onClose && (
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <Icon name="close" size={24} color="#666666" />
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
       
       {/* Frames List */}
@@ -92,10 +112,10 @@ const FrameSelector: React.FC<FrameSelectorProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 12,
-    marginBottom: 15,
+    borderRadius: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
+    padding: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
+    marginHorizontal: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : 12),
+    marginBottom: isLandscape ? (isTablet ? 15 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -108,27 +128,39 @@ const styles = StyleSheet.create({
     borderColor: '#e9ecef',
   },
   header: {
+    marginBottom: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
+  },
+  headerContent: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 16,
+    justifyContent: 'space-between',
+  },
+  headerText: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  closeButton: {
+    padding: isLandscape ? (isTablet ? 8 : 6) : (isUltraSmallScreen ? 4 : 6),
+    marginLeft: isLandscape ? (isTablet ? 12 : 8) : (isUltraSmallScreen ? 6 : 8),
   },
   title: {
-    fontSize: 16,
+    fontSize: isLandscape ? (isTablet ? 18 : 16) : (isUltraSmallScreen ? 14 : isSmallScreen ? 15 : 16),
     fontWeight: '700',
     color: '#333333',
-    marginBottom: 4,
+    marginBottom: isLandscape ? (isTablet ? 6 : 4) : (isUltraSmallScreen ? 3 : 4),
   },
   subtitle: {
-    fontSize: 12,
+    fontSize: isLandscape ? (isTablet ? 13 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : 12),
     color: '#666666',
   },
   listContent: {
-    paddingHorizontal: 4,
+    paddingHorizontal: isLandscape ? (isTablet ? 6 : 4) : (isUltraSmallScreen ? 2 : 4),
   },
   frameItem: {
     alignItems: 'center',
-    minWidth: 120,
-    padding: 8,
-    borderRadius: 12,
+    minWidth: isLandscape ? (isTablet ? 130 : 110) : (isUltraSmallScreen ? 90 : isSmallScreen ? 100 : 110),
+    padding: isLandscape ? (isTablet ? 10 : 8) : (isUltraSmallScreen ? 6 : 8),
+    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : 10),
   },
   frameItemSelected: {
     backgroundColor: 'rgba(102, 126, 234, 0.1)',
@@ -136,11 +168,11 @@ const styles = StyleSheet.create({
     borderColor: '#667eea',
   },
   framePreview: {
-    width: 100,
-    height: 140,
-    borderRadius: 8,
+    width: isLandscape ? (isTablet ? 110 : 95) : (isUltraSmallScreen ? 75 : isSmallScreen ? 85 : 95),
+    height: isLandscape ? (isTablet ? 150 : 130) : (isUltraSmallScreen ? 105 : isSmallScreen ? 120 : 130),
+    borderRadius: isLandscape ? (isTablet ? 10 : 8) : (isUltraSmallScreen ? 6 : 8),
     overflow: 'hidden',
-    marginBottom: 8,
+    marginBottom: isLandscape ? (isTablet ? 10 : 8) : (isUltraSmallScreen ? 6 : 8),
     position: 'relative',
     backgroundColor: '#f8f9fa',
   },
@@ -172,7 +204,7 @@ const styles = StyleSheet.create({
     borderRadius: 2,
   },
   frameName: {
-    fontSize: 12,
+    fontSize: isLandscape ? (isTablet ? 13 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : 12),
     fontWeight: '600',
     color: '#333333',
     textAlign: 'center',
@@ -183,13 +215,13 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   frameCategory: {
-    fontSize: 10,
+    fontSize: isLandscape ? (isTablet ? 11 : 10) : (isUltraSmallScreen ? 9 : 10),
     color: '#666666',
     textAlign: 'center',
     textTransform: 'capitalize',
   },
   separator: {
-    width: 12,
+    width: isLandscape ? (isTablet ? 14 : 12) : (isUltraSmallScreen ? 8 : 10),
   },
 });
 
