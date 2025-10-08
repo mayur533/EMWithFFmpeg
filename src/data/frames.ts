@@ -41,7 +41,7 @@ export const frames: Frame[] = [
         type: 'text',
         key: 'companyName',
         x: 280,
-        y: 40,
+        y: 50,
         fontSize: 24,
         color: '#FFFFFF',
         fontFamily: 'System',

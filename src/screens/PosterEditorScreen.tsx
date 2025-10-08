@@ -9,6 +9,7 @@ import {
   StyleSheet,
   Dimensions,
   TouchableOpacity,
+  TouchableWithoutFeedback,
   ScrollView,
   Modal,
   TextInput,
@@ -1822,7 +1823,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               styles.layer,
               layerStyle,
               isSelected && styles.selectedLayer,
-              layer.type === 'logo' && styles.selectedLayerImage,
+              isSelected && layer.type === 'logo' && styles.selectedLayerImage,
               draggedLayer === layer.id && styles.draggedLayer,
               draggedLayer === layer.id && {
                 transform: [
@@ -1840,7 +1841,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               <Image
                 source={{ uri: layer.content }}
                 style={styles.layerImage}
-                resizeMode="cover"
+                resizeMode="contain"
               />
             </TouchableOpacity>
           </Animated.View>
@@ -2048,7 +2049,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               }}
             >
               {/* Visible Canvas for editing */}
-              <View style={[
+              <TouchableWithoutFeedback onPress={() => setSelectedLayer(null)}>
+                <View style={[
                 styles.canvas,
                 { width: canvasWidth, height: canvasHeight },
                 selectedTemplate !== 'business' && styles.canvasWithFrame,
@@ -2131,7 +2133,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           
           {/* Watermark - Only shown during capture if user is not subscribed */}
           {isCapturing && <Watermark isSubscribed={checkPremiumAccess('poster_export')} />}
-        </View>
+                </View>
+              </TouchableWithoutFeedback>
             </ViewShot>
           
           
@@ -3424,7 +3427,7 @@ const styles = StyleSheet.create({
   layerImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 12,
+    borderRadius: 0,
   },
   selectedLayerImage: {
     borderWidth: 3,
