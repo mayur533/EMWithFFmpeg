@@ -6,33 +6,51 @@ export interface FrameContent {
 }
 
 export const mapBusinessProfileToFrameContent = (profile: BusinessProfile): FrameContent => {
-  return {
-    companyName: profile.name || '',
-    tagline: profile.description || '',
+  // Create comprehensive contact information
+  const contactInfo = [
+    profile.phone ? `📞 ${profile.phone}` : '',
+    profile.email ? `📧 ${profile.email}` : '',
+    profile.website ? `🌐 ${profile.website}` : '',
+    profile.address ? `📍 ${profile.address}` : '',
+  ].filter(Boolean).join('\n');
+
+  const content: FrameContent = {
+    // Company/Brand identifiers
+    companyName: profile.name || 'Your Company',
+    brandName: profile.name || 'Your Brand',
+    name: profile.name || 'Your Name',
+    
+    // Descriptions and taglines
+    tagline: profile.description || 'Your tagline here',
+    slogan: profile.description || 'Your slogan here',
+    companyDescription: profile.description || 'Company description',
+    
+    // Logo and images
     logo: profile.companyLogo || profile.logo || '',
-    contact: [
-      profile.name ? `${profile.name}` : '',
-      profile.phone ? `📞 ${profile.phone}` : '',
-      profile.email ? `📧 ${profile.email}` : '',
-      profile.website ? `🌐 ${profile.website}` : '',
-      profile.address ? `📍 ${profile.address}` : '',
-    ].filter(Boolean).join('\n'),
-    brandName: profile.name || '',
-    slogan: profile.description || '',
-    name: profile.name || '',
-    title: profile.category || '',
-    profileImage: profile.companyLogo || profile.logo || '',
-    eventTitle: profile.name || '',
-    eventDate: new Date().toLocaleDateString(),
-    organizer: profile.name || '',
-    // Add more specific mappings for better content placement
     companyLogo: profile.companyLogo || profile.logo || '',
-    companyDescription: profile.description || '',
+    profileImage: profile.companyLogo || profile.logo || '',
+    
+    // Contact information (combined)
+    contact: contactInfo || 'Contact information',
+    
+    // Individual contact fields
     companyPhone: profile.phone || '',
     companyEmail: profile.email || '',
     companyWebsite: profile.website || '',
     companyAddress: profile.address || '',
+    
+    // Category and title
+    title: profile.category || 'Business',
+    category: profile.category || 'Business',
+    
+    // Event-specific fields (with fallbacks)
+    eventTitle: profile.name || 'Event Title',
+    eventDate: new Date().toLocaleDateString(),
+    organizer: profile.name || 'Organizer',
   };
+
+  console.log('📋 Mapped business profile to frame content:', Object.keys(content).length, 'fields');
+  return content;
 };
 
 export const generateLayersFromFrame = (
@@ -42,57 +60,84 @@ export const generateLayersFromFrame = (
   canvasHeight: number
 ) => {
   const layers: any[] = [];
-  let zIndex = 1;
+  let zIndex = 10; // Start at z-index 10 to ensure layers are above frame overlay (z-index 0)
+
+  // Standard frame dimensions (frames are designed for this size)
+  const standardWidth = 400;
+  const standardHeight = 600;
+  
+  // Calculate scaling factors to adapt frame placeholders to actual canvas size
+  const scaleX = canvasWidth / standardWidth;
+  const scaleY = canvasHeight / standardHeight;
 
   frame.placeholders.forEach((placeholder) => {
     const contentValue = content[placeholder.key];
     
-    if (!contentValue) return;
+    // Skip if no content value provided for this placeholder
+    if (!contentValue) {
+      console.log(`⚠️ No content value for placeholder key: ${placeholder.key}`);
+      return;
+    }
 
     if (placeholder.type === 'text') {
+      // Scale position and size based on canvas dimensions
+      const scaledX = placeholder.x * scaleX;
+      const scaledY = placeholder.y * scaleY;
+      const scaledWidth = (placeholder.maxWidth || 300) * scaleX;
+      const scaledFontSize = (placeholder.fontSize || 16) * Math.min(scaleX, scaleY);
+      
       layers.push({
         id: `frame-${placeholder.key}`,
         type: 'text',
         content: contentValue,
         position: {
-          x: placeholder.x,
-          y: placeholder.y,
+          x: scaledX,
+          y: scaledY,
         },
         size: {
-          width: placeholder.maxWidth || 300,
-          height: 50,
+          width: scaledWidth,
+          height: scaledFontSize * 3, // Height based on font size for proper wrapping
         },
         rotation: 0,
         zIndex: zIndex++,
         fieldType: placeholder.key,
         style: {
-          fontSize: placeholder.fontSize || 16,
+          fontSize: scaledFontSize,
           color: placeholder.color || '#FFFFFF',
           fontFamily: placeholder.fontFamily || 'System',
           fontWeight: placeholder.fontWeight || 'normal',
           textAlign: placeholder.textAlign || 'left',
         },
       });
+      console.log(`✅ Added text layer for ${placeholder.key}: position (${scaledX.toFixed(1)}, ${scaledY.toFixed(1)}), fontSize: ${scaledFontSize.toFixed(1)}`);
     } else if (placeholder.type === 'image') {
+      // Scale position and size based on canvas dimensions
+      const scaledX = placeholder.x * scaleX;
+      const scaledY = placeholder.y * scaleY;
+      const scaledWidth = (placeholder.width || 80) * scaleX;
+      const scaledHeight = (placeholder.height || 80) * scaleY;
+      
       layers.push({
         id: `frame-${placeholder.key}`,
-        type: 'image',
+        type: 'logo',
         content: contentValue,
         position: {
-          x: placeholder.x,
-          y: placeholder.y,
+          x: scaledX,
+          y: scaledY,
         },
         size: {
-          width: placeholder.width || 80,
-          height: placeholder.height || 80,
+          width: scaledWidth,
+          height: scaledHeight,
         },
         rotation: 0,
         zIndex: zIndex++,
         fieldType: placeholder.key,
       });
+      console.log(`✅ Added image layer for ${placeholder.key}: position (${scaledX.toFixed(1)}, ${scaledY.toFixed(1)}), size: ${scaledWidth.toFixed(1)}x${scaledHeight.toFixed(1)}`);
     }
   });
 
+  console.log(`🎨 Generated ${layers.length} layers from frame "${frame.name}" (Canvas: ${canvasWidth}x${canvasHeight}, Scale: ${scaleX.toFixed(2)}x${scaleY.toFixed(2)})`);
   return layers;
 };
 

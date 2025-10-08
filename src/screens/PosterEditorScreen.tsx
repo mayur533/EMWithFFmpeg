@@ -39,7 +39,6 @@ import { GOOGLE_FONTS, getFontsByCategory, SYSTEM_FONTS, getFontFamily } from '.
 import { useSubscription } from '../contexts/SubscriptionContext';
 import Watermark from '../components/Watermark';
 import { useTheme } from '../context/ThemeContext';
-import ComingSoonModal from '../components/ComingSoonModal';
 
 
 
@@ -209,19 +208,12 @@ const getHeaderSubtitleSize = () => {
   return isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14;
 };
 
-// Enhanced toolbar-specific responsive helpers
-const getToolbarRightPosition = () => {
-  if (isLandscape) {
-    return isTablet ? 24 : 16;
-  }
-  return isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 12 : isLargeScreen ? 16 : 20;
-};
-
+// Enhanced toolbar-specific responsive helpers (for bottom toolbar)
 const getToolbarButtonSize = () => {
   if (isLandscape) {
-    return isTablet ? 70 : 55;
+    return isTablet ? 80 : 70;
   }
-  return isUltraSmallScreen ? 40 : isSmallScreen ? 45 : isMediumScreen ? 50 : isLargeScreen ? 55 : 60;
+  return isUltraSmallScreen ? 60 : isSmallScreen ? 65 : isMediumScreen ? 70 : isLargeScreen ? 75 : 80;
 };
 
 const getToolbarButtonTextSize = () => {
@@ -745,9 +737,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [isCapturing, setIsCapturing] = useState(false);
   const [currentPositions, setCurrentPositions] = useState<{ [key: string]: { x: number; y: number } }>({});
   const currentPositionsRef = useRef<{ [key: string]: { x: number; y: number } }>({});
-  
-  // State for Coming Soon modal
-  const [showFrameComingSoonModal, setShowFrameComingSoonModal] = useState(false);
+  const [showRemoveFrameModal, setShowRemoveFrameModal] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -1643,6 +1633,46 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       // Generate layers from frame
       const frameLayers = generateLayersFromFrame(frame, content, canvasWidth, canvasHeight);
       
+      console.log('🎨 Applying frame with', frameLayers.length, 'layers');
+      
+      // Initialize animated values for all new frame layers to make them moveable
+      frameLayers.forEach(layer => {
+        // Initialize position animation values
+        if (!layerAnimations[layer.id]) {
+          layerAnimations[layer.id] = {
+            x: new Animated.Value(layer.position.x),
+            y: new Animated.Value(layer.position.y)
+          };
+          console.log(`✅ Initialized position animations for layer ${layer.id}`);
+        } else {
+          // Update existing animation values
+          layerAnimations[layer.id].x.setValue(layer.position.x);
+          layerAnimations[layer.id].y.setValue(layer.position.y);
+          console.log(`♻️ Updated position animations for layer ${layer.id}`);
+        }
+        
+        // Initialize translation values for dragging
+        if (!translationValues[layer.id]) {
+          translationValues[layer.id] = {
+            x: new Animated.Value(0),
+            y: new Animated.Value(0)
+          };
+          console.log(`✅ Initialized translation values for layer ${layer.id}`);
+        } else {
+          // Reset translation values
+          translationValues[layer.id].x.setValue(0);
+          translationValues[layer.id].y.setValue(0);
+        }
+        
+        // Initialize scale values for pinch gestures
+        if (!scaleValues[layer.id]) {
+          scaleValues[layer.id] = new Animated.Value(1);
+          console.log(`✅ Initialized scale values for layer ${layer.id}`);
+        } else {
+          scaleValues[layer.id].setValue(1);
+        }
+      });
+      
       // Replace existing layers with frame layers
       setLayers(frameLayers);
       
@@ -1655,13 +1685,15 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         });
         return newVisibleFields;
       });
+      
+      console.log('✨ Frame applied successfully with moveable layers');
     }
     
     // Hide loading after a short delay
     setTimeout(() => {
       setApplyingFrame(false);
     }, 500);
-  }, [selectedBusinessProfile, canvasWidth, canvasHeight, layers]);
+  }, [selectedBusinessProfile, canvasWidth, canvasHeight, layers, layerAnimations, translationValues, scaleValues]);
 
   // Apply font style
   const applyFontStyle = useCallback((fontFamily: string) => {
@@ -2051,11 +2083,11 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           
           {/* Frame Overlay (when frame is selected) */}
           {selectedFrame && (
-            <View style={styles.frameOverlayContainer}>
+            <View style={styles.frameOverlayContainer} pointerEvents="none">
               <Image
                 source={getFrameBackgroundSource(selectedFrame)}
                 style={styles.frameOverlayImage}
-                resizeMode="cover"
+                resizeMode="stretch"
               />
             </View>
           )}
@@ -2094,8 +2126,53 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         </View>
             </ViewShot>
           
-          {/* Toolbar on the right side */}
-          <View style={styles.toolbar}>
+          
+          {/* Instructions */}
+          {layers.length === 0 && !loadingProfiles && (
+            <View style={styles.instructionsContainer}>
+              <Icon name="info" size={24} color="#667eea" />
+              <Text style={styles.instructionsText}>
+                {businessProfiles.length === 0 
+                  ? 'No business profiles found. Please create a business profile first.'
+                  : 'Business profile data has been applied to your poster'
+                }
+              </Text>
+            </View>
+          )}
+
+          {/* Loading indicator */}
+          {loadingProfiles && (
+            <View style={styles.loadingContainer}>
+              <Icon name="hourglass-empty" size={24} color="#667eea" />
+              <Text style={styles.loadingText}>Loading business profiles...</Text>
+            </View>
+          )}
+        </View>
+        
+        {/* Frame Selector */}
+        {showFrameSelector && (
+          <FrameSelector
+            frames={frames}
+            selectedFrameId={selectedFrame?.id || ''}
+            onFrameSelect={applyFrame}
+          />
+        )}
+        
+        {/* Controls Container */}
+        <View style={[
+          styles.controlsContainer, 
+          { 
+            paddingBottom: Math.max(insets.bottom + responsiveSpacing.md, responsiveSpacing.lg)
+          }
+        ]}>
+        
+        {/* Toolbar Below Canvas */}
+        <View style={styles.bottomToolbar}>
+          <ScrollView 
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.toolbarScrollContent}
+          >
             <TouchableOpacity
               style={styles.toolbarButton}
               onPress={() => setShowTextModal(true)}
@@ -2150,11 +2227,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               </TouchableOpacity>
             )}
             
-
-            
             <TouchableOpacity
               style={styles.toolbarButton}
-              onPress={() => setShowFrameComingSoonModal(true)}
+              onPress={() => setShowFrameSelector(true)}
             >
               <LinearGradient
                 colors={['#667eea', '#764ba2']}
@@ -2168,34 +2243,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             {selectedFrame && (
               <TouchableOpacity
                 style={styles.toolbarButton}
-                onPress={() => {
-                  Alert.alert(
-                    'Remove Frame',
-                    'Are you sure you want to remove the current frame?',
-                    [
-                      {
-                        text: 'Cancel',
-                        style: 'cancel',
-                      },
-                      {
-                        text: 'Remove',
-                        style: 'destructive',
-                        onPress: () => {
-                          setSelectedFrame(null);
-                          setFrameContent({});
-                          // Restore original layers to their original positions
-                          if (originalLayers.length > 0) {
-                            setLayers(originalLayers);
-                            setOriginalLayers([]); // Clear stored original layers
-                          } else if (selectedBusinessProfile) {
-                            // Fallback to business profile if no original layers stored
-                            applyBusinessProfileToPoster(selectedBusinessProfile);
-                          }
-                        },
-                      },
-                    ]
-                  );
-                }}
+                onPress={() => setShowRemoveFrameModal(true)}
               >
                 <LinearGradient
                   colors={['#dc3545', '#c82333']}
@@ -2206,8 +2254,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 </LinearGradient>
               </TouchableOpacity>
             )}
-            
-
             
             {selectedLayer && (
               <TouchableOpacity
@@ -2239,46 +2285,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 </LinearGradient>
               </TouchableOpacity>
             )}
-          </View>
-          
-          {/* Instructions */}
-          {layers.length === 0 && !loadingProfiles && (
-            <View style={styles.instructionsContainer}>
-              <Icon name="info" size={24} color="#667eea" />
-              <Text style={styles.instructionsText}>
-                {businessProfiles.length === 0 
-                  ? 'No business profiles found. Please create a business profile first.'
-                  : 'Business profile data has been applied to your poster'
-                }
-              </Text>
-            </View>
-          )}
-
-          {/* Loading indicator */}
-          {loadingProfiles && (
-            <View style={styles.loadingContainer}>
-              <Icon name="hourglass-empty" size={24} color="#667eea" />
-              <Text style={styles.loadingText}>Loading business profiles...</Text>
-            </View>
-          )}
+          </ScrollView>
         </View>
-        
-        {/* Frame Selector */}
-        {showFrameSelector && (
-          <FrameSelector
-            frames={frames}
-            selectedFrameId={selectedFrame?.id || ''}
-            onFrameSelect={applyFrame}
-          />
-        )}
-        
-        {/* Controls Container */}
-        <View style={[
-          styles.controlsContainer, 
-          { 
-            paddingBottom: Math.max(insets.bottom + responsiveSpacing.md, responsiveSpacing.lg)
-          }
-        ]}>
         
         {/* Field Toggle Buttons */}
         <View style={styles.fieldToggleSection}>
@@ -3110,13 +3118,127 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         </View>
       </Modal>
 
-      {/* Frame Coming Soon Modal */}
-      <ComingSoonModal
-        visible={showFrameComingSoonModal}
-        onClose={() => setShowFrameComingSoonModal(false)}
-        title="Frame Editor Coming Soon!"
-        subtitle="We're working hard to bring you amazing frame templates and customization options. Stay tuned for updates!"
-      />
+      {/* Remove Frame Confirmation Modal */}
+      <Modal
+        visible={showRemoveFrameModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRemoveFrameModal(false)}
+      >
+        <View style={[styles.modalOverlay, { paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md) }]}>
+          <View style={[
+            themeStyles.modalContent,
+            {
+              width: isLandscape 
+                ? (isTablet ? screenWidth * 0.5 : screenWidth * 0.6) 
+                : (isUltraSmallScreen ? screenWidth * 0.95 : isSmallScreen ? screenWidth * 0.92 : isMediumScreen ? screenWidth * 0.9 : isLargeScreen ? screenWidth * 0.88 : screenWidth * 0.85),
+              maxHeight: isLandscape 
+                ? (isTablet ? screenHeight * 0.6 : screenHeight * 0.5) 
+                : (isUltraSmallScreen ? screenHeight * 0.6 : isSmallScreen ? screenHeight * 0.55 : isMediumScreen ? screenHeight * 0.5 : isLargeScreen ? screenHeight * 0.45 : screenHeight * 0.4),
+            }
+          ]}>
+            <View style={{ alignItems: 'center', marginBottom: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md) }}>
+              <View style={{ 
+                width: isLandscape ? (isTablet ? 70 : 60) : (isUltraSmallScreen ? 50 : isSmallScreen ? 55 : 60), 
+                height: isLandscape ? (isTablet ? 70 : 60) : (isUltraSmallScreen ? 50 : isSmallScreen ? 55 : 60), 
+                borderRadius: isLandscape ? (isTablet ? 35 : 30) : (isUltraSmallScreen ? 25 : isSmallScreen ? 27.5 : 30), 
+                backgroundColor: '#fff5f5', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                marginBottom: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm)
+              }}>
+                <Icon name="delete" size={isLandscape ? (isTablet ? 36 : 32) : (isUltraSmallScreen ? 24 : isSmallScreen ? 28 : 32)} color="#dc3545" />
+              </View>
+              <Text style={[
+                themeStyles.modalTitle, 
+                { 
+                  fontSize: isLandscape ? (isTablet ? 24 : 20) : (isUltraSmallScreen ? 18 : isSmallScreen ? 20 : isMediumScreen ? 22 : isLargeScreen ? 24 : 26),
+                  marginBottom: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm),
+                  textAlign: 'center'
+                }
+              ]}>
+                Remove Frame?
+              </Text>
+              <Text style={[
+                themeStyles.modalSubtitle, 
+                { 
+                  fontSize: isLandscape ? (isTablet ? 15 : 13) : (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16),
+                  textAlign: 'center',
+                  lineHeight: isLandscape ? (isTablet ? 20 : 18) : (isUltraSmallScreen ? 16 : isSmallScreen ? 18 : isMediumScreen ? 20 : isLargeScreen ? 22 : 24),
+                  paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm)
+                }
+              ]}>
+                Are you sure you want to remove the current frame? Your poster will return to its original state.
+              </Text>
+            </View>
+            <View style={[
+              styles.modalButtons,
+              {
+                flexDirection: isLandscape && !isTablet ? 'row' : 'row',
+                gap: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm)
+              }
+            ]}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton, 
+                  themeStyles.cancelButton,
+                  {
+                    flex: 1,
+                    paddingVertical: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : 16),
+                    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : 12),
+                    marginHorizontal: 0
+                  }
+                ]}
+                onPress={() => setShowRemoveFrameModal(false)}
+              >
+                <Text style={[
+                  themeStyles.cancelButtonText,
+                  {
+                    fontSize: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : 16)
+                  }
+                ]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  {
+                    flex: 1,
+                    backgroundColor: '#dc3545',
+                    paddingVertical: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : 16),
+                    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : 12),
+                    marginHorizontal: 0
+                  }
+                ]}
+                onPress={() => {
+                  setSelectedFrame(null);
+                  setFrameContent({});
+                  // Restore original layers to their original positions
+                  if (originalLayers.length > 0) {
+                    setLayers(originalLayers);
+                    setOriginalLayers([]); // Clear stored original layers
+                  } else if (selectedBusinessProfile) {
+                    // Fallback to business profile if no original layers stored
+                    applyBusinessProfileToPoster(selectedBusinessProfile);
+                  }
+                  setShowRemoveFrameModal(false);
+                }}
+              >
+                <Text style={[
+                  styles.addButtonText,
+                  {
+                    fontSize: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : 16)
+                  }
+                ]}>
+                  Remove
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </Animated.View>
   );
 };
@@ -3279,7 +3401,7 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 16,
-    resizeMode: 'cover', // Use cover to fit canvas while maintaining aspect ratio
+    resizeMode: 'stretch', // Stretch to match exact canvas dimensions
   },
   layer: {
     position: 'absolute',
@@ -3306,14 +3428,13 @@ const styles = StyleSheet.create({
     borderColor: '#667eea',
     borderRadius: 8,
   },
-  toolbar: {
-    position: 'absolute',
-    right: getToolbarRightPosition(),
-    top: '50%',
-    transform: [{ translateY: -100 }],
+  // Bottom toolbar styles (replacing floating toolbar)
+  bottomToolbar: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16),
-    padding: isLandscape ? (isTablet ? 16 : 10) : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12),
+    padding: isLandscape ? (isTablet ? 12 : 8) : (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14),
+    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md),
+    marginHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -3322,17 +3443,24 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.15,
     shadowRadius: 12,
     elevation: 8,
-    zIndex: 100,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  toolbarScrollContent: {
+    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm),
+    alignItems: 'center',
   },
   toolbarButton: {
-    marginVertical: isLandscape ? (isTablet ? 4 : 3) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : isMediumScreen ? 3 : isLargeScreen ? 4 : 5),
+    marginHorizontal: isLandscape ? (isTablet ? 6 : 4) : (isUltraSmallScreen ? 2 : isSmallScreen ? 3 : isMediumScreen ? 4 : isLargeScreen ? 5 : 6),
+    marginVertical: isLandscape ? (isTablet ? 2 : 1) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : isMediumScreen ? 3 : isLargeScreen ? 4 : 5),
   },
   toolbarButtonGradient: {
     alignItems: 'center',
-    paddingVertical: isLandscape ? (isTablet ? 14 : 10) : (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14),
-    paddingHorizontal: isLandscape ? (isTablet ? 18 : 12) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16),
-    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14),
-    minWidth: getToolbarButtonSize(),
+    paddingVertical: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16),
+    paddingHorizontal: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : 18),
+    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16),
+    minWidth: isLandscape ? (isTablet ? 80 : 70) : (isUltraSmallScreen ? 60 : isSmallScreen ? 65 : isMediumScreen ? 70 : isLargeScreen ? 75 : 80),
+    minHeight: isLandscape ? (isTablet ? 50 : 45) : (isUltraSmallScreen ? 40 : isSmallScreen ? 42 : isMediumScreen ? 45 : isLargeScreen ? 48 : 50),
   },
   toolbarButtonText: {
     fontSize: getToolbarButtonTextSize(),
@@ -5246,12 +5374,13 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 1,
+    zIndex: 0, // Keep frame behind layers so they remain interactive
   },
   frameOverlayImage: {
     width: '100%',
     height: '100%',
     opacity: 0.9, // Slightly transparent to show poster underneath
+    resizeMode: 'stretch', // Ensure frame stretches to match canvas
   },
 
 });

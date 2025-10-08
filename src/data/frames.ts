@@ -30,57 +30,57 @@ export const frames: Frame[] = [
     background: require('../assets/frames/frame1.png'),
     placeholders: [
       {
-        type: 'text',
-        key: 'companyName',
-        x: 50,
-        y: 50,
-        fontSize: 28,
-        color: '#FFFFFF',
-        fontFamily: 'System',
-        fontWeight: 'bold',
-        textAlign: 'left',
-        maxWidth: 300
-      },
-      {
-        type: 'text',
-        key: 'tagline',
-        x: 50,
-        y: 90,
-        fontSize: 16,
-        color: '#FFFFFF',
-        fontFamily: 'System',
-        fontWeight: 'normal',
-        textAlign: 'left',
-        maxWidth: 300
-      },
-      {
         type: 'image',
         key: 'logo',
-        x: 320,
-        y: 50,
+        x: 30,
+        y: 30,
         width: 80,
         height: 80
       },
       {
         type: 'text',
-        key: 'contact',
-        x: 50,
-        y: 500,
+        key: 'companyName',
+        x: 280,
+        y: 40,
+        fontSize: 24,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'right',
+        maxWidth: 100
+      },
+      {
+        type: 'text',
+        key: 'tagline',
+        x: 280,
+        y: 70,
         fontSize: 14,
         color: '#FFFFFF',
         fontFamily: 'System',
         fontWeight: 'normal',
-        textAlign: 'left',
-        maxWidth: 350
+        textAlign: 'right',
+        maxWidth: 100
+      },
+      {
+        type: 'text',
+        key: 'contact',
+        x: 280,
+        y: 450,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'right',
+        maxWidth: 100
       }
     ],
     category: 'business',
-    description: 'Professional business template with clean layout'
+    description: 'Modern business frame with bold red accents and strategic positioning'
   },
   {
     id: 'frame2',
     name: 'Frame 2',
-    background: require('../assets/frames/frame2.jpg'),
+    background: require('../assets/frames/frame2.png'),
     placeholders: [
       {
         type: 'text',
@@ -133,7 +133,7 @@ export const frames: Frame[] = [
   {
     id: 'frame3',
     name: 'Frame 3',
-    background: require('../assets/frames/Frame3.png'),
+    background: require('../assets/frames/frame3.png'),
     placeholders: [
       {
         type: 'text',
@@ -237,9 +237,9 @@ export const frames: Frame[] = [
     description: 'Bold creative template with dynamic positioning'
   },
   {
-    id: 'f3',
-    name: 'Frame F3',
-    background: require('../assets/frames/f3.png'),
+    id: 'frame5',
+    name: 'Frame 5',
+    background: require('../assets/frames/frame5.png'),
     placeholders: [
       {
         type: 'text',
@@ -288,6 +288,88 @@ export const frames: Frame[] = [
     ],
     category: 'business',
     description: 'Modern business frame with centered layout'
+  },
+  {
+    id: 'frame6',
+    name: 'Frame 6',
+    background: require('../assets/frames/frame6.png'),
+    placeholders: [
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 60,
+        y: 100,
+        fontSize: 26,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'left',
+        maxWidth: 300
+      },
+      {
+        type: 'image',
+        key: 'logo',
+        x: 280,
+        y: 40,
+        width: 80,
+        height: 80
+      },
+      {
+        type: 'text',
+        key: 'tagline',
+        x: 60,
+        y: 150,
+        fontSize: 16,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 300
+      }
+    ],
+    category: 'business',
+    description: 'Professional business frame'
+  },
+  {
+    id: 'frame7',
+    name: 'Frame 7',
+    background: require('../assets/frames/frame7.png'),
+    placeholders: [
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 50,
+        y: 80,
+        fontSize: 30,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        maxWidth: 350
+      },
+      {
+        type: 'image',
+        key: 'logo',
+        x: 160,
+        y: 140,
+        width: 90,
+        height: 90
+      },
+      {
+        type: 'text',
+        key: 'contact',
+        x: 50,
+        y: 450,
+        fontSize: 14,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'center',
+        maxWidth: 350
+      }
+    ],
+    category: 'creative',
+    description: 'Creative frame with center focus'
   }
 ];
 
