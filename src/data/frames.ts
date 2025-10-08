@@ -51,7 +51,7 @@ export const frames: Frame[] = [
       },
       {
         type: 'text',
-        key: 'companyPhone',
+        key: 'phone',
         x: 176,
         y: 450,
         fontSize: 12,
@@ -63,7 +63,7 @@ export const frames: Frame[] = [
       },
       {
         type: 'text',
-        key: 'companyWebsite',
+        key: 'website',
         x: 252,
         y: 450,
         fontSize: 12,
@@ -75,7 +75,7 @@ export const frames: Frame[] = [
       },
       {
         type: 'text',
-        key: 'companyEmail',
+        key: 'email',
         x: 141,
         y: 502,
         fontSize: 12,
@@ -87,7 +87,7 @@ export const frames: Frame[] = [
       },
       {
         type: 'text',
-        key: 'companyAddress',
+        key: 'address',
         x: 230,
         y: 508,
         fontSize: 12,

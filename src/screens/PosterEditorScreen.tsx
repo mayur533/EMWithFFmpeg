@@ -2050,7 +2050,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             >
               {/* Visible Canvas for editing */}
               <TouchableWithoutFeedback onPress={() => setSelectedLayer(null)}>
-                <View style={[
+              <View style={[
                 styles.canvas,
                 { width: canvasWidth, height: canvasHeight },
                 selectedTemplate !== 'business' && styles.canvasWithFrame,
@@ -2133,7 +2133,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           
           {/* Watermark - Only shown during capture if user is not subscribed */}
           {isCapturing && <Watermark isSubscribed={checkPremiumAccess('poster_export')} />}
-                </View>
+        </View>
               </TouchableWithoutFeedback>
             </ViewShot>
           
@@ -2223,23 +2223,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               </LinearGradient>
             </TouchableOpacity>
             
-            {selectedLayer && (
               <TouchableOpacity
                 style={styles.toolbarButton}
-                onPress={() => setShowStyleModal(true)}
-              >
-                <LinearGradient
-                  colors={['#667eea', '#764ba2']}
-                  style={styles.toolbarButtonGradient}
-                >
-                  <Icon name="palette" size={getResponsiveIconSize()} color="#ffffff" />
-                  <Text style={styles.toolbarButtonText}>Style</Text>
-                </LinearGradient>
-              </TouchableOpacity>
-            )}
-            
-            <TouchableOpacity
-              style={styles.toolbarButton}
               onPress={() => setShowFrameSelector(true)}
             >
               <LinearGradient
@@ -2297,7 +2282,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               </TouchableOpacity>
             )}
           </ScrollView>
-        </View>
+          </View>
         
         {/* Field Toggle Buttons */}
         <View style={styles.fieldToggleSection}>

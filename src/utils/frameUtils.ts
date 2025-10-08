@@ -22,6 +22,12 @@ export const mapBusinessProfileToFrameContent = (profile: BusinessProfile): Fram
     profileImage: profile.companyLogo || profile.logo || '',
     
     // Individual contact fields with icons
+    phone: profile.phone ? `📞 ${profile.phone}` : '',
+    email: profile.email ? `📧 ${profile.email}` : '',
+    website: profile.website ? `🌐 ${profile.website}` : '',
+    address: profile.address ? `📍 ${profile.address}` : '',
+    
+    // Company-prefixed fields (for backward compatibility with some frames)
     companyPhone: profile.phone ? `📞 ${profile.phone}` : '',
     companyEmail: profile.email ? `📧 ${profile.email}` : '',
     companyWebsite: profile.website ? `🌐 ${profile.website}` : '',
