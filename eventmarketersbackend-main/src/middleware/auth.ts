@@ -205,7 +205,7 @@ export const authenticateCustomer = async (req: Request, res: Response, next: Ne
         id: true,
         email: true,
         name: true,
-        selectedBusinessCategoryId: true,
+        selectedBusinessCategory: true,
         subscriptionStatus: true,
         subscriptionEndDate: true
       }
@@ -227,7 +227,7 @@ export const authenticateCustomer = async (req: Request, res: Response, next: Ne
       name: customer.name,
       role: 'CUSTOMER',
       userType: 'CUSTOMER',
-      selectedBusinessCategory: customer.selectedBusinessCategoryId || undefined,
+      selectedBusinessCategory: customer.selectedBusinessCategory || undefined,
       subscriptionStatus: customer.subscriptionStatus,
       subscriptionExpiry: customer.subscriptionEndDate || undefined
     };

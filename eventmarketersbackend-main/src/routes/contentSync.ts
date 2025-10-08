@@ -1,6 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { PrismaClient } from '@prisma/client';
-import { requireAdmin } from '../middleware/auth';
+import { authenticateToken, requireAdmin } from '../middleware/auth';
 import ContentSyncService from '../services/contentSyncService';
 
 const prisma = new PrismaClient();
@@ -8,6 +8,7 @@ const prisma = new PrismaClient();
 const router = Router();
 
 // All content sync routes require admin authentication
+router.use(authenticateToken);
 router.use(requireAdmin);
 
 /**

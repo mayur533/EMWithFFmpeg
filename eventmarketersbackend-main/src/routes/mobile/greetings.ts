@@ -523,4 +523,53 @@ router.get('/emojis', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/mobile/greetings
+ * Get all greetings (alias for /templates)
+ */
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { page = '1', limit = '20', category, search, type } = req.query;
+    
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const where: any = { isActive: true };
+    if (category) where.category = category;
+    if (search) where.title = { contains: search as string, mode: 'insensitive' };
+    if (type) where.type = type;
+
+    const [greetings, total] = await Promise.all([
+      prisma.greetingTemplate.findMany({
+        where,
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' }
+      }),
+      prisma.greetingTemplate.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        greetings,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Fetch greetings error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch greetings'
+    });
+  }
+});
+
 export default router;

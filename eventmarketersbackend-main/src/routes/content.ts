@@ -117,10 +117,10 @@ router.get('/images', async (req, res) => {
         businessCategory: {
           select: { name: true, icon: true }
         },
-        adminUploader: {
+        admin: {
           select: { name: true, email: true }
         },
-        subadminUploader: {
+        subadmin: {
           select: { name: true, email: true }
         }
       },
@@ -460,10 +460,10 @@ router.get('/videos', async (req, res) => {
         businessCategory: {
           select: { name: true, icon: true }
         },
-        adminUploader: {
+        admin: {
           select: { name: true, email: true }
         },
-        subadminUploader: {
+        subadmin: {
           select: { name: true, email: true }
         }
       },

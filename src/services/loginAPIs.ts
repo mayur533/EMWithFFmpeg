@@ -237,10 +237,14 @@ class LoginAPIsService {
         const { user, accessToken, token } = response.data.data;
         const authTokenToSave = accessToken || token; // Backend might return 'token' or 'accessToken'
         
-        console.log('🔑 accessToken value:', accessToken);
-        console.log('🔑 token value:', token);
-        console.log('🔑 Extracted token from response:', authTokenToSave ? 'YES' : 'NO');
-        console.log('🔑 Token length:', authTokenToSave?.length || 0);
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🔑 LOGIN SUCCESSFUL - AUTH TOKEN (loginAPIs.ts):');
+        console.log('accessToken value:', accessToken);
+        console.log('token value:', token);
+        console.log('Final Token Used:', authTokenToSave);
+        console.log('Token Length:', authTokenToSave?.length || 0);
+        console.log('Token Preview:', authTokenToSave?.substring(0, 50) + '...');
+        console.log('═══════════════════════════════════════════════════════════');
         
         // IMPORTANT: Save token to storage FIRST so it's available for subsequent API calls
         await authService.saveUserToStorage(user, authTokenToSave);

@@ -57,6 +57,20 @@ const TransactionHistoryScreen: React.FC = () => {
   const [filter, setFilter] = useState<FilterType>('all');
   const [showStats, setShowStats] = useState(true);
 
+  // Debug logging on mount and when transactions change
+  useEffect(() => {
+    console.log('🏦 TransactionHistoryScreen - Mounted');
+    console.log('🏦 Transactions from context:', transactions.length);
+    console.log('🏦 Transactions data:', JSON.stringify(transactions, null, 2));
+    console.log('🏦 Stats from context:', transactionStats);
+    
+    // Auto-refresh transactions on mount
+    if (transactions.length === 0) {
+      console.log('🔄 No transactions found, triggering refresh...');
+      refreshTransactions();
+    }
+  }, []);
+
   // Filter transactions based on selected filter
   const filteredTransactions = transactions.filter(transaction => {
     if (filter === 'all') return true;
@@ -65,9 +79,11 @@ const TransactionHistoryScreen: React.FC = () => {
 
   // Handle refresh
   const onRefresh = async () => {
+    console.log('🔄 Manual refresh triggered by user');
     setRefreshing(true);
     await refreshTransactions();
     setRefreshing(false);
+    console.log('✅ Manual refresh completed');
   };
 
   // Format date
@@ -226,7 +242,7 @@ const TransactionHistoryScreen: React.FC = () => {
           </View>
           <View style={[styles.statItem, { backgroundColor: theme.colors.inputBackground }]}>
             <Text style={[styles.statValue, { color: theme.colors.text }]}>
-              {transactionStats.monthlySubscriptions + transactionStats.yearlySubscriptions}
+              {(transactionStats.quarterlySubscriptions || 0) + (transactionStats.yearlySubscriptions || 0)}
             </Text>
             <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Active Subscriptions</Text>
           </View>
@@ -260,6 +276,12 @@ const TransactionHistoryScreen: React.FC = () => {
             {filteredTransactions.length} transactions found
           </Text>
         </View>
+        <TouchableOpacity
+          style={styles.refreshButton}
+          onPress={onRefresh}
+        >
+          <Icon name="refresh" size={24} color="#ffffff" />
+        </TouchableOpacity>
       </LinearGradient>
 
       <ScrollView 
@@ -323,6 +345,11 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   backButton: {
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  refreshButton: {
     padding: 10,
     borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',

@@ -152,16 +152,14 @@ router.post('/', extractUserId, async (req: Request, res: Response) => {
       data: {
         mobileUserId,
         businessName,
-        ownerName,
-        email,
-        phone,
-        address,
-        category,
-        logo,
-        description,
-        website,
-        socialMedia: socialMedia ? JSON.stringify(socialMedia) : null,
-        isActive: true
+        businessEmail: email,
+        businessPhone: phone,
+        alternatePhone: req.body.alternatePhone || '',
+        businessAddress: address,
+        businessCategory: category,
+        businessLogo: logo,
+        businessDescription: description,
+        businessWebsite: website
       },
       include: {
         mobileUser: {
@@ -292,7 +290,18 @@ router.get('/:userId', async (req: Request, res: Response) => {
         mobileUserId: userId,
         isActive: true 
       },
-      include: {
+      select: {
+        id: true,
+        businessName: true,
+        businessDescription: true,
+        businessCategory: true,
+        businessAddress: true,
+        businessPhone: true,
+        alternatePhone: true,
+        businessEmail: true,
+        businessWebsite: true,
+        businessLogo: true,
+        createdAt: true,
         mobileUser: {
           select: {
             id: true,
@@ -314,29 +323,27 @@ router.get('/:userId', async (req: Request, res: Response) => {
       });
     }
 
-    // Parse social media for all profiles
-    const profilesWithParsedSocialMedia = businessProfiles.map(profile => {
-      let socialMedia = null;
-      if (profile.socialMedia) {
-        try {
-          socialMedia = JSON.parse(profile.socialMedia);
-        } catch (e) {
-          console.warn('Failed to parse social media JSON:', e);
-        }
-      }
-
+    // Format profiles to match expected response structure
+    const formattedProfiles = businessProfiles.map(profile => {
       return {
-        ...profile,
-        socialMedia
+        id: profile.id,
+        name: profile.businessName,
+        description: profile.businessDescription || "",
+        category: profile.businessCategory || "",
+        address: profile.businessAddress || "",
+        phone: profile.businessPhone || "",
+        alternatePhone: profile.alternatePhone || "",
+        email: profile.businessEmail || "",
+        website: profile.businessWebsite || "",
+        logo: profile.businessLogo || "",
+        createdAt: profile.createdAt
       };
     });
 
     res.json({
       success: true,
-      message: 'Business profiles fetched successfully',
       data: {
-        profiles: profilesWithParsedSocialMedia,
-        count: profilesWithParsedSocialMedia.length
+        profiles: formattedProfiles
       }
     });
 
@@ -396,16 +403,15 @@ router.put('/:id', extractUserId, async (req: Request, res: Response) => {
     const updatedProfile = await prisma.businessProfile.update({
       where: { id },
       data: {
-        businessName,
-        ownerName,
-        email,
-        phone,
-        address,
-        category,
-        logo,
-        description,
-        website,
-        socialMedia: socialMedia ? JSON.stringify(socialMedia) : existingProfile.socialMedia
+        businessName: businessName || undefined,
+        businessEmail: email || undefined,
+        businessPhone: phone || undefined,
+        alternatePhone: req.body.alternatePhone || undefined,
+        businessAddress: address || undefined,
+        businessCategory: category || undefined,
+        businessLogo: logo || undefined,
+        businessDescription: description || undefined,
+        businessWebsite: website || undefined
       },
       include: {
         mobileUser: {

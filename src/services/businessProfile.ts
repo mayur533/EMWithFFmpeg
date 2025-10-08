@@ -73,13 +73,11 @@ class BusinessProfileService {
       const response = await api.get(`/api/mobile/business-profile/${userId}`);
       
       console.log('🎬 businessProfileService: API Response status:', response.status);
-      console.log('🎬 businessProfileService: API Response data:', JSON.stringify(response.data, null, 2));
       
       if (response.data.success) {
         const profiles = response.data.data.profiles;
         if (profiles && profiles.length > 0) {
           console.log(`🎬 businessProfileService: ✅ Found ${profiles.length} business profiles for user`);
-          console.log('🎬 businessProfileService: Raw profile data:', JSON.stringify(profiles, null, 2));
           
           // Convert backend profiles to frontend format
           const businessProfiles: BusinessProfile[] = profiles.map((profile: any) => {
@@ -122,7 +120,7 @@ class BusinessProfileService {
             };
           });
           
-          console.log('🎬 businessProfileService: Mapped business profiles:', JSON.stringify(businessProfiles, null, 2));
+          console.log(`🎬 businessProfileService: ✅ Successfully mapped ${businessProfiles.length} business profiles`);
           return businessProfiles;
         }
         console.log('🎬 businessProfileService: No user-specific business profiles found');

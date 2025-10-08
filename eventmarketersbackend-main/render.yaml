@@ -3,7 +3,7 @@ services:
     name: eventmarketers-backend
     env: node
     plan: free
-    buildCommand: npm install --include=dev && npm run build && npx prisma generate && npx prisma db push
+    buildCommand: npm install --include=dev && npm run build && npx prisma generate
     startCommand: npm start
     envVars:
       - key: NODE_ENV

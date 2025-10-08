@@ -23,16 +23,13 @@ router.get('/subadmins', async (req, res) => {
         id: true,
         email: true,
         name: true,
-        mobileNumber: true,
         role: true,
         permissions: true,
         status: true,
         assignedCategories: true,
         createdAt: true,
         lastLogin: true,
-        admin: {
-          select: { name: true }
-        }
+        isActive: true
       },
       orderBy: { createdAt: 'desc' }
     });
@@ -293,7 +290,15 @@ router.delete('/subadmins/:id', async (req, res) => {
 // Get all business categories
 router.get('/business-categories', async (req, res) => {
   try {
+    const { mainCategory } = req.query;
+    
+    const where: any = {};
+    if (mainCategory) {
+      where.mainCategory = mainCategory as string;
+    }
+    
     const categories = await prisma.businessCategory.findMany({
+      where,
       orderBy: { sortOrder: 'asc' },
       include: {
         admin: {
@@ -302,8 +307,7 @@ router.get('/business-categories', async (req, res) => {
         _count: {
           select: {
             images: true,
-            videos: true,
-            customers: true
+            videos: true
           }
         }
       }
@@ -338,7 +342,7 @@ router.post('/business-categories', [
       });
     }
 
-    const { name, description, icon } = req.body;
+    const { name, description, icon, mainCategory, sortOrder } = req.body;
 
     // Check if category already exists
     const existingCategory = await prisma.businessCategory.findUnique({
@@ -358,7 +362,11 @@ router.post('/business-categories', [
         name,
         description,
         icon,
-        createdBy: req.user!.id
+        mainCategory: mainCategory || "BUSINESS", // Use provided or default to BUSINESS
+        sortOrder: sortOrder || 0,
+        admin: {
+          connect: { id: req.user!.id }
+        }
       }
     });
 
@@ -388,6 +396,164 @@ router.post('/business-categories', [
     res.status(500).json({
       success: false,
       error: 'Failed to create business category'
+    });
+  }
+});
+
+// Update business category
+router.put('/business-categories/:id', [
+  body('name').optional().isLength({ min: 2 }).withMessage('Category name must be at least 2 characters'),
+  body('description').optional().isLength({ max: 500 }).withMessage('Description too long'),
+], async (req: Request, res: Response) => {
+  try {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Validation failed',
+        details: errors.array()
+      });
+    }
+
+    const { id } = req.params;
+    const { name, description, icon, mainCategory, sortOrder, isActive } = req.body;
+    
+    // Check if category exists
+    const existingCategory = await prisma.businessCategory.findUnique({
+      where: { id }
+    });
+    
+    if (!existingCategory) {
+      return res.status(404).json({
+        success: false,
+        error: 'Business category not found'
+      });
+    }
+    
+    // If name is being changed, check if new name already exists
+    if (name && name !== existingCategory.name) {
+      const duplicateName = await prisma.businessCategory.findUnique({
+        where: { name }
+      });
+      if (duplicateName) {
+        return res.status(400).json({
+          success: false,
+          error: 'Category name already exists'
+        });
+      }
+    }
+    
+    // Update category
+    const category = await prisma.businessCategory.update({
+      where: { id },
+      data: {
+        ...(name && { name }),
+        ...(description !== undefined && { description }),
+        ...(icon && { icon }),
+        ...(mainCategory && { mainCategory }),
+        ...(sortOrder !== undefined && { sortOrder }),
+        ...(isActive !== undefined && { isActive })
+      }
+    });
+    
+    // Log activity
+    await prisma.auditLog.create({
+      data: {
+        adminId: req.user!.id,
+        userType: 'ADMIN',
+        action: 'UPDATE',
+        resource: 'BUSINESS_CATEGORY',
+        resourceId: category.id,
+        details: `Updated business category: ${category.name}`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        status: 'SUCCESS'
+      }
+    });
+    
+    res.json({
+      success: true,
+      message: 'Business category updated successfully',
+      category
+    });
+
+  } catch (error) {
+    console.error('Update business category error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to update business category'
+    });
+  }
+});
+
+// Delete business category
+router.delete('/business-categories/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    // Check if category exists
+    const category = await prisma.businessCategory.findUnique({
+      where: { id },
+      include: {
+        _count: {
+          select: {
+            images: true,
+            videos: true
+          }
+        }
+      }
+    });
+    
+    if (!category) {
+      return res.status(404).json({
+        success: false,
+        error: 'Business category not found'
+      });
+    }
+    
+    // Check if category has associated content
+    const hasContent = category._count.images > 0 || category._count.videos > 0;
+    if (hasContent) {
+      return res.status(400).json({
+        success: false,
+        error: `Cannot delete category. It has ${category._count.images} images and ${category._count.videos} videos.`,
+        details: {
+          images: category._count.images,
+          videos: category._count.videos
+        }
+      });
+    }
+    
+    // Delete category
+    await prisma.businessCategory.delete({
+      where: { id }
+    });
+    
+    // Log activity
+    await prisma.auditLog.create({
+      data: {
+        adminId: req.user!.id,
+        userType: 'ADMIN',
+        action: 'DELETE',
+        resource: 'BUSINESS_CATEGORY',
+        resourceId: id,
+        details: `Deleted business category: ${category.name}`,
+        ipAddress: req.ip,
+        userAgent: req.get('User-Agent'),
+        status: 'SUCCESS'
+      }
+    });
+    
+    res.json({
+      success: true,
+      message: 'Business category deleted successfully'
+    });
+
+  } catch (error) {
+    console.error('Delete business category error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to delete business category'
     });
   }
 });

@@ -93,7 +93,6 @@ export type MainStackParamList = {
   MyPosters: undefined;
   LikedItems: undefined;
   ApiTest: undefined;
-  FFmpegTest: undefined;
   HelpSupport: undefined;
 };
 
@@ -129,7 +128,6 @@ import GreetingEditorScreen from '../screens/GreetingEditorScreen';
 import MyPostersScreen from '../screens/MyPostersScreen';
 import LikedItemsScreen from '../screens/LikedItemsScreen';
 import ApiTestScreen from '../screens/ApiTestScreen';
-import FFmpegTestScreen from '../screens/FFmpegTestScreen';
 import MyBusinessScreen from '../screens/MyBusinessScreen';
 import MyBusinessPlayerScreen from '../screens/MyBusinessPlayerScreen';
 import AboutUsScreen from '../screens/AboutUsScreen';
@@ -229,11 +227,6 @@ const TabNavigator = () => {
       <MainStack.Screen 
         name="ApiTest" 
         component={ApiTestScreen}
-        options={{ headerShown: false }}
-      />
-      <MainStack.Screen 
-        name="FFmpegTest" 
-        component={FFmpegTestScreen}
         options={{ headerShown: false }}
       />
       <MainStack.Screen 

@@ -116,6 +116,171 @@ router.post('/register', [
   }
 });
 
+// Get list of all installed users (admin endpoint)
+router.get('/list', async (req: Request, res: Response) => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 1000;
+    const skip = (page - 1) * limit;
+    const search = req.query.search as string;
+    const isConverted = req.query.isConverted as string; // boolean as string
+    const businessCategory = req.query.businessCategory as string;
+    const followUpStatus = req.query.followUpStatus as string;
+    const paymentStatus = req.query.paymentStatus as string;
+
+    // Build where clause
+    const where: any = {};
+    
+    if (search) {
+      where.OR = [
+        { name: { contains: search } },
+        { email: { contains: search } },
+        { deviceId: { contains: search } }
+      ];
+    }
+
+    // Handle isConverted boolean parameter
+    if (isConverted !== undefined) {
+      where.isConverted = isConverted === 'true';
+    }
+
+    // Handle businessCategory filter
+    if (businessCategory) {
+      where.selectedBusinessCategory = { contains: businessCategory };
+    }
+
+    // Handle followUpStatus filter (custom logic based on lastActiveAt)
+    if (followUpStatus) {
+      const now = new Date();
+      switch (followUpStatus) {
+        case 'recent':
+          where.lastActiveAt = {
+            gte: new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
+          };
+          break;
+        case 'overdue':
+          where.lastActiveAt = {
+            lt: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000) // More than 30 days ago
+          };
+          break;
+        case 'never':
+          where.lastActiveAt = null;
+          break;
+      }
+    }
+
+    // Handle paymentStatus filter (based on subscription status)
+    if (paymentStatus) {
+      switch (paymentStatus) {
+        case 'paid':
+          where.subscriptionStatus = 'ACTIVE';
+          break;
+        case 'unpaid':
+          where.subscriptionStatus = { not: 'ACTIVE' };
+          break;
+        case 'expired':
+          where.subscriptionStatus = 'EXPIRED';
+          break;
+      }
+    }
+
+    // Get installed users with pagination
+    const [installedUsers, total] = await Promise.all([
+      prisma.installedUser.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { lastActiveAt: 'desc' },
+        select: {
+          id: true,
+          deviceId: true,
+          name: true,
+          email: true,
+          phone: true,
+          appVersion: true,
+          installDate: true,
+          lastActiveAt: true,
+          totalViews: true,
+          downloadAttempts: true,
+          isConverted: true,
+          convertedAt: true,
+          convertedToCustomerId: true
+        }
+      }),
+      prisma.installedUser.count({ where })
+    ]);
+
+    // Calculate statistics
+    const stats = await Promise.all([
+      prisma.installedUser.count({ where: { isConverted: false } }), // Active installed users
+      prisma.installedUser.count({ where: { isConverted: true } }), // Converted users
+      prisma.installedUser.count({ 
+        where: { 
+          isConverted: false,
+          lastActiveAt: {
+            gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) // Last 7 days
+          }
+        } 
+      }), // Recently active
+      prisma.installedUser.aggregate({
+        where: { isConverted: false },
+        _avg: { totalViews: true }
+      }), // Average views
+      prisma.installedUser.aggregate({
+        where: { isConverted: false },
+        _avg: { downloadAttempts: true }
+      }) // Average download attempts
+    ]);
+
+    const totalPages = Math.ceil(total / limit);
+
+    res.json({
+      success: true,
+      data: {
+        users: installedUsers.map(user => ({
+          id: user.id,
+          deviceId: user.deviceId,
+          name: user.name,
+          email: user.email,
+          phone: user.phone,
+          appVersion: user.appVersion,
+          installDate: user.installDate,
+          lastActiveAt: user.lastActiveAt,
+          totalViews: user.totalViews,
+          downloadAttempts: user.downloadAttempts,
+          isConverted: user.isConverted,
+          convertedAt: user.convertedAt,
+          convertedToCustomerId: user.convertedToCustomerId,
+          status: user.isConverted ? 'converted' : 
+                 (user.lastActiveAt && user.lastActiveAt > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)) ? 'active' : 'inactive'
+        })),
+        pagination: {
+          page,
+          limit,
+          total,
+          totalPages,
+          hasNext: page < totalPages,
+          hasPrev: page > 1
+        },
+        statistics: {
+          totalInstalledUsers: stats[0],
+          totalConverted: stats[1],
+          recentlyActive: stats[2],
+          averageViews: Math.round(stats[3]._avg.totalViews || 0),
+          averageDownloadAttempts: Math.round(stats[4]._avg.downloadAttempts || 0)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get installed users list error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get installed users list'
+    });
+  }
+});
+
 // Get installed user profile
 router.get('/profile/:deviceId', async (req: Request, res: Response) => {
   try {

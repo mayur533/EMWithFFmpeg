@@ -44,6 +44,12 @@ class EventMarketersAuthService {
         await this.saveAuthData(response.data.user, response.data.token);
         
         console.log('✅ Admin login successful:', response.data.user.name);
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🔑 ADMIN AUTH TOKEN (eventMarketersAuthService.ts):');
+        console.log('Token:', response.data.token);
+        console.log('Token Length:', response.data.token?.length || 0);
+        console.log('Token Preview:', response.data.token?.substring(0, 50) + '...');
+        console.log('═══════════════════════════════════════════════════════════');
         return response.data;
       } else {
         throw new Error('Login failed');
@@ -68,6 +74,12 @@ class EventMarketersAuthService {
         await this.saveAuthData(response.data.user, response.data.token);
         
         console.log('✅ Subadmin login successful:', response.data.user.name);
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🔑 SUBADMIN AUTH TOKEN (eventMarketersAuthService.ts):');
+        console.log('Token:', response.data.token);
+        console.log('Token Length:', response.data.token?.length || 0);
+        console.log('Token Preview:', response.data.token?.substring(0, 50) + '...');
+        console.log('═══════════════════════════════════════════════════════════');
         return response.data;
       } else {
         throw new Error('Login failed');

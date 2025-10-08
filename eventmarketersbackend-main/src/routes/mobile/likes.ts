@@ -261,4 +261,96 @@ router.get('/check', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/mobile/likes
+ * Get user likes
+ */
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { mobileUserId, page = '1', limit = '20', resourceType } = req.query;
+    
+    if (!mobileUserId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Mobile User ID is required'
+      });
+    }
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get likes from different tables based on resource type
+    let likes = [];
+    let total = 0;
+
+    if (!resourceType || resourceType === 'TEMPLATE') {
+      const templateLikes = await prisma.templateLike.findMany({
+        where: { mobileUserId: mobileUserId as string },
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          template: {
+            select: { id: true, title: true, imageUrl: true, category: true }
+          }
+        }
+      });
+      likes = [...likes, ...templateLikes.map(l => ({ ...l, resourceType: 'TEMPLATE' }))];
+    }
+
+    if (!resourceType || resourceType === 'VIDEO') {
+      const videoLikes = await prisma.videoLike.findMany({
+        where: { mobileUserId: mobileUserId as string },
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          video: {
+            select: { id: true, title: true, videoUrl: true, category: true }
+          }
+        }
+      });
+      likes = [...likes, ...videoLikes.map(l => ({ ...l, resourceType: 'VIDEO' }))];
+    }
+
+    if (!resourceType || resourceType === 'GREETING') {
+      const greetingLikes = await prisma.greetingLike.findMany({
+        where: { mobileUserId: mobileUserId as string },
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          greeting: {
+            select: { id: true, title: true, imageUrl: true, category: true }
+          }
+        }
+      });
+      likes = [...likes, ...greetingLikes.map(l => ({ ...l, resourceType: 'GREETING' }))];
+    }
+
+    // Sort by creation date
+    likes.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.json({
+      success: true,
+      data: {
+        likes,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: likes.length
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get likes error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get likes'
+    });
+  }
+});
+
 export default router;

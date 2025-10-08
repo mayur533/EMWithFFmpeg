@@ -440,4 +440,62 @@ router.get('/videos/search', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/mobile/content/templates
+ * Get mobile templates
+ */
+router.get('/templates', async (req: Request, res: Response) => {
+  try {
+    const { page = '1', limit = '20', category, search } = req.query;
+    
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    const where: any = { isActive: true };
+    if (category) where.category = category;
+    if (search) where.title = { contains: search as string, mode: 'insensitive' };
+
+    const [templates, total] = await Promise.all([
+      prisma.mobileTemplate.findMany({
+        where,
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          sourceImage: {
+            select: {
+              id: true,
+              title: true,
+              url: true,
+              category: true
+            }
+          }
+        }
+      }),
+      prisma.mobileTemplate.count({ where })
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        templates,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total,
+          pages: Math.ceil(total / limitNum)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get mobile templates error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get mobile templates'
+    });
+  }
+});
+
 export default router;

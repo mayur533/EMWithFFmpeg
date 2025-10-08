@@ -44,6 +44,7 @@ class BusinessCategoryPostersApiService {
         const cached = this.postersCache.get(cacheKey)!;
         if ((now - cached.timestamp) < this.CACHE_DURATION) {
           console.log('✅ Using cached posters for category:', category);
+          console.log('   Cached posters already have absolute URLs');
           return {
             success: true,
             data: {
@@ -62,14 +63,38 @@ class BusinessCategoryPostersApiService {
       if (response.data.success) {
         const posters = response.data.data.posters;
         
-        // Cache the results
+        // TEMPORARY FIX: Convert relative paths to absolute URLs
+        const baseUrl = 'https://eventmarketersbackend.onrender.com';
+        const postersWithAbsoluteUrls = posters.map((poster: BusinessCategoryPoster) => ({
+          ...poster,
+          thumbnail: poster.thumbnail && !poster.thumbnail.startsWith('http') 
+            ? `${baseUrl}${poster.thumbnail}` 
+            : poster.thumbnail,
+          imageUrl: poster.imageUrl && !poster.imageUrl.startsWith('http')
+            ? `${baseUrl}${poster.imageUrl}`
+            : poster.imageUrl,
+          downloadUrl: poster.downloadUrl && !poster.downloadUrl.startsWith('http')
+            ? `${baseUrl}${poster.downloadUrl}`
+            : poster.downloadUrl,
+        }));
+        
+        console.log('🔧 Converted relative paths to absolute URLs');
+        console.log('   Example URL:', postersWithAbsoluteUrls[0]?.thumbnail || 'No posters');
+        
+        // Cache the results with absolute URLs
         this.postersCache.set(cacheKey, {
-          data: posters,
+          data: postersWithAbsoluteUrls,
           timestamp: now
         });
         
-        console.log('✅ Fetched posters for category:', category, 'Count:', posters.length);
-        return response.data;
+        console.log('✅ Fetched posters for category:', category, 'Count:', postersWithAbsoluteUrls.length);
+        return {
+          ...response.data,
+          data: {
+            ...response.data.data,
+            posters: postersWithAbsoluteUrls
+          }
+        };
       } else {
         throw new Error(response.data.error || 'Failed to fetch posters');
       }

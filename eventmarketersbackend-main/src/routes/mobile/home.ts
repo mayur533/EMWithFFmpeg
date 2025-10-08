@@ -681,4 +681,57 @@ router.post('/videos/:id/download', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/mobile/home/stats
+ * Get home screen statistics
+ */
+router.get('/stats', async (req: Request, res: Response) => {
+  try {
+    const [
+      totalTemplates,
+      totalVideos,
+      totalGreetings,
+      templateDownloads,
+      videoDownloads,
+      greetingDownloads,
+      templateLikes,
+      videoLikes,
+      greetingLikes
+    ] = await Promise.all([
+      prisma.mobileTemplate.count({ where: { isActive: true } }),
+      prisma.mobileVideo.count({ where: { isActive: true } }),
+      prisma.greetingTemplate.count({ where: { isActive: true } }),
+      prisma.templateDownload.count(),
+      prisma.videoDownload.count(),
+      prisma.greetingDownload.count(),
+      prisma.templateLike.count(),
+      prisma.videoLike.count(),
+      prisma.greetingLike.count()
+    ]);
+
+    const totalDownloads = templateDownloads + videoDownloads + greetingDownloads;
+    const totalLikes = templateLikes + videoLikes + greetingLikes;
+
+    res.json({
+      success: true,
+      data: {
+        stats: {
+          totalTemplates,
+          totalVideos,
+          totalGreetings,
+          totalDownloads,
+          totalLikes
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Home stats error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get home stats'
+    });
+  }
+});
+
 export default router;

@@ -165,6 +165,60 @@ export interface ActionResponse {
 // ============================================================================
 
 class HomeApiService {
+  // Base URL for converting relative paths to absolute URLs
+  private readonly BASE_URL = 'https://eventmarketersbackend.onrender.com';
+
+  /**
+   * Convert relative image URLs to absolute URLs
+   */
+  private convertToAbsoluteUrl(url: string | undefined | null): string | undefined {
+    if (!url) return undefined;
+    if (url.startsWith('http')) return url; // Already absolute
+    return `${this.BASE_URL}${url}`; // Convert relative to absolute
+  }
+
+  /**
+   * Convert image URLs in featured content
+   */
+  private convertFeaturedContentUrls(content: FeaturedContent[]): FeaturedContent[] {
+    return content.map(item => ({
+      ...item,
+      imageUrl: this.convertToAbsoluteUrl(item.imageUrl) || item.imageUrl,
+      videoUrl: item.videoUrl ? this.convertToAbsoluteUrl(item.videoUrl) : item.videoUrl,
+    }));
+  }
+
+  /**
+   * Convert image URLs in upcoming events
+   */
+  private convertUpcomingEventsUrls(events: UpcomingEvent[]): UpcomingEvent[] {
+    return events.map(event => ({
+      ...event,
+      imageUrl: this.convertToAbsoluteUrl(event.imageUrl) || event.imageUrl,
+    }));
+  }
+
+  /**
+   * Convert image URLs in professional templates
+   */
+  private convertProfessionalTemplatesUrls(templates: ProfessionalTemplate[]): ProfessionalTemplate[] {
+    return templates.map(template => ({
+      ...template,
+      thumbnail: this.convertToAbsoluteUrl(template.thumbnail) || template.thumbnail,
+      previewUrl: template.previewUrl ? this.convertToAbsoluteUrl(template.previewUrl) : template.previewUrl,
+    }));
+  }
+
+  /**
+   * Convert image URLs in video content
+   */
+  private convertVideoContentUrls(videos: VideoContent[]): VideoContent[] {
+    return videos.map(video => ({
+      ...video,
+      thumbnail: this.convertToAbsoluteUrl(video.thumbnail) || video.thumbnail,
+      videoUrl: this.convertToAbsoluteUrl(video.videoUrl) || video.videoUrl,
+    }));
+  }
   // ============================================================================
   // API 1: FEATURED CONTENT
   // ============================================================================
@@ -192,6 +246,13 @@ class HomeApiService {
       const url = `/api/mobile/home/featured${queryString ? `?${queryString}` : ''}`;
       
       const response = await api.get(url);
+      
+      // Convert relative URLs to absolute URLs
+      if (response.data.success && response.data.data) {
+        console.log('🔧 [Home API] Converting featured content URLs to absolute');
+        response.data.data = this.convertFeaturedContentUrls(response.data.data);
+      }
+      
       return response.data;
     } catch (error) {
       console.log('Using mock featured content due to API error:', error);
@@ -235,6 +296,13 @@ class HomeApiService {
       const url = `/api/mobile/home/upcoming-events${queryString ? `?${queryString}` : ''}`;
       
       const response = await api.get(url);
+      
+      // Convert relative URLs to absolute URLs
+      if (response.data.success && response.data.data) {
+        console.log('🔧 [Home API] Converting upcoming events URLs to absolute');
+        response.data.data = this.convertUpcomingEventsUrls(response.data.data);
+      }
+      
       return response.data;
     } catch (error) {
       console.log('Using mock upcoming events due to API error:', error);
@@ -280,6 +348,13 @@ class HomeApiService {
       const url = `/api/mobile/home/templates${queryString ? `?${queryString}` : ''}`;
       
       const response = await api.get(url);
+      
+      // Convert relative URLs to absolute URLs
+      if (response.data.success && response.data.data) {
+        console.log('🔧 [Home API] Converting professional templates URLs to absolute');
+        response.data.data = this.convertProfessionalTemplatesUrls(response.data.data);
+      }
+      
       return response.data;
     } catch (error) {
       console.log('Using mock professional templates due to API error:', error);
@@ -328,6 +403,13 @@ class HomeApiService {
       const url = `/api/mobile/home/video-content${queryString ? `?${queryString}` : ''}`;
       
       const response = await api.get(url);
+      
+      // Convert relative URLs to absolute URLs
+      if (response.data.success && response.data.data) {
+        console.log('🔧 [Home API] Converting video content URLs to absolute');
+        response.data.data = this.convertVideoContentUrls(response.data.data);
+      }
+      
       return response.data;
     } catch (error) {
       console.log('Using mock video content due to API error:', error);

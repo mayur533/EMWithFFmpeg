@@ -401,4 +401,83 @@ function getMockPostersByCategory(category: string): BusinessCategoryPoster[] {
   return shuffled.slice(0, Math.floor(Math.random() * 4) + 3);
 }
 
+/**
+ * GET /api/mobile/posters
+ * Get all posters
+ */
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { category, page = '1', limit = '20' } = req.query;
+    
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    
+    let posters: BusinessCategoryPoster[] = [];
+    
+    if (category) {
+      posters = getMockPostersByCategory(category as string);
+    } else {
+      // Get posters from all categories
+      const categories = ['Restaurant', 'Wedding Planning', 'Electronics', 'Beauty', 'Fitness', 'Education'];
+      posters = categories.flatMap(cat => getMockPostersByCategory(cat));
+    }
+    
+    // Pagination
+    const startIndex = (pageNum - 1) * limitNum;
+    const endIndex = startIndex + limitNum;
+    const paginatedPosters = posters.slice(startIndex, endIndex);
+    
+    res.json({
+      success: true,
+      data: {
+        posters: paginatedPosters,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: posters.length,
+          pages: Math.ceil(posters.length / limitNum)
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Fetch posters error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch posters'
+    });
+  }
+});
+
+/**
+ * GET /api/mobile/posters/categories
+ * Get poster categories
+ */
+router.get('/categories', async (req: Request, res: Response) => {
+  try {
+    const categories = [
+      { id: 'restaurant', name: 'Restaurant', count: 15, icon: '🍽️' },
+      { id: 'wedding', name: 'Wedding Planning', count: 12, icon: '💒' },
+      { id: 'electronics', name: 'Electronics', count: 18, icon: '📱' },
+      { id: 'beauty', name: 'Beauty', count: 14, icon: '💄' },
+      { id: 'fitness', name: 'Fitness', count: 16, icon: '💪' },
+      { id: 'education', name: 'Education', count: 13, icon: '📚' }
+    ];
+
+    res.json({
+      success: true,
+      data: {
+        categories
+      }
+    });
+
+  } catch (error) {
+    console.error('Fetch poster categories error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to fetch poster categories'
+    });
+  }
+});
+
 export default router;

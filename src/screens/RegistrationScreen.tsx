@@ -62,7 +62,7 @@ const FloatingInput = React.memo(({
   numberOfLines = 1,
   keyboardType = 'default',
   secureTextEntry = false,
-  showValidationSummary = false
+  hasError = false
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -75,7 +75,7 @@ const FloatingInput = React.memo(({
   numberOfLines?: number;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'url';
   secureTextEntry?: boolean;
-  showValidationSummary?: boolean;
+  hasError?: boolean;
 }) => (
     <View style={styles.inputContainer}>
     <TextInput
@@ -83,7 +83,7 @@ const FloatingInput = React.memo(({
         styles.input,
         { 
           color: theme.theme.colors.text,
-          borderColor: focusedField === field ? theme.theme.colors.primary : theme.theme.colors.border,
+          borderColor: hasError ? theme.theme.colors.error : (focusedField === field ? theme.theme.colors.primary : theme.theme.colors.border),
           backgroundColor: theme.theme.colors.inputBackground,
         },
         multiline && styles.multilineInput
@@ -184,29 +184,71 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   const validateForm = () => {
     const errors: {[key: string]: string} = {};
 
+    // Company Name validation
     if (!formData.name.trim()) {
-      errors.name = 'Company name is required';
+      errors.name = 'Company name is required to create your account';
+    } else if (formData.name.trim().length < 2) {
+      errors.name = 'Company name must be at least 2 characters long';
+    } else if (formData.name.trim().length > 100) {
+      errors.name = 'Company name must not exceed 100 characters';
     }
+
+    // Email validation
     if (!formData.email.trim()) {
-      errors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      errors.email = 'Email is invalid';
+      errors.email = 'Email address is required for your account';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      errors.email = 'Please enter a valid email address (e.g., example@email.com)';
+    } else if (formData.email.length > 100) {
+      errors.email = 'Email address must not exceed 100 characters';
     }
+
+    // Phone number validation
     if (!formData.phone.trim()) {
-      errors.phone = 'Phone number is required';
+      errors.phone = 'Phone number is required to contact you';
+    } else if (!/^\d+$/.test(formData.phone)) {
+      errors.phone = 'Phone number must contain only digits (0-9)';
     } else if (formData.phone.length !== 10) {
-      errors.phone = 'Enter phone number';
+      errors.phone = 'Phone number must be exactly 10 digits (e.g., 9876543210)';
+    } else if (!/^[6-9]\d{9}$/.test(formData.phone)) {
+      errors.phone = 'Please enter a valid Indian mobile number starting with 6-9';
     }
-    if (formData.alternatePhone && formData.alternatePhone.length !== 10) {
-      errors.alternatePhone = 'Enter alternate phone number ';
+
+    // Alternate phone validation (optional field)
+    if (formData.alternatePhone && formData.alternatePhone.trim()) {
+      if (!/^\d+$/.test(formData.alternatePhone)) {
+        errors.alternatePhone = 'Alternate phone must contain only digits (0-9)';
+      } else if (formData.alternatePhone.length !== 10) {
+        errors.alternatePhone = 'Alternate phone must be exactly 10 digits';
+      } else if (!/^[6-9]\d{9}$/.test(formData.alternatePhone)) {
+        errors.alternatePhone = 'Please enter a valid Indian mobile number starting with 6-9';
+      } else if (formData.alternatePhone === formData.phone) {
+        errors.alternatePhone = 'Alternate phone must be different from primary phone number';
+      }
     }
+
+    // Password validation
     if (!formData.password.trim()) {
-      errors.password = 'Password is required';
+      errors.password = 'Password is required to secure your account';
     } else if (formData.password.length < 6) {
-      errors.password = 'Password must be at least 6 characters';
+      errors.password = 'Password must be at least 6 characters for security';
+    } else if (formData.password.length > 50) {
+      errors.password = 'Password must not exceed 50 characters';
+    } else if (!/(?=.*[a-zA-Z])/.test(formData.password)) {
+      errors.password = 'Password must contain at least one letter';
+    } else if (formData.password === formData.email || formData.password === formData.name) {
+      errors.password = 'Password should not be the same as your email or company name';
     }
-    if (formData.password !== formData.confirmPassword) {
-      errors.confirmPassword = 'Passwords do not match';
+
+    // Category validation
+    if (!formData.category.trim()) {
+      errors.category = 'Business category is required to help us serve you better';
+    }
+
+    // Confirm Password validation
+    if (!formData.confirmPassword.trim()) {
+      errors.confirmPassword = 'Please confirm your password';
+    } else if (formData.password !== formData.confirmPassword) {
+      errors.confirmPassword = 'Passwords do not match. Please enter the same password in both fields';
     }
 
     setValidationErrors(errors);
@@ -228,41 +270,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   };
 
   const handleRegister = async () => {
-    // Validate basic field requirements first
-    const basicValidationErrors: {[key: string]: string} = {};
-    let hasBasicErrors = false;
-
-    // Check only basic required field validation
-    if (!formData.name.trim()) {
-      basicValidationErrors.name = 'Company name is required';
-      hasBasicErrors = true;
-    }
-    if (!formData.email.trim()) {
-      basicValidationErrors.email = 'Email is required';
-      hasBasicErrors = true;
-    }
-    if (!formData.phone.trim()) {
-      basicValidationErrors.phone = 'Phone number is required';
-      hasBasicErrors = true;
-    } else if (formData.phone.length !== 10) {
-      basicValidationErrors.phone = 'Phone number must be exactly 10 digits';
-      hasBasicErrors = true;
-    }
-    if (formData.alternatePhone && formData.alternatePhone.length !== 10) {
-      basicValidationErrors.alternatePhone = 'Alternate phone number must be exactly 10 digits';
-      hasBasicErrors = true;
-    }
-    if (!formData.password.trim()) {
-      basicValidationErrors.password = 'Password is required';
-      hasBasicErrors = true;
-    }
-    if (formData.password !== formData.confirmPassword) {
-      basicValidationErrors.confirmPassword = 'Passwords do not match';
-      hasBasicErrors = true;
-    }
-
-    if (hasBasicErrors) {
-      setValidationErrors(basicValidationErrors);
+    // Validate all fields using the comprehensive validation
+    if (!validateForm()) {
       setShowValidationSummary(true);
       return;
     }
@@ -326,10 +335,10 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   };
 
   useEffect(() => {
-    if (showErrorModal) {
+    if (showErrorModal || showValidationSummary) {
       showModal();
     }
-  }, [showErrorModal]);
+  }, [showErrorModal, showValidationSummary]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.theme.colors.background }]}>
@@ -412,15 +421,26 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: theme.theme.colors.text }]}>Company Information</Text>
                 
-                <FloatingInput
-                  value={formData.name}
-                  onChangeText={(value) => handleInputChange('name', value)}
-                  field="name"
-                  placeholder="Enter company name"
-                  focusedField={focusedField}
-                  setFocusedField={setFocusedField}
-                  theme={theme}
-                />
+                <View style={styles.inputWrapper}>
+                  <FloatingInput
+                    value={formData.name}
+                    onChangeText={(value) => handleInputChange('name', value)}
+                    field="name"
+                    placeholder="Enter company name *"
+                    focusedField={focusedField}
+                    setFocusedField={setFocusedField}
+                    theme={theme}
+                    hasError={!!validationErrors.name}
+                  />
+                  {validationErrors.name && (
+                    <View style={styles.errorContainer}>
+                      <Icon name="error" size={16} color={theme.theme.colors.error} />
+                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                        {validationErrors.name}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
                 <FloatingInput
                   value={formData.description}
@@ -436,7 +456,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
 
                 {/* Business Category */}
                 <View style={styles.categorySection}>
-                  <Text style={[styles.categoryLabel, { color: theme.theme.colors.text }]}>Business Category</Text>
+                  <Text style={[styles.categoryLabel, { color: theme.theme.colors.text }]}>Business Category *</Text>
                   
                   {/* Selected Category Display */}
                   <View style={styles.selectedCategoryContainer}>
@@ -445,17 +465,27 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                         styles.selectedCategoryInput,
                         { 
                           color: theme.theme.colors.text,
-                          borderColor: formData.category ? theme.theme.colors.primary : theme.theme.colors.border,
+                          borderColor: validationErrors.category ? theme.theme.colors.error : (formData.category ? theme.theme.colors.primary : theme.theme.colors.border),
                           backgroundColor: theme.theme.colors.inputBackground,
                         }
                       ]}
                       value={formData.category}
-                      placeholder="Select your business category"
+                      placeholder="Select your business category *"
                       placeholderTextColor={theme.theme.colors.textSecondary}
                       editable={false}
                       pointerEvents="none"
                     />
                   </View>
+                  
+                  {/* Category Validation Error */}
+                  {validationErrors.category && (
+                    <View style={styles.errorContainer}>
+                      <Icon name="error" size={16} color={theme.theme.colors.error} />
+                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                        {validationErrors.category}
+                      </Text>
+                    </View>
+                  )}
                   
                   {/* Category Options */}
                   <ScrollView 
@@ -499,38 +529,71 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   </ScrollView>
               </View>
               
-              <FloatingInput
-                value={formData.phone}
-                onChangeText={(value) => handleInputChange('phone', value)}
-                field="phone"
-                placeholder="Enter 10-digit phone number"
-                keyboardType="phone-pad"
-                focusedField={focusedField}
-                setFocusedField={setFocusedField}
-                theme={theme}
-              />
-
+              <View style={styles.inputWrapper}>
                 <FloatingInput
-                value={formData.alternatePhone || ''}
-                onChangeText={(value) => handleInputChange('alternatePhone', value)}
-                field="alternatePhone"
-                placeholder="Enter 10-digit alternate phone number"
-                keyboardType="phone-pad"
+                  value={formData.phone}
+                  onChangeText={(value) => handleInputChange('phone', value)}
+                  field="phone"
+                  placeholder="Enter 10-digit phone number *"
+                  keyboardType="phone-pad"
                   focusedField={focusedField}
                   setFocusedField={setFocusedField}
                   theme={theme}
+                  hasError={!!validationErrors.phone}
                 />
+                {validationErrors.phone && (
+                  <View style={styles.errorContainer}>
+                    <Icon name="error" size={16} color={theme.theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                      {validationErrors.phone}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
-                <FloatingInput
-                  value={formData.email}
-                onChangeText={(value) => handleInputChange('email', value)}
-                  field="email"
-                placeholder="Enter email address"
-                keyboardType="email-address"
-                focusedField={focusedField}
-                setFocusedField={setFocusedField}
-                theme={theme}
-              />
+                <View style={styles.inputWrapper}>
+                  <FloatingInput
+                    value={formData.alternatePhone || ''}
+                    onChangeText={(value) => handleInputChange('alternatePhone', value)}
+                    field="alternatePhone"
+                    placeholder="Enter 10-digit alternate phone number (optional)"
+                    keyboardType="phone-pad"
+                    focusedField={focusedField}
+                    setFocusedField={setFocusedField}
+                    theme={theme}
+                    hasError={!!validationErrors.alternatePhone}
+                  />
+                  {validationErrors.alternatePhone && (
+                    <View style={styles.errorContainer}>
+                      <Icon name="error" size={16} color={theme.theme.colors.error} />
+                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                        {validationErrors.alternatePhone}
+                      </Text>
+                    </View>
+                  )}
+                </View>
+
+                <View style={styles.inputWrapper}>
+                  <FloatingInput
+                    value={formData.email}
+                    onChangeText={(value) => handleInputChange('email', value)}
+                    field="email"
+                    placeholder="Enter email address *"
+                    keyboardType="email-address"
+                    focusedField={focusedField}
+                    setFocusedField={setFocusedField}
+                    theme={theme}
+                    hasError={!!validationErrors.email}
+                  />
+                  {validationErrors.email && (
+                    <View style={styles.errorContainer}>
+                      <Icon name="error" size={16} color={theme.theme.colors.error} />
+                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                        {validationErrors.email}
+                      </Text>
+                    </View>
+                  )}
+                </View>
 
               <FloatingInput
                 value={formData.website || ''}
@@ -560,64 +623,84 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
             <View style={styles.section}>
                 <Text style={[styles.sectionTitle, { color: theme.theme.colors.text }]}>Account Security</Text>
               
-              <View style={styles.passwordContainer}>
-                <TextInput
-                  style={[
-                    styles.passwordInput,
-                    { 
-                      color: theme.theme.colors.text,
-                      borderColor: focusedField === 'password' ? theme.theme.colors.primary : theme.theme.colors.border,
-                      backgroundColor: theme.theme.colors.inputBackground,
-                    }
-                  ]}
-                  value={formData.password}
-                  onChangeText={(value) => handleInputChange('password', value)}
-                  onFocus={() => setFocusedField('password')}
-                  onBlur={() => setFocusedField(null)}
-                  placeholder="Enter password"
-                  placeholderTextColor={theme.theme.colors.textSecondary}
-                  secureTextEntry={!showPassword}
-                />
-                <TouchableOpacity 
-                  style={styles.eyeButton}
-                  onPress={() => setShowPassword(!showPassword)}
-                >
-                  <Icon 
-                    name={showPassword ? "visibility" : "visibility-off"} 
-                    size={22} 
-                    color={theme.theme.colors.textSecondary} 
-                  />
-                </TouchableOpacity>
-              </View>
-
+              <View style={styles.inputWrapper}>
                 <View style={styles.passwordContainer}>
                   <TextInput
                     style={[
                       styles.passwordInput,
                       { 
                         color: theme.theme.colors.text,
-                        borderColor: focusedField === 'confirmPassword' ? theme.theme.colors.primary : theme.theme.colors.border,
+                        borderColor: validationErrors.password ? theme.theme.colors.error : (focusedField === 'password' ? theme.theme.colors.primary : theme.theme.colors.border),
                         backgroundColor: theme.theme.colors.inputBackground,
                       }
                     ]}
-                    value={formData.confirmPassword}
-                    onChangeText={(value) => handleInputChange('confirmPassword', value)}
-                    onFocus={() => setFocusedField('confirmPassword')}
+                    value={formData.password}
+                    onChangeText={(value) => handleInputChange('password', value)}
+                    onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
-                    placeholder="Confirm password"
+                    placeholder="Enter password *"
                     placeholderTextColor={theme.theme.colors.textSecondary}
-                    secureTextEntry={!showConfirmPassword}
+                    secureTextEntry={!showPassword}
                   />
                   <TouchableOpacity 
                     style={styles.eyeButton}
-                    onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    onPress={() => setShowPassword(!showPassword)}
                   >
                     <Icon 
-                      name={showConfirmPassword ? "visibility" : "visibility-off"} 
+                      name={showPassword ? "visibility" : "visibility-off"} 
                       size={22} 
                       color={theme.theme.colors.textSecondary} 
                     />
                   </TouchableOpacity>
+                </View>
+                {validationErrors.password && (
+                  <View style={styles.errorContainer}>
+                    <Icon name="error" size={16} color={theme.theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                      {validationErrors.password}
+                    </Text>
+                  </View>
+                )}
+              </View>
+
+                <View style={styles.inputWrapper}>
+                  <View style={styles.passwordContainer}>
+                    <TextInput
+                      style={[
+                        styles.passwordInput,
+                        { 
+                          color: theme.theme.colors.text,
+                          borderColor: validationErrors.confirmPassword ? theme.theme.colors.error : (focusedField === 'confirmPassword' ? theme.theme.colors.primary : theme.theme.colors.border),
+                          backgroundColor: theme.theme.colors.inputBackground,
+                        }
+                      ]}
+                      value={formData.confirmPassword}
+                      onChangeText={(value) => handleInputChange('confirmPassword', value)}
+                      onFocus={() => setFocusedField('confirmPassword')}
+                      onBlur={() => setFocusedField(null)}
+                      placeholder="Confirm password *"
+                      placeholderTextColor={theme.theme.colors.textSecondary}
+                      secureTextEntry={!showConfirmPassword}
+                    />
+                    <TouchableOpacity 
+                      style={styles.eyeButton}
+                      onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                    >
+                      <Icon 
+                        name={showConfirmPassword ? "visibility" : "visibility-off"} 
+                        size={22} 
+                        color={theme.theme.colors.textSecondary} 
+                      />
+                    </TouchableOpacity>
+                  </View>
+                  {validationErrors.confirmPassword && (
+                    <View style={styles.errorContainer}>
+                      <Icon name="error" size={16} color={theme.theme.colors.error} />
+                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                        {validationErrors.confirmPassword}
+                      </Text>
+                    </View>
+                  )}
                 </View>
             </View>
 
@@ -720,6 +803,210 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
         </View>
       </Modal>
 
+      {/* Validation Errors Modal */}
+      <Modal
+        visible={showValidationSummary && Object.keys(validationErrors).length > 0}
+        transparent={true}
+        animationType="none"
+        onRequestClose={hideModal}
+      >
+        <View style={[
+          styles.modalOverlay,
+          modalDimensions.isLandscape && {
+            paddingHorizontal: modalDimensions.width * 0.15,
+            paddingVertical: modalDimensions.height * 0.05,
+          }
+        ]}>
+          <Animated.View 
+            style={[
+              styles.validationModalContainer,
+              { backgroundColor: theme.theme.colors.surface },
+              modalDimensions.isTablet && {
+                maxWidth: modalDimensions.width * 0.6,
+              },
+              modalDimensions.isLandscape && !modalDimensions.isTablet && {
+                maxWidth: modalDimensions.width * 0.7,
+                maxHeight: modalDimensions.height * 0.85,
+              },
+              modalDimensions.isSmall && {
+                width: modalDimensions.width * 0.92,
+                paddingHorizontal: modalDimensions.width * 0.04,
+              },
+              {
+                transform: [{
+                  scale: modalAnimation.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.8, 1],
+                  }),
+                }],
+                opacity: modalAnimation,
+              }
+            ]}
+          >
+            {/* Modal Header */}
+            <View style={[
+              styles.validationModalHeader,
+              modalDimensions.isSmall && {
+                marginBottom: modalDimensions.height * 0.015,
+              }
+            ]}>
+              <View style={[
+                styles.validationIconContainer,
+                { backgroundColor: '#ffc107' + '20' },
+                modalDimensions.isSmall && {
+                  width: modalDimensions.width * 0.12,
+                  height: modalDimensions.width * 0.12,
+                }
+              ]}>
+                <Icon 
+                  name="warning" 
+                  size={modalDimensions.isSmall ? 24 : modalDimensions.isTablet ? 36 : 28} 
+                  color="#ffc107" 
+                />
+              </View>
+              <Text style={[
+                styles.validationModalTitle, 
+                { color: theme.theme.colors.text },
+                modalDimensions.isSmall && {
+                  fontSize: 18,
+                },
+                modalDimensions.isTablet && {
+                  fontSize: 24,
+                }
+              ]}>
+                Please Fix These Errors
+              </Text>
+              <Text style={[
+                styles.validationModalSubtitle,
+                { color: theme.theme.colors.textSecondary },
+                modalDimensions.isSmall && {
+                  fontSize: 12,
+                },
+                modalDimensions.isTablet && {
+                  fontSize: 16,
+                }
+              ]}>
+                {Object.keys(validationErrors).length} field{Object.keys(validationErrors).length > 1 ? 's need' : ' needs'} your attention
+              </Text>
+            </View>
+
+            {/* Errors List */}
+            <ScrollView 
+              style={[
+                styles.validationErrorsList,
+                modalDimensions.isLandscape && {
+                  maxHeight: modalDimensions.height * 0.5,
+                }
+              ]}
+              showsVerticalScrollIndicator={false}
+            >
+              {Object.entries(validationErrors).map(([field, error], index) => (
+                <View 
+                  key={field}
+                  style={[
+                    styles.validationErrorItem,
+                    { 
+                      backgroundColor: theme.theme.colors.error + '10',
+                      borderLeftColor: theme.theme.colors.error,
+                    },
+                    modalDimensions.isSmall && {
+                      paddingHorizontal: modalDimensions.width * 0.03,
+                      paddingVertical: modalDimensions.height * 0.012,
+                      marginBottom: modalDimensions.height * 0.01,
+                    },
+                    modalDimensions.isTablet && {
+                      paddingHorizontal: modalDimensions.width * 0.025,
+                      paddingVertical: modalDimensions.height * 0.015,
+                      marginBottom: modalDimensions.height * 0.015,
+                    }
+                  ]}
+                >
+                  <View style={styles.errorItemHeader}>
+                    <View style={[
+                      styles.errorBullet,
+                      { backgroundColor: theme.theme.colors.error },
+                      modalDimensions.isSmall && {
+                        width: 6,
+                        height: 6,
+                      },
+                      modalDimensions.isTablet && {
+                        width: 10,
+                        height: 10,
+                      }
+                    ]} />
+                    <Text style={[
+                      styles.errorFieldName,
+                      { color: theme.theme.colors.text },
+                      modalDimensions.isSmall && {
+                        fontSize: 13,
+                      },
+                      modalDimensions.isTablet && {
+                        fontSize: 17,
+                      }
+                    ]}>
+                      {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
+                    </Text>
+                  </View>
+                  <Text style={[
+                    styles.errorMessage,
+                    { color: theme.theme.colors.textSecondary },
+                    modalDimensions.isSmall && {
+                      fontSize: 12,
+                      lineHeight: 16,
+                    },
+                    modalDimensions.isTablet && {
+                      fontSize: 16,
+                      lineHeight: 22,
+                    }
+                  ]}>
+                    {error}
+                  </Text>
+                </View>
+              ))}
+            </ScrollView>
+
+            {/* Action Button */}
+            <View style={[
+              styles.validationModalActions,
+              modalDimensions.isSmall && {
+                marginTop: modalDimensions.height * 0.015,
+              },
+              modalDimensions.isTablet && {
+                marginTop: modalDimensions.height * 0.025,
+              }
+            ]}>
+              <TouchableOpacity
+                style={[
+                  styles.validationModalButton,
+                  { backgroundColor: theme.theme.colors.primary },
+                  modalDimensions.isSmall && {
+                    paddingVertical: modalDimensions.height * 0.013,
+                  },
+                  modalDimensions.isTablet && {
+                    paddingVertical: modalDimensions.height * 0.02,
+                  }
+                ]}
+                onPress={hideModal}
+                activeOpacity={0.8}
+              >
+                <Icon name="check-circle" size={modalDimensions.isSmall ? 18 : modalDimensions.isTablet ? 24 : 20} color="#ffffff" />
+                <Text style={[
+                  styles.validationModalButtonText,
+                  modalDimensions.isSmall && {
+                    fontSize: 14,
+                  },
+                  modalDimensions.isTablet && {
+                    fontSize: 18,
+                  }
+                ]}>
+                  Got It, Let Me Fix These
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </Animated.View>
+        </View>
+      </Modal>
+
       {/* Image Picker Modal */}
       <ImagePickerModal
         visible={showImagePickerModal}
@@ -792,6 +1079,9 @@ const styles = StyleSheet.create({
   inputContainer: {
     marginBottom: screenHeight * 0.015,
   },
+  inputWrapper: {
+    marginBottom: screenHeight * 0.015,
+  },
   input: {
     borderWidth: 1,
     borderRadius: 12,
@@ -799,6 +1089,18 @@ const styles = StyleSheet.create({
     paddingVertical: screenHeight * 0.015,
     fontSize: isSmallScreen ? 14 : 16,
     minHeight: isSmallScreen ? 48 : 52,
+  },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: screenHeight * 0.006,
+    paddingHorizontal: screenWidth * 0.02,
+  },
+  errorText: {
+    fontSize: isSmallScreen ? 12 : 13,
+    marginLeft: 6,
+    flex: 1,
+    lineHeight: isSmallScreen ? 16 : 18,
   },
   multilineInput: {
     minHeight: isSmallScreen ? 80 : 100,
@@ -1050,6 +1352,111 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: isSmallScreen ? 16 : 18,
     fontWeight: '600',
+  },
+  // Validation Modal Styles
+  validationModalContainer: {
+    width: '100%',
+    maxWidth: screenWidth * 0.9,
+    borderRadius: 20,
+    paddingHorizontal: screenWidth * 0.05,
+    paddingVertical: screenHeight * 0.025,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    elevation: 10,
+  },
+  validationModalHeader: {
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.02,
+  },
+  validationIconContainer: {
+    width: screenWidth * 0.15,
+    height: screenWidth * 0.15,
+    borderRadius: screenWidth * 0.075,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.015,
+  },
+  validationModalTitle: {
+    fontSize: isSmallScreen ? 20 : isTablet ? 24 : 22,
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: 6,
+  },
+  validationModalSubtitle: {
+    fontSize: isSmallScreen ? 13 : isTablet ? 16 : 14,
+    textAlign: 'center',
+    opacity: 0.7,
+  },
+  validationErrorsList: {
+    maxHeight: screenHeight * 0.45,
+    width: '100%',
+    marginBottom: screenHeight * 0.02,
+  },
+  validationErrorItem: {
+    borderLeftWidth: 4,
+    borderRadius: 10,
+    paddingHorizontal: screenWidth * 0.04,
+    paddingVertical: screenHeight * 0.015,
+    marginBottom: screenHeight * 0.012,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  errorItemHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  errorBullet: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  errorFieldName: {
+    fontSize: isSmallScreen ? 14 : isTablet ? 17 : 15,
+    fontWeight: '600',
+    flex: 1,
+  },
+  errorMessage: {
+    fontSize: isSmallScreen ? 13 : isTablet ? 16 : 14,
+    marginLeft: 16,
+    lineHeight: isSmallScreen ? 18 : isTablet ? 22 : 20,
+  },
+  validationModalActions: {
+    width: '100%',
+    marginTop: screenHeight * 0.02,
+  },
+  validationModalButton: {
+    flexDirection: 'row',
+    paddingVertical: screenHeight * 0.016,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#667eea',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  validationModalButtonText: {
+    color: '#ffffff',
+    fontSize: isSmallScreen ? 15 : isTablet ? 18 : 16,
+    fontWeight: '600',
+    marginLeft: 8,
   },
 });
 

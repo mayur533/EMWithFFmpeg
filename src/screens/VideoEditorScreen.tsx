@@ -36,10 +36,8 @@ import FrameSelector from '../components/FrameSelector';
 import { GOOGLE_FONTS, getFontsByCategory, SYSTEM_FONTS, getFontFamily } from '../services/fontService';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import Watermark from '../components/Watermark';
-import videoProcessingService, { VideoLayer } from '../services/videoProcessingService';
 import { useTheme } from '../context/ThemeContext';
 import ViewShot from 'react-native-view-shot';
-import VideoProcessor from '../components/VideoProcessor';
 import { convertCanvasToVideoFormat, createSampleVideoCanvas } from '../utils/videoCanvasConverter';
 import VideoComposer, { OverlayConfig, VideoLayer as ComposerVideoLayer } from '../services/VideoComposer';
 import { getVideoAssetSource, getAvailableVideoNames, getRandomVideoFromAssets } from '../utils/videoAssets';
@@ -122,7 +120,6 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const [showCloudComposer, setShowCloudComposer] = useState(false);
   const [showProcessingOptions, setShowProcessingOptions] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
-  const [showVideoProcessor, setShowVideoProcessor] = useState(false);
   const [generatedVideoPath, setGeneratedVideoPath] = useState<string | null>(null);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
   const [videoSource, setVideoSource] = useState<any>(null);
@@ -807,27 +804,9 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
         throw new Error(`Source video file is empty: ${filePath}`);
       }
       
-      console.log('✅ File validation passed, proceeding with FFmpeg processing...');
-      console.log('🎯 Calling videoProcessingService.processVideo...');
-      console.log('📁 Source path (file:// URI):', currentVideoSource);
-      console.log('📁 Source path type:', typeof currentVideoSource);
-      console.log('📁 Source path starts with file://:', currentVideoSource.startsWith('file://'));
-      console.log('📁 Layers count:', layers.length);
-
-      // Call FFmpeg-based video processing service
-      const processedVideoPath = await videoProcessingService.processVideo(
-        currentVideoSource,
-        layers,
-        {
-          width: videoCanvasWidth,
-          height: videoCanvasHeight,
-          quality: 'high',
-          frameRate: 30,
-        }
-      );
-
-      console.log('✅ Video generation completed!');
-      console.log('- Processed video path:', processedVideoPath);
+      console.log('⚠️ FFmpeg integration removed - local video processing is no longer available');
+      Alert.alert('Feature Unavailable', 'Local video processing has been removed. Please use Cloud Processing instead.');
+      return;
 
       // Navigate to video preview
     navigation.navigate('VideoPreview', {
@@ -970,7 +949,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
               x: Math.round(layer.position.x),
               y: Math.round(layer.position.y),
               fontsize: fontSize,
-              color: color.replace('#', ''), // Remove # for FFmpeg
+              color: color.replace('#', ''), // Remove # for color format
               start: 0, // Show from start
               end: 5 // Show for 5 seconds
             });
@@ -1659,37 +1638,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
       setOverlayImageUri(null);
     }
 
-    // Show the video processor modal
-    setShowVideoProcessor(true);
-  };
-
-  const handleVideoProcessingComplete = (processedVideoPath: string) => {
-    console.log('Video processing completed. Processed video path:', processedVideoPath);
-
-    // Navigate to video preview screen with processed video and layer data
-    navigation.navigate('VideoPreview', {
-      selectedVideo: {
-        ...selectedVideo,
-        uri: processedVideoPath, // Use processed video path
-      },
-      selectedLanguage,
-      selectedTemplateId,
-      layers, // Pass layers for rendering in preview
-      selectedProfile,
-      processedVideoPath: processedVideoPath, // Pass the processed video path
-      canvasData: {
-        width: videoCanvasWidth,
-        height: videoCanvasHeight,
-        layers: layers,
-      },
-    });
-
-    // Close the video processor modal
-    setShowVideoProcessor(false);
-  };
-
-  const handleVideoProcessingClose = () => {
-    setShowVideoProcessor(false);
+    // FFmpeg integration removed - video processing functionality disabled
   };
 
   // Render functions
@@ -2350,21 +2299,6 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
           </View>
         </View>
       </Modal>
-
-             {/* Video Processor Modal */}
-       <VideoProcessor
-         visible={showVideoProcessor}
-         onComplete={handleVideoProcessingComplete}
-         onClose={handleVideoProcessingClose}
-         layers={layers}
-         selectedVideoUri={selectedVideo}
-         selectedLanguage={selectedLanguage}
-         canvasData={{
-           width: videoCanvasWidth,
-           height: videoCanvasHeight,
-           layers: layers,
-         }}
-       />
 
       {/* Video Processing Modal - Removed, using direct generation */}
 

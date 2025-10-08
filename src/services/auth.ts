@@ -106,7 +106,13 @@ class AuthService {
         await this.saveUserToStorage(response.data.user, response.data.token);
         this.notifyAuthStateListeners(this.currentUser);
         
-        console.log('Email sign-in successful via API:', response.data.user.id);
+        console.log('✅ Email sign-in successful via API:', response.data.user.id);
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🔑 AUTH TOKEN (auth.ts):');
+        console.log('Token:', response.data.token);
+        console.log('Token Length:', response.data.token?.length || 0);
+        console.log('Token Preview:', response.data.token?.substring(0, 50) + '...');
+        console.log('═══════════════════════════════════════════════════════════');
         return { success: true, user: response.data.user };
       } else {
         throw new Error('Login failed');
@@ -144,7 +150,13 @@ class AuthService {
         await this.saveUserToStorage(response.data.user, response.data.token);
         this.notifyAuthStateListeners(this.currentUser);
         
-        console.log('Google sign-in successful via API:', response.data.user.id);
+        console.log('✅ Google sign-in successful via API:', response.data.user.id);
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🔑 GOOGLE AUTH TOKEN (auth.ts):');
+        console.log('Token:', response.data.token);
+        console.log('Token Length:', response.data.token?.length || 0);
+        console.log('Token Preview:', response.data.token?.substring(0, 50) + '...');
+        console.log('═══════════════════════════════════════════════════════════');
         return { success: true, user: response.data.user };
       } else {
         throw new Error('Google login failed');

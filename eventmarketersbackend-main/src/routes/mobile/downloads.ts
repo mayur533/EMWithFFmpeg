@@ -174,4 +174,88 @@ router.get('/user/:mobileUserId', async (req: Request, res: Response) => {
   }
 });
 
+/**
+ * GET /api/mobile/downloads
+ * Get user downloads
+ */
+router.get('/', async (req: Request, res: Response) => {
+  try {
+    const { mobileUserId, page = '1', limit = '20' } = req.query;
+    
+    if (!mobileUserId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Mobile User ID is required'
+      });
+    }
+
+    const pageNum = parseInt(page as string);
+    const limitNum = parseInt(limit as string);
+    const skip = (pageNum - 1) * limitNum;
+
+    // Get downloads from different tables
+    const [templateDownloads, videoDownloads, greetingDownloads] = await Promise.all([
+      prisma.templateDownload.findMany({
+        where: { mobileUserId: mobileUserId as string },
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          template: {
+            select: { id: true, title: true, imageUrl: true, category: true }
+          }
+        }
+      }),
+      prisma.videoDownload.findMany({
+        where: { mobileUserId: mobileUserId as string },
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          video: {
+            select: { id: true, title: true, videoUrl: true, category: true }
+          }
+        }
+      }),
+      prisma.greetingDownload.findMany({
+        where: { mobileUserId: mobileUserId as string },
+        skip,
+        take: limitNum,
+        orderBy: { createdAt: 'desc' },
+        include: {
+          greeting: {
+            select: { id: true, title: true, imageUrl: true, category: true }
+          }
+        }
+      })
+    ]);
+
+    // Combine all downloads
+    const allDownloads = [
+      ...templateDownloads.map(d => ({ ...d, type: 'TEMPLATE' })),
+      ...videoDownloads.map(d => ({ ...d, type: 'VIDEO' })),
+      ...greetingDownloads.map(d => ({ ...d, type: 'GREETING' }))
+    ].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+    res.json({
+      success: true,
+      data: {
+        downloads: allDownloads,
+        pagination: {
+          page: pageNum,
+          limit: limitNum,
+          total: allDownloads.length
+        }
+      }
+    });
+
+  } catch (error) {
+    console.error('Get downloads error:', error);
+    res.status(500).json({
+      success: false,
+      error: 'Failed to get downloads'
+    });
+  }
+});
+
 export default router;

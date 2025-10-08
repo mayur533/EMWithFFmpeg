@@ -4,12 +4,51 @@ import { PrismaClient } from '@prisma/client';
 const router = Router();
 const prisma = new PrismaClient();
 
-// Middleware to extract user ID from JWT token (placeholder for mobile users)
+// Middleware to extract user ID from JWT token
 const extractUserId = (req: Request, res: Response, next: any) => {
-  // TODO: Implement actual JWT verification for mobile users
-  // For now, we'll use a placeholder user ID
-  req.userId = 'demo-mobile-user-id';
-  next();
+  try {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+      console.log('❌ No valid authorization header found for transactions');
+      return res.status(401).json({
+        success: false,
+        error: 'Authorization token required'
+      });
+    }
+
+    const token = authHeader.substring(7);
+    
+    // Try to verify JWT token
+    try {
+      const jwt = require('jsonwebtoken');
+      const decoded = jwt.verify(token, process.env.JWT_SECRET || 'business-marketing-platform-super-secret-jwt-key-2024');
+      
+      // Extract user ID from token - check for mobile user type
+      if (decoded.userType === 'MOBILE_USER' && decoded.id) {
+        req.userId = decoded.id;
+        console.log('✅ Mobile user ID extracted from JWT for transactions:', decoded.id);
+        next();
+      } else {
+        console.log('⚠️ Invalid user type in JWT:', decoded.userType);
+        return res.status(401).json({
+          success: false,
+          error: 'Invalid user type'
+        });
+      }
+    } catch (jwtError: any) {
+      console.log('⚠️ JWT verification failed for transactions:', jwtError.message);
+      return res.status(401).json({
+        success: false,
+        error: 'Invalid authorization token'
+      });
+    }
+  } catch (error) {
+    console.log('❌ Error in extractUserId middleware:', error);
+    res.status(401).json({
+      success: false,
+      error: 'Authentication failed'
+    });
+  }
 };
 
 // Extend Request interface to include userId
@@ -37,17 +76,22 @@ router.post('/', extractUserId, async (req: Request, res: Response) => {
       description,
       paymentMethod = 'razorpay',
       paymentId,
-      metadata
+      status,
+      metadata,
+      mobileUserId: bodyMobileUserId
     } = req.body;
 
-    const mobileUserId = req.userId;
+    const mobileUserId = req.userId || bodyMobileUserId;
 
-    if (!transactionId || !amount) {
+    if (!amount) {
       return res.status(400).json({
         success: false,
-        error: 'Transaction ID and amount are required'
+        error: 'Amount is required'
       });
     }
+
+    // Generate transaction ID if not provided
+    const finalTransactionId = transactionId || `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     if (!mobileUserId) {
       return res.status(401).json({
@@ -69,14 +113,18 @@ router.post('/', extractUserId, async (req: Request, res: Response) => {
     }
 
     // Create transaction
+    // Status can be: 'success', 'failed', 'pending', 'cancelled'
+    // Convert to uppercase for database (SUCCESS, FAILED, PENDING, CANCELLED)
+    const dbStatus = status ? status.toUpperCase() : 'SUCCESS';
+    
     const transaction = await prisma.mobileTransaction.create({
       data: {
         mobileUserId,
-        transactionId,
+        transactionId: finalTransactionId,
         orderId,
         amount: parseFloat(amount),
         currency,
-        status: 'PENDING',
+        status: dbStatus,
         plan,
         planName,
         description,

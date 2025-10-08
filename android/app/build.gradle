@@ -116,7 +116,7 @@ android {
         }
     }
     
-    // Standard packaging options for React Native with ffmpeg-kit
+    // Standard packaging options for React Native
     packagingOptions {
         pickFirst '**/libc++_shared.so'
         pickFirst '**/libjsc.so'
@@ -125,9 +125,6 @@ android {
         pickFirst '**/libhermes.so'
     }
 }
-
-// Allow ffmpeg-kit-react-native-full-gpl to include its native libraries
-// No exclusions needed - let the package handle its own dependencies
 
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
@@ -145,10 +142,4 @@ dependencies {
     implementation('com.facebook.react:react-native:+') {
         exclude group: 'com.yqritc', module: 'android-scalablevideoview'
     }
-
-    // Add local FFmpeg Kit React Native module
-    // Re-enabled with proper error handling
-    implementation project(':ffmpeg-kit-react-native')
-
-
 }

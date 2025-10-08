@@ -13,6 +13,7 @@ import authRoutes from './routes/auth';
 import adminRoutes from './routes/admin';
 import contentRoutes from './routes/content';
 import mobileRoutes from './routes/mobile';
+import customerRoutes from './routes/customer';
 // import mobileAuthRoutes from './routes/mobileAuth'; // Removed - using new mobile auth routes
 import mobileContentRoutesOld from './routes/mobileContent';
 import mobileSubscriptionRoutes from './routes/mobileSubscription';
@@ -66,15 +67,24 @@ const corsOptions = {
       'http://127.0.0.1:3000',
       'http://127.0.0.1:3001',
       'https://your-frontend-domain.com',
+      'https://eventmarketers-frontend.onrender.com', // Add your frontend domain
+      'https://eventmarketers.vercel.app', // Add Vercel domain if using
+      'https://eventmarketers.netlify.app', // Add Netlify domain if using
       process.env.CORS_ORIGIN
     ].filter(Boolean); // Remove undefined values
     
-    if (allowedOrigins.includes(origin)) {
-      callback(null, true);
-    } else {
-      console.log('CORS blocked origin:', origin);
-      callback(new Error('Not allowed by CORS'));
-    }
+    // For now, allow all origins to fix CORS issues
+    // TODO: Restrict this in production with proper domain configuration
+    console.log('CORS request from origin:', origin);
+    return callback(null, true);
+    
+    // Original restrictive logic (commented out for now)
+    // if (allowedOrigins.includes(origin)) {
+    //   callback(null, true);
+    // } else {
+    //   console.log('CORS blocked origin:', origin);
+    //   callback(new Error('Not allowed by CORS'));
+    // }
   },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -101,7 +111,6 @@ app.use(cookieParser());
 
 // Apply subscription check middleware to all mobile API routes
 app.use('/api/mobile', checkSubscription);
-
 // Logging middleware
 app.use(morgan('combined'));
 
@@ -129,6 +138,7 @@ app.get('/health', (req, res) => {
 // API routes
 app.use('/api/auth', authRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/admin/customers', customerRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/mobile', mobileRoutes);
 

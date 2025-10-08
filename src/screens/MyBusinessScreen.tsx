@@ -143,6 +143,9 @@ const MyBusinessScreen: React.FC = () => {
             console.log(`     Title: ${poster.title}`);
             console.log(`     Category: ${poster.category}`);
             console.log(`     Premium: ${poster.isPremium ? 'Yes' : 'No'}`);
+            console.log(`     🖼️ THUMBNAIL: ${poster.thumbnail || '⚠️ MISSING/NULL'}`);
+            console.log(`     🖼️ IMAGE URL: ${poster.imageUrl || '⚠️ MISSING/NULL'}`);
+            console.log(`     📥 DOWNLOAD URL: ${poster.downloadUrl || '⚠️ MISSING/NULL'}`);
             console.log('     ---');
           });
           
@@ -156,6 +159,17 @@ const MyBusinessScreen: React.FC = () => {
             console.log('⚠️ VERIFICATION WARNING: Mixed categories detected!');
             console.log('   Expected:', response.data.category);
             console.log('   Found:', categoriesInResponse);
+          }
+          
+          // Check for missing image URLs
+          const postersWithMissingImages = response.data.posters.filter(p => !p.thumbnail || !p.imageUrl);
+          if (postersWithMissingImages.length > 0) {
+            console.error('🚨 IMAGE URL ISSUE DETECTED:');
+            console.error(`   ${postersWithMissingImages.length} poster(s) have missing image URLs!`);
+            console.error('   Poster IDs with missing images:', postersWithMissingImages.map(p => p.id));
+            console.error('   ⚠️ This is likely a BACKEND ISSUE - images not uploaded or URLs not set');
+          } else {
+            console.log('✅ IMAGE URL CHECK: All posters have valid image URLs');
           }
         } else {
           console.log('⚠️ No posters found for category:', response.data.category);
@@ -252,6 +266,39 @@ const MyBusinessScreen: React.FC = () => {
   };
 
   const renderPoster = useCallback(({ item }: { item: BusinessCategoryPoster }) => {
+    // Log image rendering info (only for first few to avoid spam)
+    const posterIndex = businessCategoryPosters.indexOf(item);
+    
+    // ALWAYS log the image URL for debugging
+    console.log('═══════════════════════════════════════════════════════');
+    console.log(`🖼️  IMAGE URL FOR POSTER ${posterIndex + 1}:`);
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('Poster ID:', item.id);
+    console.log('Poster Title:', item.title);
+    console.log('📍 THUMBNAIL URL:', item.thumbnail);
+    console.log('📍 IMAGE URL:', item.imageUrl);
+    console.log('📍 DOWNLOAD URL:', item.downloadUrl);
+    console.log('-----------------------------------------------------------');
+    console.log('URL Validation:');
+    console.log('  - Has thumbnail?', !!item.thumbnail);
+    console.log('  - Starts with http?', !!item.thumbnail && item.thumbnail.startsWith('http'));
+    console.log('  - Starts with https?', !!item.thumbnail && item.thumbnail.startsWith('https'));
+    console.log('  - Is valid URL?', !!item.thumbnail && item.thumbnail.startsWith('https://eventmarketersbackend'));
+    console.log('═══════════════════════════════════════════════════════');
+    
+    if (posterIndex < 3) {
+      // Additional validation for first 3 posters
+      if (!item.thumbnail) {
+        console.error('🚨 ERROR: Poster has NO thumbnail URL!');
+      } else if (!item.thumbnail.startsWith('http')) {
+        console.error('🚨 ERROR: Poster has RELATIVE path (not converted):', item.thumbnail);
+      } else if (!item.thumbnail.startsWith('https')) {
+        console.warn('⚠️  WARNING: Poster using HTTP (not HTTPS):', item.thumbnail);
+      } else {
+        console.log('✅ URL looks good!');
+      }
+    }
+    
     return (
       <TouchableOpacity
         style={[
@@ -264,7 +311,29 @@ const MyBusinessScreen: React.FC = () => {
         onPress={() => handlePosterPress(item)}
         activeOpacity={0.8}
       >
-        <Image source={{ uri: item.thumbnail }} style={styles.posterImage} />
+        <Image 
+          source={{ 
+            uri: item.thumbnail,
+            cache: 'force-cache', // Enable caching
+          }} 
+          style={styles.posterImage}
+          resizeMode="cover"
+          onError={(error) => {
+            console.error('❌ Image load error for poster:', item.id);
+            console.error('   Thumbnail URL:', item.thumbnail);
+            console.error('   Error:', error.nativeEvent?.error || 'Unknown error');
+          }}
+          onLoad={() => {
+            if (posterIndex < 3) {
+              console.log('✅ Image loaded successfully for poster:', item.id);
+            }
+          }}
+          onLoadStart={() => {
+            if (posterIndex < 3) {
+              console.log('🔄 Starting to load image for poster:', item.id);
+            }
+          }}
+        />
         <View style={styles.posterOverlay}>
           <TouchableOpacity
             style={styles.posterLikeButton}
