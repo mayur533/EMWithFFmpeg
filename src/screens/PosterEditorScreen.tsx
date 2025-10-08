@@ -717,6 +717,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   
   // Store original layers for frame removal
   const [originalLayers, setOriginalLayers] = useState<Layer[]>([]);
+  const [originalTemplate, setOriginalTemplate] = useState<string>('business');
 
   // State for templates
   const [selectedTemplate, setSelectedTemplate] = useState<string>('business');
@@ -1628,8 +1629,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const applyFrame = useCallback((frame: Frame) => {
     setApplyingFrame(true);
     
-    // Store current layers as original before applying frame
+    // Store current layers and template as original before applying frame
     setOriginalLayers([...layers]);
+    setOriginalTemplate(selectedTemplate);
     
     setSelectedFrame(frame);
     setShowFrameSelector(false);
@@ -1702,7 +1704,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     setTimeout(() => {
       setApplyingFrame(false);
     }, 500);
-  }, [selectedBusinessProfile, canvasWidth, canvasHeight, layers, layerAnimations, translationValues, scaleValues]);
+  }, [selectedBusinessProfile, canvasWidth, canvasHeight, layers, layerAnimations, translationValues, scaleValues, selectedTemplate]);
 
   // Apply font style
   const applyFontStyle = useCallback((fontFamily: string) => {
@@ -3210,10 +3212,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 onPress={() => {
                   setSelectedFrame(null);
                   setFrameContent({});
-                  // Restore original layers to their original positions
+                  // Restore original layers and template to their original state
                   if (originalLayers.length > 0) {
                     setLayers(originalLayers);
                     setOriginalLayers([]); // Clear stored original layers
+                    // Restore original template
+                    setSelectedTemplate(originalTemplate);
+                    // Re-apply the template to restore footer colors and styles
+                    applyTemplate(originalTemplate);
                   } else if (selectedBusinessProfile) {
                     // Fallback to business profile if no original layers stored
                     applyBusinessProfileToPoster(selectedBusinessProfile);
