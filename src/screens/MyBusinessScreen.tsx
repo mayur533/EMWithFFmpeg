@@ -18,6 +18,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import businessCategoryPostersApi, { BusinessCategoryPoster } from '../services/businessCategoryPostersApi';
+import ComingSoonModal from '../components/ComingSoonModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -99,6 +100,7 @@ const MyBusinessScreen: React.FC = () => {
   const [postersLoading, setPostersLoading] = useState(false);
   const [userBusinessCategory, setUserBusinessCategory] = useState<string>('General');
   const [refreshing, setRefreshing] = useState(false);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   
   // State for orientation changes
   const [screenData, setScreenData] = useState(Dimensions.get('window'));
@@ -157,22 +159,9 @@ const MyBusinessScreen: React.FC = () => {
     });
   };
 
-  const handleLikePoster = async (posterId: string) => {
-    try {
-      const result = await businessCategoryPostersApi.likePoster(posterId);
-      
-      if (result.success) {
-        setBusinessCategoryPosters(prev => 
-          prev.map(poster => 
-            poster.id === posterId 
-              ? { ...poster, likes: poster.likes + 1 }
-              : poster
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Error liking poster:', error);
-    }
+  const handleLikePoster = (posterId: string) => {
+    // Show Coming Soon modal for like feature
+    setShowComingSoonModal(true);
   };
 
   const renderPoster = useCallback(({ item }: { item: BusinessCategoryPoster }) => {
@@ -315,6 +304,14 @@ const MyBusinessScreen: React.FC = () => {
           )}
         </ScrollView>
       </LinearGradient>
+      
+      {/* Coming Soon Modal for Like Feature */}
+      <ComingSoonModal
+        visible={showComingSoonModal}
+        onClose={() => setShowComingSoonModal(false)}
+        title="Like Feature"
+        subtitle="The like feature is under development and will be available soon!"
+      />
     </SafeAreaView>
   );
 };

@@ -28,6 +28,7 @@ import templatesBannersApi from '../services/templatesBannersApi';
 import genericLikesApi from '../services/genericLikesApi';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import ComingSoonModal from '../components/ComingSoonModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -71,6 +72,7 @@ const TemplateGalleryScreen: React.FC = () => {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const [selectedPremiumTemplate, setSelectedPremiumTemplate] = useState<Template | null>(null);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   // Filter configurations
   const categoryFilters = [
@@ -183,45 +185,8 @@ const TemplateGalleryScreen: React.FC = () => {
 
   // Handle like change
   const handleLikeChange = useCallback(async (templateId: string, isLiked: boolean) => {
-    try {
-      // Update local state immediately
-      setTemplates(prevTemplates => 
-        prevTemplates.map(template => 
-          template.id === templateId 
-            ? { ...template, isLiked, likes: isLiked ? template.likes + 1 : Math.max(0, template.likes - 1) }
-            : template
-        )
-      );
-      setFilteredTemplates(prevFiltered => 
-        prevFiltered.map(template => 
-          template.id === templateId 
-            ? { ...template, isLiked, likes: isLiked ? template.likes + 1 : Math.max(0, template.likes - 1) }
-            : template
-        )
-      );
-      
-      // Call backend API
-      await genericLikesApi.toggleLike('TEMPLATE', templateId);
-      
-      console.log('✅ Template like toggled:', templateId, 'isLiked:', isLiked);
-    } catch (error) {
-      console.error('❌ Error toggling template like:', error);
-      // Revert local state on error
-      setTemplates(prevTemplates => 
-        prevTemplates.map(template => 
-          template.id === templateId 
-            ? { ...template, isLiked: !isLiked, likes: !isLiked ? template.likes + 1 : Math.max(0, template.likes - 1) }
-            : template
-        )
-      );
-      setFilteredTemplates(prevFiltered => 
-        prevFiltered.map(template => 
-          template.id === templateId 
-            ? { ...template, isLiked: !isLiked, likes: !isLiked ? template.likes + 1 : Math.max(0, template.likes - 1) }
-            : template
-        )
-      );
-    }
+    // Show Coming Soon modal for like feature
+    setShowComingSoonModal(true);
   }, []);
 
   // Render template item
@@ -618,6 +583,14 @@ const TemplateGalleryScreen: React.FC = () => {
          {/* Upgrade Modal */}
          {renderUpgradeModal()}
       </LinearGradient>
+      
+      {/* Coming Soon Modal for Like Feature */}
+      <ComingSoonModal
+        visible={showComingSoonModal}
+        onClose={() => setShowComingSoonModal(false)}
+        title="Like Feature"
+        subtitle="The like feature is under development and will be available soon!"
+      />
     </SafeAreaView>
   );
 };

@@ -89,29 +89,13 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ template, onPres
     return template.category === 'premium' ? 'star' : 'favorite';
   };
 
-  const handleLikePress = async (e: any) => {
+  const handleLikePress = (e: any) => {
     e.stopPropagation();
+    e.preventDefault();
     
-    if (isLiking) return; // Prevent multiple rapid clicks
-    
-    try {
-      setIsLiking(true);
-      
-      // Use generic likes API
-      const newLikeStatus = await genericLikesApi.toggleLike('TEMPLATE', template.id);
-      setIsLiked(newLikeStatus);
-      onLikeChange?.(template.id, newLikeStatus);
-      
-      console.log('✅ Template like toggled:', template.id, 'isLiked:', newLikeStatus);
-    } catch (error) {
-      console.error('Error toggling like:', error);
-      Alert.alert(
-        'Error',
-        'Failed to update like status. Please try again.',
-        [{ text: 'OK' }]
-      );
-    } finally {
-      setIsLiking(false);
+    // Call parent's onLikeChange which will show Coming Soon modal
+    if (onLikeChange) {
+      onLikeChange(template.id, !isLiked);
     }
   };
 
@@ -326,18 +310,14 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ template, onPres
             <TouchableOpacity
               style={styles.likeButton}
               onPress={handleLikePress}
-              disabled={isLiking}
               activeOpacity={0.7}
+              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             >
-              {isLiking ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-                <Icon 
-                  name={isLiked ? "favorite" : "favorite-border"} 
-                  size={16} 
-                  color={isLiked ? "#ff4757" : "#ffffff"} 
-                />
-              )}
+              <Icon 
+                name={isLiked ? "favorite" : "favorite-border"} 
+                size={16} 
+                color={isLiked ? "#ff4757" : "#ffffff"} 
+              />
             </TouchableOpacity>
 
             {/* Overlay Gradient */}
@@ -346,6 +326,7 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ template, onPres
               style={styles.imageOverlay}
               start={{ x: 0, y: 0 }}
               end={{ x: 0, y: 1 }}
+              pointerEvents="none"
             />
           </View>
 
@@ -468,6 +449,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     height: 50,
+    zIndex: 1,
   },
   categoryBadge: {
     position: 'absolute',
@@ -528,7 +510,8 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.3,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 10,
+    zIndex: 10,
   },
   content: {
     padding: 14,

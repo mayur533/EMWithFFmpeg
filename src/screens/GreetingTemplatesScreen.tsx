@@ -24,6 +24,7 @@ import GreetingTemplateCard, { getCardDimensions } from '../components/GreetingT
 import greetingTemplatesService, { GreetingTemplate, GreetingCategory } from '../services/greetingTemplates';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
+import ComingSoonModal from '../components/ComingSoonModal';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -65,6 +66,7 @@ const GreetingTemplatesScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const [selectedPremiumTemplate, setSelectedPremiumTemplate] = useState<GreetingTemplate | null>(null);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
   // Memoized data fetching functions
   const fetchData = useCallback(async () => {
@@ -161,22 +163,8 @@ const GreetingTemplatesScreen: React.FC = () => {
   }, [isSubscribed, navigation]);
 
   const handleLike = useCallback(async (templateId: string) => {
-    try {
-      const isLiked = await greetingTemplatesService.toggleLike(templateId);
-      
-      // Update both allTemplates and filteredTemplates
-      const updateTemplate = (template: GreetingTemplate) => 
-        template.id === templateId 
-          ? { ...template, isLiked, likes: isLiked ? template.likes + 1 : template.likes - 1 }
-          : template;
-
-      setAllTemplates(prev => prev.map(updateTemplate));
-      setFilteredTemplates(prev => prev.map(updateTemplate));
-      
-      console.log('✅ Greeting template like toggled:', templateId, 'isLiked:', isLiked);
-    } catch (error) {
-      console.error('Error toggling like:', error);
-    }
+    // Show Coming Soon modal for like feature
+    setShowComingSoonModal(true);
   }, []);
 
   const handleRefresh = useCallback(async () => {
@@ -186,42 +174,47 @@ const GreetingTemplatesScreen: React.FC = () => {
   }, [fetchData]);
 
   // Memoized render functions with optimized dependencies
-  const renderCategoryTab = useCallback(({ item }: { item: GreetingCategory }) => (
-    <TouchableOpacity
-      style={[
-        styles.categoryTab,
-        {
-          backgroundColor: selectedCategory === item.id ? item.color : theme.colors.surface,
-          borderColor: theme.colors.border,
-          paddingVertical: responsiveSpacing.sm,
-          paddingHorizontal: responsiveSpacing.md,
-          borderRadius: isTablet ? 28 : 24,
-          gap: responsiveSpacing.xs,
-          minWidth: isTablet ? (isLandscape ? 120 : 100) : 80,
-          minHeight: isTablet ? 52 : 44,
-        }
-      ]}
-      onPress={() => handleCategorySelect(item.id)}
-      activeOpacity={0.7}
-    >
-      <Icon
-        name={item.icon}
-        size={isTablet ? 24 : 20}
-        color={selectedCategory === item.id ? '#FFFFFF' : theme.colors.text}
-      />
-      <Text
+  const renderCategoryTab = useCallback(({ item }: { item: GreetingCategory }) => {
+    // Check if icon is an emoji (not a Material icon name)
+    const isEmoji = item.icon && /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(item.icon);
+    
+    return (
+      <TouchableOpacity
         style={[
-          styles.categoryTabText,
+          styles.categoryTab,
           {
-            color: selectedCategory === item.id ? '#FFFFFF' : theme.colors.text,
-            fontSize: responsiveText.caption,
+            backgroundColor: selectedCategory === item.id ? item.color : theme.colors.surface,
+            borderColor: theme.colors.border,
+            paddingVertical: responsiveSpacing.sm,
+            paddingHorizontal: responsiveSpacing.md,
+            borderRadius: isTablet ? 28 : 24,
+            gap: responsiveSpacing.xs,
+            minWidth: isTablet ? (isLandscape ? 120 : 100) : 80,
+            minHeight: isTablet ? 52 : 44,
           }
         ]}
+        onPress={() => handleCategorySelect(item.id)}
+        activeOpacity={0.7}
       >
-        {item.name}
-      </Text>
-    </TouchableOpacity>
-  ), [selectedCategory, theme.colors.surface, theme.colors.border, theme.colors.text, handleCategorySelect, responsiveSpacing, isTablet, isLandscape, responsiveText.caption]);
+        {item.icon && (
+          isEmoji ? (
+            <Text style={{ fontSize: isTablet ? 24 : 20 }}>{item.icon}</Text>
+          ) : null
+        )}
+        <Text
+          style={[
+            styles.categoryTabText,
+            {
+              color: selectedCategory === item.id ? '#FFFFFF' : theme.colors.text,
+              fontSize: responsiveText.caption,
+            }
+          ]}
+        >
+          {item.name}
+        </Text>
+      </TouchableOpacity>
+    );
+  }, [selectedCategory, theme.colors.surface, theme.colors.border, theme.colors.text, handleCategorySelect, responsiveSpacing, isTablet, isLandscape, responsiveText.caption]);
 
   // Optimized template card renderer with proper spacing
   const renderTemplateCard = useCallback(({ item, index }: { item: GreetingTemplate; index: number }) => {
@@ -564,6 +557,14 @@ const GreetingTemplatesScreen: React.FC = () => {
       
       {/* Premium Modal */}
       {renderUpgradeModal()}
+      
+      {/* Coming Soon Modal for Like Feature */}
+      <ComingSoonModal
+        visible={showComingSoonModal}
+        onClose={() => setShowComingSoonModal(false)}
+        title="Like Feature"
+        subtitle="The like feature is under development and will be available soon!"
+      />
     </SafeAreaView>
   );
 };
@@ -829,7 +830,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     textAlign: 'center',
     flexShrink: 0,
-    numberOfLines: 1,
   },
 });
 

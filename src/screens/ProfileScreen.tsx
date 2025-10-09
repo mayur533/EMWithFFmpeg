@@ -34,6 +34,7 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 type ProfileScreenNavigationProp = StackNavigationProp<MainStackParamList>;
 import downloadedPostersService from '../services/downloadedPosters';
 import ImagePickerModal from '../components/ImagePickerModal';
+import ComingSoonModal from '../components/ComingSoonModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -91,6 +92,9 @@ const ProfileScreen: React.FC = () => {
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
   const [showSignOutModal, setShowSignOutModal] = useState(false);
+  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  const [comingSoonTitle, setComingSoonTitle] = useState('');
+  const [comingSoonSubtitle, setComingSoonSubtitle] = useState('');
   const { isDarkMode, toggleDarkMode, theme } = useTheme();
   const { isSubscribed, subscriptionStatus, transactionStats, clearSubscriptionData } = useSubscription();
   const insets = useSafeAreaInsets();
@@ -314,11 +318,15 @@ const ProfileScreen: React.FC = () => {
   };
 
   const handleMyPosters = () => {
-    navigation.navigate('MyPosters' as never);
+    setComingSoonTitle('Downloaded Posters');
+    setComingSoonSubtitle('This feature is under development and will be available soon!');
+    setShowComingSoonModal(true);
   };
 
   const handleLikedItems = () => {
-    navigation.navigate('LikedItems' as never);
+    setComingSoonTitle('Liked Content');
+    setComingSoonSubtitle('This feature is under development and will be available soon!');
+    setShowComingSoonModal(true);
   };
 
 
@@ -1266,6 +1274,14 @@ const ProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </Modal>
 
+
+      {/* Coming Soon Modal */}
+      <ComingSoonModal
+        visible={showComingSoonModal}
+        onClose={() => setShowComingSoonModal(false)}
+        title={comingSoonTitle}
+        subtitle={comingSoonSubtitle}
+      />
 
       {/* Image Picker Modal */}
       <ImagePickerModal

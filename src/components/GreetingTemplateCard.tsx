@@ -95,17 +95,9 @@ const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
     }
   };
 
-  const handleLike = async () => {
-    try {
-      // Use generic likes API
-      const newLikeStatus = await genericLikesApi.toggleLike('GREETING', template.id);
-      setIsLiked(newLikeStatus);
-      onLike(template.id);
-      
-      console.log('✅ Greeting template like toggled:', template.id, 'isLiked:', newLikeStatus);
-    } catch (error) {
-      console.error('Error toggling greeting like:', error);
-    }
+  const handleLike = () => {
+    // Call parent's onLike which will show Coming Soon modal
+    onLike(template.id);
   };
 
   const handlePress = () => {
@@ -177,6 +169,7 @@ const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.7)']}
           style={styles.overlay}
+          pointerEvents="none"
         />
       </View>
 
@@ -189,6 +182,7 @@ const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
          ]}
          onPress={handleLike}
          activeOpacity={0.8}
+         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
        >
          <Icon
            name={isLiked ? 'favorite' : 'favorite-border'}
@@ -241,7 +235,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: isSmallScreen ? 4 : 6,
     paddingVertical: isSmallScreen ? 2 : 3,
     borderRadius: isSmallScreen ? 8 : 10,
-    zIndex: 1,
+    zIndex: 3,
   },
   premiumText: {
     color: '#FFD700',
@@ -267,7 +261,7 @@ const styles = StyleSheet.create({
   likeButton: {
     position: 'absolute',
     top: isSmallScreen ? 6 : 8,
-    right: isSmallScreen ? 6 : 8,
+    left: isSmallScreen ? 6 : 8,
     width: isSmallScreen ? 28 : 32,
     height: isSmallScreen ? 28 : 32,
     borderRadius: isSmallScreen ? 14 : 16,
@@ -280,7 +274,8 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.2,
     shadowRadius: 3,
-    elevation: 2,
+    elevation: 10,
+    zIndex: 10,
   },
   likeButtonBackground: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',

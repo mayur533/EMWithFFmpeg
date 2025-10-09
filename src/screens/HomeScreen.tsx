@@ -31,7 +31,6 @@ import homeApi, {
   VideoContent 
 } from '../services/homeApi';
 import genericLikesApi from '../services/genericLikesApi';
-import businessCategoryPostersApi, { BusinessCategoryPoster } from '../services/businessCategoryPostersApi';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 import userLikesService from '../services/userLikes';
@@ -85,11 +84,6 @@ const HomeScreen: React.FC = React.memo(() => {
   const [videoContent, setVideoContent] = useState<VideoContent[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-
-  // Business category posters states
-  const [businessCategoryPosters, setBusinessCategoryPosters] = useState<BusinessCategoryPoster[]>([]);
-  const [postersLoading, setPostersLoading] = useState(false);
-  const [userBusinessCategory, setUserBusinessCategory] = useState<string>('General');
   
   // Coming Soon Modal state
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
@@ -373,34 +367,6 @@ const HomeScreen: React.FC = React.memo(() => {
     loadApiData();
   }, [loadApiData]);
 
-  // Load business category posters
-  const loadBusinessCategoryPosters = useCallback(async () => {
-    setPostersLoading(true);
-    try {
-      console.log('🎯 Loading business category posters...');
-      const response = await businessCategoryPostersApi.getUserCategoryPosters();
-      
-      if (response.success) {
-        setBusinessCategoryPosters(response.data.posters);
-        setUserBusinessCategory(response.data.category);
-        console.log('✅ Business category posters loaded:', response.data.posters.length, 'posters for category:', response.data.category);
-      } else {
-        console.log('⚠️ Failed to load business category posters');
-        setBusinessCategoryPosters([]);
-      }
-    } catch (error) {
-      console.error('❌ Error loading business category posters:', error);
-      setBusinessCategoryPosters([]);
-    } finally {
-      setPostersLoading(false);
-    }
-  }, []);
-
-  // Load business category posters on component mount
-  useEffect(() => {
-    loadBusinessCategoryPosters();
-  }, [loadBusinessCategoryPosters]);
-
   // Handle search query changes - using API data only
   useEffect(() => {
     const handleSearchQueryChange = async () => {
@@ -467,73 +433,19 @@ const HomeScreen: React.FC = React.memo(() => {
   }, []);
 
   const handleLikeTemplate = useCallback(async (templateId: string) => {
-    try {
-      const currentUser = authService.getCurrentUser();
-      const userId = currentUser?.id;
-      
-      // Toggle like in user-specific service
-      const success = await userLikesService.toggleLike(templateId, 'template', userId);
-      
-      if (success) {
-        // Update local state immediately for better UX
-        setTemplates(prev => prev.map(template => 
-          template.id === templateId 
-            ? { ...template, isLiked: !template.isLiked, likes: template.isLiked ? template.likes - 1 : template.likes + 1 }
-            : template
-        ));
-        
-        console.log('✅ Template like toggled for user:', userId);
-      }
-    } catch (error) {
-      console.error('❌ Error toggling template like:', error);
-    }
+    // Show Coming Soon modal for like feature
+    setShowComingSoonModal(true);
   }, []);
 
   // New API-based like handlers
   const handleLikeProfessionalTemplate = useCallback(async (templateId: string) => {
-    // Update local state immediately
-    setProfessionalTemplates(prev => prev.map(template => 
-      template.id === templateId 
-        ? { ...template, isLiked: !template.isLiked, likes: template.isLiked ? template.likes - 1 : template.likes + 1 }
-        : template
-    ));
-    
-    // Try API call
-    try {
-      await genericLikesApi.toggleLike('TEMPLATE', templateId);
-      console.log('✅ Template liked successfully');
-    } catch (error) {
-      console.error('❌ Error liking template:', error);
-      // Revert local state on error
-      setProfessionalTemplates(prev => prev.map(template => 
-        template.id === templateId 
-          ? { ...template, isLiked: !template.isLiked, likes: template.isLiked ? template.likes + 1 : template.likes - 1 }
-          : template
-      ));
-    }
+    // Show Coming Soon modal for like feature
+    setShowComingSoonModal(true);
   }, []);
 
   const handleLikeVideoContent = useCallback(async (videoId: string) => {
-    // Update local state immediately
-    setVideoContent(prev => prev.map(video => 
-      video.id === videoId 
-        ? { ...video, isLiked: !video.isLiked, likes: video.isLiked ? video.likes - 1 : video.likes + 1 }
-        : video
-    ));
-    
-    // Try API call
-    try {
-      await genericLikesApi.toggleLike('VIDEO', videoId);
-      console.log('✅ Video liked successfully');
-    } catch (error) {
-      console.error('❌ Error liking video:', error);
-      // Revert local state on error
-      setVideoContent(prev => prev.map(video => 
-        video.id === videoId 
-          ? { ...video, isLiked: !video.isLiked, likes: video.isLiked ? video.likes + 1 : video.likes - 1 }
-          : video
-      ));
-    }
+    // Show Coming Soon modal for like feature
+    setShowComingSoonModal(true);
   }, []);
 
   const handleDownloadTemplate = useCallback(async (templateId: string) => {
@@ -874,99 +786,6 @@ const HomeScreen: React.FC = React.memo(() => {
     );
   }, [handleLikeTemplate, handleTemplatePress, theme]);
 
-  const renderBusinessCategoryPoster = useCallback(({ item }: { item: BusinessCategoryPoster }) => {
-    const scaleAnim = new Animated.Value(1);
-
-    const handlePressIn = () => {
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const handlePressOut = () => {
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const handleCardPress = () => {
-      // Navigate to poster editor with the selected poster
-      navigation.navigate('PosterEditor', {
-        selectedImage: {
-          uri: item.thumbnail,
-          title: item.title,
-          description: item.description
-        },
-        selectedLanguage: 'en',
-        selectedTemplateId: item.id,
-      });
-    };
-
-    const handleLikePoster = async (posterId: string) => {
-      try {
-        const result = await businessCategoryPostersApi.likePoster(posterId);
-        if (result.success) {
-          // Update local state to reflect the like
-          setBusinessCategoryPosters(prev => 
-            prev.map(poster => 
-              poster.id === posterId 
-                ? { ...poster, likes: poster.likes + 1 }
-                : poster
-            )
-          );
-        }
-      } catch (error) {
-        console.error('Error liking poster:', error);
-      }
-    };
-
-
-    return (
-      <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={handleCardPress}
-        style={styles.templateCardWrapper}
-      >
-        <Animated.View 
-          style={[
-            styles.templateCard, 
-            { 
-              backgroundColor: theme.colors.cardBackground,
-              transform: [{ scale: scaleAnim }],
-            }
-          ]}
-        >
-          <View style={styles.templateImageContainer}>
-            <Image source={{ uri: item.thumbnail }} style={styles.templateImage} />
-            <View style={styles.templateActions}>
-              <TouchableOpacity
-                style={[
-                  styles.actionButton, 
-                  { backgroundColor: 'rgba(255, 255, 255, 0.9)' }
-                ]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleLikePoster(item.id);
-                }}
-              >
-                <Icon 
-                  name="favorite-border" 
-                  size={16} 
-                  color="#E74C3C" 
-                />
-              </TouchableOpacity>
-            </View>
-          </View>
-        </Animated.View>
-      </TouchableOpacity>
-    );
-  }, [navigation, theme]);
 
   const renderVideoTemplate = useCallback(({ item }: { item: VideoContent }) => {
     const scaleAnim = new Animated.Value(1);
@@ -1288,39 +1107,6 @@ const HomeScreen: React.FC = React.memo(() => {
               contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
             />
           </View>
-
-          {/* Business Category Posters Section */}
-          {businessCategoryPosters.length > 0 && (
-            <View style={styles.templatesSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={styles.sectionTitle}>
-                  {userBusinessCategory} Posters
-                </Text>
-                {postersLoading && (
-                  <ActivityIndicator 
-                    size="small" 
-                    color={theme.colors.primary} 
-                    style={styles.sectionLoadingIndicator}
-                  />
-                )}
-              </View>
-              <FlatList
-                key={`business-posters-${businessCategoryPosters.length}`}
-                data={businessCategoryPosters}
-                renderItem={renderBusinessCategoryPoster}
-                keyExtractor={(item) => item.id}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                nestedScrollEnabled={true}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={6}
-                windowSize={10}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
-              />
-            </View>
-          )}
 
           {/* Video Section */}
           <View style={styles.videoSection}>
