@@ -9,13 +9,27 @@
 
 # Add any project specific keep options here:
 
-# FFmpeg Kit ProGuard rules
--keep class com.arthenica.ffmpegkit.** { *; }
+# FFmpeg Kit ProGuard rules - Keep only public API
+-keep public class com.arthenica.ffmpegkit.FFmpegKit { *; }
+-keep public class com.arthenica.ffmpegkit.FFmpegSession { *; }
+-keep public class com.arthenica.ffmpegkit.FFprobeKit { *; }
+-keep public class com.arthenica.ffmpegkit.ReturnCode { *; }
+-keep public class com.arthenica.ffmpegkit.Statistics { *; }
 -dontwarn com.arthenica.ffmpegkit.**
 
-# React Native ProGuard rules
--keep class com.facebook.react.** { *; }
--keep class com.facebook.hermes.** { *; }
+# React Native ProGuard rules - Keep only essential classes
+-keep,allowobfuscation @interface com.facebook.proguard.annotations.DoNotStrip
+-keep,allowobfuscation @interface com.facebook.proguard.annotations.KeepGettersAndSetters
+-keep @com.facebook.proguard.annotations.DoNotStrip class *
+-keepclassmembers class * {
+    @com.facebook.proguard.annotations.DoNotStrip *;
+}
+
+# Keep React Native bridge classes
+-keep public class com.facebook.react.bridge.** { public *; }
+-keep public class com.facebook.react.uimanager.** { public *; }
+-keep public class com.facebook.react.turbomodule.** { public *; }
+-keep class com.facebook.hermes.unicode.** { *; }
 -keep class com.facebook.jni.** { *; }
 
 # Keep native methods
@@ -28,9 +42,12 @@
     @android.webkit.JavascriptInterface <methods>;
 }
 
-# Firebase rules
--keep class com.google.firebase.** { *; }
--keep class com.google.android.gms.** { *; }
+# Firebase rules - Keep only what's needed
+-keep class com.google.firebase.messaging.FirebaseMessaging { *; }
+-keep class com.google.firebase.analytics.FirebaseAnalytics { *; }
+-keep class com.google.firebase.auth.FirebaseAuth { *; }
+-keep class com.google.firebase.firestore.FirebaseFirestore { *; }
+-keep class com.google.firebase.storage.FirebaseStorage { *; }
 -dontwarn com.google.firebase.**
 -dontwarn com.google.android.gms.**
 
@@ -39,18 +56,20 @@
 -dontwarn io.invertase.firebase.**
 
 # React Native Google Sign In
--keep class com.reactnativegooglesignin.** { *; }
+-keep class com.reactnativegooglesignin.RNGoogleSigninModule { *; }
+-keep class com.reactnativegooglesignin.RNGoogleSigninPackage { *; }
 -dontwarn com.reactnativegooglesignin.**
 
 # React Native Vector Icons
--keep class com.oblador.vectoricons.** { *; }
+-keep class com.oblador.vectoricons.VectorIconsModule { *; }
+-keep class com.oblador.vectoricons.VectorIconsPackage { *; }
 
 # React Native Image Picker
--keep class com.imagepicker.** { *; }
--keep class com.reactnative.ivpusic.imagepicker.** { *; }
+-keep class com.imagepicker.ImagePickerModule { *; }
+-keep class com.reactnative.ivpusic.imagepicker.PickerModule { *; }
 
 # React Native Video
--keep class com.brentvatne.** { *; }
+-keep class com.brentvatne.react.ReactVideoPackage { *; }
 -dontwarn com.brentvatne.**
 
 # Razorpay
@@ -60,17 +79,17 @@
 # OkHttp (used by many libraries)
 -dontwarn okhttp3.**
 -dontwarn okio.**
--keep class okhttp3.** { *; }
--keep interface okhttp3.** { *; }
+-keep class okhttp3.internal.publicsuffix.PublicSuffixDatabase
 
 # Gson (if used)
--keep class com.google.gson.** { *; }
--keepclassmembers class * {
+-keepclassmembers,allowobfuscation class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }
 
-# Keep all model classes
--keep class com.eventmarketers.** { *; }
+# Keep model classes but allow field obfuscation
+-keepclassmembers class com.eventmarketers.** {
+    public <init>(...);
+}
 
 # Hermes
 -keep class com.facebook.hermes.unicode.** { *; }
