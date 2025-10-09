@@ -20,23 +20,35 @@ class BusinessCategoriesService {
   // Get all business categories
   async getBusinessCategories(): Promise<BusinessCategoriesResponse> {
     try {
-      console.log('Fetching business categories from EventMarketers API...');
+      console.log('📡 [CATEGORY API] Calling: /api/mobile/business-categories');
       const response = await api.get('/api/mobile/business-categories');
-      console.log('✅ Business categories loaded:', response.data.categories?.length || 0, 'categories');
+      
+      console.log('✅ [CATEGORY API] Response received');
+      console.log('📊 [CATEGORY API] Full Response:', JSON.stringify(response.data, null, 2));
+      console.log('📊 [CATEGORY API] Success:', response.data.success);
+      console.log('📊 [CATEGORY API] Categories count:', response.data.categories?.length || 0);
+      
+      if (response.data.categories && response.data.categories.length > 0) {
+        console.log('📊 [CATEGORY API] First category:', JSON.stringify(response.data.categories[0], null, 2));
+        console.log('📊 [CATEGORY API] All category names:', response.data.categories.map((cat: BusinessCategory) => cat.name));
+      }
       
       // Cache the categories
       if (response.data.success && response.data.categories) {
         this.categoriesCache = response.data.categories;
         this.cacheTimestamp = Date.now();
+        console.log('💾 [CATEGORY API] Categories cached successfully');
       }
       
       return response.data;
     } catch (error) {
-      console.error('❌ Failed to fetch business categories:', error);
+      console.error('❌ [CATEGORY API] Error:', error);
+      console.error('❌ [CATEGORY API] Error details:', JSON.stringify(error, null, 2));
       
       // Return cached data if available
       if (this.categoriesCache && (Date.now() - this.cacheTimestamp) < this.CACHE_DURATION) {
-        console.log('⚠️ Using cached business categories due to API error');
+        console.log('⚠️ [CATEGORY API] Using cached business categories due to API error');
+        console.log('💾 [CATEGORY API] Cached categories count:', this.categoriesCache.length);
         return {
           success: true,
           categories: this.categoriesCache
@@ -44,7 +56,7 @@ class BusinessCategoriesService {
       }
       
       // Return mock data as fallback
-      console.log('⚠️ Using mock business categories due to API error');
+      console.log('⚠️ [CATEGORY API] Using mock business categories due to API error');
       return this.getMockCategories();
     }
   }
@@ -52,19 +64,24 @@ class BusinessCategoriesService {
   // Get categories using alias endpoint
   async getCategories(): Promise<BusinessCategoriesResponse> {
     try {
-      console.log('Fetching categories from alias endpoint...');
+      console.log('📡 [CATEGORY API ALIAS] Calling: /api/v1/categories');
       const response = await api.get('/api/v1/categories');
-      console.log('✅ Categories loaded from alias endpoint:', response.data.categories?.length || 0, 'categories');
+      
+      console.log('✅ [CATEGORY API ALIAS] Response received');
+      console.log('📊 [CATEGORY API ALIAS] Full Response:', JSON.stringify(response.data, null, 2));
+      console.log('📊 [CATEGORY API ALIAS] Categories count:', response.data.categories?.length || 0);
       
       // Cache the categories
       if (response.data.success && response.data.categories) {
         this.categoriesCache = response.data.categories;
         this.cacheTimestamp = Date.now();
+        console.log('💾 [CATEGORY API ALIAS] Categories cached successfully');
       }
       
       return response.data;
     } catch (error) {
-      console.error('❌ Failed to fetch categories from alias endpoint:', error);
+      console.error('❌ [CATEGORY API ALIAS] Error:', error);
+      console.log('🔄 [CATEGORY API ALIAS] Falling back to main endpoint');
       
       // Fallback to main endpoint
       return this.getBusinessCategories();

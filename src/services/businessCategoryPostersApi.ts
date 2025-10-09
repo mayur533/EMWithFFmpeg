@@ -42,9 +42,19 @@ class BusinessCategoryPostersApiService {
       // Check cache first
       if (this.postersCache.has(cacheKey)) {
         const cached = this.postersCache.get(cacheKey)!;
-        if ((now - cached.timestamp) < this.CACHE_DURATION) {
-          console.log('✅ Using cached posters for category:', category);
-          console.log('   Cached posters already have absolute URLs');
+        const cacheAge = now - cached.timestamp;
+        console.log('💾 [CACHE CHECK] Cache exists for:', category);
+        console.log('💾 [CACHE CHECK] Cache age (ms):', cacheAge);
+        console.log('💾 [CACHE CHECK] Cache duration (ms):', this.CACHE_DURATION);
+        console.log('💾 [CACHE CHECK] Is valid:', cacheAge < this.CACHE_DURATION);
+        console.log('💾 [CACHE CHECK] Cached posters count:', cached.data.length);
+        
+        if (cacheAge < this.CACHE_DURATION) {
+          console.log('✅ [CACHE HIT] Returning cached posters');
+          if (cached.data.length > 0) {
+            console.log('📸 [CACHE] First cached poster thumbnail:', cached.data[0]?.thumbnail);
+            console.log('📸 [CACHE] First cached poster full:', JSON.stringify(cached.data[0], null, 2));
+          }
           return {
             success: true,
             data: {
@@ -54,32 +64,66 @@ class BusinessCategoryPostersApiService {
             },
             message: 'Posters fetched from cache'
           };
+        } else {
+          console.log('⏰ [CACHE EXPIRED] Cache too old, fetching fresh data');
         }
+      } else {
+        console.log('❌ [CACHE MISS] No cache for category:', category);
       }
 
-      console.log('🔍 Fetching posters for business category:', category);
+      console.log('📡 [CATEGORY POSTERS API] Calling: /api/mobile/posters/category/' + category);
       const response = await api.get(`/api/mobile/posters/category/${encodeURIComponent(category)}`);
+      
+      console.log('✅ [CATEGORY POSTERS API] Response received');
+      console.log('📊 [CATEGORY POSTERS API] Full Response:', JSON.stringify(response.data, null, 2));
+      console.log('📊 [CATEGORY POSTERS API] Success:', response.data.success);
+      console.log('📊 [CATEGORY POSTERS API] Category:', category);
       
       if (response.data.success) {
         const posters = response.data.data.posters;
+        console.log('📊 [CATEGORY POSTERS API] Posters count:', posters.length);
         
-        // TEMPORARY FIX: Convert relative paths to absolute URLs
+        if (posters.length > 0) {
+          console.log('📊 [CATEGORY POSTERS API] First poster:', JSON.stringify(posters[0], null, 2));
+        }
+        
+        // Convert backend response to frontend format and fix URLs
         const baseUrl = 'https://eventmarketersbackend.onrender.com';
-        const postersWithAbsoluteUrls = posters.map((poster: BusinessCategoryPoster) => ({
-          ...poster,
-          thumbnail: poster.thumbnail && !poster.thumbnail.startsWith('http') 
-            ? `${baseUrl}${poster.thumbnail}` 
-            : poster.thumbnail,
-          imageUrl: poster.imageUrl && !poster.imageUrl.startsWith('http')
-            ? `${baseUrl}${poster.imageUrl}`
-            : poster.imageUrl,
-          downloadUrl: poster.downloadUrl && !poster.downloadUrl.startsWith('http')
-            ? `${baseUrl}${poster.downloadUrl}`
-            : poster.downloadUrl,
-        }));
+        const postersWithAbsoluteUrls = posters.map((poster: any) => {
+          // Backend returns 'thumbnailUrl', frontend expects 'thumbnail'
+          const thumbnailUrl = poster.thumbnailUrl || poster.thumbnail;
+          const imageUrl = poster.imageUrl;
+          const downloadUrl = poster.downloadUrl;
+          
+          return {
+            id: poster.id,
+            title: poster.title,
+            description: poster.description,
+            category: poster.category,
+            thumbnail: thumbnailUrl && !thumbnailUrl.startsWith('http') 
+              ? `${baseUrl}${thumbnailUrl}` 
+              : thumbnailUrl,
+            imageUrl: imageUrl && !imageUrl.startsWith('http')
+              ? `${baseUrl}${imageUrl}`
+              : imageUrl,
+            downloadUrl: downloadUrl && !downloadUrl.startsWith('http')
+              ? `${baseUrl}${downloadUrl}`
+              : downloadUrl,
+            likes: poster.likes || 0,
+            downloads: poster.downloads || 0,
+            isPremium: poster.isPremium || false,
+            tags: poster.tags || [],
+            createdAt: poster.createdAt,
+            updatedAt: poster.updatedAt || poster.createdAt,
+          } as BusinessCategoryPoster;
+        });
         
-        console.log('🔧 Converted relative paths to absolute URLs');
-        console.log('   Example URL:', postersWithAbsoluteUrls[0]?.thumbnail || 'No posters');
+        console.log('🔧 [CATEGORY POSTERS API] Converted relative paths to absolute URLs');
+        if (postersWithAbsoluteUrls.length > 0) {
+          console.log('📸 [CATEGORY POSTERS API] First converted poster:', JSON.stringify(postersWithAbsoluteUrls[0], null, 2));
+          console.log('📸 [CATEGORY POSTERS API] Thumbnail URL:', postersWithAbsoluteUrls[0]?.thumbnail);
+          console.log('📸 [CATEGORY POSTERS API] Image URL:', postersWithAbsoluteUrls[0]?.imageUrl);
+        }
         
         // Cache the results with absolute URLs
         this.postersCache.set(cacheKey, {
@@ -87,7 +131,7 @@ class BusinessCategoryPostersApiService {
           timestamp: now
         });
         
-        console.log('✅ Fetched posters for category:', category, 'Count:', postersWithAbsoluteUrls.length);
+        console.log('✅ [CATEGORY POSTERS API] Posters fetched and cached:', postersWithAbsoluteUrls.length);
         return {
           ...response.data,
           data: {
@@ -99,7 +143,8 @@ class BusinessCategoryPostersApiService {
         throw new Error(response.data.error || 'Failed to fetch posters');
       }
     } catch (error: any) {
-      console.error('❌ Error fetching posters by category:', error);
+      console.error('❌ [CATEGORY POSTERS API] Error:', error);
+      console.error('❌ [CATEGORY POSTERS API] Error details:', JSON.stringify(error, null, 2));
       
       // Return empty data when API fails
       return {
@@ -119,24 +164,31 @@ class BusinessCategoryPostersApiService {
    */
   async getUserCategoryPosters(): Promise<BusinessCategoryPostersResponse> {
     try {
+      console.log('🎯 [getUserCategoryPosters] Starting...');
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
       
+      console.log('🎯 [getUserCategoryPosters] User ID:', userId);
+      
       if (!userId) {
-        console.log('⚠️ No user ID available, returning general posters');
+        console.log('🎯 [getUserCategoryPosters] No user ID, using General category');
         return this.getPostersByCategory('General');
       }
 
       // Get user's business profiles to determine category
+      console.log('🎯 [getUserCategoryPosters] Fetching business profiles...');
       const businessProfileService = (await import('./businessProfile')).default;
       const userProfiles = await businessProfileService.getUserBusinessProfiles(userId);
       
+      console.log('🎯 [getUserCategoryPosters] Profiles found:', userProfiles.length);
+      
       if (userProfiles.length > 0) {
         const primaryCategory = userProfiles[0].category;
-        console.log('🎯 User business category:', primaryCategory);
+        console.log('🎯 [getUserCategoryPosters] Primary category:', primaryCategory);
+        console.log('🎯 [getUserCategoryPosters] Calling getPostersByCategory...');
         return this.getPostersByCategory(primaryCategory);
       } else {
-        console.log('⚠️ No business profiles found, returning general posters');
+        console.log('🎯 [getUserCategoryPosters] No profiles, using General category');
         return this.getPostersByCategory('General');
       }
     } catch (error) {

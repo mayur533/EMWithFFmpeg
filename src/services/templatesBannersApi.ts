@@ -128,6 +128,28 @@ export interface ShareRequest {
 
 // Templates and Banners API service
 class TemplatesBannersApiService {
+  private readonly BASE_URL = 'https://eventmarketersbackend.onrender.com';
+
+  /**
+   * Convert relative image URLs to absolute URLs
+   */
+  private convertToAbsoluteUrl(url: string | undefined | null): string | undefined {
+    if (!url) {
+      return undefined;
+    }
+    
+    // Already absolute URL
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Handle URLs that don't start with /
+    const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
+    const absoluteUrl = `${this.BASE_URL}${normalizedUrl}`;
+    
+    return absoluteUrl;
+  }
+
   // Get templates
   async getTemplates(filters?: TemplateFilters): Promise<TemplatesResponse> {
     try {
@@ -139,25 +161,61 @@ class TemplatesBannersApiService {
       if (filters?.page) params.append('page', filters.page.toString());
       if (filters?.limit) params.append('limit', filters.limit.toString());
 
+      console.log('📡 [TEMPLATES API] Calling: /api/mobile/templates?' + params.toString());
       const response = await api.get(`/api/mobile/templates?${params.toString()}`);
       
+      console.log('✅ [TEMPLATES API] Response received');
+      console.log('📊 [TEMPLATES API] Full Response:', JSON.stringify(response.data, null, 2));
+      console.log('📊 [TEMPLATES API] Success:', response.data.success);
+      
       if (response.data.success) {
-        // Map backend response to frontend format
-        const mappedTemplates = response.data.data.templates.map((backendTemplate: any) => ({
-          id: backendTemplate.id,
-          name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
-          description: backendTemplate.description || '',
-          thumbnail: backendTemplate.imageUrl,
-          imageUrl: backendTemplate.imageUrl,
-          category: backendTemplate.isPremium ? 'premium' : 'free', // Map isPremium to category
-          type: backendTemplate.type,
-          language: backendTemplate.language,
-          tags: backendTemplate.tags ? JSON.parse(backendTemplate.tags) : [],
-          likes: backendTemplate.likes || 0,
-          downloads: backendTemplate.downloads || 0,
-          isLiked: false, // This would need to be determined by checking user likes
-          createdAt: backendTemplate.createdAt,
-        }));
+        console.log('📊 [TEMPLATES API] Templates count:', response.data.data.templates.length);
+        
+        if (response.data.data.templates.length > 0) {
+          console.log('📊 [TEMPLATES API] First template (raw):', JSON.stringify(response.data.data.templates[0], null, 2));
+        }
+        
+        // Map backend response to frontend format and convert URLs
+        const mappedTemplates = response.data.data.templates.map((backendTemplate: any) => {
+          const originalUrl = backendTemplate.imageUrl;
+          const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
+          
+          console.log(`📸 [TEMPLATES API] ${backendTemplate.title}:`, originalUrl, '→', absoluteUrl);
+          
+          // Handle tags - backend returns array, not string
+          let tags: string[] = [];
+          if (Array.isArray(backendTemplate.tags)) {
+            tags = backendTemplate.tags;
+          } else if (typeof backendTemplate.tags === 'string') {
+            try {
+              tags = JSON.parse(backendTemplate.tags);
+            } catch (e) {
+              console.warn('Failed to parse tags for template:', backendTemplate.title);
+              tags = [];
+            }
+          }
+          
+          return {
+            id: backendTemplate.id,
+            name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
+            description: backendTemplate.description || '',
+            thumbnail: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
+            imageUrl: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400&fit=crop',
+            category: (backendTemplate.isPremium ? 'premium' : 'free') as 'free' | 'premium',
+            type: backendTemplate.type || 'daily',
+            language: backendTemplate.language || 'English',
+            tags: tags,
+            likes: backendTemplate.likes || 0,
+            downloads: backendTemplate.downloads || 0,
+            isLiked: false, // This would need to be determined by checking user likes
+            createdAt: backendTemplate.createdAt,
+          };
+        });
+
+        console.log('✅ [TEMPLATES API] Mapped templates count:', mappedTemplates.length);
+        if (mappedTemplates.length > 0) {
+          console.log('📊 [TEMPLATES API] First mapped template:', JSON.stringify(mappedTemplates[0], null, 2));
+        }
 
         return {
           success: true,
@@ -173,7 +231,9 @@ class TemplatesBannersApiService {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
-      console.log('Using mock templates due to API error:', error);
+      console.error('❌ [TEMPLATES API] Error:', error);
+      console.error('❌ [TEMPLATES API] Error details:', JSON.stringify(error, null, 2));
+      console.log('⚠️ [TEMPLATES API] Using mock templates due to API error');
       return this.getMockTemplates(filters);
     }
   }
@@ -181,25 +241,49 @@ class TemplatesBannersApiService {
   // Get template by ID
   async getTemplateById(id: string): Promise<TemplateResponse> {
     try {
+      console.log('📡 [TEMPLATE BY ID API] Calling: /api/mobile/templates/' + id);
       const response = await api.get(`/api/mobile/templates/${id}`);
+      
+      console.log('✅ [TEMPLATE BY ID API] Response received');
+      console.log('📊 [TEMPLATE BY ID API] Full Response:', JSON.stringify(response.data, null, 2));
       
       if (response.data.success) {
         const backendTemplate = response.data.data;
-        const mappedTemplate = {
+        const originalUrl = backendTemplate.imageUrl;
+        const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
+        
+        console.log(`📸 [TEMPLATE BY ID API] ${backendTemplate.title}:`, originalUrl, '→', absoluteUrl);
+        
+        // Handle tags - backend returns array, not string
+        let tags: string[] = [];
+        if (Array.isArray(backendTemplate.tags)) {
+          tags = backendTemplate.tags;
+        } else if (typeof backendTemplate.tags === 'string') {
+          try {
+            tags = JSON.parse(backendTemplate.tags);
+          } catch (e) {
+            console.warn('Failed to parse tags for template:', backendTemplate.title);
+            tags = [];
+          }
+        }
+        
+        const mappedTemplate: Template = {
           id: backendTemplate.id,
           name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
           description: backendTemplate.description || '',
-          thumbnail: backendTemplate.imageUrl,
-          imageUrl: backendTemplate.imageUrl,
-          category: backendTemplate.isPremium ? 'premium' : 'free', // Map isPremium to category
-          type: backendTemplate.type,
-          language: backendTemplate.language,
-          tags: backendTemplate.tags ? JSON.parse(backendTemplate.tags) : [],
+          thumbnail: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
+          imageUrl: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400&fit=crop',
+          category: (backendTemplate.isPremium ? 'premium' : 'free') as 'free' | 'premium',
+          type: backendTemplate.type || 'daily',
+          language: backendTemplate.language || 'English',
+          tags: tags,
           likes: backendTemplate.likes || 0,
           downloads: backendTemplate.downloads || 0,
           isLiked: false, // This would need to be determined by checking user likes
           createdAt: backendTemplate.createdAt,
         };
+
+        console.log('✅ [TEMPLATE BY ID API] Mapped template:', JSON.stringify(mappedTemplate, null, 2));
 
         return {
           success: true,
@@ -210,7 +294,8 @@ class TemplatesBannersApiService {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
-      console.log('Using mock template details due to API error:', error);
+      console.error('❌ [TEMPLATE BY ID API] Error:', error);
+      console.log('⚠️ [TEMPLATE BY ID API] Using mock template details due to API error');
       return this.getMockTemplateById(id);
     }
   }

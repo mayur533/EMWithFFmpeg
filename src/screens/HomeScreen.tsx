@@ -23,7 +23,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
-import dashboardService, { Banner, Template, Category } from '../services/dashboard';
+import dashboardService, { Banner, Template } from '../services/dashboard';
 import homeApi, { 
   FeaturedContent, 
   UpcomingEvent, 
@@ -67,7 +67,6 @@ const HomeScreen: React.FC = React.memo(() => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [banners, setBanners] = useState<Banner[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [categories, setCategories] = useState<Category[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
@@ -302,19 +301,27 @@ const HomeScreen: React.FC = React.memo(() => {
 
       // Handle featured content
       if (featuredResponse.status === 'fulfilled' && featuredResponse.value.success) {
-        setFeaturedContent(featuredResponse.value.data);
-        console.log('✅ Featured content loaded:', featuredResponse.value.data.length, 'items');
+        const featured = featuredResponse.value.data;
+        setFeaturedContent(featured);
+        
+        // Convert featured content to banners format
+        const convertedBanners: Banner[] = featured.map(item => ({
+          id: item.id,
+          title: item.title,
+          imageUrl: item.imageUrl,
+          link: item.link,
+        }));
+        setBanners(convertedBanners);
       } else {
-        console.log('⚠️ Featured content API failed');
         setFeaturedContent([]);
+        setBanners([]);
       }
 
       // Handle upcoming events
       if (eventsResponse.status === 'fulfilled' && eventsResponse.value.success) {
-        setUpcomingEvents(eventsResponse.value.data);
-        console.log('✅ Upcoming events loaded:', eventsResponse.value.data.length, 'items');
+        const events = eventsResponse.value.data;
+        setUpcomingEvents(events);
       } else {
-        console.log('⚠️ Upcoming events API failed');
         setUpcomingEvents([]);
       }
 
@@ -761,7 +768,10 @@ const HomeScreen: React.FC = React.memo(() => {
         }}
       >
                  <View style={styles.bannerContainer}>
-           <Image source={{ uri: item.imageUrl }} style={styles.bannerImage} />
+           <Image 
+             source={{ uri: item.imageUrl }} 
+             style={styles.bannerImage}
+           />
            <LinearGradient
              colors={['transparent', 'rgba(0,0,0,0.7)']}
              style={styles.bannerOverlay}
@@ -797,32 +807,6 @@ const HomeScreen: React.FC = React.memo(() => {
   }, [theme, navigation, professionalTemplates]);
 
                                        
-
-  const renderCategory = useCallback(({ item }: { item: Category }) => {
-    return (
-      <TouchableOpacity
-        activeOpacity={0.8}
-        onPress={() => handleCategorySelect(item.id)}
-        style={styles.categoryChipWrapper}
-      >
-                 <View
-           style={[
-             styles.categoryChip,
-             { 
-               backgroundColor: selectedCategory === item.id ? theme.colors.cardBackground : 'rgba(255,255,255,0.2)',
-             }
-           ]}
-         >
-           <Text style={[
-             styles.categoryChipText,
-             { color: selectedCategory === item.id ? theme.colors.primary : '#ffffff' }
-           ]}>
-             {item.name}
-           </Text>
-         </View>
-       </TouchableOpacity>
-     );
-   }, [selectedCategory, handleCategorySelect, theme]);
 
   const renderTemplate = useCallback(({ item }: { item: Template }) => {
     const scaleAnim = new Animated.Value(1);
@@ -1256,7 +1240,17 @@ const HomeScreen: React.FC = React.memo(() => {
                     }}
                   >
                     <View style={styles.upcomingEventImageContainer}>
-                      <Image source={{ uri: event.imageUrl }} style={styles.upcomingEventImage} />
+                      <Image 
+                        source={{ uri: event.imageUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop' }} 
+                        style={styles.upcomingEventImage}
+                        defaultSource={require('../assets/MainLogo/MB.png')}
+                        onError={(error) => {
+                          console.log('Event image load error:', event.id, event.imageUrl);
+                        }}
+                        onLoad={() => {
+                          console.log('Event image loaded successfully:', event.id);
+                        }}
+                      />
                       <LinearGradient
                         colors={['transparent', 'rgba(0,0,0,0.7)']}
                         style={styles.upcomingEventOverlay}
@@ -1269,24 +1263,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 ))}
               </ScrollView>
             </View>
-
-          {/* Categories */}
-          <View style={styles.categoriesSection}>
-            <Text style={styles.sectionTitle}>Categories</Text>
-            <FlatList
-              data={categories}
-              renderItem={renderCategory}
-              keyExtractor={keyExtractor}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.categoriesList}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={7}
-              windowSize={10}
-              nestedScrollEnabled={true}
-              scrollEnabled={true}
-            />
-          </View>
 
           {/* Templates Grid */}
           <View style={styles.templatesSection}>
@@ -1510,7 +1486,14 @@ const HomeScreen: React.FC = React.memo(() => {
                       }}
                     >
                       <View style={styles.upcomingEventModalImageContainer}>
-                        <Image source={{ uri: event.imageUrl }} style={styles.upcomingEventModalImage} />
+                        <Image 
+                          source={{ uri: event.imageUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop' }} 
+                          style={styles.upcomingEventModalImage}
+                          defaultSource={require('../assets/MainLogo/MB.png')}
+                          onError={(error) => {
+                            console.log('Event modal image load error:', event.id, event.imageUrl);
+                          }}
+                        />
                         <LinearGradient
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
@@ -1947,25 +1930,6 @@ const styles = StyleSheet.create({
      color: '#ffffff',
      fontWeight: '600',
    },
-  categoriesSection: {
-    marginBottom: screenWidth < 480 ? screenHeight * 0.015 : screenWidth < 768 ? screenHeight * 0.02 : screenHeight * 0.03,
-    paddingHorizontal: 16,
-  },
-  categoriesList: {
-    paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : screenWidth * 0.05,
-  },
-  categoryChipWrapper: {
-    marginRight: screenWidth < 480 ? 4 : screenWidth < 768 ? 6 : screenWidth * 0.02,
-  },
-  categoryChip: {
-    paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 10 : screenWidth * 0.04,
-    paddingVertical: screenWidth < 480 ? 4 : screenWidth < 768 ? 6 : screenHeight * 0.008,
-    borderRadius: screenWidth < 480 ? 14 : screenWidth < 768 ? 16 : 20,
-  },
-  categoryChipText: {
-    fontSize: screenWidth < 480 ? 10 : screenWidth < 768 ? 12 : Math.min(screenWidth * 0.035, 14),
-    fontWeight: '500',
-  },
   templatesSection: {
     paddingBottom: screenWidth < 480 ? screenHeight * 0.02 : screenWidth < 768 ? screenHeight * 0.03 : screenHeight * 0.05,
     paddingHorizontal: 16,

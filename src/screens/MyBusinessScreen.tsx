@@ -117,138 +117,51 @@ const MyBusinessScreen: React.FC = () => {
 
   // Load business category posters
   const loadBusinessCategoryPosters = useCallback(async () => {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('🚀 MY BUSINESS SCREEN - Loading Category Posters');
-    console.log('═══════════════════════════════════════════════════════');
-    
     setPostersLoading(true);
     try {
-      console.log('🎯 Step 1: Calling getUserCategoryPosters API...');
       const response = await businessCategoryPostersApi.getUserCategoryPosters();
       
-      console.log('📦 Step 2: API Response received:');
-      console.log('  - Success:', response.success);
-      console.log('  - Category:', response.data.category);
-      console.log('  - Total posters:', response.data.total);
-      console.log('  - Posters count:', response.data.posters.length);
-      
       if (response.success) {
-        console.log('✅ Step 3: Processing successful response');
-        
-        // Log detailed poster information
-        if (response.data.posters.length > 0) {
-          console.log('📋 Poster Details:');
-          response.data.posters.forEach((poster, index) => {
-            console.log(`  ${index + 1}. ID: ${poster.id}`);
-            console.log(`     Title: ${poster.title}`);
-            console.log(`     Category: ${poster.category}`);
-            console.log(`     Premium: ${poster.isPremium ? 'Yes' : 'No'}`);
-            console.log(`     🖼️ THUMBNAIL: ${poster.thumbnail || '⚠️ MISSING/NULL'}`);
-            console.log(`     🖼️ IMAGE URL: ${poster.imageUrl || '⚠️ MISSING/NULL'}`);
-            console.log(`     📥 DOWNLOAD URL: ${poster.downloadUrl || '⚠️ MISSING/NULL'}`);
-            console.log('     ---');
-          });
-          
-          // Check if all posters match the user's category
-          const categoriesInResponse = [...new Set(response.data.posters.map(p => p.category))];
-          console.log('📊 Unique categories in response:', categoriesInResponse);
-          
-          if (categoriesInResponse.length === 1 && categoriesInResponse[0] === response.data.category) {
-            console.log('✅ VERIFICATION PASSED: All posters match user category!');
-          } else {
-            console.log('⚠️ VERIFICATION WARNING: Mixed categories detected!');
-            console.log('   Expected:', response.data.category);
-            console.log('   Found:', categoriesInResponse);
-          }
-          
-          // Check for missing image URLs
-          const postersWithMissingImages = response.data.posters.filter(p => !p.thumbnail || !p.imageUrl);
-          if (postersWithMissingImages.length > 0) {
-            console.error('🚨 IMAGE URL ISSUE DETECTED:');
-            console.error(`   ${postersWithMissingImages.length} poster(s) have missing image URLs!`);
-            console.error('   Poster IDs with missing images:', postersWithMissingImages.map(p => p.id));
-            console.error('   ⚠️ This is likely a BACKEND ISSUE - images not uploaded or URLs not set');
-          } else {
-            console.log('✅ IMAGE URL CHECK: All posters have valid image URLs');
-          }
-        } else {
-          console.log('⚠️ No posters found for category:', response.data.category);
-        }
-        
         setBusinessCategoryPosters(response.data.posters);
         setUserBusinessCategory(response.data.category);
-        
-        console.log('✅ Step 4: State updated successfully');
-        console.log('  - businessCategoryPosters state set with', response.data.posters.length, 'posters');
-        console.log('  - userBusinessCategory state set to:', response.data.category);
       } else {
-        console.log('⚠️ API returned unsuccessful response');
-        console.log('  - Message:', response.message);
         setBusinessCategoryPosters([]);
       }
     } catch (error) {
-      console.error('❌ Error loading business category posters:', error);
-      console.error('Error details:', JSON.stringify(error, null, 2));
+      console.error('Error loading business category posters:', error);
       setBusinessCategoryPosters([]);
     } finally {
       setPostersLoading(false);
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('🏁 MY BUSINESS SCREEN - Loading Complete');
-      console.log('═══════════════════════════════════════════════════════');
     }
   }, []);
 
   useEffect(() => {
-    console.log('🎬 MyBusinessScreen mounted - Component initialized');
     loadBusinessCategoryPosters();
   }, [loadBusinessCategoryPosters]);
 
-  // Log state changes for debugging
-  useEffect(() => {
-    console.log('📊 State Updated:');
-    console.log('  - Current category:', userBusinessCategory);
-    console.log('  - Posters in state:', businessCategoryPosters.length);
-    console.log('  - Loading:', postersLoading);
-  }, [businessCategoryPosters, userBusinessCategory, postersLoading]);
-
   const onRefresh = useCallback(async () => {
-    console.log('🔄 User triggered manual refresh');
     setRefreshing(true);
     try {
       await loadBusinessCategoryPosters();
-      console.log('✅ Manual refresh completed successfully');
     } catch (error) {
-      console.error('❌ Error refreshing posters:', error);
+      console.error('Error refreshing posters:', error);
     } finally {
       setRefreshing(false);
     }
   }, [loadBusinessCategoryPosters]);
 
   const handlePosterPress = (poster: BusinessCategoryPoster) => {
-    console.log('👆 Poster pressed:');
-    console.log('  - Poster ID:', poster.id);
-    console.log('  - Title:', poster.title);
-    console.log('  - Category:', poster.category);
-    console.log('  - Related posters count:', businessCategoryPosters.filter(p => p.id !== poster.id).length);
-    
-    // Navigate to MyBusinessPlayer with the selected poster and related posters
     navigation.navigate('MyBusinessPlayer', {
       selectedPoster: poster,
       relatedPosters: businessCategoryPosters.filter(p => p.id !== poster.id),
     });
-    
-    console.log('✅ Navigated to MyBusinessPlayer');
   };
 
   const handleLikePoster = async (posterId: string) => {
-    console.log('❤️ Like button pressed for poster:', posterId);
     try {
       const result = await businessCategoryPostersApi.likePoster(posterId);
-      console.log('Like API response:', result);
       
       if (result.success) {
-        console.log('✅ Poster liked successfully');
-        // Update local state to reflect the like
         setBusinessCategoryPosters(prev => 
           prev.map(poster => 
             poster.id === posterId 
@@ -256,49 +169,13 @@ const MyBusinessScreen: React.FC = () => {
               : poster
           )
         );
-        console.log('✅ Local state updated with new like count');
-      } else {
-        console.log('⚠️ Like failed:', result.message);
       }
     } catch (error) {
-      console.error('❌ Error liking poster:', error);
+      console.error('Error liking poster:', error);
     }
   };
 
   const renderPoster = useCallback(({ item }: { item: BusinessCategoryPoster }) => {
-    // Log image rendering info (only for first few to avoid spam)
-    const posterIndex = businessCategoryPosters.indexOf(item);
-    
-    // ALWAYS log the image URL for debugging
-    console.log('═══════════════════════════════════════════════════════');
-    console.log(`🖼️  IMAGE URL FOR POSTER ${posterIndex + 1}:`);
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('Poster ID:', item.id);
-    console.log('Poster Title:', item.title);
-    console.log('📍 THUMBNAIL URL:', item.thumbnail);
-    console.log('📍 IMAGE URL:', item.imageUrl);
-    console.log('📍 DOWNLOAD URL:', item.downloadUrl);
-    console.log('-----------------------------------------------------------');
-    console.log('URL Validation:');
-    console.log('  - Has thumbnail?', !!item.thumbnail);
-    console.log('  - Starts with http?', !!item.thumbnail && item.thumbnail.startsWith('http'));
-    console.log('  - Starts with https?', !!item.thumbnail && item.thumbnail.startsWith('https'));
-    console.log('  - Is valid URL?', !!item.thumbnail && item.thumbnail.startsWith('https://eventmarketersbackend'));
-    console.log('═══════════════════════════════════════════════════════');
-    
-    if (posterIndex < 3) {
-      // Additional validation for first 3 posters
-      if (!item.thumbnail) {
-        console.error('🚨 ERROR: Poster has NO thumbnail URL!');
-      } else if (!item.thumbnail.startsWith('http')) {
-        console.error('🚨 ERROR: Poster has RELATIVE path (not converted):', item.thumbnail);
-      } else if (!item.thumbnail.startsWith('https')) {
-        console.warn('⚠️  WARNING: Poster using HTTP (not HTTPS):', item.thumbnail);
-      } else {
-        console.log('✅ URL looks good!');
-      }
-    }
-    
     return (
       <TouchableOpacity
         style={[
@@ -314,24 +191,12 @@ const MyBusinessScreen: React.FC = () => {
         <Image 
           source={{ 
             uri: item.thumbnail,
-            cache: 'force-cache', // Enable caching
+            cache: 'force-cache',
           }} 
           style={styles.posterImage}
           resizeMode="cover"
           onError={(error) => {
-            console.error('❌ Image load error for poster:', item.id);
-            console.error('   Thumbnail URL:', item.thumbnail);
-            console.error('   Error:', error.nativeEvent?.error || 'Unknown error');
-          }}
-          onLoad={() => {
-            if (posterIndex < 3) {
-              console.log('✅ Image loaded successfully for poster:', item.id);
-            }
-          }}
-          onLoadStart={() => {
-            if (posterIndex < 3) {
-              console.log('🔄 Starting to load image for poster:', item.id);
-            }
+            console.error('Image load error for poster:', item.id, item.thumbnail);
           }}
         />
         <View style={styles.posterOverlay}>

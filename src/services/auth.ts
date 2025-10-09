@@ -6,8 +6,11 @@ import authApi, { type RegisterRequest, type LoginRequest, type GoogleAuthReques
 class AuthService {
   private currentUser: any = null;
   private authStateListeners: ((user: any) => void)[] = [];
+  private isInitialized: boolean = false; // Track if initial load is complete
 
   constructor() {
+    // Note: Constructor cannot be async, so we call loadStoredUser without await
+    // The initialize() method should be called by the app to ensure proper async initialization
     this.loadStoredUser();
     
     // Configure Google Sign-In
@@ -20,16 +23,35 @@ class AuthService {
   // Load stored user from AsyncStorage
   private async loadStoredUser() {
     try {
+      console.log('🔄 Loading stored user from AsyncStorage...');
+      
       // Check for regular user only
       const storedUser = await AsyncStorage.getItem('currentUser');
       const authToken = await AsyncStorage.getItem('authToken');
+      
+      console.log('📦 AsyncStorage check - User:', storedUser ? 'Found' : 'Not found');
+      console.log('📦 AsyncStorage check - Token:', authToken ? 'Found' : 'Not found');
+      
       if (storedUser && authToken) {
         this.currentUser = JSON.parse(storedUser);
+        console.log('✅ Loaded stored user:', this.currentUser.id || this.currentUser.uid);
+        console.log('✅ User email:', this.currentUser.email);
+        console.log('✅ Token length:', authToken.length);
+        
+        // Mark as initialized and notify auth state listeners
+        this.isInitialized = true;
         this.notifyAuthStateListeners(this.currentUser);
-        console.log('Loaded stored user:', this.currentUser.uid);
+      } else {
+        console.log('ℹ️ No stored user or token found - user needs to login');
+        // Mark as initialized and notify with null to indicate no user
+        this.isInitialized = true;
+        this.notifyAuthStateListeners(null);
       }
     } catch (error) {
-      console.error('Error loading stored user:', error);
+      console.error('❌ Error loading stored user:', error);
+      // Mark as initialized and notify with null on error to show login screen
+      this.isInitialized = true;
+      this.notifyAuthStateListeners(null);
     }
   }
 
@@ -288,6 +310,42 @@ class AuthService {
     this.currentUser = user;
   }
 
+  // Debug helper: Check AsyncStorage status
+  async debugAsyncStorage(): Promise<void> {
+    try {
+      console.log('🐛 ===== AsyncStorage Debug Info =====');
+      
+      const currentUser = await AsyncStorage.getItem('currentUser');
+      const authToken = await AsyncStorage.getItem('authToken');
+      
+      console.log('📦 currentUser in AsyncStorage:', currentUser ? 'EXISTS' : 'NOT FOUND');
+      if (currentUser) {
+        const parsed = JSON.parse(currentUser);
+        console.log('   - User ID:', parsed.id || parsed.uid);
+        console.log('   - User Email:', parsed.email);
+        console.log('   - User Name:', parsed.companyName || parsed.displayName);
+      }
+      
+      console.log('🔑 authToken in AsyncStorage:', authToken ? 'EXISTS' : 'NOT FOUND');
+      if (authToken) {
+        console.log('   - Token Length:', authToken.length);
+        console.log('   - Token Preview:', authToken.substring(0, 30) + '...');
+      }
+      
+      console.log('👤 currentUser in memory:', this.currentUser ? 'EXISTS' : 'NOT FOUND');
+      if (this.currentUser) {
+        console.log('   - User ID:', this.currentUser.id || this.currentUser.uid);
+        console.log('   - User Email:', this.currentUser.email);
+      }
+      
+      console.log('🔧 Is Initialized:', this.isInitialized);
+      console.log('👂 Auth State Listeners:', this.authStateListeners.length);
+      console.log('🐛 ===================================');
+    } catch (error) {
+      console.error('❌ Error debugging AsyncStorage:', error);
+    }
+  }
+
 
   // Get current Google user info
   async getCurrentGoogleUser(): Promise<any> {
@@ -302,31 +360,52 @@ class AuthService {
   // Initialize auth service (load stored user only)
   async initialize(): Promise<void> {
     try {
+      console.log('🔧 Initializing auth service...');
+      
+      // Ensure stored user is loaded (this may be called after constructor)
       await this.loadStoredUser();
+      
+      console.log('✅ Auth service initialized successfully');
+      console.log('Current user:', this.currentUser ? `${this.currentUser.email} (${this.currentUser.id})` : 'None');
       
       // Check if user is already signed in with Google
       try {
         const currentUser = await GoogleSignin.getCurrentUser();
         const isGoogleSignedIn = !!currentUser;
         if (isGoogleSignedIn && !this.currentUser) {
-          console.log('User is signed in with Google but not in local storage, attempting to restore session...');
+          console.log('🔄 User is signed in with Google but not in local storage, attempting to restore session...');
           try {
             await this.signInWithGoogle();
           } catch (error) {
-            console.error('Failed to restore Google session:', error);
+            console.error('❌ Failed to restore Google session:', error);
           }
         }
       } catch (googleError) {
-        console.error('Error checking Google sign-in status:', googleError);
+        console.error('⚠️ Error checking Google sign-in status:', googleError);
       }
     } catch (error) {
-      console.error('Error initializing auth service:', error);
+      console.error('❌ Error initializing auth service:', error);
+      throw error; // Re-throw to let AppNavigator handle it
     }
   }
 
   // Listen to auth state changes
   onAuthStateChanged(callback: (user: any) => void) {
     this.authStateListeners.push(callback);
+    
+    // Immediately call the callback with current state if initialization is complete
+    // This ensures listeners get the current state even if they subscribe after initialization
+    if (this.isInitialized) {
+      const userState = this.currentUser ? 'logged in' : 'logged out';
+      console.log(`🔔 onAuthStateChanged: Immediately notifying new listener (user ${userState})`);
+      try {
+        callback(this.currentUser);
+      } catch (error) {
+        console.error('Error in immediate auth state callback:', error);
+      }
+    } else {
+      console.log('⏳ onAuthStateChanged: Listener added, waiting for initialization to complete');
+    }
     
     // Return unsubscribe function
     return () => {

@@ -6,7 +6,6 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTabBarStyle, getTabBarItemStyle, getTabBarLabelStyle } from '../utils/notchUtils';
 import authService from '../services/auth';
-import DebugInfo from '../components/DebugInfo';
 import { useTheme } from '../context/ThemeContext';
 import { navigationRef } from './NavigationService';
 import { Image, View, Text, TouchableOpacity } from 'react-native';
@@ -92,7 +91,6 @@ export type MainStackParamList = {
   };
   MyPosters: undefined;
   LikedItems: undefined;
-  ApiTest: undefined;
   HelpSupport: undefined;
 };
 
@@ -112,8 +110,6 @@ import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EventsScreen from '../screens/EventsScreen';
 import BusinessProfilesScreen from '../screens/BusinessProfilesScreen';
-import TestScreen from '../screens/TestScreen';
-import SimpleTestScreen from '../screens/SimpleTestScreen';
 import TemplateGalleryScreen from '../screens/TemplateGalleryScreen';
 import PosterEditorScreen from '../screens/PosterEditorScreen';
 import PosterPreviewScreen from '../screens/PosterPreviewScreen';
@@ -127,7 +123,6 @@ import GreetingTemplatesScreen from '../screens/GreetingTemplatesScreen';
 import GreetingEditorScreen from '../screens/GreetingEditorScreen';
 import MyPostersScreen from '../screens/MyPostersScreen';
 import LikedItemsScreen from '../screens/LikedItemsScreen';
-import ApiTestScreen from '../screens/ApiTestScreen';
 import MyBusinessScreen from '../screens/MyBusinessScreen';
 import MyBusinessPlayerScreen from '../screens/MyBusinessPlayerScreen';
 import AboutUsScreen from '../screens/AboutUsScreen';
@@ -220,13 +215,8 @@ const TabNavigator = () => {
         options={{ headerShown: false }}
       />
       <MainStack.Screen 
-        name="LikedItems" 
+        name="LikedItems"
         component={LikedItemsScreen}
-        options={{ headerShown: false }}
-      />
-      <MainStack.Screen 
-        name="ApiTest" 
-        component={ApiTestScreen}
         options={{ headerShown: false }}
       />
       <MainStack.Screen 
@@ -460,19 +450,40 @@ const AppNavigator = () => {
   const [isLoading, setIsLoading] = useState<boolean>(true);
 
   useEffect(() => {
-    console.log('AppNavigator: Starting initialization');
+    console.log('🚀 AppNavigator: Starting initialization');
+    let authStateReceived = false;
     
-    // Simple timeout to ensure we don't get stuck
+    // Longer timeout to give AsyncStorage enough time to load (especially on slow devices or with debugging)
     const timeout = setTimeout(() => {
-      console.log('AppNavigator: Timeout reached, setting loading to false');
-      setIsLoading(false);
-    }, 3000);
+      if (!authStateReceived) {
+        console.log('⚠️ AppNavigator: Timeout reached without auth state - showing login');
+        setIsLoading(false);
+        setIsAuthenticated(false);
+      }
+    }, 5000); // Increased from 3000ms to 5000ms
 
     // Listen to authentication state changes
     const unsubscribe = authService.onAuthStateChanged((user) => {
-      console.log('AppNavigator: Auth state changed:', user ? 'User logged in' : 'User logged out');
+      authStateReceived = true;
+      clearTimeout(timeout); // Clear timeout once we get auth state
+      
+      console.log('🔔 AppNavigator: Auth state changed:', user ? '✅ User logged in' : '❌ User logged out');
+      if (user) {
+        console.log('👤 User ID:', user.id || user.uid);
+        console.log('📧 User Email:', user.email);
+      }
+      
       setIsAuthenticated(!!user);
       setIsLoading(false);
+    });
+
+    // Explicitly call initialize to ensure async loading completes
+    authService.initialize().catch((error) => {
+      console.error('❌ AppNavigator: Error initializing auth service:', error);
+      authStateReceived = true;
+      clearTimeout(timeout);
+      setIsLoading(false);
+      setIsAuthenticated(false);
     });
 
     return () => {
@@ -481,7 +492,7 @@ const AppNavigator = () => {
     };
   }, []);
 
-  console.log('AppNavigator: Rendering with isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
+  console.log('🎨 AppNavigator: Rendering with isLoading:', isLoading, 'isAuthenticated:', isAuthenticated);
 
   // Show splash screen while loading
   if (isLoading) {

@@ -1,1 +1,0 @@
-{"version":3,"file":"mobileSubscription.d.ts","sourceRoot":"","sources":["../../src/routes/mobileSubscription.ts"],"names":[],"mappings":"AAKA,QAAA,MAAM,MAAM,4CAAmB,CAAC;AA8DhC,OAAO,CAAC,MAAM,CAAC;IACb,UAAU,OAAO,CAAC;QAChB,UAAU,OAAO;YACf,YAAY,CAAC,EAAE,MAAM,CAAC;SACvB;KACF;CACF;AAohBD,eAAe,MAAM,CAAC"}

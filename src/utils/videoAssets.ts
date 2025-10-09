@@ -1,7 +1,6 @@
 export const VIDEO_ASSETS = {
-  test: require('../assets/video/test.mp4'),
   // ONLY use videos from src/assets/video folder
-  // To add more videos: place them in C:\RSL\EventMarketersWorking\src\assets\video\
+  // To add more videos: place them in src/assets/video\
   // and add them here like: videoName: require('../assets/video/videoName.mp4')
 };
 

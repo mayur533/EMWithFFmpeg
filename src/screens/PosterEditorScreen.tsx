@@ -1383,7 +1383,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         zIndex: layers.length,
         style: {
           fontSize: 16,
-          color: '#000000',
+          color: '#FFFFFF',
           fontFamily: 'System',
           fontWeight: '400',
         },
@@ -3469,7 +3469,7 @@ const styles = StyleSheet.create({
   },
   layerText: {
     fontSize: 16,
-    color: '#000000',
+    color: '#FFFFFF',
     textAlign: 'left',
     flexWrap: 'wrap', // Allow text to wrap
     textAlignVertical: 'top', // Align text to top

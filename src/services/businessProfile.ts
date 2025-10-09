@@ -55,34 +55,21 @@ class BusinessProfileService {
   // Get user-specific business profiles
   async getUserBusinessProfiles(userId: string): Promise<BusinessProfile[]> {
     try {
-      console.log('🎬 businessProfileService: Fetching user-specific business profiles for user:', userId);
-      console.log('🎬 businessProfileService: API URL:', `/api/mobile/business-profile/${userId}`);
-      
       // First check if backend is available with a quick health check
       try {
-        console.log('🎬 businessProfileService: Checking backend health...');
         await api.get('/health', { timeout: 5000 });
-        console.log('🎬 businessProfileService: ✅ Backend server is available');
       } catch (healthError: any) {
-        console.log('🎬 businessProfileService: ⚠️ Backend server not available, will use mock data');
-        console.log('🎬 businessProfileService: ⚠️ Health check error:', healthError?.message || 'Unknown error');
         throw new Error('Backend server not available');
       }
       
-      console.log('🎬 businessProfileService: Making API call to fetch profiles...');
       const response = await api.get(`/api/mobile/business-profile/${userId}`);
-      
-      console.log('🎬 businessProfileService: API Response status:', response.status);
       
       if (response.data.success) {
         const profiles = response.data.data.profiles;
+        
         if (profiles && profiles.length > 0) {
-          console.log(`🎬 businessProfileService: ✅ Found ${profiles.length} business profiles for user`);
-          
           // Convert backend profiles to frontend format
           const businessProfiles: BusinessProfile[] = profiles.map((profile: any) => {
-            console.log('🎬 businessProfileService: Processing profile:', profile.name, 'Category:', profile.category);
-            
             return {
               id: profile.id,
               name: profile.name || profile.businessName,
@@ -120,18 +107,14 @@ class BusinessProfileService {
             };
           });
           
-          console.log(`🎬 businessProfileService: ✅ Successfully mapped ${businessProfiles.length} business profiles`);
           return businessProfiles;
         }
-        console.log('🎬 businessProfileService: No user-specific business profiles found');
         return [];
       } else {
-        console.log('🎬 businessProfileService: API returned unsuccessful response for user profiles');
         return [];
       }
     } catch (error: any) {
-      console.error('🎬 businessProfileService: ❌ Error fetching user-specific business profiles:', error);
-      console.error('🎬 businessProfileService: ❌ Error details:', error?.response?.data);
+      console.error('Error fetching business profiles:', error);
       
       // If it's a network/timeout error, throw it so the calling code can handle it
       if (error instanceof Error && (

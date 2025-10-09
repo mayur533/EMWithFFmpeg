@@ -172,30 +172,78 @@ class HomeApiService {
    * Convert relative image URLs to absolute URLs
    */
   private convertToAbsoluteUrl(url: string | undefined | null): string | undefined {
-    if (!url) return undefined;
-    if (url.startsWith('http')) return url; // Already absolute
-    return `${this.BASE_URL}${url}`; // Convert relative to absolute
+    if (!url) {
+      return undefined;
+    }
+    
+    // Already absolute URL
+    if (url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    
+    // Handle URLs that don't start with /
+    const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
+    const absoluteUrl = `${this.BASE_URL}${normalizedUrl}`;
+    
+    return absoluteUrl;
+  }
+
+  /**
+   * Map backend featured content to FeaturedContent interface
+   */
+  private mapToFeaturedContent(item: any): FeaturedContent {
+    return {
+      id: item.id,
+      title: item.title,
+      description: item.description || '',
+      imageUrl: item.imageUrl,
+      videoUrl: item.videoUrl || undefined,
+      link: `/templates/${item.id}`, // Default link to template
+      type: item.isFeatured ? 'banner' : 'highlight', // Map based on isFeatured flag
+      priority: item.isFeatured ? 1 : 2,
+      isActive: true,
+      createdAt: item.createdAt,
+      updatedAt: item.updatedAt || item.createdAt,
+    };
   }
 
   /**
    * Convert image URLs in featured content
    */
-  private convertFeaturedContentUrls(content: FeaturedContent[]): FeaturedContent[] {
-    return content.map(item => ({
-      ...item,
-      imageUrl: this.convertToAbsoluteUrl(item.imageUrl) || item.imageUrl,
-      videoUrl: item.videoUrl ? this.convertToAbsoluteUrl(item.videoUrl) : item.videoUrl,
-    }));
+  private convertFeaturedContentUrls(content: any[]): FeaturedContent[] {
+    if (!Array.isArray(content)) {
+      return [];
+    }
+    
+    return content.map(item => {
+      // First map to FeaturedContent interface
+      const mappedItem = this.mapToFeaturedContent(item);
+      
+      // Then convert URLs to absolute
+      const convertedImageUrl = this.convertToAbsoluteUrl(mappedItem.imageUrl);
+      const convertedVideoUrl = mappedItem.videoUrl ? this.convertToAbsoluteUrl(mappedItem.videoUrl) : mappedItem.videoUrl;
+      
+      return {
+        ...mappedItem,
+        imageUrl: convertedImageUrl || mappedItem.imageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop',
+        videoUrl: convertedVideoUrl || mappedItem.videoUrl,
+      };
+    });
   }
 
   /**
    * Convert image URLs in upcoming events
    */
   private convertUpcomingEventsUrls(events: UpcomingEvent[]): UpcomingEvent[] {
-    return events.map(event => ({
-      ...event,
-      imageUrl: this.convertToAbsoluteUrl(event.imageUrl) || event.imageUrl,
-    }));
+    return events.map(event => {
+      const originalUrl = event.imageUrl;
+      const convertedUrl = this.convertToAbsoluteUrl(event.imageUrl);
+      
+      return {
+        ...event,
+        imageUrl: convertedUrl || originalUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop',
+      };
+    });
   }
 
   /**
@@ -247,16 +295,56 @@ class HomeApiService {
       
       const response = await api.get(url);
       
-      // Convert relative URLs to absolute URLs
-      if (response.data.success && response.data.data) {
-        console.log('🔧 [Home API] Converting featured content URLs to absolute');
-        response.data.data = this.convertFeaturedContentUrls(response.data.data);
+      // Validate response structure
+      if (!response.data.success) {
+        return {
+          success: false,
+          data: [],
+          message: response.data.message || 'API returned unsuccessful response',
+        };
       }
       
-      return response.data;
+      // Check if data exists
+      if (!response.data.data) {
+        return {
+          success: false,
+          data: [],
+          message: 'No data returned from API',
+        };
+      }
+      
+      // Extract featured content array from nested structure
+      let featuredData: FeaturedContent[];
+      
+      if (Array.isArray(response.data.data)) {
+        // Direct array format
+        featuredData = response.data.data;
+      } else if (response.data.data.featured && Array.isArray(response.data.data.featured)) {
+        // Nested format: { data: { featured: [...] } }
+        featuredData = response.data.data.featured;
+      } else {
+        return {
+          success: false,
+          data: [],
+          message: 'Invalid data format from API',
+        };
+      }
+      
+      const convertedData = this.convertFeaturedContentUrls(featuredData);
+      
+      return {
+        success: true,
+        data: convertedData,
+        message: response.data.message || 'Featured content retrieved successfully',
+      };
     } catch (error) {
-      console.log('Using mock featured content due to API error:', error);
-      return this.getMockFeaturedContent(params);
+      console.error('Featured Content API error:', error);
+      // Return empty response instead of mock data
+      return {
+        success: false,
+        data: [],
+        message: 'Failed to load featured content from API',
+      };
     }
   }
 
@@ -299,13 +387,11 @@ class HomeApiService {
       
       // Convert relative URLs to absolute URLs
       if (response.data.success && response.data.data) {
-        console.log('🔧 [Home API] Converting upcoming events URLs to absolute');
         response.data.data = this.convertUpcomingEventsUrls(response.data.data);
       }
       
       return response.data;
     } catch (error) {
-      console.log('Using mock upcoming events due to API error:', error);
       return this.getMockUpcomingEvents(params);
     }
   }
@@ -497,72 +583,8 @@ class HomeApiService {
   // MOCK DATA METHODS (FALLBACK WHEN SERVER IS NOT AVAILABLE)
   // ============================================================================
 
-  private getMockFeaturedContent(params?: {
-    limit?: number;
-    type?: 'banner' | 'promotion' | 'highlight' | 'all';
-    active?: boolean;
-  }): FeaturedContentResponse {
-    const mockData: FeaturedContent[] = [
-      {
-        id: 'fc-1',
-        title: 'Welcome to EventMarketers',
-        description: 'Create stunning marketing materials with our professional templates',
-        imageUrl: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=800&h=400&fit=crop',
-        link: '/templates',
-        type: 'banner',
-        priority: 1,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: 'fc-2',
-        title: 'Premium Templates Available',
-        description: 'Unlock premium templates and advanced features',
-        imageUrl: 'https://images.unsplash.com/photo-1559136555-9303baea8ebd?w=800&h=400&fit=crop',
-        link: '/subscription',
-        type: 'promotion',
-        priority: 2,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-      {
-        id: 'fc-3',
-        title: 'New Video Editor',
-        description: 'Create professional videos with our new video editor',
-        imageUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=800&h=400&fit=crop',
-        link: '/video-editor',
-        type: 'highlight',
-        priority: 3,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      },
-    ];
-
-    let filteredData = mockData;
-
-    // Apply filters
-    if (params?.type && params.type !== 'all') {
-      filteredData = filteredData.filter(item => item.type === params.type);
-    }
-
-    if (params?.active !== undefined) {
-      filteredData = filteredData.filter(item => item.isActive === params.active);
-    }
-
-    // Apply limit
-    if (params?.limit) {
-      filteredData = filteredData.slice(0, params.limit);
-    }
-
-    return {
-      success: true,
-      data: filteredData,
-      message: 'Mock featured content retrieved successfully',
-    };
-  }
+  // Mock data removed - Featured content now loads exclusively from API
+  // If API fails, empty response is returned instead of mock data
 
   private getMockUpcomingEvents(params?: {
     limit?: number;

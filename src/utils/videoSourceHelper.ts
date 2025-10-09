@@ -151,9 +151,10 @@ const getIOSVideoSource = async (fileName: string): Promise<VideoSourceResult> =
  */
 export const getVideoComponentSource = async (config: VideoSourceConfig = {}) => {
   try {
-    // For Video component, always use Metro asset as it works reliably
-    console.log('📹 Getting video component source (using Metro asset)...');
-    return require('../assets/video/test.mp4');
+    // For Video component, use the fallback URL since local assets were removed
+    const finalConfig = { ...DEFAULT_CONFIG, ...config };
+    console.log('📹 Getting video component source (using fallback URL)...');
+    return { uri: finalConfig.fallbackUrl };
   } catch (error) {
     console.error('🚨 Failed to get video component source:', error);
     throw error;
