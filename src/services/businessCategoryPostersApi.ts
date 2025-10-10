@@ -207,68 +207,6 @@ class BusinessCategoryPostersApiService {
   }
 
   /**
-   * Like a poster
-   */
-  async likePoster(posterId: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const currentUser = authService.getCurrentUser();
-      const userId = currentUser?.id;
-      
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-
-      const response = await api.post(`/api/mobile/likes`, {
-        resourceType: 'POSTER',
-        resourceId: posterId,
-        mobileUserId: userId
-      });
-
-      if (response.data.success) {
-        console.log('✅ Poster liked successfully:', posterId);
-        return { success: true, message: 'Poster liked successfully' };
-      } else {
-        throw new Error(response.data.error || 'Failed to like poster');
-      }
-    } catch (error: any) {
-      console.error('❌ Error liking poster:', error);
-      return { success: false, message: error.message || 'Failed to like poster' };
-    }
-  }
-
-  /**
-   * Unlike a poster
-   */
-  async unlikePoster(posterId: string): Promise<{ success: boolean; message: string }> {
-    try {
-      const currentUser = authService.getCurrentUser();
-      const userId = currentUser?.id;
-      
-      if (!userId) {
-        throw new Error('User not authenticated');
-      }
-
-      const response = await api.delete(`/api/mobile/likes`, {
-        data: {
-          resourceType: 'POSTER',
-          resourceId: posterId,
-          mobileUserId: userId
-        }
-      });
-
-      if (response.data.success) {
-        console.log('✅ Poster unliked successfully:', posterId);
-        return { success: true, message: 'Poster unliked successfully' };
-      } else {
-        throw new Error(response.data.error || 'Failed to unlike poster');
-      }
-    } catch (error: any) {
-      console.error('❌ Error unliking poster:', error);
-      return { success: false, message: error.message || 'Failed to unlike poster' };
-    }
-  }
-
-  /**
    * Download a poster
    */
   async downloadPoster(posterId: string): Promise<{ success: boolean; message: string; downloadUrl?: string }> {

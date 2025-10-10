@@ -434,28 +434,6 @@ class TemplatesBannersApiService {
     }
   }
 
-  // Like template
-  async likeTemplate(id: string): Promise<{ success: boolean; message: string; isLiked: boolean }> {
-    try {
-      const response = await api.post(`/api/mobile/templates/${id}/like`);
-      return response.data;
-    } catch (error) {
-      console.error('Like template error:', error);
-      throw error;
-    }
-  }
-
-  // Unlike template
-  async unlikeTemplate(id: string): Promise<{ success: boolean; message: string; isLiked: boolean }> {
-    try {
-      const response = await api.delete(`/api/mobile/templates/${id}/like`);
-      return response.data;
-    } catch (error) {
-      console.error('Unlike template error:', error);
-      throw error;
-    }
-  }
-
   // Download template
   async downloadTemplate(id: string): Promise<{ success: boolean; message: string }> {
     try {

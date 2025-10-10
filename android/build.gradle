@@ -4,8 +4,8 @@ buildscript {
         minSdkVersion = 24
         compileSdkVersion = 35
         targetSdkVersion = 35
-        ndkVersion = "27.1.12297006"
-        kotlinVersion = "2.1.20"
+        ndkVersion = "25.1.8937393"
+        kotlinVersion = "1.9.24"
         // FFmpeg Kit configuration for local source
         ffmpegKitPackage = "full-gpl" // Use full-gpl to include drawtext filter
         ffmpegKitVersion = "6.0.2"

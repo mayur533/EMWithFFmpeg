@@ -33,7 +33,6 @@ interface DatePoster {
   thumbnail: string;
   category: string;
   likes: number;
-  isLiked: boolean;
 }
 
 interface DatePosters {
@@ -268,7 +267,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=1',
       category: 'New Year',
       likes: 45,
-      isLiked: false,
     },
     {
       id: '2',
@@ -276,7 +274,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=2',
       category: 'Celebration',
       likes: 32,
-      isLiked: true,
     },
   ],
   '2025-01-14': [
@@ -286,7 +283,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=3',
       category: 'Festival',
       likes: 28,
-      isLiked: false,
     },
   ],
   '2025-01-26': [
@@ -296,7 +292,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=4',
       category: 'National',
       likes: 67,
-      isLiked: true,
     },
     {
       id: '5',
@@ -304,7 +299,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=5',
       category: 'Patriotic',
       likes: 41,
-      isLiked: false,
     },
   ],
   '2025-03-02': [
@@ -314,7 +308,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=6',
       category: 'Festival',
       likes: 89,
-      isLiked: true,
     },
     {
       id: '7',
@@ -322,7 +315,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=7',
       category: 'Holi',
       likes: 56,
-      isLiked: false,
     },
   ],
   '2025-10-20': [
@@ -332,7 +324,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=8',
       category: 'Festival',
       likes: 92,
-      isLiked: true,
     },
     {
       id: '9',
@@ -340,7 +331,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=9',
       category: 'Diwali',
       likes: 78,
-      isLiked: false,
     },
   ],
   '2025-12-25': [
@@ -350,7 +340,6 @@ const datePosters: DatePosters = {
       thumbnail: 'https://picsum.photos/300/400?random=10',
       category: 'Christmas',
       likes: 85,
-      isLiked: true,
     },
   ],
 };
@@ -766,21 +755,6 @@ const SimpleFestivalCalendar: React.FC = () => {
     setSelectedDatePosters(posters);
   }, [currentMonth, currentYear]);
 
-  // Handle poster like
-  const handlePosterLike = useCallback((posterId: string) => {
-    setSelectedDatePosters(prevPosters => 
-      prevPosters.map(poster => 
-        poster.id === posterId 
-          ? { 
-              ...poster, 
-              isLiked: !poster.isLiked,
-              likes: poster.isLiked ? poster.likes - 1 : poster.likes + 1
-            }
-          : poster
-      )
-    );
-  }, []);
-
   // Render poster card
   const renderPosterCard = useCallback(({ item }: { item: DatePoster }) => (
     <TouchableOpacity
@@ -788,18 +762,6 @@ const SimpleFestivalCalendar: React.FC = () => {
       activeOpacity={0.8}
     >
       <Image source={{ uri: item.thumbnail }} style={dynamicStyles.posterImage} />
-      <View style={dynamicStyles.posterOverlay}>
-        <TouchableOpacity
-          style={dynamicStyles.posterLikeButton}
-          onPress={() => handlePosterLike(item.id)}
-        >
-          <Icon 
-            name={item.isLiked ? "favorite" : "favorite-border"} 
-            size={isTablet ? 16 : 14} 
-            color={item.isLiked ? "#E74C3C" : "#E74C3C"} 
-          />
-        </TouchableOpacity>
-      </View>
       <View style={dynamicStyles.posterInfo}>
         <Text style={dynamicStyles.posterTitle} numberOfLines={1}>
           {item.title}
@@ -807,13 +769,9 @@ const SimpleFestivalCalendar: React.FC = () => {
         <Text style={dynamicStyles.posterCategory} numberOfLines={1}>
           {item.category}
         </Text>
-        <View style={dynamicStyles.posterStats}>
-          <Icon name="favorite" size={isTablet ? 12 : 10} color="#E74C3C" />
-          <Text style={dynamicStyles.posterLikes}>{item.likes}</Text>
-        </View>
       </View>
     </TouchableOpacity>
-  ), [handlePosterLike, dynamicStyles, isTablet]);
+  ), [dynamicStyles, isTablet]);
 
   // Check if date is today
   const isToday = useCallback((day: number) => {

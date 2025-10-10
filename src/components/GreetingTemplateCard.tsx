@@ -11,7 +11,6 @@ import {
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { GreetingTemplate } from '../services/greetingTemplates';
-import genericLikesApi from '../services/genericLikesApi';
 import { useTheme } from '../context/ThemeContext';
 
 const { width: screenWidth } = Dimensions.get('window');
@@ -42,16 +41,13 @@ const { cardWidth, cardHeight } = getCardDimensions();
 interface GreetingTemplateCardProps {
   template: GreetingTemplate;
   onPress: (template: GreetingTemplate) => void;
-  onLike: (templateId: string) => void;
 }
 
 const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
   template,
   onPress,
-  onLike,
 }) => {
   const { theme, isDarkMode } = useTheme();
-  const [isLiked, setIsLiked] = useState(template.isLiked);
   const [scaleValue] = useState(() => new Animated.Value(1));
   const [_isHovered, setIsHovered] = useState(false);
   const gradientBorderOpacity = useRef(new Animated.Value(0)).current;
@@ -93,11 +89,6 @@ const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
         }).start();
       }, 100);
     }
-  };
-
-  const handleLike = () => {
-    // Call parent's onLike which will show Coming Soon modal
-    onLike(template.id);
   };
 
   const handlePress = () => {
@@ -172,24 +163,6 @@ const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
           pointerEvents="none"
         />
       </View>
-
-             {/* Like Button */}
-       <TouchableOpacity
-         style={[
-           styles.likeButton,
-           styles.likeButtonBackground,
-           isLiked && styles.likeButtonActive
-         ]}
-         onPress={handleLike}
-         activeOpacity={0.8}
-         hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-       >
-         <Icon
-           name={isLiked ? 'favorite' : 'favorite-border'}
-           size={14}
-           color={isLiked ? '#FFFFFF' : '#E74C3C'}
-         />
-       </TouchableOpacity>
      </TouchableOpacity>
    </Animated.View>
     );

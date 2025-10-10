@@ -90,7 +90,6 @@ export type MainStackParamList = {
     template: any;
   };
   MyPosters: undefined;
-  LikedItems: undefined;
   HelpSupport: undefined;
 };
 
@@ -122,7 +121,6 @@ import TransactionHistoryScreen from '../screens/TransactionHistoryScreen';
 import GreetingTemplatesScreen from '../screens/GreetingTemplatesScreen';
 import GreetingEditorScreen from '../screens/GreetingEditorScreen';
 import MyPostersScreen from '../screens/MyPostersScreen';
-import LikedItemsScreen from '../screens/LikedItemsScreen';
 import MyBusinessScreen from '../screens/MyBusinessScreen';
 import MyBusinessPlayerScreen from '../screens/MyBusinessPlayerScreen';
 import AboutUsScreen from '../screens/AboutUsScreen';
@@ -215,11 +213,6 @@ const TabNavigator = () => {
         options={{ headerShown: false }}
       />
       <MainStack.Screen 
-        name="LikedItems"
-        component={LikedItemsScreen}
-        options={{ headerShown: false }}
-      />
-      <MainStack.Screen 
         name="AboutUs" 
         component={AboutUsScreen}
         options={{ headerShown: false }}
@@ -270,29 +263,36 @@ const CustomTabBar = (props: any) => {
         borderRadius: 35,
       }} />
       
-      {/* Logo positioned to overlap with screen content */}
-      <View style={{
-        position: 'absolute',
-        top: -35, // Half logo above the tab bar
-        left: '50%',
-        marginLeft: -35, // Center the circular container (70px width / 2)
-        zIndex: 1000,
-        backgroundColor: theme.colors.surface,
-        width: 70,
-        height: 70,
-        borderRadius: 35, // Perfect circle
-        justifyContent: 'center',
-        alignItems: 'center',
-        shadowColor: theme.colors.shadow,
-        shadowOffset: { width: 0, height: 2 },
-        shadowOpacity: 0.15,
-        shadowRadius: 8,
-        elevation: 8,
-        borderWidth: 2,
-        borderColor: theme.colors.border,
-        // Ensure the circle completely covers any background elements
-        overflow: 'hidden',
-      }}>
+      {/* Logo positioned to overlap with screen content - Clickable to navigate to My Business */}
+      <TouchableOpacity
+        onPress={() => {
+          // Navigate to My Business tab
+          props.navigation.navigate('MyBusiness');
+        }}
+        activeOpacity={0.7}
+        style={{
+          position: 'absolute',
+          top: -35, // Half logo above the tab bar
+          left: '50%',
+          marginLeft: -35, // Center the circular container (70px width / 2)
+          zIndex: 1000,
+          backgroundColor: theme.colors.surface,
+          width: 70,
+          height: 70,
+          borderRadius: 35, // Perfect circle
+          justifyContent: 'center',
+          alignItems: 'center',
+          shadowColor: theme.colors.shadow,
+          shadowOffset: { width: 0, height: 2 },
+          shadowOpacity: 0.15,
+          shadowRadius: 8,
+          elevation: 8,
+          borderWidth: 2,
+          borderColor: theme.colors.border,
+          // Ensure the circle completely covers any background elements
+          overflow: 'hidden',
+        }}
+      >
         <Image
           source={require('../assets/MainLogo/MB.png')}
           style={{
@@ -301,7 +301,7 @@ const CustomTabBar = (props: any) => {
             resizeMode: 'contain',
           }}
         />
-      </View>
+      </TouchableOpacity>
       
       {/* Tab Bar */}
       <View style={{
@@ -356,11 +356,16 @@ const CustomTabBar = (props: any) => {
                 paddingVertical: 4,
               }}
             >
-              {options.tabBarIcon && options.tabBarIcon({
-                focused: isFocused,
-                color: isFocused ? theme.colors.primary : theme.colors.textSecondary,
-                size: 24,
-              })}
+              {options.tabBarIcon ? (
+                options.tabBarIcon({
+                  focused: isFocused,
+                  color: isFocused ? theme.colors.primary : theme.colors.textSecondary,
+                  size: 24,
+                })
+              ) : (
+                // Add invisible spacer for tabs without icon to maintain text alignment
+                <View style={{ height: 24 }} />
+              )}
               <Text style={{
                 fontSize: 10,
                 fontWeight: '600',
@@ -415,9 +420,6 @@ const MainTabNavigator = () => {
         component={MyBusinessScreen}
         options={{
           title: 'My Business',
-          tabBarIcon: ({ color, size }) => (
-            <Icon name="business" size={size} color={color} />
-          ),
         }}
       />
       <Tab.Screen 

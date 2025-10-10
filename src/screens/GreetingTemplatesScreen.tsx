@@ -162,10 +162,6 @@ const GreetingTemplatesScreen: React.FC = () => {
     });
   }, [isSubscribed, navigation]);
 
-  const handleLike = useCallback(async (templateId: string) => {
-    // Show Coming Soon modal for like feature
-    setShowComingSoonModal(true);
-  }, []);
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -229,11 +225,10 @@ const GreetingTemplatesScreen: React.FC = () => {
         <GreetingTemplateCard
           template={item}
           onPress={handleTemplatePress}
-          onLike={handleLike}
         />
       </View>
     );
-  }, [handleTemplatePress, handleLike, gridColumns]);
+  }, [handleTemplatePress, gridColumns]);
 
   const renderEmptyState = useCallback(() => (
     <View style={[styles.emptyContainer, { paddingHorizontal: responsiveSpacing.lg }]}>

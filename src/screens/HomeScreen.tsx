@@ -30,10 +30,8 @@ import homeApi, {
   ProfessionalTemplate, 
   VideoContent 
 } from '../services/homeApi';
-import genericLikesApi from '../services/genericLikesApi';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
-import userLikesService from '../services/userLikes';
 // import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
 import ComingSoonModal from '../components/ComingSoonModal';
 import responsiveUtils, { 
@@ -231,7 +229,7 @@ const HomeScreen: React.FC = React.memo(() => {
 
 
 
-  // Mock upcoming events removed - using only API data
+  // Mock upcoming festivals removed - using only API data
   // const mockUpcomingEvents = useMemo(() => [
   //   {
   //     id: '1',
@@ -311,7 +309,7 @@ const HomeScreen: React.FC = React.memo(() => {
         setBanners([]);
       }
 
-      // Handle upcoming events
+      // Handle upcoming festivals
       if (eventsResponse.status === 'fulfilled' && eventsResponse.value.success) {
         const events = eventsResponse.value.data;
         setUpcomingEvents(events);
@@ -319,12 +317,12 @@ const HomeScreen: React.FC = React.memo(() => {
         setUpcomingEvents([]);
       }
 
-      // Handle professional templates
+      // Handle business events
       if (templatesResponse.status === 'fulfilled' && templatesResponse.value.success) {
         setProfessionalTemplates(templatesResponse.value.data);
-        console.log('✅ Professional templates loaded:', templatesResponse.value.data.length, 'items');
+        console.log('✅ Business events loaded:', templatesResponse.value.data.length, 'items');
       } else {
-        console.log('⚠️ Professional templates API failed');
+        console.log('⚠️ Business events API failed');
         setProfessionalTemplates([]);
       }
 
@@ -371,7 +369,7 @@ const HomeScreen: React.FC = React.memo(() => {
   useEffect(() => {
     const handleSearchQueryChange = async () => {
       if (searchQuery.trim() === '') {
-        // Reset to show all professional templates from API
+        // Reset to show all business events from API
         setTemplates(professionalTemplates);
       }
     };
@@ -399,7 +397,7 @@ const HomeScreen: React.FC = React.memo(() => {
     
     // Use API data for different tabs
     try {
-      // Filter professional templates based on tab
+      // Filter business events based on tab
       const filteredTemplates = professionalTemplates.filter(template => {
         if (tab === 'daily') return template.category?.toLowerCase().includes('daily');
         if (tab === 'festival') return template.category?.toLowerCase().includes('festival');
@@ -412,41 +410,11 @@ const HomeScreen: React.FC = React.memo(() => {
     }
   }, [professionalTemplates]);
 
-  // Apply user-specific like status to templates
+  // Like functionality has been removed - templates no longer have like status
   const applyUserLikeStatus = useCallback(async (templates: Template[]) => {
-    try {
-      const currentUser = authService.getCurrentUser();
-      const userId = currentUser?.id;
-      
-      const templatesWithUserLikes = await userLikesService.applyLikeStatusToContent(
-        templates, 
-        'template', 
-        userId
-      );
-      
-      console.log('🔍 Applied user-specific like status for user:', userId);
-      return templatesWithUserLikes;
-    } catch (error) {
-      console.error('Error applying user like status:', error);
-      return templates.map(template => ({ ...template, isLiked: false }));
-    }
+    return templates;
   }, []);
 
-  const handleLikeTemplate = useCallback(async (templateId: string) => {
-    // Show Coming Soon modal for like feature
-    setShowComingSoonModal(true);
-  }, []);
-
-  // New API-based like handlers
-  const handleLikeProfessionalTemplate = useCallback(async (templateId: string) => {
-    // Show Coming Soon modal for like feature
-    setShowComingSoonModal(true);
-  }, []);
-
-  const handleLikeVideoContent = useCallback(async (videoId: string) => {
-    // Show Coming Soon modal for like feature
-    setShowComingSoonModal(true);
-  }, []);
 
   const handleDownloadTemplate = useCallback(async (templateId: string) => {
     // Update local state immediately for better UX
@@ -762,29 +730,11 @@ const HomeScreen: React.FC = React.memo(() => {
         >
           <View style={styles.templateImageContainer}>
             <Image source={{ uri: item.thumbnail }} style={styles.templateImage} />
-            <View style={styles.templateActions}>
-              <TouchableOpacity
-                style={[
-                  styles.actionButton, 
-                  { backgroundColor: item.isLiked ? '#E74C3C' : 'rgba(255, 255, 255, 0.9)' }
-                ]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleLikeTemplate(item.id);
-                }}
-              >
-                <Icon 
-                  name={item.isLiked ? "favorite" : "favorite-border"} 
-                  size={16} 
-                  color={item.isLiked ? '#FFFFFF' : '#E74C3C'} 
-                />
-              </TouchableOpacity>
-            </View>
           </View>
         </Animated.View>
       </TouchableOpacity>
     );
-  }, [handleLikeTemplate, handleTemplatePress, theme]);
+  }, [handleTemplatePress, theme]);
 
 
   const renderVideoTemplate = useCallback(({ item }: { item: VideoContent }) => {
@@ -836,28 +786,10 @@ const HomeScreen: React.FC = React.memo(() => {
               <Icon name="play-arrow" size={32} color="#ffffff" />
             </View>
           </View>
-            <View style={styles.templateActions}>
-              <TouchableOpacity
-                style={[
-                  styles.actionButton, 
-                  { backgroundColor: item.isLiked ? '#E74C3C' : 'rgba(255, 255, 255, 0.9)' }
-                ]}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  handleLikeVideoContent(item.id);
-                }}
-              >
-                <Icon 
-                  name={item.isLiked ? "favorite" : "favorite-border"} 
-                  size={16} 
-                  color={item.isLiked ? '#FFFFFF' : '#E74C3C'} 
-                />
-              </TouchableOpacity>
-            </View>
         </Animated.View>
       </TouchableOpacity>
     );
-  }, [handleLikeVideoContent, handleTemplatePress, theme]);
+  }, [handleTemplatePress, theme]);
 
   // Memoized key extractors
   const keyExtractor = useCallback((item: any) => item.id, []);
@@ -1019,10 +951,10 @@ const HomeScreen: React.FC = React.memo(() => {
             />
           </View>
 
-                                {/* Upcoming Events */}
+                                {/* Upcoming Festivals */}
             <View style={styles.upcomingEventsSection}>
                              <View style={styles.sectionHeader}>
-                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Upcoming Events</Text>
+                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Upcoming Festivals</Text>
                  <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllUpcomingEvents}>
                    <Text style={styles.viewAllButtonText}>Browse All</Text>
                  </TouchableOpacity>
@@ -1086,7 +1018,7 @@ const HomeScreen: React.FC = React.memo(() => {
           {/* Templates Grid */}
           <View style={styles.templatesSection}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Professional Templates</Text>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Business Events</Text>
               <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllTemplates}>
                 <Text style={styles.viewAllButtonText}>Browse All</Text>
               </TouchableOpacity>
@@ -1183,29 +1115,6 @@ const HomeScreen: React.FC = React.memo(() => {
                          <Text style={styles.modalStatValue}>{selectedTemplate.downloads}</Text>
                        </View>
                      </View>
-                     <View style={styles.modalActions}>
-                       <TouchableOpacity 
-                         style={[
-                           styles.modalActionButton, 
-                           { backgroundColor: selectedTemplate.isLiked ? '#E74C3C' : theme.colors.cardBackground }
-                         ]}
-                         onPress={() => {
-                           handleLikeTemplate(selectedTemplate.id);
-                         }}
-                       >
-                         <Icon 
-                           name={selectedTemplate.isLiked ? "favorite" : "favorite-border"} 
-                           size={20} 
-                           color={selectedTemplate.isLiked ? '#FFFFFF' : '#E74C3C'} 
-                         />
-                         <Text style={[
-                           styles.modalActionButtonText, 
-                           { color: selectedTemplate.isLiked ? '#FFFFFF' : theme.colors.text, marginLeft: 8 }
-                         ]}>
-                           {selectedTemplate.isLiked ? 'LIKED' : 'LIKE'}
-                         </Text>
-                       </TouchableOpacity>
-                     </View>
                    </View>
                  </>
                )}
@@ -1214,7 +1123,7 @@ const HomeScreen: React.FC = React.memo(() => {
          </View>
                </Modal>
 
-        {/* Upcoming Events Modal */}
+        {/* Upcoming Festivals Modal */}
         <Modal
           visible={isUpcomingEventsModalVisible}
           transparent={true}
@@ -1229,8 +1138,8 @@ const HomeScreen: React.FC = React.memo(() => {
               >
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
-                    <Text style={styles.upcomingEventsModalTitle}>Upcoming Events</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse upcoming events and professional services</Text>
+                    <Text style={styles.upcomingEventsModalTitle}>Upcoming Festivals</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse upcoming festivals and events</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -1296,7 +1205,7 @@ const HomeScreen: React.FC = React.memo(() => {
           </View>
         </Modal>
 
-        {/* Professional Templates Modal */}
+        {/* Business Events Modal */}
         <Modal
           visible={isTemplatesModalVisible}
           transparent={true}
@@ -1311,8 +1220,8 @@ const HomeScreen: React.FC = React.memo(() => {
               >
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
-                    <Text style={styles.upcomingEventsModalTitle}>Professional Templates</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all available templates</Text>
+                    <Text style={styles.upcomingEventsModalTitle}>Business Events</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all available business events</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -1787,23 +1696,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: 40,
   },
-  templateActions: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-  },
-  actionButton: {
-    borderRadius: responsiveSize.buttonBorderRadius,
-    paddingHorizontal: responsiveSpacing.xs,
-    paddingVertical: responsiveSpacing.xs / 2,
-    marginLeft: responsiveSpacing.xs,
-    ...responsiveShadow.small,
-  },
-  actionButtonText: {
-    fontSize: responsiveText.small,
-    fontWeight: '600',
-  },
   templateInfo: {
     padding: screenWidth * 0.03,
   },
@@ -1940,33 +1832,8 @@ const styles = StyleSheet.create({
      fontWeight: 'bold',
      color: '#333333',
    },
-   modalActions: {
-     flexDirection: 'row',
-     justifyContent: 'center',
-     gap: screenWidth * 0.03,
-   },
-   modalActionButton: {
-     flexDirection: 'row',
-     alignItems: 'center',
-     justifyContent: 'center',
-     paddingVertical: screenHeight * 0.015,
-     paddingHorizontal: screenWidth * 0.04,
-     borderRadius: 15,
-     shadowColor: '#000',
-     shadowOffset: {
-       width: 0,
-       height: 2,
-     },
-     shadowOpacity: 0.1,
-     shadowRadius: 4,
-     elevation: 3,
-   },
-       modalActionButtonText: {
-      fontSize: Math.min(screenWidth * 0.035, 14),
-      fontWeight: '600',
-    },
-    // Upcoming Events Modal Styles
-    upcomingEventsModalContent: {
+   // Upcoming Festivals Modal Styles
+   upcomingEventsModalContent: {
       width: screenWidth * 0.95,
       height: screenHeight * 0.9,
       backgroundColor: '#ffffff',

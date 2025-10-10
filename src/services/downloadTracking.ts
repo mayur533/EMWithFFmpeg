@@ -101,21 +101,34 @@ class DownloadTrackingService {
     }
   }
 
-  // Track a download (this would be called when user downloads content)
-  async trackDownload(userId: string, resourceType: string, resourceId: string, fileUrl: string): Promise<boolean> {
+  // Track a download (call this whenever user downloads content)
+  async trackDownload(
+    userId: string, 
+    resourceType: 'TEMPLATE' | 'VIDEO' | 'GREETING' | 'POSTER' | 'CONTENT', 
+    resourceId: string, 
+    fileUrl: string,
+    additionalData?: { title?: string; thumbnail?: string; category?: string }
+  ): Promise<boolean> {
     try {
-      // This would typically be called automatically by the download APIs
-      // But we can also provide a direct tracking method if needed
+      console.log('📥 [TRACK DOWNLOAD] Tracking download:', { userId, resourceType, resourceId });
+      
       const response = await api.post('/api/mobile/downloads/track', {
         mobileUserId: userId,
-        resourceType: resourceType.toUpperCase(),
+        resourceType: resourceType,
         resourceId,
-        fileUrl
+        fileUrl,
+        ...additionalData
       });
       
-      return response.data.success;
+      if (response.data.success) {
+        console.log('✅ [TRACK DOWNLOAD] Download tracked successfully');
+        return true;
+      } else {
+        console.log('⚠️ [TRACK DOWNLOAD] API returned unsuccessful response');
+        return false;
+      }
     } catch (error) {
-      console.error('Error tracking download:', error);
+      console.error('❌ [TRACK DOWNLOAD] Error tracking download:', error);
       return false;
     }
   }

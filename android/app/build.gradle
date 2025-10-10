@@ -70,8 +70,9 @@ react {
 
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
+ * DISABLED temporarily to fix Play Store installation issues
  */
-def enableProguardInReleaseBuilds = true
+def enableProguardInReleaseBuilds = false
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)
@@ -129,10 +130,10 @@ android {
             shrinkResources enableProguardInReleaseBuilds
             proguardFiles getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             
-            // Additional optimizations for smaller APK/AAB size
-            ndk {
-                debugSymbolLevel 'SYMBOL_TABLE'
-            }
+            // Disable NDK optimizations temporarily to fix crashes
+            // ndk {
+            //     debugSymbolLevel 'SYMBOL_TABLE'
+            // }
         }
     }
     

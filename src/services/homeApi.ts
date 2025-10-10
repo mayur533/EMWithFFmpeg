@@ -531,28 +531,6 @@ class HomeApiService {
     }
   }
 
-  // Like content (templates or videos)
-  async likeContent(contentId: string, contentType: 'template' | 'video'): Promise<ActionResponse> {
-    try {
-      const response = await api.post(`/api/mobile/home/${contentType}s/${contentId}/like`);
-      return response.data;
-    } catch (error) {
-      console.error('Like content error:', error);
-      throw error;
-    }
-  }
-
-  // Unlike content (templates or videos)
-  async unlikeContent(contentId: string, contentType: 'template' | 'video'): Promise<ActionResponse> {
-    try {
-      const response = await api.delete(`/api/mobile/home/${contentType}s/${contentId}/like`);
-      return response.data;
-    } catch (error) {
-      console.error('Unlike content error:', error);
-      throw error;
-    }
-  }
-
   // Download content (templates or videos)
   async downloadContent(contentId: string, contentType: 'template' | 'video'): Promise<ActionResponse> {
     try {

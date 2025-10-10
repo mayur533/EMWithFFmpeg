@@ -21,6 +21,7 @@ import { useNavigation } from '@react-navigation/native';
 import { Share } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import downloadedPostersService, { DownloadedPoster } from '../services/downloadedPosters';
+import downloadTrackingService, { DownloadedContent } from '../services/downloadTracking';
 import authService from '../services/auth';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -60,7 +61,31 @@ const MyPostersScreen: React.FC = () => {
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
       
-      const downloadedPosters = await downloadedPostersService.getDownloadedPosters(userId);
+      if (!userId) {
+        console.log('⚠️ No user ID available');
+        setLoading(false);
+        return;
+      }
+
+      console.log('📥 [MY POSTERS] Fetching downloads from API for user:', userId);
+      
+      // Fetch downloads from backend API
+      const downloadsResponse = await downloadTrackingService.getUserDownloads(userId);
+      
+      console.log('✅ [MY POSTERS] Downloads fetched:', downloadsResponse.downloads.length);
+      
+      // Convert DownloadedContent to DownloadedPoster format
+      const downloadedPosters: DownloadedPoster[] = downloadsResponse.downloads.map((download: DownloadedContent) => ({
+        id: download.id,
+        title: download.title || `Download ${download.resourceId}`,
+        description: '',
+        imageUri: download.fileUrl,
+        thumbnailUri: download.thumbnail,
+        category: download.category || 'General',
+        downloadDate: download.createdAt,
+        tags: []
+      }));
+      
       setPosters(downloadedPosters);
       
       // Extract unique categories
@@ -68,9 +93,11 @@ const MyPostersScreen: React.FC = () => {
         new Set(downloadedPosters.map(poster => poster.category || 'Uncategorized'))
       );
       setCategories(uniqueCategories);
+      
+      console.log('✅ [MY POSTERS] Posters loaded:', downloadedPosters.length, 'Categories:', uniqueCategories.length);
     } catch (error) {
-      console.error('Error loading posters:', error);
-      Alert.alert('Error', 'Failed to load downloaded posters');
+      console.error('❌ [MY POSTERS] Error loading posters:', error);
+      Alert.alert('Error', 'Failed to load downloaded posters. Please check your internet connection.');
     } finally {
       setLoading(false);
     }

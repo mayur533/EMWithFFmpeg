@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback, useRef } from 'react';
 import transactionHistoryService, { Transaction } from '../services/transactionHistory';
 import subscriptionApi, { SubscriptionStatus } from '../services/subscriptionApi';
 import authService from '../services/auth';
@@ -47,6 +47,8 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     yearlySubscriptions: 0,
   });
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const lastRefreshTimeRef = useRef<number>(0);
+  const isRefreshingRef = useRef<boolean>(false);
 
   // Monitor user changes and reset subscription state when user changes
   useEffect(() => {
@@ -123,8 +125,23 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   }, []);
 
   // Refresh subscription status from backend
-  const refreshSubscription = async () => {
+  const refreshSubscription = useCallback(async () => {
     try {
+      // Prevent duplicate API calls - use cached data if refreshed within last 5 seconds
+      const now = Date.now();
+      const cacheValidityMs = 5000; // 5 seconds
+      
+      if (isRefreshingRef.current) {
+        console.log('⏭️ Subscription refresh already in progress, skipping...');
+        return;
+      }
+      
+      if (now - lastRefreshTimeRef.current < cacheValidityMs) {
+        console.log('📦 Using cached subscription data (refreshed', Math.round((now - lastRefreshTimeRef.current) / 1000), 'seconds ago)');
+        return;
+      }
+      
+      isRefreshingRef.current = true;
       setIsLoading(true);
       console.log('🔄 Refreshing subscription status...');
       
@@ -147,6 +164,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
           monthlySubscriptions: 0,
           yearlySubscriptions: 0,
         });
+        lastRefreshTimeRef.current = now;
         return;
       }
 
@@ -169,6 +187,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         
         setIsSubscribed(isActive);
         setSubscriptionStatus(status);
+        lastRefreshTimeRef.current = now;
         
         console.log('🔐 Subscription access:', isActive ? 'GRANTED ✅' : 'DENIED ❌');
         console.log('🔍 Status details:', {
@@ -197,11 +216,14 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       setSubscriptionStatus(null);
     } finally {
       setIsLoading(false);
+      isRefreshingRef.current = false;
+      lastRefreshTimeRef.current = Date.now();
+      console.log('✅ Subscription refresh completed');
     }
-  };
+  }, []);
 
   // Refresh transactions and stats
-  const refreshTransactions = async () => {
+  const refreshTransactions = useCallback(async () => {
     try {
       console.log('🔄 SubscriptionContext - Refreshing transactions...');
       const [transactionsData, statsData] = await Promise.all([
@@ -220,10 +242,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     } catch (error) {
       console.error('❌ SubscriptionContext - Error refreshing transactions:', error);
     }
-  };
+  }, []);
 
   // Add a new transaction
-  const addTransaction = async (transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
+  const addTransaction = useCallback(async (transaction: Omit<Transaction, 'id' | 'timestamp'>) => {
     try {
       const newTransaction = await transactionHistoryService.addTransaction(transaction);
       await refreshTransactions(); // Refresh to get updated data
@@ -232,21 +254,21 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
       console.error('Error adding transaction:', error);
       throw error;
     }
-  };
+  }, [refreshTransactions]);
 
 
   // Clear all transactions
-  const clearTransactions = async () => {
+  const clearTransactions = useCallback(async () => {
     try {
       await transactionHistoryService.clearTransactions();
       await refreshTransactions();
     } catch (error) {
       console.error('Error clearing transactions:', error);
     }
-  };
+  }, [refreshTransactions]);
 
   // Clear all subscription data (called on logout)
-  const clearSubscriptionData = () => {
+  const clearSubscriptionData = useCallback(() => {
     console.log('🧹 Clearing all subscription data...');
     setIsSubscribed(false);
     setSubscriptionStatus(null);
@@ -262,10 +284,10 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
     });
     setCurrentUserId(null);
     console.log('✅ All subscription data cleared');
-  };
+  }, []);
 
   // Check if user has premium access for a specific feature
-  const checkPremiumAccess = (feature: string): boolean => {
+  const checkPremiumAccess = useCallback((feature: string): boolean => {
     if (!isSubscribed || !subscriptionStatus) {
       console.log(`🔒 Premium access denied for feature: ${feature} (not subscribed)`);
       return false;
@@ -287,7 +309,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
 
     console.log(`✅ Premium access granted for feature: ${feature}`);
     return true;
-  };
+  }, [isSubscribed, subscriptionStatus]);
 
   return (
     <SubscriptionContext.Provider value={{ 

@@ -105,7 +105,7 @@ class UserActivityService {
     }
   }
 
-  // Record like/favorite activity
+  // Like functionality has been removed
   async recordLike(userId: string, resourceType: string, resourceId: string, metadata?: any): Promise<void> {
     try {
       await this.recordActivity({

@@ -24,7 +24,6 @@ import authApi from '../services/authApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import userBusinessProfilesService from '../services/userBusinessProfiles';
 import businessProfileService from '../services/businessProfile';
-import userLikesService from '../services/userLikes';
 import userPreferencesService from '../services/userPreferences';
 import userProfileService from '../services/userProfile';
 import { useTheme } from '../context/ThemeContext';
@@ -33,6 +32,7 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 
 type ProfileScreenNavigationProp = StackNavigationProp<MainStackParamList>;
 import downloadedPostersService from '../services/downloadedPosters';
+import downloadTrackingService from '../services/downloadTracking';
 import ImagePickerModal from '../components/ImagePickerModal';
 import ComingSoonModal from '../components/ComingSoonModal';
 
@@ -83,7 +83,6 @@ const ProfileScreen: React.FC = () => {
   const [isUpdating, setIsUpdating] = useState(false);
   const [posterStats, setPosterStats] = useState({ total: 0, recentCount: 0 });
   const [businessProfileStats, setBusinessProfileStats] = useState({ total: 0, recentCount: 0 });
-  const [likeStats, setLikeStats] = useState({ total: 0, recentCount: 0, byType: { template: 0, video: 0, poster: 0, businessProfile: 0 } });
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
   const [profileImageUri, setProfileImageUri] = useState<string | null>(
     currentUser?.companyLogo || currentUser?.businessLogo || currentUser?.logo || null
@@ -178,12 +177,18 @@ const ProfileScreen: React.FC = () => {
             // Continue with existing user data
           }
           
-          // Load poster stats
-          const posterStats = await downloadedPostersService.getPosterStats(userId);
-          setPosterStats({
-            total: posterStats?.total || 0,
-            recentCount: posterStats?.recentCount || 0,
-          });
+          // Load download stats from backend API
+          try {
+            const downloadStats = await downloadTrackingService.getDownloadStats(userId);
+            setPosterStats({
+              total: downloadStats.total || 0,
+              recentCount: downloadStats.recent || 0,
+            });
+            console.log('✅ [PROFILE] Download stats loaded:', downloadStats);
+          } catch (error) {
+            console.log('⚠️ [PROFILE] Failed to load download stats:', error);
+            setPosterStats({ total: 0, recentCount: 0 });
+          }
           
           // Load business profile stats by fetching actual profiles from backend
           let businessStats = { total: 0, recentCount: 0 };
@@ -207,15 +212,7 @@ const ProfileScreen: React.FC = () => {
             setBusinessProfileStats({ total: 0, recentCount: 0 });
           }
           
-          // Load like stats from backend
-          const likeStats = await userProfileService.getLikeStats(userId);
-          setLikeStats({
-            total: likeStats?.total || 0,
-            recentCount: likeStats?.recentCount || 0,
-            byType: likeStats?.byType || {},
-          });
-          
-          console.log('📊 Loaded stats for user:', userId, 'Posters:', posterStats?.total || 0, 'Business Profiles:', businessStats?.total || 0, 'Likes:', likeStats?.total || 0);
+          console.log('📊 Loaded stats for user:', userId, 'Posters:', posterStats?.total || 0, 'Business Profiles:', businessStats?.total || 0);
         } catch (error) {
           console.error('Error loading user profile data:', error);
         }
@@ -318,15 +315,7 @@ const ProfileScreen: React.FC = () => {
   };
 
   const handleMyPosters = () => {
-    setComingSoonTitle('Downloaded Posters');
-    setComingSoonSubtitle('This feature is under development and will be available soon!');
-    setShowComingSoonModal(true);
-  };
-
-  const handleLikedItems = () => {
-    setComingSoonTitle('Liked Content');
-    setComingSoonSubtitle('This feature is under development and will be available soon!');
-    setShowComingSoonModal(true);
+    navigation.navigate('MyPosters' as never);
   };
 
 
@@ -772,32 +761,6 @@ const ProfileScreen: React.FC = () => {
                     </Text>
                     <Text style={[styles.myPostersSubtitle, { color: theme.colors.textSecondary }]}>
                       {posterStats.total} posters • {posterStats.recentCount} recent
-                    </Text>
-                  </View>
-                </View>
-                <Icon name="chevron-right" size={24} color={theme.colors.textSecondary} />
-              </View>
-            </TouchableOpacity>
-          </View>
-
-          {/* Liked Items Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Liked Items</Text>
-            <TouchableOpacity 
-              style={[styles.likedItemsCard, { backgroundColor: theme.colors.cardBackground }]}
-              onPress={handleLikedItems}
-            >
-              <View style={styles.likedItemsContent}>
-                <View style={styles.likedItemsLeft}>
-                  <View style={[styles.likedItemsIcon, { backgroundColor: '#E74C3C20' }]}>
-                    <Icon name="favorite" size={24} color="#E74C3C" />
-                  </View>
-                  <View style={styles.likedItemsInfo}>
-                    <Text style={[styles.likedItemsTitle, { color: theme.colors.text }]}>
-                      Liked Content
-                    </Text>
-                    <Text style={[styles.likedItemsSubtitle, { color: theme.colors.textSecondary }]}>
-                      {likeStats.total} liked items • {likeStats.recentCount} recent
                     </Text>
                   </View>
                 </View>

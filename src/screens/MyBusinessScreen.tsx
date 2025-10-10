@@ -159,11 +159,6 @@ const MyBusinessScreen: React.FC = () => {
     });
   };
 
-  const handleLikePoster = (posterId: string) => {
-    // Show Coming Soon modal for like feature
-    setShowComingSoonModal(true);
-  };
-
   const renderPoster = useCallback(({ item }: { item: BusinessCategoryPoster }) => {
     return (
       <TouchableOpacity
@@ -188,21 +183,6 @@ const MyBusinessScreen: React.FC = () => {
             console.error('Image load error for poster:', item.id, item.thumbnail);
           }}
         />
-        <View style={styles.posterOverlay}>
-          <TouchableOpacity
-            style={styles.posterLikeButton}
-            onPress={(e) => {
-              e.stopPropagation();
-              handleLikePoster(item.id);
-            }}
-          >
-            <Icon 
-              name="favorite-border" 
-              size={isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 15 : isLargeScreen ? 16 : 18} 
-              color="#E74C3C" 
-            />
-          </TouchableOpacity>
-        </View>
       </TouchableOpacity>
     );
   }, [theme, navigation, cardWidth, cardHeight]);
@@ -404,21 +384,6 @@ const styles = StyleSheet.create({
   posterImage: {
     width: '100%',
     height: '100%',
-  },
-  posterOverlay: {
-    position: 'absolute',
-    top: responsiveSpacing.sm,
-    right: responsiveSpacing.sm,
-  },
-  posterLikeButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    borderRadius: isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16,
-    padding: isUltraSmallScreen ? 4 : isSmallScreen ? 5 : isMediumScreen ? 6 : isLargeScreen ? 7 : 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.2,
-    shadowRadius: 2,
-    elevation: 2,
   },
   emptyPostersContainer: {
     alignItems: 'center',

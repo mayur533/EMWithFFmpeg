@@ -17,27 +17,23 @@ import LinearGradient from 'react-native-linear-gradient';
 import { Template } from '../services/templates';
 import { useTheme } from '../context/ThemeContext';
 import templatesBannersApi from '../services/templatesBannersApi';
-import genericLikesApi from '../services/genericLikesApi';
 
 interface TemplateCardProps {
   template: Template;
   onPress: (template: Template) => void;
-  onLikeChange?: (templateId: string, isLiked: boolean) => void;
   width?: number;
 }
 
 const { width, height } = Dimensions.get('window');
 const cardWidth = (width - 60) / 2; // Default for 2 columns, can be overridden
 
-const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ template, onPress, onLikeChange, width: customWidth }) => {
+const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ template, onPress, width: customWidth }) => {
   const { theme, isDarkMode } = useTheme();
   const [scaleValue] = useState(() => new Animated.Value(1));
   const [imageLoaded, setImageLoaded] = useState(false);
   const [previewModalVisible, setPreviewModalVisible] = useState(false);
   const [previewImageLoaded, setPreviewImageLoaded] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
-  const [isLiked, setIsLiked] = useState(template.isLiked || false);
-  const [isLiking, setIsLiking] = useState(false);
   const gradientBorderOpacity = useRef(new Animated.Value(0)).current;
 
   const handlePressIn = () => {
@@ -86,17 +82,7 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ template, onPres
   };
 
   const getCategoryIcon = () => {
-    return template.category === 'premium' ? 'star' : 'favorite';
-  };
-
-  const handleLikePress = (e: any) => {
-    e.stopPropagation();
-    e.preventDefault();
-    
-    // Call parent's onLikeChange which will show Coming Soon modal
-    if (onLikeChange) {
-      onLikeChange(template.id, !isLiked);
-    }
+    return template.category === 'premium' ? 'star' : 'star';
   };
 
   const renderPreviewModal = () => (
@@ -305,20 +291,6 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ template, onPres
               <Icon name="translate" size={10} color="#ffffff" />
               <Text style={styles.languageText}>{template.language}</Text>
             </View>
-
-            {/* Like Button */}
-            <TouchableOpacity
-              style={styles.likeButton}
-              onPress={handleLikePress}
-              activeOpacity={0.7}
-              hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-            >
-              <Icon 
-                name={isLiked ? "favorite" : "favorite-border"} 
-                size={16} 
-                color={isLiked ? "#ff4757" : "#ffffff"} 
-              />
-            </TouchableOpacity>
 
             {/* Overlay Gradient */}
             <LinearGradient

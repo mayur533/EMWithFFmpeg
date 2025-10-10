@@ -25,7 +25,6 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import TemplateCard from '../components/TemplateCard';
 import templateService, { Template, TemplateFilters } from '../services/templates';
 import templatesBannersApi from '../services/templatesBannersApi';
-import genericLikesApi from '../services/genericLikesApi';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import ComingSoonModal from '../components/ComingSoonModal';
@@ -183,20 +182,13 @@ const TemplateGalleryScreen: React.FC = () => {
     applyFilters();
   }, [applyFilters]);
 
-  // Handle like change
-  const handleLikeChange = useCallback(async (templateId: string, isLiked: boolean) => {
-    // Show Coming Soon modal for like feature
-    setShowComingSoonModal(true);
-  }, []);
-
   // Render template item
   const renderTemplateItem = useCallback(({ item }: { item: Template }) => (
     <TemplateCard 
       template={item} 
-      onPress={handleTemplatePress} 
-      onLikeChange={handleLikeChange}
+      onPress={handleTemplatePress}
     />
-  ), [handleTemplatePress, handleLikeChange]);
+  ), [handleTemplatePress]);
 
   // Key extractor for FlatList
   const keyExtractor = useCallback((item: Template) => item.id, []);

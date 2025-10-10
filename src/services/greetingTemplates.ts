@@ -245,33 +245,6 @@ class GreetingTemplatesService {
     }
   }
 
-  // Like/unlike a template
-  async toggleLike(templateId: string): Promise<boolean> {
-    try {
-      // First check if already liked (this would need to be implemented)
-      // For now, we'll assume it's not liked and try to like it
-      const response = await api.post(`/api/mobile/greetings/templates/${templateId}/like`);
-      
-      if (response.data.success) {
-        return response.data.isLiked;
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
-    } catch (error) {
-      console.error('Error toggling like:', error);
-      // If like failed, try to unlike
-      try {
-        const unlikeResponse = await api.delete(`/api/mobile/greetings/templates/${templateId}/like`);
-        if (unlikeResponse.data.success) {
-          return unlikeResponse.data.isLiked;
-        }
-      } catch (unlikeError) {
-        console.error('Error unliking template:', unlikeError);
-      }
-      return false;
-    }
-  }
-
   // Download a template
   async downloadTemplate(templateId: string): Promise<boolean> {
     try {
