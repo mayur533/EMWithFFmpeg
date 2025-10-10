@@ -75,16 +75,27 @@ const MyPostersScreen: React.FC = () => {
       console.log('✅ [MY POSTERS] Downloads fetched:', downloadsResponse.downloads.length);
       
       // Convert DownloadedContent to DownloadedPoster format
-      const downloadedPosters: DownloadedPoster[] = downloadsResponse.downloads.map((download: DownloadedContent) => ({
-        id: download.id,
-        title: download.title || `Download ${download.resourceId}`,
-        description: '',
-        imageUri: download.fileUrl,
-        thumbnailUri: download.thumbnail,
-        category: download.category || 'General',
-        downloadDate: download.createdAt,
-        tags: []
-      }));
+      const downloadedPosters: DownloadedPoster[] = downloadsResponse.downloads.map((download: DownloadedContent) => {
+        console.log('🔄 [MAPPING DOWNLOAD]', {
+          id: download.id,
+          resourceType: download.resourceType,
+          fileUrl: download.fileUrl,
+          thumbnail: download.thumbnail,
+          title: download.title,
+          category: download.category
+        });
+        
+        return {
+          id: download.id,
+          title: download.resourceType, // Show resource type as title
+          description: download.thumbnail || download.fileUrl || 'No thumbnail', // Show thumbnail URL as description
+          imageUri: download.fileUrl,
+          thumbnailUri: download.thumbnail,
+          category: download.resourceType, // Group by resource type
+          downloadDate: download.createdAt,
+          tags: []
+        };
+      });
       
       setPosters(downloadedPosters);
       
@@ -197,11 +208,24 @@ const MyPostersScreen: React.FC = () => {
       activeOpacity={0.7}
     >
       <View style={styles.posterImageContainer}>
-        <Image
-          source={{ uri: item.thumbnailUri || item.imageUri }}
-          style={styles.posterImage}
-          resizeMode="cover"
-        />
+        {(item.thumbnailUri || item.imageUri) ? (
+          <Image
+            source={{ uri: item.thumbnailUri || item.imageUri }}
+            style={styles.posterImage}
+            resizeMode="cover"
+            onLoad={() => {
+              console.log('✅ Image loaded successfully:', item.id);
+            }}
+            onError={(error) => {
+              console.error('❌ Image load failed:', item.id, 'URL:', item.thumbnailUri || item.imageUri);
+            }}
+          />
+        ) : (
+          <View style={[styles.posterImage, { backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' }]}>
+            <Icon name="image" size={48} color="#999" />
+            <Text style={{ color: '#666', fontSize: 10, marginTop: 8 }}>No Image</Text>
+          </View>
+        )}
         <View style={styles.posterOverlay}>
           <View style={styles.posterActions}>
             <TouchableOpacity
@@ -220,19 +244,12 @@ const MyPostersScreen: React.FC = () => {
         </View>
       </View>
       <View style={styles.posterInfo}>
-        <Text style={[styles.posterTitle, { color: theme.colors.text }]} numberOfLines={2}>
+        <Text style={[styles.posterTitle, { color: theme.colors.text }]} numberOfLines={1}>
           {item.title}
         </Text>
-        <Text style={[styles.posterDate, { color: theme.colors.textSecondary }]}>
-          {new Date(item.downloadDate).toLocaleDateString()}
+        <Text style={[styles.posterDescription, { color: theme.colors.textSecondary, fontSize: 10 }]} numberOfLines={2}>
+          {item.description}
         </Text>
-        {item.category && (
-          <View style={[styles.categoryTag, { backgroundColor: `${theme.colors.primary}20` }]}>
-            <Text style={[styles.categoryText, { color: theme.colors.primary }]}>
-              {item.category}
-            </Text>
-          </View>
-        )}
       </View>
     </TouchableOpacity>
   );
@@ -499,6 +516,11 @@ const styles = StyleSheet.create({
   posterTitle: {
     fontSize: 14,
     fontWeight: '600',
+    marginBottom: 4,
+  },
+  posterDescription: {
+    fontSize: 10,
+    lineHeight: 14,
     marginBottom: 4,
   },
   posterDate: {

@@ -41,11 +41,13 @@ class GreetingTemplatesService {
    */
   private convertToAbsoluteUrl(url: string | undefined | null): string | undefined {
     if (!url) {
+      console.log('⚠️ [URL CONVERSION] No URL provided, returning undefined');
       return undefined;
     }
     
     // Already absolute URL
     if (url.startsWith('http://') || url.startsWith('https://')) {
+      console.log('✅ [URL CONVERSION] Already absolute:', url);
       return url;
     }
     
@@ -53,6 +55,7 @@ class GreetingTemplatesService {
     const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
     const absoluteUrl = `${this.BASE_URL}${normalizedUrl}`;
     
+    console.log('🔧 [URL CONVERSION] Converted:', url, '→', absoluteUrl);
     return absoluteUrl;
   }
 
@@ -111,22 +114,27 @@ class GreetingTemplatesService {
           const originalUrl = backendTemplate.imageUrl;
           const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
           
-          console.log(`📸 [GREETING BY CATEGORY API] ${backendTemplate.title}:`, originalUrl, '→', absoluteUrl);
+          const finalThumbnail = absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
+          
+          console.log(`📸 [GREETING BY CATEGORY API] Template: ${backendTemplate.title}`);
+          console.log(`   Original URL: ${originalUrl}`);
+          console.log(`   Absolute URL: ${absoluteUrl}`);
+          console.log(`   Final URL: ${finalThumbnail}`);
           
           return {
             id: backendTemplate.id,
             name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
-            thumbnail: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
+            thumbnail: finalThumbnail,
             category: backendTemplate.category,
             content: {
               text: backendTemplate.description,
-              background: absoluteUrl,
+              background: absoluteUrl || finalThumbnail,
               layout: 'vertical' as const
             },
             likes: backendTemplate.likes || 0,
             downloads: backendTemplate.downloads || 0,
-            isLiked: false, // This would need to be determined by checking user likes
-            isDownloaded: false, // This would need to be determined by checking user downloads
+            isLiked: false,
+            isDownloaded: false,
             isPremium: backendTemplate.isPremium || false
           };
         });
@@ -166,22 +174,27 @@ class GreetingTemplatesService {
           const originalUrl = backendTemplate.imageUrl;
           const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
           
-          console.log(`📸 [GREETING TEMPLATES API] ${backendTemplate.title}:`, originalUrl, '→', absoluteUrl);
+          const finalThumbnail = absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
+          
+          console.log(`📸 [GREETING TEMPLATES API] Template: ${backendTemplate.title}`);
+          console.log(`   Original URL: ${originalUrl}`);
+          console.log(`   Absolute URL: ${absoluteUrl}`);
+          console.log(`   Final URL: ${finalThumbnail}`);
           
           return {
             id: backendTemplate.id,
             name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
-            thumbnail: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
+            thumbnail: finalThumbnail,
             category: backendTemplate.category,
             content: {
               text: backendTemplate.description,
-              background: absoluteUrl,
+              background: absoluteUrl || finalThumbnail,
               layout: 'vertical' as const
             },
             likes: backendTemplate.likes || 0,
             downloads: backendTemplate.downloads || 0,
-            isLiked: false, // This would need to be determined by checking user likes
-            isDownloaded: false, // This would need to be determined by checking user downloads
+            isLiked: false,
+            isDownloaded: false,
             isPremium: backendTemplate.isPremium || false
           };
         });
@@ -221,22 +234,28 @@ class GreetingTemplatesService {
           const originalUrl = backendTemplate.imageUrl;
           const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
           
-          console.log(`📸 [GREETING SEARCH API] ${backendTemplate.title}:`, originalUrl, '→', absoluteUrl);
+          // Fallback to Unsplash if no URL
+          const finalThumbnail = absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
+          
+          console.log(`📸 [GREETING SEARCH API] Template: ${backendTemplate.title}`);
+          console.log(`   Original URL: ${originalUrl}`);
+          console.log(`   Absolute URL: ${absoluteUrl}`);
+          console.log(`   Final URL: ${finalThumbnail}`);
           
           return {
             id: backendTemplate.id,
             name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
-            thumbnail: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
+            thumbnail: finalThumbnail,
             category: backendTemplate.category,
             content: {
               text: backendTemplate.description,
-              background: absoluteUrl,
+              background: absoluteUrl || finalThumbnail,
               layout: 'vertical' as const
             },
             likes: backendTemplate.likes || 0,
             downloads: backendTemplate.downloads || 0,
-            isLiked: false, // This would need to be determined by checking user likes
-            isDownloaded: false, // This would need to be determined by checking user downloads
+            isLiked: false,
+            isDownloaded: false,
             isPremium: backendTemplate.isPremium || false
           };
         });

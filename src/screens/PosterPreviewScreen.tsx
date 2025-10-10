@@ -21,6 +21,7 @@ import authService from '../services/auth';
 // import RNFS from 'react-native-fs'; // Removed - package uninstalled
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import downloadedPostersService from '../services/downloadedPosters';
+import { trackPosterDownload } from '../utils/downloadHelper';
 import { useTheme } from '../context/ThemeContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -316,12 +317,15 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
          const currentUser = authService.getCurrentUser();
          const userId = currentUser?.id;
          
+         const posterTitle = selectedImage.title || 'Custom Poster';
+         const posterCategory = selectedImage.title?.toLowerCase().includes('event') ? 'Events' : 'General';
+         
          await downloadedPostersService.savePosterInfo({
-           title: selectedImage.title || 'Custom Poster',
+           title: posterTitle,
            description: selectedImage.description || 'Event poster created with EventMarketers',
            imageUri: capturedImageUri,
            templateId: selectedTemplateId,
-           category: selectedImage.title?.toLowerCase().includes('event') ? 'Events' : 'General',
+           category: posterCategory,
            tags: ['poster', 'event', 'marketing'],
            size: {
              width: canvasWidth || 1080,
@@ -329,6 +333,18 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
            },
          }, userId);
          console.log('Poster information saved successfully');
+         
+         // Track download in backend API
+         if (userId) {
+           await trackPosterDownload(
+             selectedTemplateId,
+             capturedImageUri,
+             posterTitle,
+             capturedImageUri, // Use same URI as thumbnail
+             posterCategory
+           );
+           console.log('✅ Poster download tracked in backend');
+         }
        } catch (error) {
          console.error('Error saving poster information:', error);
          // Don't fail the download if poster info saving fails

@@ -56,20 +56,50 @@ class DownloadTrackingService {
       if (filters?.page) params.append('page', filters.page.toString());
       if (filters?.limit) params.append('limit', filters.limit.toString());
 
+      console.log('📡 [GET DOWNLOADS API] Calling: GET /api/mobile/users/' + userId + '/downloads/all?' + params.toString());
       const response = await api.get(`/api/mobile/users/${userId}/downloads/all?${params.toString()}`);
       
+      console.log('✅ [GET DOWNLOADS API] Response received');
+      console.log('📊 [GET DOWNLOADS API] Full Response:', JSON.stringify(response.data, null, 2));
+      console.log('📊 [GET DOWNLOADS API] Success:', response.data.success);
+      console.log('📊 [GET DOWNLOADS API] Status Code:', response.status);
+      
       if (response.data.success) {
+        console.log('📊 [GET DOWNLOADS API] Downloads count:', response.data.data?.downloads?.length || 0);
+        console.log('📊 [GET DOWNLOADS API] Statistics:', JSON.stringify(response.data.data?.statistics, null, 2));
+        console.log('📊 [GET DOWNLOADS API] Pagination:', JSON.stringify(response.data.data?.pagination, null, 2));
+        
         // Map backend response to frontend format
-        const mappedDownloads = response.data.data.downloads.map((download: any) => ({
-          id: download.id,
-          resourceType: download.resourceType,
-          resourceId: download.resourceId,
-          fileUrl: download.fileUrl,
-          createdAt: download.createdAt,
-          title: this.getResourceTitle(download.resourceType, download.resourceId),
-          thumbnail: this.getResourceThumbnail(download.resourceType, download.resourceId),
-          category: this.getResourceCategory(download.resourceType, download.resourceId)
-        }));
+        const mappedDownloads = response.data.data.downloads.map((download: any) => {
+          // Use thumbnailUrl from backend, fallback to fileUrl if thumbnailUrl is valid HTTP/HTTPS
+          const thumbnailUrl = download.thumbnailUrl;
+          const isValidThumbnail = thumbnailUrl?.startsWith('http://') || thumbnailUrl?.startsWith('https://');
+          const isValidFileUrl = download.fileUrl?.startsWith('http://') || download.fileUrl?.startsWith('https://');
+          
+          // Prefer thumbnailUrl, then fileUrl if valid, otherwise null (will show fallback UI)
+          const imageUrl = isValidThumbnail ? thumbnailUrl : (isValidFileUrl ? download.fileUrl : null);
+          
+          console.log('🖼️ [DOWNLOAD MAPPING]', {
+            id: download.id,
+            resourceType: download.resourceType,
+            thumbnailUrl: download.thumbnailUrl,
+            fileUrl: download.fileUrl,
+            isValidThumbnail,
+            isValidFileUrl,
+            finalImageUrl: imageUrl
+          });
+          
+          return {
+            id: download.id,
+            resourceType: download.resourceType,
+            resourceId: download.resourceId,
+            fileUrl: imageUrl,
+            createdAt: download.downloadedAt || download.createdAt,
+            title: download.title || this.getResourceTitle(download.resourceType, download.resourceId),
+            thumbnail: imageUrl,
+            category: download.category || this.getResourceCategory(download.resourceType, download.resourceId)
+          };
+        });
 
         return {
           downloads: mappedDownloads,

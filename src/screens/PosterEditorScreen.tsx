@@ -1638,9 +1638,17 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const applyFrame = useCallback((frame: Frame) => {
     setApplyingFrame(true);
     
-    // Store current layers and template as original before applying frame
-    setOriginalLayers([...layers]);
+    // Store current layers and template as original before applying frame (deep clone)
+    const clonedLayers = layers.map(layer => ({
+      ...layer,
+      position: { ...layer.position },
+      size: { ...layer.size },
+      style: { ...layer.style }
+    }));
+    setOriginalLayers(clonedLayers);
     setOriginalTemplate(selectedTemplate);
+    
+    console.log('📦 Stored original layers for restoration:', clonedLayers.length, 'layers');
     
     setSelectedFrame(frame);
     setShowFrameSelector(false);
@@ -3234,12 +3242,20 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   }
                 ]}
                 onPress={() => {
+                  console.log('🗑️ [REMOVE FRAME] Starting frame removal...');
+                  console.log('📊 [REMOVE FRAME] Original layers count:', originalLayers.length);
+                  
                   setSelectedFrame(null);
                   setFrameContent({});
+                  
                   // Restore original layers and template to their original state
                   if (originalLayers.length > 0) {
+                    console.log('🔄 [REMOVE FRAME] Restoring', originalLayers.length, 'layers to original positions');
+                    
                     // Update animation values for all original layers
                     originalLayers.forEach(layer => {
+                      console.log(`📍 [REMOVE FRAME] Layer ${layer.id}: Restoring to position (${layer.position.x}, ${layer.position.y})`);
+                      
                       // Update position animations
                       if (layerAnimations[layer.id]) {
                         layerAnimations[layer.id].x.setValue(layer.position.x);
@@ -3268,20 +3284,23 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                       } else {
                         scaleValues[layer.id] = new Animated.Value(1);
                       }
-                      
-                      console.log(`♻️ Restored animation values for layer ${layer.id} to position (${layer.position.x}, ${layer.position.y})`);
                     });
                     
+                    // Restore layers with their original positions
                     setLayers(originalLayers);
                     setOriginalLayers([]); // Clear stored original layers
+                    
                     // Restore original template
                     setSelectedTemplate(originalTemplate);
-                    // Re-apply the template to restore footer colors and styles
-                    applyTemplate(originalTemplate);
-                    console.log('✅ Frame removed and original layout restored');
-                  } else if (selectedBusinessProfile) {
-                    // Fallback to business profile if no original layers stored
-                    applyBusinessProfileToPoster(selectedBusinessProfile);
+                    
+                    console.log('✅ [REMOVE FRAME] Frame removed and original layout restored');
+                    console.log('📋 [REMOVE FRAME] Template restored:', originalTemplate);
+                  } else {
+                    console.log('⚠️ [REMOVE FRAME] No original layers found, using fallback');
+                    if (selectedBusinessProfile) {
+                      // Fallback to business profile if no original layers stored
+                      applyBusinessProfileToPoster(selectedBusinessProfile);
+                    }
                   }
                   setShowRemoveFrameModal(false);
                 }}
