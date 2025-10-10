@@ -30,6 +30,7 @@ import homeApi, {
   ProfessionalTemplate, 
   VideoContent 
 } from '../services/homeApi';
+import greetingTemplatesService from '../services/greetingTemplates';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 // import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
@@ -82,6 +83,19 @@ const HomeScreen: React.FC = React.memo(() => {
   const [videoContent, setVideoContent] = useState<VideoContent[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+
+  // Greeting sections data states
+  const [motivationTemplates, setMotivationTemplates] = useState<any[]>([]);
+  const [goodMorningTemplates, setGoodMorningTemplates] = useState<any[]>([]);
+  const [businessEthicsTemplates, setBusinessEthicsTemplates] = useState<any[]>([]);
+  const [devotionalTemplates, setDevotionalTemplates] = useState<any[]>([]);
+  const [leaderQuotesTemplates, setLeaderQuotesTemplates] = useState<any[]>([]);
+  const [atmanirbharBharatTemplates, setAtmanirbharBharatTemplates] = useState<any[]>([]);
+  const [goodThoughtsTemplates, setGoodThoughtsTemplates] = useState<any[]>([]);
+  const [trendingTemplates, setTrendingTemplates] = useState<any[]>([]);
+  const [bhagvatGitaTemplates, setBhagvatGitaTemplates] = useState<any[]>([]);
+  const [booksTemplates, setBooksTemplates] = useState<any[]>([]);
+  const [celebratesMomentsTemplates, setCelebratesMomentsTemplates] = useState<any[]>([]);
   
   // Coming Soon Modal state
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
@@ -333,6 +347,94 @@ const HomeScreen: React.FC = React.memo(() => {
       } else {
         console.log('⚠️ Video content API failed');
         setVideoContent([]);
+      }
+
+      // Load greeting sections in parallel
+      const [
+        motivationResponse,
+        goodMorningResponse,
+        businessEthicsResponse,
+        devotionalResponse,
+        leaderQuotesResponse,
+        atmanirbharResponse,
+        goodThoughtsResponse,
+        trendingResponse,
+        bhagvatGitaResponse,
+        booksResponse,
+        celebratesResponse
+      ] = await Promise.allSettled([
+        greetingTemplatesService.searchTemplates('motivation'),
+        greetingTemplatesService.searchTemplates('good morning'),
+        greetingTemplatesService.searchTemplates('business ethics'),
+        greetingTemplatesService.searchTemplates('devotional'),
+        greetingTemplatesService.searchTemplates('leader quotes'),
+        greetingTemplatesService.searchTemplates('atmanirbhar bharat'),
+        greetingTemplatesService.searchTemplates('good thoughts'),
+        greetingTemplatesService.searchTemplates('trending'),
+        greetingTemplatesService.searchTemplates('bhagvat gita'),
+        greetingTemplatesService.searchTemplates('books'),
+        greetingTemplatesService.searchTemplates('celebrates the moments')
+      ]);
+
+      // Handle greeting sections responses - Only set data if array has items
+      if (motivationResponse.status === 'fulfilled' && motivationResponse.value.length > 0) {
+        console.log('✅ [MOTIVATION] Setting templates:', motivationResponse.value.length);
+        setMotivationTemplates(motivationResponse.value.slice(0, 10));
+      } else {
+        console.log('⚠️ [MOTIVATION] No data available or API failed');
+        setMotivationTemplates([]);
+      }
+      if (goodMorningResponse.status === 'fulfilled' && goodMorningResponse.value.length > 0) {
+        console.log('✅ [GOOD MORNING] Setting templates:', goodMorningResponse.value.length);
+        setGoodMorningTemplates(goodMorningResponse.value.slice(0, 10));
+      } else {
+        console.log('⚠️ [GOOD MORNING] No data available or API failed');
+        setGoodMorningTemplates([]);
+      }
+      if (businessEthicsResponse.status === 'fulfilled' && businessEthicsResponse.value.length > 0) {
+        setBusinessEthicsTemplates(businessEthicsResponse.value.slice(0, 10));
+      } else {
+        setBusinessEthicsTemplates([]);
+      }
+      if (devotionalResponse.status === 'fulfilled' && devotionalResponse.value.length > 0) {
+        setDevotionalTemplates(devotionalResponse.value.slice(0, 10));
+      } else {
+        setDevotionalTemplates([]);
+      }
+      if (leaderQuotesResponse.status === 'fulfilled' && leaderQuotesResponse.value.length > 0) {
+        setLeaderQuotesTemplates(leaderQuotesResponse.value.slice(0, 10));
+      } else {
+        setLeaderQuotesTemplates([]);
+      }
+      if (atmanirbharResponse.status === 'fulfilled' && atmanirbharResponse.value.length > 0) {
+        setAtmanirbharBharatTemplates(atmanirbharResponse.value.slice(0, 10));
+      } else {
+        setAtmanirbharBharatTemplates([]);
+      }
+      if (goodThoughtsResponse.status === 'fulfilled' && goodThoughtsResponse.value.length > 0) {
+        setGoodThoughtsTemplates(goodThoughtsResponse.value.slice(0, 10));
+      } else {
+        setGoodThoughtsTemplates([]);
+      }
+      if (trendingResponse.status === 'fulfilled' && trendingResponse.value.length > 0) {
+        setTrendingTemplates(trendingResponse.value.slice(0, 10));
+      } else {
+        setTrendingTemplates([]);
+      }
+      if (bhagvatGitaResponse.status === 'fulfilled' && bhagvatGitaResponse.value.length > 0) {
+        setBhagvatGitaTemplates(bhagvatGitaResponse.value.slice(0, 10));
+      } else {
+        setBhagvatGitaTemplates([]);
+      }
+      if (booksResponse.status === 'fulfilled' && booksResponse.value.length > 0) {
+        setBooksTemplates(booksResponse.value.slice(0, 10));
+      } else {
+        setBooksTemplates([]);
+      }
+      if (celebratesResponse.status === 'fulfilled' && celebratesResponse.value.length > 0) {
+        setCelebratesMomentsTemplates(celebratesResponse.value.slice(0, 10));
+      } else {
+        setCelebratesMomentsTemplates([]);
       }
 
     } catch (error) {
@@ -794,6 +896,53 @@ const HomeScreen: React.FC = React.memo(() => {
   // Memoized key extractors
   const keyExtractor = useCallback((item: any) => item.id, []);
 
+  // Render greeting card (used for all 11 greeting sections) - Poster only, no text
+  const renderGreetingCard = useCallback(({ item }: { item: any }) => {
+    const scaleAnim = new Animated.Value(1);
+
+    const handlePressIn = () => {
+      Animated.timing(scaleAnim, {
+        toValue: 0.95,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    const handlePressOut = () => {
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 150,
+        useNativeDriver: true,
+      }).start();
+    };
+
+    return (
+      <TouchableOpacity
+        activeOpacity={1}
+        onPressIn={handlePressIn}
+        onPressOut={handlePressOut}
+        onPress={() => {
+          navigation.navigate('GreetingEditor', { template: item });
+        }}
+        style={{ marginRight: responsiveSpacing.sm }}
+      >
+        <Animated.View
+          style={[
+            styles.templateCard,
+            {
+              backgroundColor: theme.colors.cardBackground,
+              transform: [{ scale: scaleAnim }],
+            }
+          ]}
+        >
+          <View style={styles.templateImageContainer}>
+            <Image source={{ uri: item.thumbnail }} style={styles.templateImage} />
+          </View>
+        </Animated.View>
+      </TouchableOpacity>
+    );
+  }, [navigation, theme, responsiveSpacing]);
+
 
 
   if (loading) {
@@ -1064,6 +1213,248 @@ const HomeScreen: React.FC = React.memo(() => {
               contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
             />
           </View>
+
+          {/* Motivation Section */}
+          {motivationTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Motivation</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={motivationTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Good Morning Section */}
+          {goodMorningTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Good Morning</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={goodMorningTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Business Ethics Section */}
+          {businessEthicsTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Business Ethics</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={businessEthicsTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Devotional Section */}
+          {devotionalTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Devotional</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={devotionalTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Leader Quotes Section */}
+          {leaderQuotesTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Leader Quotes</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={leaderQuotesTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Atmanirbhar Bharat Section */}
+          {atmanirbharBharatTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Atmanirbhar Bharat</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={atmanirbharBharatTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Good Thoughts Section */}
+          {goodThoughtsTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Good Thoughts</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={goodThoughtsTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Trending Section */}
+          {trendingTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Trending</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={trendingTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Bhagvat Gita Section */}
+          {bhagvatGitaTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Bhagvat Gita</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={bhagvatGitaTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Books Section */}
+          {booksTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Books</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={booksTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
+
+          {/* Celebrates the Moments Section */}
+          {celebratesMomentsTemplates.length > 0 && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Celebrates the Moments</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                data={celebratesMomentsTemplates}
+                renderItem={renderGreetingCard}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
+            </View>
+          )}
                  </ScrollView>
        </LinearGradient>
 

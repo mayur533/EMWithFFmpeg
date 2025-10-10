@@ -91,8 +91,8 @@ class GreetingTemplatesService {
       }
     } catch (error) {
       console.error('❌ [GREETING CATEGORIES API] Error:', error);
-      console.log('⚠️ [GREETING CATEGORIES API] Using mock greeting categories');
-      return this.getMockCategories();
+      console.log('⚠️ [GREETING CATEGORIES API] Returning empty array - no mock data');
+      return []; // Return empty array instead of mock data
     }
   }
 
@@ -138,8 +138,8 @@ class GreetingTemplatesService {
       }
     } catch (error) {
       console.error('❌ [GREETING BY CATEGORY API] Error:', error);
-      console.log('⚠️ [GREETING BY CATEGORY API] Using mock greeting templates');
-      return this.getMockTemplatesByCategory(category);
+      console.log('⚠️ [GREETING BY CATEGORY API] Returning empty array - no mock data');
+      return []; // Return empty array instead of mock data
     }
   }
 
@@ -193,8 +193,8 @@ class GreetingTemplatesService {
       }
     } catch (error) {
       console.error('❌ [GREETING TEMPLATES API] Error:', error);
-      console.log('⚠️ [GREETING TEMPLATES API] Using mock greeting templates');
-      return this.getMockTemplates(filters);
+      console.log('⚠️ [GREETING TEMPLATES API] Returning empty array - no mock data');
+      return []; // Return empty array instead of mock data
     }
   }
 
@@ -208,8 +208,16 @@ class GreetingTemplatesService {
       console.log('📊 [GREETING SEARCH API] Full Response:', JSON.stringify(response.data, null, 2));
       
       if (response.data.success) {
+        // Check if templates array exists and has items
+        const templates = response.data.data?.templates || [];
+        
+        if (templates.length === 0) {
+          console.log('⚠️ [GREETING SEARCH API] No templates found for query:', query);
+          return [];
+        }
+        
         // Map backend response to frontend format with URL conversion
-        const mappedTemplates = response.data.data.templates.map((backendTemplate: any) => {
+        const mappedTemplates = templates.map((backendTemplate: any) => {
           const originalUrl = backendTemplate.imageUrl;
           const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
           
@@ -240,8 +248,8 @@ class GreetingTemplatesService {
       }
     } catch (error) {
       console.error('❌ [GREETING SEARCH API] Error:', error);
-      console.log('⚠️ [GREETING SEARCH API] Using mock search results');
-      return this.getMockSearchResults(query);
+      console.log('⚠️ [GREETING SEARCH API] Returning empty array - no mock data');
+      return []; // Return empty array instead of mock data
     }
   }
 
