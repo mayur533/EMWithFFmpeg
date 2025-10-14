@@ -38,6 +38,7 @@ const FrameSelector: React.FC<FrameSelectorProps> = ({
 
   const renderFrameItem = ({ item }: { item: Frame }) => {
     const isSelected = selectedFrameId === item.id;
+    const [imageError, setImageError] = React.useState(false);
 
     return (
       <TouchableOpacity
@@ -48,14 +49,26 @@ const FrameSelector: React.FC<FrameSelectorProps> = ({
           {/* Sample background for preview */}
           <View style={styles.framePreviewBackground} />
           {/* Frame image preview */}
-          <Image
-            source={item.background}
-            style={styles.frameImagePreview}
-            resizeMode="cover"
-          />
+          {!imageError ? (
+            <Image
+              source={item.background}
+              style={styles.frameImagePreview}
+              resizeMode="contain"
+              onError={(error) => {
+                console.log(`Error loading frame preview ${item.id}:`, error.nativeEvent.error);
+                setImageError(true);
+              }}
+              defaultSource={require('../assets/frames/frame1.png')}
+            />
+          ) : (
+            <View style={styles.framePreviewFallback}>
+              <Icon name="image" size={32} color="#999999" />
+              <Text style={styles.framePreviewFallbackText}>{item.name}</Text>
+            </View>
+          )}
           <View style={styles.frameOverlay}>
             {/* Show placeholder indicators */}
-            {item.placeholders.map((placeholder, index) => (
+            {!imageError && item.placeholders.map((placeholder, index) => (
               <View
                 key={index}
                 style={[
@@ -187,7 +200,25 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    opacity: 0.8,
+    opacity: 0.9,
+    width: '100%',
+    height: '100%',
+  },
+  framePreviewFallback: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#f0f0f0',
+  },
+  framePreviewFallbackText: {
+    fontSize: 10,
+    color: '#999999',
+    marginTop: 4,
+    textAlign: 'center',
   },
   frameOverlay: {
     position: 'absolute',
