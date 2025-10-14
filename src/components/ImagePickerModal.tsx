@@ -9,6 +9,7 @@ import {
   Alert,
   Animated,
   Platform,
+  PermissionsAndroid,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -98,51 +99,147 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
     }
   }, [visible]);
 
-  const handleCameraPress = () => {
+  const requestCameraPermission = async () => {
+    if (Platform.OS === 'android') {
+      try {
+        const granted = await PermissionsAndroid.request(
+          PermissionsAndroid.PERMISSIONS.CAMERA,
+          {
+            title: 'Camera Permission',
+            message: 'App needs access to your camera to take photos',
+            buttonNeutral: 'Ask Me Later',
+            buttonNegative: 'Cancel',
+            buttonPositive: 'OK',
+          }
+        );
+        
+        console.log('Camera permission result:', granted);
+        return granted === PermissionsAndroid.RESULTS.GRANTED;
+      } catch (err) {
+        console.error('Camera permission error:', err);
+        return false;
+      }
+    }
+    // iOS permissions are handled automatically by react-native-image-picker
+    return true;
+  };
+
+  const handleCameraPress = async () => {
+    console.log('📷 Camera button pressed');
+    
+    // Request camera permission for Android
+    const hasPermission = await requestCameraPermission();
+    
+    if (!hasPermission) {
+      console.log('❌ Camera permission denied');
+      Alert.alert(
+        'Permission Required',
+        'Camera permission is required to take photos. Please enable it in your device settings.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    console.log('✅ Camera permission granted, launching camera...');
+    
     const options = {
       title: 'Take Photo',
       mediaType: 'photo' as const,
-      quality: 0.8,
+      quality: 0.8 as number,
       maxWidth: 1024,
       maxHeight: 1024,
+      saveToPhotos: false,
+      cameraType: 'back' as const,
     };
 
     launchCamera(options, (response) => {
-      if (response.didCancel || response.errorMessage) {
+      console.log('📸 Camera response:', response);
+      
+      if (response.didCancel) {
+        console.log('User cancelled camera');
         return;
       }
 
-      if (response.assets && response.assets[0]) {
+      if (response.errorCode) {
+        console.error('Camera error:', response.errorCode, response.errorMessage);
+        Alert.alert(
+          'Camera Error',
+          response.errorMessage || 'Failed to take photo. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (response.assets && response.assets[0] && response.assets[0].uri) {
         const imageUri = response.assets[0].uri;
+        console.log('✅ Photo captured:', imageUri);
         openCropModal(imageUri);
+      } else {
+        console.error('No image URI in response');
+        Alert.alert(
+          'Error',
+          'Failed to capture photo. Please try again.',
+          [{ text: 'OK' }]
+        );
       }
     });
   };
 
   const handleGalleryPress = () => {
+    console.log('🖼️ Gallery button pressed');
+    
     const options = {
       title: 'Select Photo',
       mediaType: 'photo' as const,
-      quality: 0.8,
+      quality: 0.8 as number,
       maxWidth: 1024,
       maxHeight: 1024,
+      selectionLimit: 1,
     };
 
     launchImageLibrary(options, (response) => {
-      if (response.didCancel || response.errorMessage) {
+      console.log('📸 Gallery response:', response);
+      
+      if (response.didCancel) {
+        console.log('User cancelled gallery picker');
         return;
       }
 
-      if (response.assets && response.assets[0]) {
+      if (response.errorCode) {
+        console.error('Gallery error:', response.errorCode, response.errorMessage);
+        Alert.alert(
+          'Gallery Error',
+          response.errorMessage || 'Failed to select photo. Please try again.',
+          [{ text: 'OK' }]
+        );
+        return;
+      }
+
+      if (response.assets && response.assets[0] && response.assets[0].uri) {
         const imageUri = response.assets[0].uri;
+        console.log('✅ Photo selected from gallery:', imageUri);
         openCropModal(imageUri);
+      } else {
+        console.error('No image URI in response');
+        Alert.alert(
+          'Error',
+          'Failed to select photo. Please try again.',
+          [{ text: 'OK' }]
+        );
       }
     });
   };
 
   const openCropModal = (imageUri: string) => {
+    console.log('✂️ Opening crop modal for:', imageUri);
+    
+    // Clean the URI for Android file:// paths
+    const cleanUri = Platform.OS === 'android' && imageUri.startsWith('file://')
+      ? imageUri
+      : imageUri.replace('file://', '');
+    
     ImageCropPicker.openCropper({
-      path: imageUri,
+      path: cleanUri,
       width: 300,
       height: 300,
       cropping: true,
@@ -154,11 +251,23 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
       cropperToolbarColor: theme.colors.primary,
       cropperActiveWidgetColor: theme.colors.primary,
       cropperToolbarWidgetColor: '#ffffff',
+      freeStyleCropEnabled: false,
+      enableRotationGesture: true,
+      avoidEmptySpaceAroundImage: true,
+      mediaType: 'photo',
     }).then((image) => {
+      console.log('✅ Image cropped successfully:', image.path);
       onImageSelected(image.path);
       onClose();
     }).catch((error) => {
-      console.log('Crop cancelled or error:', error);
+      console.log('❌ Crop cancelled or error:', error);
+      if (error.message && error.message !== 'User cancelled image selection') {
+        Alert.alert(
+          'Crop Error',
+          'Failed to crop image. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
     });
   };
 
