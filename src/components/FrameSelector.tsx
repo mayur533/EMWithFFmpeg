@@ -28,6 +28,67 @@ interface FrameSelectorProps {
   onClose?: () => void;
 }
 
+// Separate component for frame item to properly use hooks
+interface FrameItemProps {
+  item: Frame;
+  isSelected: boolean;
+  onSelect: (frame: Frame) => void;
+}
+
+const FrameItem: React.FC<FrameItemProps> = ({ item, isSelected, onSelect }) => {
+  const [imageError, setImageError] = React.useState(false);
+
+  return (
+    <TouchableOpacity
+      style={[styles.frameItem, isSelected && styles.frameItemSelected]}
+      onPress={() => onSelect(item)}
+    >
+      <View style={styles.framePreview}>
+        {/* Sample background for preview */}
+        <View style={styles.framePreviewBackground} />
+        {/* Frame image preview */}
+        {!imageError ? (
+          <Image
+            source={item.background}
+            style={styles.frameImagePreview}
+            resizeMode="contain"
+            onError={(error) => {
+              console.log(`Error loading frame preview ${item.id}:`, error.nativeEvent?.error);
+              setImageError(true);
+            }}
+          />
+        ) : (
+          <View style={styles.framePreviewFallback}>
+            <Icon name="image" size={32} color="#999999" />
+            <Text style={styles.framePreviewFallbackText}>{item.name}</Text>
+          </View>
+        )}
+        <View style={styles.frameOverlay}>
+          {/* Show placeholder indicators */}
+          {!imageError && item.placeholders.map((placeholder, index) => (
+            <View
+              key={index}
+              style={[
+                styles.placeholderIndicator,
+                {
+                  left: placeholder.x * 0.3, // Scale down for preview
+                  top: placeholder.y * 0.3,
+                  width: placeholder.width ? placeholder.width * 0.3 : 20,
+                  height: placeholder.height ? placeholder.height * 0.3 : 20,
+                },
+              ]}
+            />
+          ))}
+        </View>
+      </View>
+      <Text style={[styles.frameName, isSelected && styles.frameNameSelected]}>
+        {item.name}
+      </Text>
+      <Text style={styles.frameCategory}>{item.category}</Text>
+    </TouchableOpacity>
+  );
+};
+
 const FrameSelector: React.FC<FrameSelectorProps> = ({
   frames,
   selectedFrameId,
@@ -35,60 +96,14 @@ const FrameSelector: React.FC<FrameSelectorProps> = ({
   onClose,
 }) => {
 
-
   const renderFrameItem = ({ item }: { item: Frame }) => {
     const isSelected = selectedFrameId === item.id;
-    const [imageError, setImageError] = React.useState(false);
-
     return (
-      <TouchableOpacity
-        style={[styles.frameItem, isSelected && styles.frameItemSelected]}
-        onPress={() => onFrameSelect(item)}
-      >
-        <View style={styles.framePreview}>
-          {/* Sample background for preview */}
-          <View style={styles.framePreviewBackground} />
-          {/* Frame image preview */}
-          {!imageError ? (
-            <Image
-              source={item.background}
-              style={styles.frameImagePreview}
-              resizeMode="contain"
-              onError={(error) => {
-                console.log(`Error loading frame preview ${item.id}:`, error.nativeEvent.error);
-                setImageError(true);
-              }}
-              defaultSource={require('../assets/frames/frame1.png')}
-            />
-          ) : (
-            <View style={styles.framePreviewFallback}>
-              <Icon name="image" size={32} color="#999999" />
-              <Text style={styles.framePreviewFallbackText}>{item.name}</Text>
-            </View>
-          )}
-          <View style={styles.frameOverlay}>
-            {/* Show placeholder indicators */}
-            {!imageError && item.placeholders.map((placeholder, index) => (
-              <View
-                key={index}
-                style={[
-                  styles.placeholderIndicator,
-                  {
-                    left: placeholder.x * 0.3, // Scale down for preview
-                    top: placeholder.y * 0.3,
-                    width: placeholder.width ? placeholder.width * 0.3 : 20,
-                    height: placeholder.height ? placeholder.height * 0.3 : 20,
-                  },
-                ]}
-              />
-            ))}
-          </View>
-        </View>
-        <Text style={[styles.frameName, isSelected && styles.frameNameSelected]}>
-          {item.name}
-        </Text>
-        <Text style={styles.frameCategory}>{item.category}</Text>
-      </TouchableOpacity>
+      <FrameItem
+        item={item}
+        isSelected={isSelected}
+        onSelect={onFrameSelect}
+      />
     );
   };
 
