@@ -65,12 +65,16 @@ const responsiveFontSize = {
 const ProfileScreen: React.FC = () => {
   const currentUser = authService.getCurrentUser();
   
-  // Debug: Log current user ID only
+  // Debug: Log current user data to diagnose company name issue
   console.log('🔍 ProfileScreen - User ID:', currentUser?.id);
+  console.log('🔍 ProfileScreen - companyName:', currentUser?.companyName);
+  console.log('🔍 ProfileScreen - _originalCompanyName:', currentUser?._originalCompanyName);
+  console.log('🔍 ProfileScreen - displayName:', currentUser?.displayName);
+  console.log('🔍 ProfileScreen - name:', currentUser?.name);
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    name: currentUser?.displayName || currentUser?.companyName || currentUser?.name || '',
+    name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || '',
     description: currentUser?.description || currentUser?.bio || '',
     category: currentUser?.category || currentUser?.businessCategory || '',
     address: currentUser?.address || currentUser?.businessAddress || '',
@@ -127,12 +131,35 @@ const ProfileScreen: React.FC = () => {
       const loadUserProfileData = async () => {
         try {
           // Get current user ID for user-specific data
-          const currentUser = authService.getCurrentUser();
+          let currentUser = authService.getCurrentUser();
           const userId = currentUser?.id;
           
           if (!userId) {
             console.log('⚠️ No user ID available for loading profile data');
             return;
+          }
+
+          // IMMEDIATE FIX: Check AsyncStorage for original registered company name
+          try {
+            const storedUser = await AsyncStorage.getItem('currentUser');
+            if (storedUser) {
+              const parsedUser = JSON.parse(storedUser);
+              // If we find an original company name in storage, use it immediately
+              if (!currentUser?._originalCompanyName && parsedUser?.companyName) {
+                console.log('🔍 Found companyName in AsyncStorage:', parsedUser.companyName);
+                console.log('🔧 Restoring original company name from storage');
+                const fixedUser = {
+                  ...currentUser,
+                  _originalCompanyName: parsedUser.companyName,
+                  companyName: parsedUser.companyName,
+                };
+                authService.setCurrentUser(fixedUser);
+                currentUser = fixedUser;
+                console.log('✅ Company name restored from AsyncStorage');
+              }
+            }
+          } catch (storageError) {
+            console.log('⚠️ Could not check AsyncStorage:', storageError);
           }
 
           // Wait for token to be available in AsyncStorage (with retry)
@@ -158,20 +185,20 @@ const ProfileScreen: React.FC = () => {
             console.log('🔍 Complete Profile Data from API:', JSON.stringify(completeUserData, null, 2));
             
             // Update current user with complete profile data
-            // Exclude businessProfiles to prevent contamination of user's registered name
-            const { businessProfiles, ...userDataWithoutProfiles } = completeUserData as any;
+            // CRITICAL: Exclude businessProfiles AND companyName from API to prevent contamination
+            const { businessProfiles, companyName: apiCompanyName, ...userDataWithoutProfiles } = completeUserData as any;
             const updatedUserData = {
               ...currentUser,
               ...userDataWithoutProfiles,
-              // Ensure companyName is preserved from registration
-              companyName: currentUser?.companyName || userDataWithoutProfiles.companyName,
+              // ALWAYS use the stored companyName, NEVER from API (API may return business profile data)
+              companyName: currentUser?._originalCompanyName || currentUser?.companyName,
             };
             
             // Update auth service with complete data (without business profiles)
             authService.setCurrentUser(updatedUserData);
             
-            console.log('✅ User data updated (business profiles excluded)');
-            console.log('✅ Preserved company name:', updatedUserData.companyName);
+            console.log('✅ User data updated (business profiles AND companyName excluded from API)');
+            console.log('✅ Preserved original registered company name:', updatedUserData.companyName);
             
             // Update profile image from companyLogo
             if (completeUserData?.companyLogo || completeUserData?.logo) {
@@ -356,7 +383,7 @@ const ProfileScreen: React.FC = () => {
         
         // Update edit form with existing data
         setEditFormData({
-          name: currentUser?.companyName || currentUser?.displayName || currentUser?.name || '',
+          name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || '',
           description: currentUser?.description || currentUser?.bio || '',
           category: currentUser?.category || currentUser?.businessCategory || '',
           address: currentUser?.address || currentUser?.businessAddress || '',
@@ -395,7 +422,7 @@ const ProfileScreen: React.FC = () => {
           console.log('⚠️ Token still not available, skipping API fetch and using current user data');
           // Use current user data instead of failing
           setEditFormData({
-            name: currentUser?.displayName || currentUser?.companyName || '',
+            name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || '',
             description: currentUser?.description || '',
             category: currentUser?.category || '',
             address: currentUser?.address || '',
@@ -420,17 +447,23 @@ const ProfileScreen: React.FC = () => {
       console.log('🔍 Complete Profile Data from API:', JSON.stringify(completeUserData, null, 2));
       
       // Update current user with complete profile data
+      // CRITICAL: Exclude companyName from API to prevent business profile contamination
+      const { businessProfiles, companyName: apiCompanyName, ...cleanUserData } = completeUserData as any;
       const updatedUserData = {
         ...currentUser,
-        ...completeUserData,
+        ...cleanUserData,
+        // ALWAYS preserve the original registered company name
+        companyName: currentUser?.companyName,
       };
       
-      // Update auth service with complete data
+      // Update auth service with clean data
       authService.setCurrentUser(updatedUserData);
+      
+      console.log('🔍 Using stored companyName (not from API):', currentUser?.companyName);
       
       const userData = completeUserData as any;
       setEditFormData({
-        name: completeUserData?.companyName || completeUserData?.displayName || completeUserData?.name || '',
+        name: currentUser?.companyName || currentUser?.displayName || currentUser?.name || '',
         description: completeUserData?.description || completeUserData?.bio || '',
         category: completeUserData?.category || userData?.businessCategory || '',
         address: completeUserData?.address || userData?.businessAddress || '',
@@ -568,7 +601,7 @@ const ProfileScreen: React.FC = () => {
     const user = authService.getCurrentUser();
     setShowEditProfileModal(false);
     setEditFormData({
-      name: user?.companyName || user?.displayName || user?.name || '',
+      name: user?._originalCompanyName || user?.companyName || user?.displayName || user?.name || '',
       description: user?.description || user?.bio || '',
       category: user?.category || user?.businessCategory || '',
       address: user?.address || user?.businessAddress || '',
@@ -701,7 +734,7 @@ const ProfileScreen: React.FC = () => {
                     style={styles.avatarGradient}
                   >
                     <Text style={styles.avatarText}>
-                      {currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
+                      {(currentUser?._originalCompanyName || currentUser?.companyName)?.charAt(0) || currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
                     </Text>
                   </LinearGradient>
                 )}
@@ -714,7 +747,7 @@ const ProfileScreen: React.FC = () => {
               </View>
               <View style={styles.profileInfo}>
                 <Text style={[styles.userName, { color: theme.colors.text }]}>
-                  {currentUser?.companyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
+                  {currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
                 </Text>
                 <Text style={[styles.userEmail, { color: theme.colors.textSecondary }]}>
                   {currentUser?.email || 'eventmarketer@example.com'}
@@ -1621,51 +1654,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   myPostersSubtitle: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    marginTop: 2,
-  },
-  // Liked Items Section Styles
-  likedItemsCard: {
-    marginHorizontal: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.01,
-    paddingVertical: screenHeight * 0.015,
-    paddingHorizontal: screenWidth * 0.05,
-    borderRadius: 15,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  likedItemsContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  likedItemsLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    flex: 1,
-  },
-  likedItemsIcon: {
-    width: screenWidth * 0.08,
-    height: screenWidth * 0.08,
-    borderRadius: screenWidth * 0.04,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginRight: screenWidth * 0.04,
-  },
-  likedItemsInfo: {
-    flex: 1,
-  },
-  likedItemsTitle: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
-    fontWeight: '600',
-  },
-  likedItemsSubtitle: {
     fontSize: Math.min(screenWidth * 0.03, 12),
     marginTop: 2,
   },

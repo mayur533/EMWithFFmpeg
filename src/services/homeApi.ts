@@ -53,10 +53,8 @@ export interface ProfessionalTemplate {
   previewUrl?: string; // Optional preview image/video
   category: string;
   subcategory?: string;
-  likes: number;
   downloads: number;
   views: number;
-  isLiked: boolean;
   isDownloaded: boolean;
   isPremium: boolean;
   tags: string[];
@@ -74,10 +72,8 @@ export interface VideoContent {
   duration: number; // in seconds
   category: string;
   language: string;
-  likes: number;
   views: number;
   downloads: number;
-  isLiked: boolean;
   isDownloaded: boolean;
   isPremium: boolean;
   tags: string[];
@@ -655,10 +651,9 @@ class HomeApiService {
         thumbnail: 'https://images.unsplash.com/photo-1542744173-8e7e53415bb0?w=300&h=200&fit=crop',
         category: 'Business',
         subcategory: 'Cards',
-        likes: 245,
+
         downloads: 189,
         views: 1200,
-        isLiked: false,
         isDownloaded: false,
         isPremium: false,
         tags: ['business', 'card', 'professional'],
@@ -673,10 +668,9 @@ class HomeApiService {
         thumbnail: 'https://images.unsplash.com/photo-1558618666-fcd25c85cd64?w=300&h=200&fit=crop',
         category: 'Marketing',
         subcategory: 'Flyers',
-        likes: 312,
+
         downloads: 234,
         views: 1500,
-        isLiked: true,
         isDownloaded: false,
         isPremium: true,
         tags: ['flyer', 'event', 'premium'],
@@ -757,10 +751,9 @@ class HomeApiService {
         duration: 30,
         category: 'Business',
         language: 'en',
-        likes: 189,
+
         views: 800,
         downloads: 45,
-        isLiked: false,
         isDownloaded: false,
         isPremium: false,
         tags: ['product', 'launch', 'business'],
@@ -777,10 +770,9 @@ class HomeApiService {
         duration: 60,
         category: 'Events',
         language: 'en',
-        likes: 267,
+
         views: 1200,
         downloads: 78,
-        isLiked: true,
         isDownloaded: false,
         isPremium: true,
         tags: ['event', 'promo', 'dynamic'],

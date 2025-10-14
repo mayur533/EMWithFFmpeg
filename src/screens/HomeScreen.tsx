@@ -738,9 +738,7 @@ const HomeScreen: React.FC = React.memo(() => {
             name: item.title,
             thumbnail: item.imageUrl,
             category: 'Featured Banner',
-            likes: 0,
             downloads: 0,
-            isLiked: false,
             isDownloaded: false,
           };
           navigation.navigate('PosterPlayer', {
@@ -769,9 +767,7 @@ const HomeScreen: React.FC = React.memo(() => {
                    name: item.title,
                    thumbnail: item.imageUrl,
                    category: 'Featured Banner',
-                   likes: 0,
                    downloads: 0,
-                   isLiked: false,
                    isDownloaded: false,
                  };
                  navigation.navigate('PosterPlayer', {
@@ -1128,9 +1124,7 @@ const HomeScreen: React.FC = React.memo(() => {
                         name: event.title,
                         thumbnail: event.imageUrl,
                         category: `${event.category} • ${event.date} • ${event.location}`,
-                        likes: 0,
                         downloads: 0,
-                        isLiked: false,
                         isDownloaded: false,
                       };
                       navigation.navigate('PosterPlayer', {
@@ -1496,16 +1490,12 @@ const HomeScreen: React.FC = React.memo(() => {
                        <Text style={styles.modalTitle}>{selectedTemplate.name}</Text>
                        <Text style={styles.modalCategory}>{selectedTemplate.category}</Text>
                      </View>
-                     <View style={styles.modalStats}>
-                       <View style={styles.modalStat}>
-                         <Text style={styles.modalStatLabel}>Likes</Text>
-                         <Text style={styles.modalStatValue}>{selectedTemplate.likes}</Text>
-                       </View>
-                       <View style={styles.modalStat}>
-                         <Text style={styles.modalStatLabel}>Downloads</Text>
-                         <Text style={styles.modalStatValue}>{selectedTemplate.downloads}</Text>
-                       </View>
-                     </View>
+                    <View style={styles.modalStats}>
+                      <View style={styles.modalStat}>
+                        <Text style={styles.modalStatLabel}>Downloads</Text>
+                        <Text style={styles.modalStatValue}>{selectedTemplate.downloads}</Text>
+                      </View>
+                    </View>
                    </View>
                  </>
                )}
@@ -1560,9 +1550,7 @@ const HomeScreen: React.FC = React.memo(() => {
                           name: event.title,
                           thumbnail: event.imageUrl,
                           category: `${event.category} • ${event.date} • ${event.location}`,
-                          likes: 0,
                           downloads: 0,
-                          isLiked: false,
                           isDownloaded: false,
                         };
                         navigation.navigate('PosterPlayer', {
@@ -1642,9 +1630,7 @@ const HomeScreen: React.FC = React.memo(() => {
                           name: template.name,
                           thumbnail: template.thumbnail,
                           category: template.category,
-                          likes: 0,
                           downloads: 0,
-                          isLiked: false,
                           isDownloaded: false,
                         };
                         navigation.navigate('PosterPlayer', {
@@ -1717,9 +1703,7 @@ const HomeScreen: React.FC = React.memo(() => {
                           name: video.title,
                           thumbnail: video.thumbnail,
                           category: video.category,
-                          likes: 0,
                           downloads: 0,
-                          isLiked: false,
                           isDownloaded: false,
                         };
                         navigation.navigate('VideoPlayer', {

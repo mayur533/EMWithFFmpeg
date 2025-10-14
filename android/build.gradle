@@ -2,13 +2,10 @@ buildscript {
     ext {
         buildToolsVersion = "35.0.0"
         minSdkVersion = 24
-        compileSdkVersion = 35
-        targetSdkVersion = 35
+        compileSdkVersion = 35  // Required by AndroidX libraries
+        targetSdkVersion = 34   // Keep at 34 for stability
         ndkVersion = "25.1.8937393"
         kotlinVersion = "1.9.24"
-        // FFmpeg Kit configuration for local source
-        ffmpegKitPackage = "full-gpl" // Use full-gpl to include drawtext filter
-        ffmpegKitVersion = "6.0.2"
     }
     repositories {
         google()

@@ -13,9 +13,7 @@ export interface Template {
   thumbnail: string;
   videoUrl?: string;
   category: string;
-  likes: number;
   downloads: number;
-  isLiked: boolean;
   isDownloaded: boolean;
   languages?: string[];
 }
@@ -55,11 +53,6 @@ class DashboardService {
   // Get templates by category (mock data only)
   async getTemplatesByCategory(category: string): Promise<Template[]> {
     return this.getMockTemplates().filter(t => t.category.toLowerCase() === category.toLowerCase());
-  }
-
-  // Like template (mock implementation)
-  async likeTemplate(templateId: string): Promise<void> {
-    console.log('Mock like template:', templateId);
   }
 
   // Download template (mock implementation)
@@ -118,9 +111,8 @@ class DashboardService {
         name: 'Modern Business Card',
         thumbnail: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
         category: 'Business',
-        likes: 156,
+
         downloads: 89,
-        isLiked: false,
         isDownloaded: false,
       },
       {
@@ -128,9 +120,8 @@ class DashboardService {
         name: 'Festive Celebration',
         thumbnail: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=300&h=200&fit=crop',
         category: 'Celebration',
-        likes: 234,
+
         downloads: 167,
-        isLiked: true,
         isDownloaded: false,
       },
       {
@@ -138,9 +129,8 @@ class DashboardService {
         name: 'Special Offer',
         thumbnail: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop',
         category: 'Marketing',
-        likes: 89,
+
         downloads: 45,
-        isLiked: false,
         isDownloaded: true,
       },
       {
@@ -148,9 +138,8 @@ class DashboardService {
         name: 'Professional Portfolio',
         thumbnail: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop',
         category: 'Portfolio',
-        likes: 312,
+
         downloads: 198,
-        isLiked: false,
         isDownloaded: false,
       },
       {
@@ -158,9 +147,8 @@ class DashboardService {
         name: 'Event Invitation',
         thumbnail: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop',
         category: 'Events',
-        likes: 178,
+
         downloads: 123,
-        isLiked: true,
         isDownloaded: false,
       },
       {
@@ -168,9 +156,8 @@ class DashboardService {
         name: 'Product Showcase',
         thumbnail: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=300&h=200&fit=crop',
         category: 'Product',
-        likes: 145,
+
         downloads: 87,
-        isLiked: false,
         isDownloaded: false,
       },
     ];

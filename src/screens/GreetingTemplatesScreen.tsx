@@ -155,7 +155,7 @@ const GreetingTemplatesScreen: React.FC = () => {
       selectedImage: {
         uri: template.thumbnail,
         title: template.name,
-        description: `${template.category} • ${template.likes} likes`,
+        description: template.category,
       },
       selectedLanguage: 'English',
       selectedTemplateId: template.id,

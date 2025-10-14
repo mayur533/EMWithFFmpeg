@@ -70,9 +70,9 @@ react {
 
 /**
  * Set this to true to Run Proguard on Release builds to minify the Java bytecode.
- * DISABLED temporarily to fix Play Store installation issues
+ * Re-enabled with comprehensive ProGuard rules for optimization
  */
-def enableProguardInReleaseBuilds = false
+def enableProguardInReleaseBuilds = true
 
 /**
  * The preferred build flavor of JavaScriptCore (JSC)

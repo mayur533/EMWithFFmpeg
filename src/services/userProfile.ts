@@ -28,16 +28,6 @@ export interface UserStats {
     total: number;
     recentCount: number;
   };
-  likes: {
-    total: number;
-    recentCount: number;
-    byType: {
-      template: number;
-      video: number;
-      greeting: number;
-      businessProfile: number;
-    };
-  };
   downloads: {
     total: number;
     recentCount: number;
@@ -96,16 +86,6 @@ class UserProfileService {
           total: 0,
           recentCount: 0
         },
-        likes: {
-          total: 0,
-          recentCount: 0,
-          byType: {
-            template: 0,
-            video: 0,
-            greeting: 0,
-            businessProfile: 0
-          }
-        },
         downloads: {
           total: 0,
           recentCount: 0
@@ -122,44 +102,6 @@ class UserProfileService {
     } catch (error) {
       console.error('❌ Error getting business profile stats:', error);
       return { total: 0, recentCount: 0 };
-    }
-  }
-
-  // Get like stats
-  async getLikeStats(userId: string): Promise<{
-    total: number;
-    recentCount: number;
-    byType: {
-      template: number;
-      video: number;
-      poster: number;
-      businessProfile: number;
-    };
-  }> {
-    try {
-      const stats = await this.getUserStats(userId);
-      return {
-        total: stats?.likes?.total || 0,
-        recentCount: stats?.likes?.recentCount || 0,
-        byType: {
-          template: stats?.likes?.byType?.template || 0,
-          video: stats?.likes?.byType?.video || 0,
-          poster: stats?.likes?.byType?.greeting || 0, // Map greeting to poster for compatibility
-          businessProfile: stats?.likes?.byType?.businessProfile || 0
-        }
-      };
-    } catch (error) {
-      console.error('❌ Error getting like stats:', error);
-      return {
-        total: 0,
-        recentCount: 0,
-        byType: {
-          template: 0,
-          video: 0,
-          poster: 0,
-          businessProfile: 0
-        }
-      };
     }
   }
 

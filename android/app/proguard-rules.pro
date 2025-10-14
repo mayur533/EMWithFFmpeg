@@ -9,14 +9,6 @@
 
 # Add any project specific keep options here:
 
-# FFmpeg Kit ProGuard rules - Keep only public API
--keep public class com.arthenica.ffmpegkit.FFmpegKit { *; }
--keep public class com.arthenica.ffmpegkit.FFmpegSession { *; }
--keep public class com.arthenica.ffmpegkit.FFprobeKit { *; }
--keep public class com.arthenica.ffmpegkit.ReturnCode { *; }
--keep public class com.arthenica.ffmpegkit.Statistics { *; }
--dontwarn com.arthenica.ffmpegkit.**
-
 # React Native ProGuard rules - Keep only essential classes
 -keep,allowobfuscation @interface com.facebook.proguard.annotations.DoNotStrip
 -keep,allowobfuscation @interface com.facebook.proguard.annotations.KeepGettersAndSetters
@@ -105,9 +97,35 @@
     public static *** i(...);
 }
 
-# Optimization settings
--optimizationpasses 5
+# Optimization settings - Conservative for React Native
+-optimizationpasses 3
 -dontusemixedcaseclassnames
 -dontskipnonpubliclibraryclasses
 -dontpreverify
 -verbose
+-optimizations !code/simplification/arithmetic,!code/simplification/cast,!field/*,!class/merging/*
+
+# Keep source file names and line numbers for better crash reports
+-keepattributes SourceFile,LineNumberTable
+-renamesourcefileattribute SourceFile
+
+# React Native specific - Additional safety
+-keep class com.facebook.react.** { *; }
+-keep class com.facebook.react.bridge.** { *; }
+-keep class com.facebook.react.modules.** { *; }
+-keep class com.facebook.hermes.** { *; }
+-keep class com.swmansion.** { *; }
+
+# Keep BuildConfig
+-keep class com.marketbrand.BuildConfig { *; }
+
+# Keep React Native module annotations
+-keepclasseswithmembernames class * {
+    native <methods>;
+}
+
+# Additional Firebase Safety
+-keepattributes Signature
+-keepattributes *Annotation*
+-keepattributes EnclosingMethod
+-keepattributes InnerClasses

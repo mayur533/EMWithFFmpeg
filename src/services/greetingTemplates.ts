@@ -12,9 +12,7 @@ export interface GreetingTemplate {
     emojis?: string[];
     layout?: 'vertical' | 'horizontal' | 'square';
   };
-  likes: number;
   downloads: number;
-  isLiked: boolean;
   isDownloaded: boolean;
   isPremium: boolean;
 }
@@ -131,9 +129,7 @@ class GreetingTemplatesService {
               background: absoluteUrl || finalThumbnail,
               layout: 'vertical' as const
             },
-            likes: backendTemplate.likes || 0,
             downloads: backendTemplate.downloads || 0,
-            isLiked: false,
             isDownloaded: false,
             isPremium: backendTemplate.isPremium || false
           };
@@ -191,9 +187,7 @@ class GreetingTemplatesService {
               background: absoluteUrl || finalThumbnail,
               layout: 'vertical' as const
             },
-            likes: backendTemplate.likes || 0,
             downloads: backendTemplate.downloads || 0,
-            isLiked: false,
             isDownloaded: false,
             isPremium: backendTemplate.isPremium || false
           };
@@ -252,9 +246,7 @@ class GreetingTemplatesService {
               background: absoluteUrl || finalThumbnail,
               layout: 'vertical' as const
             },
-            likes: backendTemplate.likes || 0,
             downloads: backendTemplate.downloads || 0,
-            isLiked: false,
             isDownloaded: false,
             isPremium: backendTemplate.isPremium || false
           };
@@ -349,9 +341,7 @@ class GreetingTemplatesService {
             background: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600&fit=crop',
             layout: 'vertical'
           },
-          likes: 245,
           downloads: 189,
-          isLiked: false,
           isDownloaded: false,
           isPremium: false
         },
@@ -365,9 +355,7 @@ class GreetingTemplatesService {
             background: 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=600&fit=crop',
             layout: 'vertical'
           },
-          likes: 189,
           downloads: 156,
-          isLiked: true,
           isDownloaded: false,
           isPremium: true
         }
@@ -383,9 +371,7 @@ class GreetingTemplatesService {
             background: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=600&fit=crop',
             layout: 'vertical'
           },
-          likes: 312,
           downloads: 234,
-          isLiked: false,
           isDownloaded: false,
           isPremium: false
         }
@@ -401,9 +387,7 @@ class GreetingTemplatesService {
             background: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=400&h=600&fit=crop',
             layout: 'vertical'
           },
-          likes: 178,
           downloads: 145,
-          isLiked: false,
           isDownloaded: false,
           isPremium: false
         }

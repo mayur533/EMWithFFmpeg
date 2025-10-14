@@ -32,7 +32,6 @@ export interface TemplateUsageStats {
   lastUsed: string;
   userSpecificStats?: {
     views: number;
-    likes: number;
     downloads: number;
     uses: number;
     shares: number;
@@ -43,7 +42,6 @@ export interface TemplateUsageStats {
 export interface UserTemplateStats {
   userId: string;
   totalTemplatesViewed: number;
-  totalTemplatesLiked: number;
   totalTemplatesDownloaded: number;
   totalTemplatesUsed: number;
   totalTemplatesShared: number;
@@ -99,7 +97,6 @@ class UserTemplateUsageService {
           templateId,
           templateType: 'unknown',
           totalViews: 0,
-          totalLikes: 0,
           totalDownloads: 0,
           totalUses: 0,
           totalShares: 0,
@@ -111,7 +108,6 @@ class UserTemplateUsageService {
 
       // Calculate global stats
       const totalViews = templateUsage.filter(u => u.action === 'view').length;
-      const totalLikes = templateUsage.filter(u => u.action === 'like').length;
       const totalDownloads = templateUsage.filter(u => u.action === 'download').length;
       const totalUses = templateUsage.filter(u => u.action === 'use').length;
       const totalShares = templateUsage.filter(u => u.action === 'share').length;
@@ -136,7 +132,6 @@ class UserTemplateUsageService {
       if (userId) {
         const userUsage = templateUsage.filter(u => u.userId === userId);
         const userViews = userUsage.filter(u => u.action === 'view').length;
-        const userLikes = userUsage.filter(u => u.action === 'like').length;
         const userDownloads = userUsage.filter(u => u.action === 'download').length;
         const userUses = userUsage.filter(u => u.action === 'use').length;
         const userShares = userUsage.filter(u => u.action === 'share').length;
@@ -147,7 +142,6 @@ class UserTemplateUsageService {
 
         userSpecificStats = {
           views: userViews,
-          likes: userLikes,
           downloads: userDownloads,
           uses: userUses,
           shares: userShares,
@@ -160,7 +154,6 @@ class UserTemplateUsageService {
         templateName,
         templateType,
         totalViews,
-        totalLikes,
         totalDownloads,
         totalUses,
         totalShares,
@@ -185,7 +178,6 @@ class UserTemplateUsageService {
         return {
           userId,
           totalTemplatesViewed: 0,
-          totalTemplatesLiked: 0,
           totalTemplatesDownloaded: 0,
           totalTemplatesUsed: 0,
           totalTemplatesShared: 0,
@@ -197,7 +189,6 @@ class UserTemplateUsageService {
       }
 
       const totalTemplatesViewed = userUsage.filter(u => u.action === 'view').length;
-      const totalTemplatesLiked = userUsage.filter(u => u.action === 'like').length;
       const totalTemplatesDownloaded = userUsage.filter(u => u.action === 'download').length;
       const totalTemplatesUsed = userUsage.filter(u => u.action === 'use').length;
       const totalTemplatesShared = userUsage.filter(u => u.action === 'share').length;
@@ -242,7 +233,6 @@ class UserTemplateUsageService {
       return {
         userId,
         totalTemplatesViewed,
-        totalTemplatesLiked,
         totalTemplatesDownloaded,
         totalTemplatesUsed,
         totalTemplatesShared,

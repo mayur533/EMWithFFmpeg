@@ -9,7 +9,7 @@ export interface BusinessCategoryPoster {
   thumbnail: string;
   imageUrl: string;
   downloadUrl: string;
-  likes: number;
+
   downloads: number;
   isPremium: boolean;
   tags: string[];
@@ -109,7 +109,7 @@ class BusinessCategoryPostersApiService {
             downloadUrl: downloadUrl && !downloadUrl.startsWith('http')
               ? `${baseUrl}${downloadUrl}`
               : downloadUrl,
-            likes: poster.likes || 0,
+
             downloads: poster.downloads || 0,
             isPremium: poster.isPremium || false,
             tags: poster.tags || [],

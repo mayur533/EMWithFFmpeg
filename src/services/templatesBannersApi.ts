@@ -11,9 +11,7 @@ export interface Template {
   type: 'daily' | 'festival' | 'special';
   language: string;
   tags: string[];
-  likes: number;
   downloads: number;
-  isLiked?: boolean;
   createdAt: string;
 }
 
@@ -205,9 +203,8 @@ class TemplatesBannersApiService {
             type: backendTemplate.type || 'daily',
             language: backendTemplate.language || 'English',
             tags: tags,
-            likes: backendTemplate.likes || 0,
+
             downloads: backendTemplate.downloads || 0,
-            isLiked: false, // This would need to be determined by checking user likes
             createdAt: backendTemplate.createdAt,
           };
         });
@@ -277,9 +274,8 @@ class TemplatesBannersApiService {
           type: backendTemplate.type || 'daily',
           language: backendTemplate.language || 'English',
           tags: tags,
-          likes: backendTemplate.likes || 0,
           downloads: backendTemplate.downloads || 0,
-          isLiked: false, // This would need to be determined by checking user likes
+ // This would need to be determined by checking user likes
           createdAt: backendTemplate.createdAt,
         };
 
@@ -486,9 +482,8 @@ class TemplatesBannersApiService {
         type: 'daily',
         language: 'en',
         tags: ['greeting', 'daily', 'social'],
-        likes: 245,
+
         downloads: 189,
-        isLiked: false,
         createdAt: new Date().toISOString(),
       },
       {
@@ -501,9 +496,8 @@ class TemplatesBannersApiService {
         type: 'festival',
         language: 'en',
         tags: ['festival', 'celebration', 'colorful'],
-        likes: 312,
+
         downloads: 234,
-        isLiked: true,
         createdAt: new Date().toISOString(),
       },
       {
@@ -516,9 +510,8 @@ class TemplatesBannersApiService {
         type: 'special',
         language: 'en',
         tags: ['event', 'banner', 'professional'],
-        likes: 189,
+
         downloads: 156,
-        isLiked: false,
         createdAt: new Date().toISOString(),
       },
     ];
@@ -578,9 +571,8 @@ class TemplatesBannersApiService {
         type: 'daily',
         language: 'en',
         tags: ['greeting', 'daily', 'social'],
-        likes: 245,
+
         downloads: 189,
-        isLiked: false,
         createdAt: new Date().toISOString(),
       },
       {
@@ -593,9 +585,8 @@ class TemplatesBannersApiService {
         type: 'festival',
         language: 'en',
         tags: ['festival', 'celebration', 'colorful'],
-        likes: 312,
+
         downloads: 234,
-        isLiked: true,
         createdAt: new Date().toISOString(),
       },
     ];

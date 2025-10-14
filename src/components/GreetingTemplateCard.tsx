@@ -231,32 +231,6 @@ const styles = StyleSheet.create({
     right: 0,
     height: isSmallScreen ? 50 : 60,
   },
-  likeButton: {
-    position: 'absolute',
-    top: isSmallScreen ? 6 : 8,
-    left: isSmallScreen ? 6 : 8,
-    width: isSmallScreen ? 28 : 32,
-    height: isSmallScreen ? 28 : 32,
-    borderRadius: isSmallScreen ? 14 : 16,
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 3,
-    elevation: 10,
-    zIndex: 10,
-  },
-  likeButtonBackground: {
-    backgroundColor: 'rgba(255, 255, 255, 0.9)',
-  },
-  likeButtonActive: {
-    backgroundColor: '#E74C3C',
-  },
-
 });
 
 export default GreetingTemplateCard;

@@ -93,13 +93,18 @@ class AuthService {
       const response = await authApi.register(registerData);
       
       if (response.success) {
-        // Save user and token
-        this.currentUser = response.data.user;
-        await this.saveUserToStorage(response.data.user, response.data.token);
+        // Save user and token, protect companyName from future API contamination
+        const userData = {
+          ...response.data.user,
+          // Store original companyName to protect from business profile contamination
+          _originalCompanyName: response.data.user.companyName,
+        };
+        this.currentUser = userData;
+        await this.saveUserToStorage(userData, response.data.token);
         this.notifyAuthStateListeners(this.currentUser);
         
-        console.log('User registration successful via API:', response.data.user.id);
-        return { success: true, user: response.data.user };
+        console.log('User registration successful via API:', userData.id);
+        return { success: true, user: userData };
       } else {
         throw new Error('Registration failed');
       }

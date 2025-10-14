@@ -11,31 +11,15 @@ import com.facebook.react.ReactPackage
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.marketbrand.VideoComposerPackage
-import com.marketbrand.FFmpegLibraryDebuggerPackage
 
 class MainApplication : Application(), ReactApplication {
-
-  companion object {
-    init {
-      try {
-        // Let ffmpeg-kit-react-native-full-gpl handle its own native library loading
-        Log.d("MainApplication", "✅ Using standard ffmpeg-kit-react-native-full-gpl")
-      } catch (e: Exception) {
-        Log.e("MainApplication", "❌ Error during initialization", e)
-        e.printStackTrace()
-      }
-    }
-  }
 
   override val reactNativeHost: ReactNativeHost =
       object : DefaultReactNativeHost(this) {
         override fun getPackages(): List<ReactPackage> =
             PackageList(this).packages.apply {
-              // Packages that cannot be autolinked yet can be added manually here, for example:
-              // add(MyReactNativePackage())
+              // Packages that cannot be autolinked yet can be added manually here
               add(VideoComposerPackage())
-              add(FFmpegLibraryDebuggerPackage())
-              // FFmpegKit is now handled by autolinking - no need to add manually
             }
 
         override fun getJSMainModuleName(): String = "index"
@@ -51,11 +35,7 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
-    
-    // Simple logging for debugging
     Log.d("MainApplication", "Application started")
-    Log.d("FFmpegDebug", "Native Android app started - FFmpeg debugging will be handled by React Native side")
-    
     loadReactNative(this)
   }
 }

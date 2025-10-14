@@ -245,6 +245,16 @@ class LoginAPIsService {
         console.log('Token Length:', authTokenToSave?.length || 0);
         console.log('Token Preview:', authTokenToSave?.substring(0, 50) + '...');
         console.log('═══════════════════════════════════════════════════════════');
+        console.log('👤 USER INFO FROM LOGIN RESPONSE:');
+        console.log('User ID:', user.id);
+        console.log('Email:', user.email);
+        console.log('Company Name:', user.companyName);
+        console.log('Display Name:', user.displayName);
+        console.log('Name:', user.name);
+        console.log('Phone:', user.phoneNumber || user.phone);
+        console.log('Category:', user.category);
+        console.log('Description:', user.description);
+        console.log('═══════════════════════════════════════════════════════════');
         
         // IMPORTANT: Save token to storage FIRST so it's available for subsequent API calls
         await authService.saveUserToStorage(user, authTokenToSave);
@@ -261,12 +271,29 @@ class LoginAPIsService {
           // Try to get complete profile using user ID
           const profileResponse = await authApi.getProfile(user.id);
           if (profileResponse.success && profileResponse.data) {
+            // CRITICAL: Exclude companyName from API to prevent business profile contamination
+            const { companyName: apiCompanyName, businessProfiles, ...cleanApiData } = profileResponse.data as any;
             completeUserData = {
               ...user,
-              ...profileResponse.data, // Merge complete profile data from API
+              ...cleanApiData, // Merge clean profile data (without companyName from API)
+              // ALWAYS preserve the companyName from login response, never from getProfile API
+              companyName: user.companyName,
             };
-            console.log('✅ Complete profile data fetched from API and merged');
-            console.log('🔍 Complete profile data:', JSON.stringify(completeUserData, null, 2));
+            console.log('✅ Complete profile data fetched from API and merged (companyName protected)');
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('🔒 COMPANY NAME PROTECTION:');
+            console.log('Original companyName (from login):', user.companyName);
+            console.log('API companyName (EXCLUDED):', apiCompanyName);
+            console.log('Final companyName (PROTECTED):', completeUserData.companyName);
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('👤 FINAL USER DATA AFTER MERGE:');
+            console.log('User ID:', completeUserData.id);
+            console.log('Email:', completeUserData.email);
+            console.log('Company Name:', completeUserData.companyName);
+            console.log('Display Name:', completeUserData.displayName);
+            console.log('Phone:', completeUserData.phoneNumber || completeUserData.phone);
+            console.log('Category:', completeUserData.category);
+            console.log('═══════════════════════════════════════════════════════════');
             
             // Update storage with complete profile data
             await authService.saveUserToStorage(completeUserData, authTokenToSave);
@@ -283,6 +310,11 @@ class LoginAPIsService {
         authService.notifyAuthStateListeners(completeUserData);
         
         console.log('✅ User login successful and complete data stored');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('💾 DATA SAVED TO ASYNC STORAGE:');
+        console.log('Saved companyName:', completeUserData.companyName);
+        console.log('Saved _originalCompanyName:', completeUserData._originalCompanyName);
+        console.log('═══════════════════════════════════════════════════════════');
       } else {
         console.log('❌ Login failed - success=false:', response.data);
         throw new Error(response.data.message || 'Login failed');
