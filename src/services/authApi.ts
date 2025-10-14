@@ -21,7 +21,7 @@ export interface GoogleAuthRequest {
 export interface UserProfile {
   id: string;
   email: string;
-  companyName: string;
+  companyName: string; // Registered company name (from registration)
   phoneNumber: string;
   logo?: string;
   photo?: string;
@@ -30,16 +30,6 @@ export interface UserProfile {
   name?: string;
   phone?: string;
   bio?: string;
-  businessName?: string;
-  businessLogo?: string;
-  businessDescription?: string;
-  businessCategory?: string;
-  businessAddress?: string;
-  businessPhone?: string;
-  businessEmail?: string;
-  businessWebsite?: string;
-  alternateBusinessPhone?: string;
-  businessProfiles?: any[];
   description?: string;
   category?: string;
   address?: string;
@@ -47,6 +37,8 @@ export interface UserProfile {
   website?: string;
   createdAt: string;
   updatedAt: string;
+  // Note: businessProfiles array removed - should not be part of user object
+  // Business profiles should be fetched separately via businessProfileService
 }
 
 export interface UpdateProfileRequest {

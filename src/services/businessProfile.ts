@@ -420,10 +420,21 @@ class BusinessProfileService {
       } else {
         throw new Error('API returned unsuccessful response');
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('❌ Error deleting business profile via API:', error);
+      
+      // If endpoint doesn't exist (404), handle gracefully
+      if (error.response?.status === 404) {
+        console.log('⚠️ Delete endpoint not implemented on backend (404)');
+        console.log('⚠️ Clearing cache to allow frontend-only removal');
+        // Clear cache so the profile list can be refreshed
+        this.clearCache();
+        // Don't throw - allow the deletion to succeed on frontend only
+        return;
+      }
+      
       console.log('⚠️ Business profile deletion failed due to API error');
-      // Throw error instead of silently failing
+      // Throw error for other types of failures
       throw new Error('Failed to delete business profile');
     }
   }

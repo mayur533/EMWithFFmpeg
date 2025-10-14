@@ -1,0 +1,111 @@
+{
+  "timestamp": "2025-10-14T05:55:10.004Z",
+  "baseUrl": "https://eventmarketersbackend.onrender.com",
+  "summary": {
+    "total": 11,
+    "working": 8,
+    "nonWorking": 3,
+    "successRate": "72.7%"
+  },
+  "workingAPIs": [
+    {
+      "name": "Get Subscription Plans",
+      "method": "GET",
+      "endpoint": "/api/mobile/subscriptions/plans",
+      "usedIn": "SubscriptionScreen, SubscriptionContext",
+      "status": 200,
+      "requiresAuth": false
+    },
+    {
+      "name": "Get Subscription Status",
+      "method": "GET",
+      "endpoint": "/api/mobile/subscriptions/status",
+      "usedIn": "SubscriptionScreen, SubscriptionContext",
+      "status": 200,
+      "requiresAuth": true
+    },
+    {
+      "name": "Get Subscription History",
+      "method": "GET",
+      "endpoint": "/api/mobile/subscriptions/history",
+      "usedIn": "SubscriptionScreen",
+      "status": 200,
+      "requiresAuth": true
+    },
+    {
+      "name": "Get Transactions",
+      "method": "GET",
+      "endpoint": "/api/mobile/transactions",
+      "usedIn": "SubscriptionContext, TransactionHistoryScreen",
+      "status": 200,
+      "requiresAuth": true
+    },
+    {
+      "name": "Get Greeting Categories",
+      "method": "GET",
+      "endpoint": "/api/mobile/greetings/categories",
+      "usedIn": "GreetingTemplatesScreen, HomeScreen",
+      "status": 200,
+      "requiresAuth": true
+    },
+    {
+      "name": "Get Business Categories",
+      "method": "GET",
+      "endpoint": "/api/mobile/business-categories",
+      "usedIn": "BusinessProfilesScreen, ProfileScreen, PosterEditorScreen",
+      "status": 200,
+      "requiresAuth": true
+    },
+    {
+      "name": "Get Languages",
+      "method": "GET",
+      "endpoint": "/api/mobile/templates/languages",
+      "usedIn": "TemplateGalleryScreen",
+      "status": 200,
+      "requiresAuth": true
+    },
+    {
+      "name": "Search Home Content",
+      "method": "GET",
+      "endpoint": "/api/mobile/home/search",
+      "usedIn": "HomeScreen",
+      "status": 200,
+      "requiresAuth": true
+    }
+  ],
+  "nonWorkingAPIs": [
+    {
+      "name": "Get User Profile",
+      "method": "GET",
+      "endpoint": "/api/auth/profile",
+      "usedIn": "ProfileScreen",
+      "error": {
+        "status": 404,
+        "message": "Request failed with status code 404"
+      },
+      "requiresAuth": true
+    },
+    {
+      "name": "Get Greeting Templates",
+      "method": "GET",
+      "endpoint": "/api/mobile/greetings/templates",
+      "usedIn": "GreetingTemplatesScreen",
+      "error": {
+        "status": 500,
+        "message": "Request failed with status code 500"
+      },
+      "requiresAuth": true
+    },
+    {
+      "name": "Get Templates",
+      "method": "GET",
+      "endpoint": "/api/mobile/templates",
+      "usedIn": "TemplateGalleryScreen",
+      "error": {
+        "status": 500,
+        "message": "Request failed with status code 500"
+      },
+      "requiresAuth": true
+    }
+  ]
+}

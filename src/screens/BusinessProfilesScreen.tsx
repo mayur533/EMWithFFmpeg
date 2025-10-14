@@ -116,9 +116,14 @@ const BusinessProfilesScreen: React.FC = () => {
       const apiProfiles = await businessProfileService.getUserBusinessProfiles(userId);
       
       if (apiProfiles.length > 0) {
-        setProfiles(apiProfiles);
-        console.log('✅ Loaded user-specific business profiles from API:', apiProfiles.length);
-        console.log('🔍 Loaded profiles:', JSON.stringify(apiProfiles, null, 2));
+        // Sort profiles by creation date - OLDEST first (so first profile created stays at index 0)
+        const sortedProfiles = apiProfiles.sort((a, b) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        
+        setProfiles(sortedProfiles);
+        console.log('✅ Loaded user-specific business profiles from API:', sortedProfiles.length);
+        console.log('🔍 First profile (Your Profile):', sortedProfiles[0]?.name, '- Created:', sortedProfiles[0]?.createdAt);
       } else {
         // No profiles found from API
         setProfiles([]);
