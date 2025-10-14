@@ -617,16 +617,52 @@ const ProfileScreen: React.FC = () => {
     setShowImagePickerModal(true);
   };
 
-  const handleImageSelected = (imageUri: string) => {
-    setProfileImageUri(imageUri);
-    // Update the current user's profile picture and company logo
-    if (currentUser) {
-      currentUser.photoURL = imageUri;
-      currentUser.profileImage = imageUri;
-      currentUser.companyLogo = imageUri; // Also update companyLogo field
+  const handleImageSelected = async (imageUri: string) => {
+    try {
+      console.log('🖼️ Image selected in ProfileScreen:', imageUri);
+      
+      // Validate image URI
+      if (!imageUri || imageUri.trim() === '') {
+        console.error('❌ Invalid image URI received');
+        Alert.alert('Error', 'Invalid image. Please try again.');
+        return;
+      }
+      
+      console.log('✅ Setting profile image URI...');
+      setProfileImageUri(imageUri);
+      
+      // Update the current user's profile picture and company logo
+      const currentUser = authService.getCurrentUser();
+      if (currentUser) {
+        console.log('✅ Updating user profile data...');
+        const updatedUser = {
+          ...currentUser,
+          photoURL: imageUri,
+          profileImage: imageUri,
+          companyLogo: imageUri,
+        };
+        
+        // Update in auth service
+        authService.setCurrentUser(updatedUser);
+        
+        // Save to storage
+        await authService.saveUserToStorage(updatedUser, await AsyncStorage.getItem('authToken') || '');
+        
+        console.log('✅ Profile picture updated in storage');
+      }
+      
+      setSuccessMessage('Profile picture updated successfully!');
+      setShowSuccessModal(true);
+      
+      console.log('✅ Profile picture update complete');
+    } catch (error) {
+      console.error('❌ Error handling selected image:', error);
+      Alert.alert(
+        'Update Error',
+        'Failed to update profile picture. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
-    setSuccessMessage('Profile picture updated successfully!');
-    setShowSuccessModal(true);
   };
 
   const handleCloseImagePicker = () => {
