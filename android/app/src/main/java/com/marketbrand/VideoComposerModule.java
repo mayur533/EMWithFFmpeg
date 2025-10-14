@@ -1,4 +1,4 @@
-package com.eventmarketers;
+package com.marketbrand;
 
 import android.util.Log;
 import com.facebook.react.bridge.ReactApplicationContext;

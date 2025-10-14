@@ -87,7 +87,7 @@
 }
 
 # Keep model classes but allow field obfuscation
--keepclassmembers class com.eventmarketers.** {
+-keepclassmembers class com.marketbrand.** {
     public <init>(...);
 }
 

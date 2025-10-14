@@ -315,7 +315,9 @@ const ProfileScreen: React.FC = () => {
   };
 
   const handleMyPosters = () => {
-    navigation.navigate('MyPosters' as never);
+    setComingSoonTitle('Downloaded Posters');
+    setComingSoonSubtitle('This feature is coming soon! You\'ll be able to view and manage all your downloaded posters here.');
+    setShowComingSoonModal(true);
   };
 
 

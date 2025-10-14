@@ -1,4 +1,4 @@
-package com.eventmarketers
+package com.marketbrand
 
 import android.app.Application
 import android.util.Log
@@ -10,8 +10,8 @@ import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
-import com.eventmarketers.VideoComposerPackage
-import com.eventmarketers.FFmpegLibraryDebuggerPackage
+import com.marketbrand.VideoComposerPackage
+import com.marketbrand.FFmpegLibraryDebuggerPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -59,3 +59,4 @@ class MainApplication : Application(), ReactApplication {
     loadReactNative(this)
   }
 }
+

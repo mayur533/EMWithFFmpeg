@@ -1,4 +1,4 @@
-package com.eventmarketers;
+package com.marketbrand;
 
 import android.graphics.Bitmap;
 import android.graphics.Canvas;

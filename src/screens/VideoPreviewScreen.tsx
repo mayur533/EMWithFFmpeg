@@ -179,7 +179,7 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
       
       // Log expected path patterns
       if (Platform.OS === 'android') {
-        console.log('- Expected Android pattern: file:///data/user/0/com.eventmarketers/files/...');
+        console.log('- Expected Android pattern: file:///data/user/0/com.marketbrand/files/...');
       } else if (Platform.OS === 'ios') {
         console.log('- Expected iOS pattern: file:///var/mobile/Containers/Data/Application/.../Documents/...');
       }

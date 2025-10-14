@@ -260,52 +260,63 @@ const BusinessProfilesScreen: React.FC = () => {
     setEditingProfile(null);
   }, []);
 
-  const renderBusinessCard = useCallback(({ item }: { item: any }) => (
-    <View style={[styles.businessCard, { backgroundColor: theme.colors.cardBackground }]}>
-      <View style={styles.cardHeader}>
-        <View style={styles.businessInfoWithLogo}>
-          {/* Business Logo */}
-          <View style={styles.logoContainer}>
-            {item.companyLogo || item.logo ? (
-              <Image
-                source={{ uri: item.companyLogo || item.logo }}
-                style={styles.businessLogo}
-                resizeMode="cover"
-              />
-            ) : (
-              <View style={[styles.logoPlaceholder, { backgroundColor: `${theme.colors.primary}20` }]}>
-                <Icon name="business" size={24} color={theme.colors.primary} />
-              </View>
-            )}
+  const renderBusinessCard = useCallback(({ item, index }: { item: any; index: number }) => {
+    // First profile is the user's own profile (from registration) - no edit/delete buttons
+    // Additional profiles are created by user - show edit/delete buttons
+    const isUserOwnProfile = index === 0;
+    
+    return (
+      <View style={[styles.businessCard, { backgroundColor: theme.colors.cardBackground }]}>
+        <View style={styles.cardHeader}>
+          <View style={styles.businessInfoWithLogo}>
+            {/* Business Logo */}
+            <View style={styles.logoContainer}>
+              {item.companyLogo || item.logo ? (
+                <Image
+                  source={{ uri: item.companyLogo || item.logo }}
+                  style={styles.businessLogo}
+                  resizeMode="cover"
+                />
+              ) : (
+                <View style={[styles.logoPlaceholder, { backgroundColor: `${theme.colors.primary}20` }]}>
+                  <Icon name="business" size={24} color={theme.colors.primary} />
+                </View>
+              )}
+            </View>
+            
+            <View style={styles.businessInfo}>
+              <Text style={[styles.businessName, { color: theme.colors.text }]}>
+                {item.name || 'Business Name'}
+                {isUserOwnProfile && (
+                  <Text style={[styles.userBadge, { color: theme.colors.primary }]}> (Your Profile)</Text>
+                )}
+              </Text>
+              {item.category && (
+                <Text style={[styles.businessCategory, { color: theme.colors.primary }]}>
+                  {item.category}
+                </Text>
+              )}
+            </View>
           </View>
           
-          <View style={styles.businessInfo}>
-            <Text style={[styles.businessName, { color: theme.colors.text }]}>
-              {item.name || 'Business Name'}
-            </Text>
-            {item.category && (
-              <Text style={[styles.businessCategory, { color: theme.colors.primary }]}>
-                {item.category}
-              </Text>
-            )}
-          </View>
+          {/* Only show edit/delete buttons for additional business profiles, not user's own profile */}
+          {!isUserOwnProfile && (
+            <View style={styles.cardActions}>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: `${theme.colors.primary}20` }]}
+                onPress={() => handleEditProfile(item)}
+              >
+                <Icon name="edit" size={16} color={theme.colors.primary} />
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.actionButton, { backgroundColor: `${theme.colors.error}20` }]}
+                onPress={() => handleDeleteProfile(item.id)}
+              >
+                <Icon name="delete" size={16} color={theme.colors.error} />
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
-        
-        <View style={styles.cardActions}>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: `${theme.colors.primary}20` }]}
-            onPress={() => handleEditProfile(item)}
-          >
-            <Icon name="edit" size={16} color={theme.colors.primary} />
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionButton, { backgroundColor: `${theme.colors.error}20` }]}
-            onPress={() => handleDeleteProfile(item.id)}
-          >
-            <Icon name="delete" size={16} color={theme.colors.error} />
-          </TouchableOpacity>
-        </View>
-      </View>
 
       {item.description && (
         <Text style={[styles.description, { color: theme.colors.textSecondary }]}>
@@ -368,7 +379,8 @@ const BusinessProfilesScreen: React.FC = () => {
         </View>
       )}
     </View>
-  ), [theme, handleEditProfile, handleDeleteProfile]);
+    );
+  }, [theme, handleEditProfile, handleDeleteProfile]);
 
   const keyExtractor = useCallback((item: any) => item.id, []);
 
@@ -723,6 +735,11 @@ const styles = StyleSheet.create({
     fontSize: Math.min(screenWidth * 0.045, 18),
     fontWeight: 'bold',
     marginBottom: screenHeight * 0.005,
+  },
+  userBadge: {
+    fontSize: Math.min(screenWidth * 0.03, 12),
+    fontWeight: '500',
+    fontStyle: 'italic',
   },
   businessCategory: {
     fontSize: Math.min(screenWidth * 0.035, 14),

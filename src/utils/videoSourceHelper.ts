@@ -99,7 +99,7 @@ export const getVideoSource = async (config: VideoSourceConfig = {}): Promise<Vi
 const getAndroidVideoSource = async (fileName: string): Promise<VideoSourceResult> => {
   try {
     // Android raw resource path
-    const rawResourcePath = `android.resource://com.eventmarketers/raw/${fileName}`;
+    const rawResourcePath = `android.resource://com.marketbrand/raw/${fileName}`;
     
     // Verify the file exists by checking if we can access it
     // Note: We can't directly check raw resources, so we'll assume it exists

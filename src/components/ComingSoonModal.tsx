@@ -122,19 +122,32 @@ const ComingSoonModal: React.FC<ComingSoonModalProps> = ({
         >
           <LinearGradient
             colors={['#667eea', '#764ba2', '#f093fb']}
-            style={styles.gradientBackground}
+            style={[
+              styles.gradientBackground,
+              {
+                padding: isTablet ? 35 : responsiveSpacing.xxl,
+                minHeight: isTablet ? 280 : (isUltraSmallScreen ? 220 : 250),
+              }
+            ]}
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 1 }}
           >
             {/* Close Button */}
             <TouchableOpacity
-              style={styles.closeButton}
+              style={[
+                styles.closeButton,
+                {
+                  width: isTablet ? 40 : (isUltraSmallScreen ? 32 : 36),
+                  height: isTablet ? 40 : (isUltraSmallScreen ? 32 : 36),
+                  borderRadius: isTablet ? 20 : (isUltraSmallScreen ? 16 : 18),
+                }
+              ]}
               onPress={onClose}
               activeOpacity={0.7}
             >
               <Icon
                 name="close"
-                size={isTablet ? 24 : 20}
+                size={isTablet ? 24 : (isUltraSmallScreen ? 18 : 20)}
                 color="#ffffff"
               />
             </TouchableOpacity>
@@ -144,30 +157,60 @@ const ComingSoonModal: React.FC<ComingSoonModalProps> = ({
               style={[
                 styles.iconContainer,
                 {
+                  width: isTablet ? 90 : (isUltraSmallScreen ? 65 : 80),
+                  height: isTablet ? 90 : (isUltraSmallScreen ? 65 : 80),
+                  borderRadius: isTablet ? 45 : (isUltraSmallScreen ? 32.5 : 40),
+                  marginBottom: responsiveSpacing.lg,
                   transform: [{ rotate: rotateInterpolate }],
                 },
               ]}
             >
               <Icon
                 name="construction"
-                size={isTablet ? 50 : 40}
+                size={isTablet ? 50 : (isUltraSmallScreen ? 32 : 40)}
                 color="#ffffff"
               />
             </Animated.View>
 
             {/* Title */}
-            <Text style={styles.title}>{title}</Text>
+            <Text style={[
+              styles.title,
+              {
+                fontSize: isTablet ? 24 : responsiveFontSize.xxxxxl,
+                marginBottom: responsiveSpacing.md,
+              }
+            ]}>{title}</Text>
 
             {/* Subtitle */}
-            <Text style={styles.subtitle}>{subtitle}</Text>
+            <Text style={[
+              styles.subtitle,
+              {
+                fontSize: isTablet ? 18 : responsiveFontSize.xl,
+                lineHeight: isTablet ? 26 : responsiveFontSize.xl * 1.5,
+                marginBottom: responsiveSpacing.xxl,
+                paddingHorizontal: responsiveSpacing.md,
+              }
+            ]}>{subtitle}</Text>
 
             {/* OK Button */}
             <TouchableOpacity
-              style={styles.okButton}
+              style={[
+                styles.okButton,
+                {
+                  paddingVertical: isTablet ? 14 : responsiveSpacing.md,
+                  paddingHorizontal: isTablet ? 35 : responsiveSpacing.xxl,
+                  borderRadius: responsiveSpacing.lg,
+                }
+              ]}
               onPress={onClose}
               activeOpacity={0.8}
             >
-              <Text style={styles.okButtonText}>Got it!</Text>
+              <Text style={[
+                styles.okButtonText,
+                {
+                  fontSize: isTablet ? 18 : responsiveFontSize.xl,
+                }
+              ]}>Got it!</Text>
             </TouchableOpacity>
           </LinearGradient>
         </Animated.View>

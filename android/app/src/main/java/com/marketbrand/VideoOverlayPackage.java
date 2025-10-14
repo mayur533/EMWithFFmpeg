@@ -1,4 +1,4 @@
-package com.eventmarketers;
+package com.marketbrand;
 
 import com.facebook.react.ReactPackage;
 import com.facebook.react.bridge.NativeModule;
@@ -9,7 +9,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-public class VideoComposerPackage implements ReactPackage {
+public class VideoOverlayPackage implements ReactPackage {
 
     @Override
     public List<ViewManager> createViewManagers(ReactApplicationContext reactContext) {
@@ -21,8 +21,9 @@ public class VideoComposerPackage implements ReactPackage {
             ReactApplicationContext reactContext) {
         List<NativeModule> modules = new ArrayList<>();
 
-        modules.add(new VideoComposerModule(reactContext));
+        modules.add(new VideoOverlayModule(reactContext));
 
         return modules;
     }
 }
+

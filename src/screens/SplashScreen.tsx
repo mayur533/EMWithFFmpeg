@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-// import Video from 'react-native-video';
+import Video from 'react-native-video';
 import { useTheme } from '../context/ThemeContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -47,16 +47,15 @@ const SplashScreen: React.FC = () => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  // const videoOpacity = useRef(new Animated.Value(1)).current;
+  const videoOpacity = useRef(new Animated.Value(1)).current;
   
   // Video state
-  // const [showVideo, setShowVideo] = React.useState(true);
-  // const [videoEnded, setVideoEnded] = React.useState(false);
-  // const [videoTimeout, setVideoTimeout] = React.useState<NodeJS.Timeout | null>(null);
-  // const [videoReady, setVideoReady] = React.useState(false);
+  const [showVideo, setShowVideo] = React.useState(true);
+  const [videoEnded, setVideoEnded] = React.useState(false);
+  const [videoTimeout, setVideoTimeout] = React.useState<NodeJS.Timeout | null>(null);
+  const [videoReady, setVideoReady] = React.useState(false);
 
   // Video event handlers
-  /* 
   const onVideoEnd = () => {
     console.log('✅ Video ended successfully');
     setVideoEnded(true);
@@ -65,20 +64,23 @@ const SplashScreen: React.FC = () => {
       clearTimeout(videoTimeout);
       setVideoTimeout(null);
     }
-    // Fade out video
-    Animated.timing(videoOpacity, {
-      toValue: 0,
-      duration: 500,
-      useNativeDriver: true,
-    }).start(() => {
-      setShowVideo(false);
-      startAnimations();
-    });
+    // Add a small delay before fading out video for smooth transition
+    setTimeout(() => {
+      // Fade out video
+      Animated.timing(videoOpacity, {
+        toValue: 0,
+        duration: 800, // Slower fade out for smoother transition
+        useNativeDriver: true,
+      }).start(() => {
+        setShowVideo(false);
+        startAnimations();
+      });
+    }, 500); // Hold video at end for 500ms before fading
   };
 
   const onVideoError = (error: any) => {
     console.log('❌ Video error:', error);
-    console.log('❌ Video path: file:///android_asset/intro.mp4');
+    console.log('❌ Video path: MarketBrand_App_Intro_Video.mp4');
     console.log('❌ Error details:', JSON.stringify(error, null, 2));
     // Clear timeout on error
     if (videoTimeout) {
@@ -91,7 +93,7 @@ const SplashScreen: React.FC = () => {
   };
 
   const onVideoLoad = () => {
-    console.log('✅ Video loaded successfully: intro.mp4');
+    console.log('✅ Video loaded successfully: MarketBrand_App_Intro_Video.mp4');
     setVideoReady(true);
     // Clear timeout on successful load
     if (videoTimeout) {
@@ -101,7 +103,7 @@ const SplashScreen: React.FC = () => {
   };
 
   const onVideoReadyForDisplay = () => {
-    console.log('🎬 Video ready for display: intro.mp4');
+    console.log('🎬 Video ready for display: MarketBrand_App_Intro_Video.mp4');
   };
 
   const onVideoProgress = (data: any) => {
@@ -113,55 +115,57 @@ const SplashScreen: React.FC = () => {
   };
 
   const onVideoLoadStart = () => {
-    console.log('🔄 Video loading started: intro.mp4');
-    // Set a timeout to fallback if video doesn't load within 5 seconds
+    console.log('🔄 Video loading started: MarketBrand_App_Intro_Video.mp4');
+    // Set a timeout to fallback if video doesn't load within 8 seconds
     const timeout = setTimeout(() => {
       console.log('⏰ Video loading timeout - falling back to regular splash');
       setShowVideo(false);
       startAnimations();
-    }, 5000);
+    }, 8000); // 8 seconds timeout
     setVideoTimeout(timeout);
   };
-  */
 
   // Memoized animation sequence
   const startAnimations = useMemo(() => () => {
-    // Fade in animation
+    // Fade in animation - slower for better impact
     Animated.timing(fadeAnim, {
       toValue: 1,
-      duration: 1000,
+      duration: 1500, // Increased from 1000ms to 1500ms
       useNativeDriver: true,
     }).start();
 
-    // Scale animation
+    // Scale animation - smoother spring effect
     Animated.spring(scaleAnim, {
       toValue: 1,
-      tension: 50,
-      friction: 7,
+      tension: 40, // Reduced for slower, smoother animation
+      friction: 8, // Increased for more damping
       useNativeDriver: true,
     }).start();
 
-    // Slide up animation
+    // Slide up animation - slower
     Animated.timing(slideAnim, {
       toValue: 0,
-      duration: 800,
+      duration: 1200, // Increased from 800ms to 1200ms
       useNativeDriver: true,
     }).start();
 
-    // Rotation animation
+    // Rotation animation - slower rotation
     Animated.loop(
       Animated.timing(rotateAnim, {
         toValue: 1,
-        duration: 3000,
+        duration: 4000, // Increased from 3000ms to 4000ms for slower rotation
         useNativeDriver: true,
       })
     ).start();
   }, [fadeAnim, scaleAnim, slideAnim, rotateAnim]);
 
   useEffect(() => {
-    // Start animations directly (video is commented out)
-    startAnimations();
-  }, [startAnimations]);
+    // Don't start animations immediately if video is showing
+    // They will start after video ends
+    if (!showVideo) {
+      startAnimations();
+    }
+  }, [startAnimations, showVideo]);
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
@@ -179,11 +183,11 @@ const SplashScreen: React.FC = () => {
         translucent={true}
       />
       
-      {/* Video Background - COMMENTED OUT 
+      {/* Video Background */}
       {showVideo && (
         <Animated.View style={[styles.videoContainer, { opacity: videoOpacity }]}>
           <Video
-            source={{ uri: 'file:///android_asset/intro.mp4' }}
+            source={require('../assets/intro/MarketBrand_App_Intro_Video.mp4')}
             style={styles.video}
             resizeMode="cover"
             onEnd={onVideoEnd}
@@ -215,90 +219,89 @@ const SplashScreen: React.FC = () => {
           />
         </Animated.View>
       )}
-      */}
       
-      <LinearGradient
-        colors={theme.colors.gradient}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        <View style={styles.content}>
-          {/* Logo Container */}
-          <Animated.View
-            style={[
-              styles.logoContainer,
-              {
-                opacity: fadeAnim,
-                transform: [
-                  { scale: scaleAnim },
-                  { translateY: slideAnim },
-                ],
-              },
-            ]}
-          >
-            {/* Animated Logo */}
+      {/* Manual Splash Screen - COMMENTED OUT - Only video plays as splash */}
+      {/* 
+      {!showVideo && (
+        <LinearGradient
+          colors={theme.colors.gradient}
+          style={styles.gradientBackground}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+        >
+          <View style={styles.content}>
             <Animated.View
               style={[
-                styles.logoCircle,
+                styles.logoContainer,
                 {
-                  backgroundColor: theme.colors.cardBackground,
-                  transform: [{ rotate: spin }],
+                  opacity: fadeAnim,
+                  transform: [
+                    { scale: scaleAnim },
+                    { translateY: slideAnim },
+                  ],
                 },
               ]}
             >
-              <Image 
-                source={require('../assets/MainLogo/main_logo.png')} 
-                style={styles.logoImage}
-                resizeMode="contain"
-              />
+              <Animated.View
+                style={[
+                  styles.logoCircle,
+                  {
+                    backgroundColor: theme.colors.cardBackground,
+                    transform: [{ rotate: spin }],
+                  },
+                ]}
+              >
+                <Image 
+                  source={require('../assets/MainLogo/main_logo.png')} 
+                  style={styles.logoImage}
+                  resizeMode="contain"
+                />
+              </Animated.View>
             </Animated.View>
-          </Animated.View>
 
-          {/* App Title */}
-          <Animated.View
-            style={[
-              styles.titleContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <Text style={styles.appTitle}>MarketBrand</Text>
-            <Text style={styles.appSubtitle}>Professional Event Marketing Solutions</Text>
-          </Animated.View>
+            <Animated.View
+              style={[
+                styles.titleContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+              <Text style={styles.appTitle}>MarketBrand</Text>
+              <Text style={styles.appSubtitle}>Professional Event Marketing Solutions</Text>
+            </Animated.View>
 
-          {/* Loading Indicator */}
-          <Animated.View
-            style={[
-              styles.loadingContainer,
-              {
-                opacity: fadeAnim,
-                transform: [{ translateY: slideAnim }],
-              },
-            ]}
-          >
-            <View style={[styles.loadingDots, { backgroundColor: theme.colors.cardBackground }]}>
-              <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
-              <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
-              <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
-            </View>
-          </Animated.View>
+            <Animated.View
+              style={[
+                styles.loadingContainer,
+                {
+                  opacity: fadeAnim,
+                  transform: [{ translateY: slideAnim }],
+                },
+              ]}
+            >
+              <View style={[styles.loadingDots, { backgroundColor: theme.colors.cardBackground }]}>
+                <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
+                <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
+                <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
+              </View>
+            </Animated.View>
 
-          {/* Powered By Text */}
-          <Animated.View
-            style={[
-              styles.poweredByContainer,
-              {
-                opacity: fadeAnim,
-              },
-            ]}
-          >
-            <Text style={styles.poweredByText}>Powered by RSL Solution Private Limited</Text>
-          </Animated.View>
-        </View>
-      </LinearGradient>
+            <Animated.View
+              style={[
+                styles.poweredByContainer,
+                {
+                  opacity: fadeAnim,
+                },
+              ]}
+            >
+              <Text style={styles.poweredByText}>Powered by RSL Solution Private Limited</Text>
+            </Animated.View>
+          </View>
+        </LinearGradient>
+      )}
+      */}
     </SafeAreaView>
   );
 };
@@ -307,20 +310,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  /* Video styles - COMMENTED OUT
   videoContainer: {
+    flex: 1,
+    backgroundColor: '#000000', // Black background
+  },
+  video: {
     position: 'absolute',
     top: 0,
     left: 0,
-    right: 0,
-    bottom: 0,
-    zIndex: 1,
+    width: screenWidth,
+    height: screenHeight,
   },
-  video: {
-    width: '100%',
-    height: '100%',
-  },
-  */
   gradientBackground: {
     flex: 1,
   },

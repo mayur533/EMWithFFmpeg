@@ -7,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { getTabBarStyle, getTabBarItemStyle, getTabBarLabelStyle } from '../utils/notchUtils';
 import authService from '../services/auth';
 import { useTheme } from '../context/ThemeContext';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import { navigationRef } from './NavigationService';
 import { Image, View, Text, TouchableOpacity } from 'react-native';
 
@@ -450,33 +451,62 @@ const MainTabNavigator = () => {
 const AppNavigator = () => {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
+  const { refreshSubscription, refreshTransactions } = useSubscription();
 
   useEffect(() => {
     console.log('🚀 AppNavigator: Starting initialization');
     let authStateReceived = false;
+    let authUser: any = null;
+    const startTime = Date.now();
+    const MIN_SPLASH_TIME = 8000; // Minimum 8 seconds to allow intro video to play
     
-    // Longer timeout to give AsyncStorage enough time to load (especially on slow devices or with debugging)
+    // Extended timeout to allow intro video to play fully before checking auth state
     const timeout = setTimeout(() => {
       if (!authStateReceived) {
         console.log('⚠️ AppNavigator: Timeout reached without auth state - showing login');
         setIsLoading(false);
         setIsAuthenticated(false);
       }
-    }, 5000); // Increased from 3000ms to 5000ms
+    }, 10000); // 10 seconds timeout for auth state
 
     // Listen to authentication state changes
     const unsubscribe = authService.onAuthStateChanged((user) => {
       authStateReceived = true;
+      authUser = user;
       clearTimeout(timeout); // Clear timeout once we get auth state
       
       console.log('🔔 AppNavigator: Auth state changed:', user ? '✅ User logged in' : '❌ User logged out');
       if (user) {
         console.log('👤 User ID:', user.id || user.uid);
         console.log('📧 User Email:', user.email);
+        
+        // Preload subscription and transaction data for logged-in users
+        console.log('📡 Preloading subscription and transaction data...');
+        refreshSubscription().then(() => {
+          console.log('✅ Subscription data preloaded');
+        }).catch((error) => {
+          console.error('❌ Error preloading subscription data:', error);
+        });
+        
+        refreshTransactions().then(() => {
+          console.log('✅ Transaction data preloaded');
+        }).catch((error) => {
+          console.error('❌ Error preloading transaction data:', error);
+        });
       }
       
-      setIsAuthenticated(!!user);
-      setIsLoading(false);
+      // Calculate remaining time for minimum splash display
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, MIN_SPLASH_TIME - elapsedTime);
+      
+      console.log(`⏱️ Elapsed: ${elapsedTime}ms, Waiting: ${remainingTime}ms before navigation`);
+      
+      // Wait for minimum splash time before navigating
+      setTimeout(() => {
+        setIsAuthenticated(!!authUser);
+        setIsLoading(false);
+        console.log('🎬 Minimum splash time reached - navigating now');
+      }, remainingTime);
     });
 
     // Explicitly call initialize to ensure async loading completes
@@ -484,8 +514,15 @@ const AppNavigator = () => {
       console.error('❌ AppNavigator: Error initializing auth service:', error);
       authStateReceived = true;
       clearTimeout(timeout);
-      setIsLoading(false);
-      setIsAuthenticated(false);
+      
+      // Still respect minimum time even on error
+      const elapsedTime = Date.now() - startTime;
+      const remainingTime = Math.max(0, MIN_SPLASH_TIME - elapsedTime);
+      
+      setTimeout(() => {
+        setIsLoading(false);
+        setIsAuthenticated(false);
+      }, remainingTime);
     });
 
     return () => {
