@@ -15,16 +15,6 @@ export interface BusinessProfile {
   companyLogo?: string;
   banner?: string;
   services: string[];
-  workingHours: {
-    [key: string]: {
-      open: string;
-      close: string;
-      isOpen: boolean;
-    };
-  };
-  rating: number;
-  reviewCount: number;
-  isVerified: boolean;
   createdAt: string;
   updatedAt: string;
 }
@@ -64,6 +54,17 @@ class BusinessProfileService {
         if (profiles && profiles.length > 0) {
           // Convert backend profiles to frontend format
           const businessProfiles: BusinessProfile[] = profiles.map((profile: any) => {
+            console.log('📋 Mapping backend profile to frontend:', profile.id);
+            console.log('   - Name:', profile.name || profile.businessName);
+            console.log('   - Description:', profile.description || '(empty)');
+            console.log('   - Category:', profile.category);
+            console.log('   - Address:', profile.address || '(empty)');
+            console.log('   - Phone:', profile.phone || '(empty)');
+            console.log('   - Alternate Phone:', profile.alternatePhone || '(empty)');
+            console.log('   - Email:', profile.email || '(empty)');
+            console.log('   - Website:', profile.website || '(empty)');
+            console.log('   - Logo:', profile.logo || '(empty)');
+            
             return {
               id: profile.id,
               name: profile.name || profile.businessName,
@@ -71,25 +72,13 @@ class BusinessProfileService {
               category: profile.category,
               address: profile.address || '',
               phone: profile.phone || '',
-              alternatePhone: '',
+              alternatePhone: profile.alternatePhone || '',
               email: profile.email || '',
               website: profile.website || '',
               logo: profile.logo || '',
               companyLogo: profile.logo || '',
               banner: '',
               services: [],
-              workingHours: {
-                monday: { open: '09:00', close: '18:00', isOpen: true },
-                tuesday: { open: '09:00', close: '18:00', isOpen: true },
-                wednesday: { open: '09:00', close: '18:00', isOpen: true },
-                thursday: { open: '09:00', close: '18:00', isOpen: true },
-                friday: { open: '09:00', close: '18:00', isOpen: true },
-                saturday: { open: '10:00', close: '16:00', isOpen: true },
-                sunday: { open: '00:00', close: '00:00', isOpen: false },
-              },
-              rating: 0,
-              reviewCount: 0,
-              isVerified: false,
               createdAt: profile.createdAt,
               updatedAt: profile.updatedAt,
             };
@@ -138,31 +127,13 @@ class BusinessProfileService {
           category: profile.category,
           address: profile.address || '',
           phone: profile.phone || '',
-          alternatePhone: '',
+          alternatePhone: profile.alternatePhone || '',
           email: profile.email || '',
           website: profile.website || '',
           logo: profile.logo || '',
           companyLogo: profile.logo || '',
           banner: '',
-          socialMedia: profile.socialMedia || {
-            facebook: '',
-            instagram: '',
-            twitter: '',
-            linkedin: '',
-          },
           services: [],
-          workingHours: {
-            monday: { open: '09:00', close: '18:00', isOpen: true },
-            tuesday: { open: '09:00', close: '18:00', isOpen: true },
-            wednesday: { open: '09:00', close: '18:00', isOpen: true },
-            thursday: { open: '09:00', close: '18:00', isOpen: true },
-            friday: { open: '09:00', close: '18:00', isOpen: true },
-            saturday: { open: '10:00', close: '16:00', isOpen: true },
-            sunday: { open: '00:00', close: '00:00', isOpen: false },
-          },
-          rating: 0,
-          reviewCount: 0,
-          isVerified: false,
           createdAt: profile.createdAt,
           updatedAt: profile.updatedAt,
         }));
@@ -200,31 +171,13 @@ class BusinessProfileService {
           category: profile.category,
           address: profile.address || '',
           phone: profile.phone || '',
-          alternatePhone: '',
+          alternatePhone: profile.alternatePhone || '',
           email: profile.email || '',
           website: profile.website || '',
           logo: profile.logo || '',
           companyLogo: profile.logo || '',
           banner: '',
-          socialMedia: profile.socialMedia || {
-            facebook: '',
-            instagram: '',
-            twitter: '',
-            linkedin: '',
-          },
           services: [],
-          workingHours: {
-            monday: { open: '09:00', close: '18:00', isOpen: true },
-            tuesday: { open: '09:00', close: '18:00', isOpen: true },
-            wednesday: { open: '09:00', close: '18:00', isOpen: true },
-            thursday: { open: '09:00', close: '18:00', isOpen: true },
-            friday: { open: '09:00', close: '18:00', isOpen: true },
-            saturday: { open: '10:00', close: '16:00', isOpen: true },
-            sunday: { open: '00:00', close: '00:00', isOpen: false },
-          },
-          rating: 0,
-          reviewCount: 0,
-          isVerified: false,
           createdAt: profile.createdAt,
           updatedAt: profile.updatedAt,
         };
@@ -274,25 +227,13 @@ class BusinessProfileService {
           category: backendProfile.category,
           address: backendProfile.address || '',
           phone: backendProfile.phone || '',
-          alternatePhone: '',
+          alternatePhone: backendProfile.alternatePhone || '',
           email: backendProfile.email || '',
           website: backendProfile.website || '',
           companyLogo: backendProfile.logo || '',
           logo: backendProfile.logo || '',
           banner: '',
           services: [],
-          workingHours: {
-            monday: { open: '09:00', close: '18:00', isOpen: true },
-            tuesday: { open: '09:00', close: '18:00', isOpen: true },
-            wednesday: { open: '09:00', close: '18:00', isOpen: true },
-            thursday: { open: '09:00', close: '18:00', isOpen: true },
-            friday: { open: '09:00', close: '18:00', isOpen: true },
-            saturday: { open: '10:00', close: '16:00', isOpen: true },
-            sunday: { open: '00:00', close: '00:00', isOpen: false },
-          },
-          rating: 0,
-          reviewCount: 0,
-          isVerified: false,
           createdAt: backendProfile.createdAt,
           updatedAt: backendProfile.updatedAt,
         };
@@ -344,25 +285,13 @@ class BusinessProfileService {
           category: backendProfile.category,
           address: backendProfile.address || '',
           phone: backendProfile.phone || '',
-          alternatePhone: '',
+          alternatePhone: backendProfile.alternatePhone || '',
           email: backendProfile.email || '',
           website: backendProfile.website || '',
           companyLogo: backendProfile.logo || '',
           logo: backendProfile.logo || '',
           banner: '',
           services: [],
-          workingHours: {
-            monday: { open: '09:00', close: '18:00', isOpen: true },
-            tuesday: { open: '09:00', close: '18:00', isOpen: true },
-            wednesday: { open: '09:00', close: '18:00', isOpen: true },
-            thursday: { open: '09:00', close: '18:00', isOpen: true },
-            friday: { open: '09:00', close: '18:00', isOpen: true },
-            saturday: { open: '10:00', close: '16:00', isOpen: true },
-            sunday: { open: '00:00', close: '00:00', isOpen: false },
-          },
-          rating: 0,
-          reviewCount: 0,
-          isVerified: false,
           createdAt: backendProfile.createdAt,
           updatedAt: backendProfile.updatedAt,
         };
@@ -444,61 +373,53 @@ class BusinessProfileService {
     }
   }
 
-  // Search business profiles
-  async searchBusinessProfiles(query: string): Promise<BusinessProfile[]> {
+  // Search business profiles (API endpoint removed - use client-side filtering)
+  // Searches by: Company Name, Business Category, Mobile Number
+  // If userId is provided, searches only that user's profiles
+  async searchBusinessProfiles(query: string, userId?: string): Promise<BusinessProfile[]> {
+    console.log('⚠️ searchBusinessProfiles - API endpoint removed');
+    console.log('⚠️ GET /api/mobile/business-profile?search={query} is no longer supported');
+    console.log('🔍 Performing client-side search on query:', query);
+    console.log('🔍 User ID:', userId || 'ALL PROFILES');
+    console.log('🔍 Search fields: Company Name, Business Category, Mobile Number');
+    
     try {
-      console.log('Searching business profiles via API:', query);
-      const response = await api.get(`/api/mobile/business-profile?search=${encodeURIComponent(query)}`);
+      // Get profiles (user-specific or all)
+      let profilesToSearch: BusinessProfile[];
       
-      if (response.data.success) {
-        const backendProfiles = response.data.data.profiles;
-        
-        // Map backend profiles to frontend format
-        const profiles = backendProfiles.map((profile: any) => ({
-          id: profile.id,
-          name: profile.businessName,
-          description: profile.description || '',
-          category: profile.category,
-          address: profile.address || '',
-          phone: profile.phone || '',
-          alternatePhone: '',
-          email: profile.email || '',
-          website: profile.website || '',
-          logo: profile.logo || '',
-          companyLogo: profile.logo || '',
-          banner: '',
-          socialMedia: profile.socialMedia || {
-            facebook: '',
-            instagram: '',
-            twitter: '',
-            linkedin: '',
-          },
-          services: [],
-          workingHours: {
-            monday: { open: '09:00', close: '18:00', isOpen: true },
-            tuesday: { open: '09:00', close: '18:00', isOpen: true },
-            wednesday: { open: '09:00', close: '18:00', isOpen: true },
-            thursday: { open: '09:00', close: '18:00', isOpen: true },
-            friday: { open: '09:00', close: '18:00', isOpen: true },
-            saturday: { open: '10:00', close: '16:00', isOpen: true },
-            sunday: { open: '00:00', close: '00:00', isOpen: false },
-          },
-          rating: 0,
-          reviewCount: 0,
-          isVerified: false,
-          createdAt: profile.createdAt,
-          updatedAt: profile.updatedAt,
-        }));
-        
-        console.log('✅ Business profiles search completed via API:', profiles.length, 'results');
-        return profiles;
+      if (userId) {
+        console.log('📋 Fetching profiles for user:', userId);
+        profilesToSearch = await this.getUserBusinessProfiles(userId);
       } else {
-        throw new Error('API returned unsuccessful response');
+        console.log('📋 Fetching all profiles (no userId provided)');
+        profilesToSearch = await this.getBusinessProfiles();
       }
+      
+      if (!query || query.trim() === '') {
+        console.log('📋 Empty query - returning all fetched profiles:', profilesToSearch.length);
+        return profilesToSearch;
+      }
+      
+      const lowercaseQuery = query.toLowerCase().trim();
+      
+      // Filter profiles by company name, business category, or mobile number
+      const filtered = profilesToSearch.filter(profile => {
+        const matchesName = profile.name.toLowerCase().includes(lowercaseQuery);
+        const matchesCategory = profile.category.toLowerCase().includes(lowercaseQuery);
+        const matchesPhone = profile.phone.toLowerCase().includes(lowercaseQuery);
+        
+        return matchesName || matchesCategory || matchesPhone;
+      });
+      
+      console.log('✅ Client-side search completed:', filtered.length, 'results found');
+      console.log('📊 Search breakdown:');
+      console.log('   - By Company Name:', filtered.filter(p => p.name.toLowerCase().includes(lowercaseQuery)).length);
+      console.log('   - By Category:', filtered.filter(p => p.category.toLowerCase().includes(lowercaseQuery)).length);
+      console.log('   - By Mobile:', filtered.filter(p => p.phone.toLowerCase().includes(lowercaseQuery)).length);
+      
+      return filtered;
     } catch (error) {
-      console.error('❌ Error searching business profiles via API:', error);
-      console.log('⚠️ No search results available due to API error');
-      // Return empty array instead of mock data
+      console.error('❌ Error during client-side search:', error);
       return [];
     }
   }
@@ -520,31 +441,13 @@ class BusinessProfileService {
           category: profile.category,
           address: profile.address || '',
           phone: profile.phone || '',
-          alternatePhone: '',
+          alternatePhone: profile.alternatePhone || '',
           email: profile.email || '',
           website: profile.website || '',
           logo: profile.logo || '',
           companyLogo: profile.logo || '',
           banner: '',
-          socialMedia: profile.socialMedia || {
-            facebook: '',
-            instagram: '',
-            twitter: '',
-            linkedin: '',
-          },
           services: [],
-          workingHours: {
-            monday: { open: '09:00', close: '18:00', isOpen: true },
-            tuesday: { open: '09:00', close: '18:00', isOpen: true },
-            wednesday: { open: '09:00', close: '18:00', isOpen: true },
-            thursday: { open: '09:00', close: '18:00', isOpen: true },
-            friday: { open: '09:00', close: '18:00', isOpen: true },
-            saturday: { open: '10:00', close: '16:00', isOpen: true },
-            sunday: { open: '00:00', close: '00:00', isOpen: false },
-          },
-          rating: 0,
-          reviewCount: 0,
-          isVerified: false,
           createdAt: profile.createdAt,
           updatedAt: profile.updatedAt,
         }));

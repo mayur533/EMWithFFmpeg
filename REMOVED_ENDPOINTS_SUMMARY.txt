@@ -8,9 +8,9 @@ This document lists all API endpoints that have been removed from the frontend
 and API documentation.
 
 CURRENT STATUS:
-  Total APIs Documented: 42 unique endpoints
-  Endpoints Removed: 10
-  Endpoints Remaining: 42 active
+  Total APIs Documented: 40 unique endpoints
+  Endpoints Removed: 12
+  Endpoints Remaining: 40 active
   Fields Removed: 2 (ownerName, socialMedia)
 
 ================================================================================
@@ -75,7 +75,15 @@ REMOVED ENDPOINTS
      • ACTUAL_IMPLEMENTED_APIS.txt (section 8.5 removed)
      • ALL_IMPLEMENTED_APIS.txt (section 10.5 removed)
 
-8. PUT /api/mobile/users/{userId}/preferences
+8. GET /api/mobile/transactions/summary
+   - Status: REMOVED
+   - Reason: Transaction stats calculated from transaction list on frontend
+   - Replacement: Frontend calculates totals, counts by status, and amounts from GET /api/mobile/transactions
+   - Affected Files:
+     • src/services/transactionHistory.ts (now calculates stats from transaction list)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 8.2 removed)
+
+9. PUT /api/mobile/users/{userId}/preferences
    - Status: REMOVED
    - Reason: Preferences stored locally in AsyncStorage
    - Affected Files:
@@ -83,7 +91,7 @@ REMOVED ENDPOINTS
      • ACTUAL_IMPLEMENTED_APIS.txt (section 10.1 removed)
      • ALL_IMPLEMENTED_APIS.txt (section 12.1 removed)
 
-9. GET /api/mobile/users/{userId}/stats
+10. GET /api/mobile/users/{userId}/stats
    - Status: REMOVED
    - Reason: Stats not tracked on backend, returns defaults
    - Affected Files:
@@ -91,13 +99,24 @@ REMOVED ENDPOINTS
      • ACTUAL_IMPLEMENTED_APIS.txt (section 10.2 removed)
      • ALL_IMPLEMENTED_APIS.txt (section 12.2 removed)
 
-10. GET /api/mobile/home/{type}s/{contentId}
+11. GET /api/mobile/home/{type}s/{contentId}
    - Status: REMOVED
    - Reason: Not needed, content details from list endpoints
    - Types: templates, videos, events
    - Affected Files:
      • src/services/homeApi.ts (now throws error)
      • ACTUAL_IMPLEMENTED_APIS.txt (section 10.7 removed)
+
+12. GET /api/mobile/business-profile?search={query}
+   - Status: REMOVED
+   - Reason: Search functionality moved to client-side filtering
+   - Replacement: Frontend fetches USER-SPECIFIC profiles and filters locally
+   - Search Scope: Only searches current user's business profiles
+   - Search Fields: Company Name, Business Category, Mobile Number
+   - Affected Files:
+     • src/services/businessProfile.ts (now uses client-side filtering with userId)
+     • src/screens/BusinessProfilesScreen.tsx (passes userId to search)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 2.7 removed)
 
 ================================================================================
 REMOVED FIELDS FROM BUSINESS PROFILE APIs
@@ -152,8 +171,50 @@ UNCERTAIN:
   ⚠️ POST /api/mobile/greetings/templates/{id}/download (Download template)
 
 ================================================================================
+CURRENT TRANSACTION APIS STATUS
+================================================================================
+
+WORKING:
+  ✅ GET /api/mobile/transactions (Get all user transactions)
+
+REMOVED:
+  ❌ POST /api/mobile/transactions (Create transaction - now local only)
+  ❌ PUT /api/mobile/transactions/{id}/status (Update status - not supported)
+  ❌ DELETE /api/mobile/transactions (Clear transactions - not supported)
+  ❌ GET /api/mobile/transactions/summary (Get statistics - now calculated from list)
+
+NOTE:
+  Transaction statistics (totals, counts by status, amounts) are now calculated
+  on the frontend from the transaction list returned by GET /api/mobile/transactions.
+  This eliminates the need for a separate summary endpoint and ensures consistency.
+
+================================================================================
 CURRENT BUSINESS PROFILE APIS STATUS
 ================================================================================
+
+WORKING:
+  ✅ POST /api/mobile/business-profile (Create profile)
+  ✅ GET /api/mobile/business-profile/{userId} (Get user profiles)
+  ✅ GET /api/mobile/business-profile (Get all profiles)
+  ✅ PUT /api/mobile/business-profile/{id} (Update profile)
+
+REMOVED:
+  ❌ GET /api/mobile/business-profile?search={query} (Search - now client-side)
+
+UNCERTAIN:
+  ⚠️ DELETE /api/mobile/business-profile/{id} (Delete profile)
+  ⚠️ POST /api/mobile/business-profile/{id}/upload (Upload image)
+  ⚠️ GET /api/mobile/business-profile?category={category} (Filter by category)
+
+NOTE:
+  Search functionality has been moved to client-side filtering. The frontend
+  now fetches ONLY THE CURRENT USER'S profiles using 
+  GET /api/mobile/business-profile/{userId} and filters them locally based on:
+    • Company Name (profile.name)
+    • Business Category (profile.category)
+    • Mobile Number (profile.phone)
+  
+  This ensures users can only search and see their own business profiles.
 
 SIMPLIFIED REQUEST FORMAT:
 
@@ -304,7 +365,7 @@ If these changes cause issues:
 ================================================================================
 END OF SUMMARY
 ================================================================================
-Total Endpoints Removed: 10
+Total Endpoints Removed: 12
 
 Templates & Greetings:
   1. GET /api/mobile/templates/{id}
@@ -316,13 +377,17 @@ Transactions:
   5. POST /api/mobile/transactions
   6. PUT /api/mobile/transactions/{id}/status
   7. DELETE /api/mobile/transactions
+  8. GET /api/mobile/transactions/summary
 
 User Preferences & Stats:
-  8. PUT /api/mobile/users/{userId}/preferences
-  9. GET /api/mobile/users/{userId}/stats
+  9. PUT /api/mobile/users/{userId}/preferences
+  10. GET /api/mobile/users/{userId}/stats
 
 Home Screen:
-  10. GET /api/mobile/home/{type}s/{contentId}
+  11. GET /api/mobile/home/{type}s/{contentId}
+
+Business Profiles:
+  12. GET /api/mobile/business-profile?search={query}
 
 Total Fields Removed: 2 (ownerName, socialMedia from business profiles)
 

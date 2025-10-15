@@ -382,6 +382,11 @@ const ProfileScreen: React.FC = () => {
       // Check if we already have complete user data from registration
       if (currentUser && currentUser.email && (currentUser.phone || currentUser.phoneNumber) && (currentUser.companyName || currentUser.name)) {
         console.log('✅ User data already complete from registration, skipping API call');
+        console.log('📋 Loading Edit Form Data from REGISTRATION:');
+        console.log('   - Address:', currentUser?.address || '(empty)');
+        console.log('   - Website:', currentUser?.website || '(empty)');
+        console.log('   - Category:', currentUser?.category || '(empty)');
+        console.log('   - Description:', currentUser?.description || '(empty)');
         
         // Update edit form with existing registered user data
         // Map stored user fields to form fields
@@ -389,11 +394,11 @@ const ProfileScreen: React.FC = () => {
           name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
           description: currentUser?.description || '',
           category: currentUser?.category || '',
-          address: currentUser?.address || '',
+          address: currentUser?.address || '', // FROM USER REGISTRATION
           phone: currentUser?.phoneNumber || currentUser?.phone || '',
           alternatePhone: currentUser?.alternatePhone || '',
           email: currentUser?.email || '',
-          website: currentUser?.website || '',
+          website: currentUser?.website || '', // FROM USER REGISTRATION
           companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
         });
         
@@ -462,20 +467,29 @@ const ProfileScreen: React.FC = () => {
       // Update auth service with clean data
       authService.setCurrentUser(updatedUserData);
       
-      console.log('🔍 Using registered user data from API');
+      console.log('🔍 Using registered user data (EXCLUDING business profile fields)');
+      console.log('📋 Loading Edit Form Data from REGISTRATION (prioritized):');
+      console.log('   - Address from currentUser:', currentUser?.address || '(empty)');
+      console.log('   - Website from currentUser:', currentUser?.website || '(empty)');
+      console.log('   - Category from currentUser:', currentUser?.category || '(empty)');
+      console.log('   - Description from currentUser:', currentUser?.description || '(empty)');
+      console.log('📋 API data (for reference only):');
+      console.log('   - Address from API:', completeUserData?.address || '(not used)');
+      console.log('   - Website from API:', completeUserData?.website || '(not used)');
       
-      // Use only registered user's profile data, NOT business profile data
-      // Map API response fields to form fields
+      // IMPORTANT: Use ONLY registered user's profile data from currentUser
+      // NOT from API response which may contain business profile data
+      // Website and Address should come from user registration, not business profiles
       setEditFormData({
-        name: completeUserData?.companyName || completeUserData?.name || '',
-        description: completeUserData?.description || '',
-        category: completeUserData?.category || '',
-        address: completeUserData?.address || '',
-        phone: completeUserData?.phoneNumber || completeUserData?.phone || '',
-        alternatePhone: completeUserData?.alternatePhone || '',
-        email: completeUserData?.email || '',
-        website: completeUserData?.website || '',
-        companyLogo: completeUserData?.logo || completeUserData?.companyLogo || '',
+        name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
+        description: currentUser?.description || completeUserData?.description || '',
+        category: currentUser?.category || completeUserData?.category || '',
+        address: currentUser?.address || '', // FROM USER REGISTRATION ONLY
+        phone: currentUser?.phoneNumber || currentUser?.phone || completeUserData?.phone || '',
+        alternatePhone: currentUser?.alternatePhone || completeUserData?.alternatePhone || '',
+        email: currentUser?.email || completeUserData?.email || '',
+        website: currentUser?.website || '', // FROM USER REGISTRATION ONLY
+        companyLogo: currentUser?.logo || currentUser?.companyLogo || completeUserData?.logo || '',
       });
       
       setShowEditProfileModal(true);
@@ -586,6 +600,15 @@ const ProfileScreen: React.FC = () => {
         };
         
         authService.setCurrentUser(updatedUser);
+        
+        // Clear business profile cache to force refresh on next visit
+        console.log('🔄 Clearing business profile cache after profile update');
+        try {
+          const businessProfileService = require('../services/businessProfile').default;
+          businessProfileService.clearCache();
+        } catch (error) {
+          console.error('Failed to clear business profile cache:', error);
+        }
         
         setShowEditProfileModal(false);
         setSuccessMessage('Profile updated successfully!');

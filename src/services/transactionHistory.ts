@@ -37,10 +37,25 @@ class TransactionHistoryService {
       }
 
       // Get transactions from backend API (using authenticated endpoint)
-      console.log('📡 Fetching transactions from:', `/api/mobile/transactions`);
-      const response = await api.get(`/api/mobile/transactions`);
+      const endpoint = `/api/mobile/transactions`;
+      console.log('================================================================================');
+      console.log('🔵 TRANSACTION API CALL - GET ALL TRANSACTIONS');
+      console.log('================================================================================');
+      console.log('📡 Endpoint:', endpoint);
+      console.log('🔗 Full URL:', api.defaults.baseURL + endpoint);
+      console.log('📤 Request Method: GET');
+      console.log('🔑 Auth Token:', currentUser?.token ? '✅ Present (length: ' + currentUser.token.length + ')' : '❌ Missing');
+      console.log('⏰ Request Time:', new Date().toISOString());
+      console.log('--------------------------------------------------------------------------------');
       
-      console.log('📊 Transactions API response:', response.data);
+      const response = await api.get(endpoint);
+      
+      console.log('📥 RESPONSE RECEIVED:');
+      console.log('📊 Status Code:', response.status);
+      console.log('📊 Status Text:', response.statusText);
+      console.log('📊 Response Headers:', JSON.stringify(response.headers, null, 2));
+      console.log('📊 Response Data (Full):', JSON.stringify(response.data, null, 2));
+      console.log('================================================================================');
       
       if (response.data.success) {
         const backendTransactions = response.data.data.transactions;
@@ -74,12 +89,27 @@ class TransactionHistoryService {
         return [];
       }
     } catch (error: any) {
-      console.error('❌ Error getting transactions from backend:', error);
-      console.error('❌ Error details:', {
+      console.log('================================================================================');
+      console.log('🔴 TRANSACTION API ERROR - GET ALL TRANSACTIONS');
+      console.log('================================================================================');
+      console.error('❌ Error Type:', error.name);
+      console.error('❌ Error Message:', error.message);
+      console.error('❌ Error Status:', error.response?.status);
+      console.error('❌ Error Status Text:', error.response?.statusText);
+      console.error('❌ Error Response Data:', JSON.stringify(error.response?.data, null, 2));
+      console.error('❌ Full Error Object:', JSON.stringify({
         message: error.message,
         status: error.response?.status,
-        data: error.response?.data
-      });
+        statusText: error.response?.statusText,
+        data: error.response?.data,
+        code: error.code,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          baseURL: error.config?.baseURL
+        }
+      }, null, 2));
+      console.log('================================================================================');
       return [];
     }
   }
@@ -148,7 +178,7 @@ class TransactionHistoryService {
     return;
   }
 
-  // Get transaction statistics from backend API only
+  // Get transaction statistics (calculated from transactions list - API endpoint removed)
   async getTransactionStats(): Promise<{
     total: number;
     successful: number;
@@ -159,11 +189,14 @@ class TransactionHistoryService {
     yearlySubscriptions: number;
   }> {
     try {
+      console.log('📊 getTransactionStats - Calculating stats from transactions list');
+      console.log('⚠️ API endpoint /api/mobile/transactions/summary has been removed');
+      
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
       
       if (!userId) {
-        console.log('⚠️ No user ID available, cannot fetch transaction stats');
+        console.log('⚠️ No user ID available, returning zero stats');
         return {
           total: 0,
           successful: 0,
@@ -175,60 +208,25 @@ class TransactionHistoryService {
         };
       }
 
-      // Try to get stats from backend API, if not available, calculate from transactions
-      try {
-        const response = await api.get(`/api/mobile/transactions/summary`);
-        
-        if (response.data.success) {
-          const backendStats = response.data.data;
-          
-          const transformedStats = {
-            total: backendStats.totalTransactions,
-            successful: backendStats.successfulTransactions,
-            failed: backendStats.failedTransactions,
-            pending: backendStats.pendingTransactions,
-            totalAmount: backendStats.successfulAmount,
-            quarterlySubscriptions: 0,
-            yearlySubscriptions: 0,
-          };
-
-          console.log('✅ Retrieved transaction stats from backend');
-          return transformedStats;
-        }
-      } catch (summaryError: any) {
-        console.log('⚠️ Summary endpoint not available, calculating stats from transactions');
-        
-        // Fallback: Calculate stats from transactions
-        const transactions = await this.getTransactions();
-        
-        const stats = {
-          total: transactions.length,
-          successful: transactions.filter(t => t.status === 'success').length,
-          failed: transactions.filter(t => t.status === 'failed').length,
-          pending: transactions.filter(t => t.status === 'pending').length,
-          totalAmount: transactions
-            .filter(t => t.status === 'success')
-            .reduce((sum, t) => sum + t.amount, 0),
-          quarterlySubscriptions: transactions.filter(t => t.plan === 'quarterly' && t.status === 'success').length,
-          yearlySubscriptions: transactions.filter(t => t.plan === 'yearly' && t.status === 'success').length,
-        };
-
-        console.log('✅ Calculated stats from transactions:', stats);
-        return stats;
-      }
+      // Calculate stats from transactions list
+      const transactions = await this.getTransactions();
       
-      // If we get here, return default stats
-      return {
-        total: 0,
-        successful: 0,
-        failed: 0,
-        pending: 0,
-        totalAmount: 0,
-        quarterlySubscriptions: 0,
-        yearlySubscriptions: 0,
+      const stats = {
+        total: transactions.length,
+        successful: transactions.filter(t => t.status === 'success').length,
+        failed: transactions.filter(t => t.status === 'failed').length,
+        pending: transactions.filter(t => t.status === 'pending').length,
+        totalAmount: transactions
+          .filter(t => t.status === 'success')
+          .reduce((sum, t) => sum + t.amount, 0),
+        quarterlySubscriptions: transactions.filter(t => t.plan === 'quarterly' && t.status === 'success').length,
+        yearlySubscriptions: transactions.filter(t => t.plan === 'yearly' && t.status === 'success').length,
       };
+
+      console.log('✅ Calculated stats from transactions:', stats);
+      return stats;
     } catch (error) {
-      console.error('Error getting transaction stats from backend:', error);
+      console.error('❌ Error calculating transaction stats:', error);
       return {
         total: 0,
         successful: 0,

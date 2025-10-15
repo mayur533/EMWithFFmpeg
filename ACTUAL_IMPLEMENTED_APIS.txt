@@ -17,22 +17,22 @@ LEGEND:
 ================================================================================
 QUICK SUMMARY
 ================================================================================
-Total APIs Documented: 42 unique endpoints
-├─ Confirmed Working: 22 (52%)
-├─ Partially Working: 18 (43%)
+Total APIs Documented: 40 unique endpoints
+├─ Confirmed Working: 22 (55%)
+├─ Partially Working: 16 (40%)
 └─ Not Confirmed: 2 (5%)
 
-Endpoints Removed: 10
+Endpoints Removed: 12
 Special Note: 11 home screen greeting categories use 1 search API
 
 Major Categories:
   • Authentication (6) - Fully working
-  • Business Profiles (8) - Mostly working
+  • Business Profiles (7) - Mostly working
   • Subscriptions (5) - Partially working
   • Greeting Templates (5) - Working with fallbacks
   • Home Screen (6) - Mock fallbacks
   • Downloads (3) - Working
-  • Transactions (2) - Read-only
+  • Transactions (1) - Read-only
 
 ================================================================================
 1. AUTHENTICATION APIs - ✅ FULLY IMPLEMENTED
@@ -504,20 +504,7 @@ Expected Response (200 OK):
 Note: Throws error on failure
 
 --------------------------------------------------------------------------------
-2.7 SEARCH BUSINESS PROFILES - ⚠️ RETURNS EMPTY ON ERROR
---------------------------------------------------------------------------------
-Endpoint: GET /api/mobile/business-profile
-Query Parameters:
-  ?search={query}
-Headers:
-  Authorization: Bearer <token>
-
-Response: Same as 2.3 but filtered
-
-Note: Returns empty array on API error
-
---------------------------------------------------------------------------------
-2.8 GET PROFILES BY CATEGORY - ⚠️ RETURNS EMPTY ON ERROR
+2.7 GET PROFILES BY CATEGORY - ⚠️ RETURNS EMPTY ON ERROR
 --------------------------------------------------------------------------------
 Endpoint: GET /api/mobile/business-profile
 Query Parameters:
@@ -1076,11 +1063,11 @@ Expected Response:
 Status: Unknown backend confirmation
 
 ================================================================================
-8. TRANSACTION APIs - ✅ MOSTLY IMPLEMENTED
+8. TRANSACTION APIs - ✅ READ-ONLY IMPLEMENTED
 ================================================================================
 
 --------------------------------------------------------------------------------
-8.1 GET USER TRANSACTIONS - ✅ WORKING
+8.1 GET USER TRANSACTIONS - ✅ WORKING (ONLY API)
 --------------------------------------------------------------------------------
 Endpoint: GET /api/mobile/transactions
 Headers:
@@ -1125,38 +1112,9 @@ Frontend Transformation:
 Fallback (on error):
   Returns empty array []
 
---------------------------------------------------------------------------------
-8.2 GET TRANSACTION SUMMARY - ⚠️ FALLBACK TO CALCULATION
---------------------------------------------------------------------------------
-Endpoint: GET /api/mobile/transactions/summary
-Headers:
-  Authorization: Bearer <token>
-
-Request: None
-
-Expected Response (200 OK):
-  {
-    "success": true,
-    "data": {
-      "totalTransactions": 5,
-      "successfulTransactions": 4,
-      "failedTransactions": 1,
-      "pendingTransactions": 0,
-      "successfulAmount": 1996
-    },
-    "message": "Summary fetched"
-  }
-
-Fallback: Calculates from transaction list if endpoint unavailable
-  {
-    "total": 5,
-    "successful": 4,
-    "failed": 1,
-    "pending": 0,
-    "totalAmount": 1996,
-    "quarterlySubscriptions": 2,
-    "yearlySubscriptions": 2
-  }
+Note: Transaction statistics (totals, counts by status, etc.) are calculated
+      on the frontend from the transaction list. The backend endpoint
+      GET /api/mobile/transactions/summary has been removed.
 
 ================================================================================
 9. DOWNLOAD TRACKING APIs - 🔄 PARTIALLY IMPLEMENTED
@@ -1773,17 +1731,17 @@ Templates: No specific cache (uses API fallback)
 FINAL API COUNT SUMMARY
 ================================================================================
 
-TOTAL DOCUMENTED APIs: 42 unique endpoints
+TOTAL DOCUMENTED APIs: 40 unique endpoints
 
 By Category:
   1. Authentication APIs: 6
-  2. Business Profile APIs: 8
+  2. Business Profile APIs: 7
   3. Business Categories APIs: 2
   4. Templates APIs: 3
   5. Greeting Templates APIs: 5
   6. Posters APIs: 1
   7. Subscriptions APIs: 5
-  8. Transactions APIs: 2
+  8. Transactions APIs: 1
   9. Download Tracking APIs: 3
   10. Home Screen APIs: 6
   11. Health Check API: 1
@@ -1801,13 +1759,12 @@ By Implementation Status:
      - Download Tracking (2)
      - Health Check (1)
 
-  ⚠️ Partially Working/Uncertain: 18 endpoints
+  ⚠️ Partially Working/Uncertain: 16 endpoints
      - Profile Update (1)
-     - Business Profile Upload/Search/Delete (5)
+     - Business Profile Upload/Category/Delete (4)
      - Template Languages/Download (2)
      - Greeting Download (1)
      - Subscription Plans/Subscribe/Cancel (3)
-     - Transaction Summary (1)
      - Download Stats (1)
      - Home Screen (4)
 
@@ -1815,22 +1772,23 @@ By Implementation Status:
      - Home Screen Search (1)
      - Home Screen Download (1)
 
-Removed Endpoints: 10
+Removed Endpoints: 12
   - Templates by ID, Categories
   - Greeting Stickers, Emojis
-  - Transaction Create/Update/Delete
+  - Transaction Create/Update/Delete, Summary
   - User Preferences/Stats
   - Home Content Details
+  - Business Profile Search
 
 Special Note: Home Screen uses 11 greeting searches via 1 endpoint
 
 ================================================================================
 END OF DOCUMENTATION
 ================================================================================
-Total Documented APIs: 42 unique endpoints
-Confirmed Working: 22 (52%)
-Partially Working: 18 (43%)
+Total Documented APIs: 40 unique endpoints
+Confirmed Working: 22 (55%)
+Partially Working: 16 (40%)
 Not Confirmed: 2 (5%)
-Endpoints Removed: 10
+Endpoints Removed: 12
 Last Updated: October 15, 2025
 ================================================================================

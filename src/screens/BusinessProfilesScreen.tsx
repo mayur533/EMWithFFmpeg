@@ -16,6 +16,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
+import { useFocusEffect } from '@react-navigation/native';
 import businessProfileService from '../services/businessProfile';
 import userBusinessProfilesService from '../services/userBusinessProfiles';
 import authService from '../services/auth';
@@ -44,6 +45,9 @@ const BusinessProfilesScreen: React.FC = () => {
   const { isDarkMode, theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [profiles, setProfiles] = useState<any[]>([]);
+  const [allProfiles, setAllProfiles] = useState<any[]>([]); // Cache all profiles for instant filtering
+  const [mainProfileId, setMainProfileId] = useState<string | null>(null); // Track the main/primary profile ID
+  const [imageRefreshKey, setImageRefreshKey] = useState(Date.now()); // Key to force image refresh
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -121,11 +125,22 @@ const BusinessProfilesScreen: React.FC = () => {
           new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         );
         
+        // Cache all profiles for instant search filtering
+        setAllProfiles(sortedProfiles);
         setProfiles(sortedProfiles);
+        
+        // Set the first profile (oldest) as the main/primary profile (from registration)
+        // This is set only once when profiles are initially loaded
+        if (!mainProfileId && sortedProfiles[0]?.id) {
+          setMainProfileId(sortedProfiles[0].id);
+          console.log('📍 Main profile ID set to:', sortedProfiles[0].id, '-', sortedProfiles[0].name);
+        }
+        
         console.log('✅ Loaded user-specific business profiles from API:', sortedProfiles.length);
         console.log('🔍 First profile (Your Profile):', sortedProfiles[0]?.name, '- Created:', sortedProfiles[0]?.createdAt);
       } else {
         // No profiles found from API
+        setAllProfiles([]);
         setProfiles([]);
         console.log('📋 No business profiles found for user');
       }
@@ -136,37 +151,60 @@ const BusinessProfilesScreen: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [mainProfileId]);
 
   useEffect(() => {
     loadBusinessProfiles();
   }, [loadBusinessProfiles]);
 
+  // Refresh profiles when screen comes into focus (e.g., returning from Profile edit)
+  useFocusEffect(
+    useCallback(() => {
+      console.log('🔄 BusinessProfilesScreen focused - refreshing profiles and images...');
+      setImageRefreshKey(Date.now()); // Force image refresh
+      loadBusinessProfiles();
+    }, [loadBusinessProfiles])
+  );
+
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
+    setImageRefreshKey(Date.now()); // Force image refresh on pull-to-refresh
     await loadBusinessProfiles();
     setRefreshing(false);
   }, [loadBusinessProfiles]);
 
-  const handleSearch = useCallback(async () => {
-    if (!searchQuery.trim()) {
-      loadBusinessProfiles();
+  // Instant search filter using cached profiles (no API call needed)
+  const filterProfiles = useCallback((query: string) => {
+    if (!query || query.trim() === '') {
+      // No search query - show all profiles
+      setProfiles(allProfiles);
+      console.log('📋 Showing all profiles:', allProfiles.length);
       return;
     }
 
-    try {
-      console.log('🔍 Searching business profiles:', searchQuery);
+    const lowercaseQuery = query.toLowerCase().trim();
+    
+    // Filter cached profiles by company name, business category, or mobile number
+    const filtered = allProfiles.filter(profile => {
+      const matchesName = profile.name?.toLowerCase().includes(lowercaseQuery);
+      const matchesCategory = profile.category?.toLowerCase().includes(lowercaseQuery);
+      const matchesPhone = profile.phone?.toLowerCase().includes(lowercaseQuery);
       
-      // Search using API
-      const results = await businessProfileService.searchBusinessProfiles(searchQuery);
-      setProfiles(results);
-      console.log('✅ Search results:', results.length, 'profiles found');
-    } catch (error) {
-      console.error('Error searching profiles:', error);
-      // No search results available due to error
-      setProfiles([]);
-    }
-  }, [searchQuery, loadBusinessProfiles]);
+      return matchesName || matchesCategory || matchesPhone;
+    });
+    
+    setProfiles(filtered);
+    console.log('🔍 Instant search results:', filtered.length, 'profiles found for query:', query);
+  }, [allProfiles]);
+
+  // Debounced search effect - automatically filter as user types
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      filterProfiles(searchQuery);
+    }, 300); // 300ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, filterProfiles]);
 
   const handleDeleteProfile = useCallback((profileId: string) => {
     setProfileToDelete(profileId);
@@ -178,7 +216,9 @@ const BusinessProfilesScreen: React.FC = () => {
     
     try {
       await businessProfileService.deleteBusinessProfile(profileToDelete);
+      // Update both displayed profiles and cached profiles
       setProfiles(prev => prev.filter(p => p.id !== profileToDelete));
+      setAllProfiles(prev => prev.filter(p => p.id !== profileToDelete));
       setSuccessMessage('Business profile deleted successfully');
       setShowSuccessModal(true);
       console.log('✅ Business profile deleted:', profileToDelete);
@@ -218,11 +258,10 @@ const BusinessProfilesScreen: React.FC = () => {
         const updatedProfile = await businessProfileService.updateBusinessProfile(editingProfile.id, formData);
         console.log('✅ Updated profile received:', updatedProfile);
         
-        setProfiles(prev => {
-          const newProfiles = prev.map(p => p.id === editingProfile.id ? updatedProfile : p);
-          console.log('📋 Updated profiles list:', newProfiles);
-          return newProfiles;
-        });
+        // Update both displayed profiles and cached profiles
+        const updateFn = (prev: any[]) => prev.map(p => p.id === editingProfile.id ? updatedProfile : p);
+        setProfiles(updateFn);
+        setAllProfiles(updateFn);
         
         setSuccessMessage('Business profile updated successfully');
         setShowSuccessModal(true);
@@ -236,7 +275,9 @@ const BusinessProfilesScreen: React.FC = () => {
       } else {
         // Create new profile
         const newProfile = await businessProfileService.createBusinessProfile(formData);
+        // Add to both displayed profiles and cached profiles
         setProfiles(prev => [...prev, newProfile]);
+        setAllProfiles(prev => [...prev, newProfile]);
         setSuccessMessage('Business profile created successfully');
         setShowSuccessModal(true);
         console.log('✅ Business profile created:', newProfile.id);
@@ -266,9 +307,9 @@ const BusinessProfilesScreen: React.FC = () => {
   }, []);
 
   const renderBusinessCard = useCallback(({ item, index }: { item: any; index: number }) => {
-    // First profile is the user's own profile (from registration) - no edit/delete buttons
-    // Additional profiles are created by user - show edit/delete buttons
-    const isUserOwnProfile = index === 0;
+    // Check if this is the user's main profile (from registration)
+    // Use the profile ID to determine, not the index (so it works correctly during search)
+    const isUserOwnProfile = mainProfileId !== null && item.id === mainProfileId;
     
     return (
       <View style={[styles.businessCard, { backgroundColor: theme.colors.cardBackground }]}>
@@ -278,9 +319,13 @@ const BusinessProfilesScreen: React.FC = () => {
             <View style={styles.logoContainer}>
               {item.companyLogo || item.logo ? (
                 <Image
-                  source={{ uri: item.companyLogo || item.logo }}
+                  source={{ 
+                    uri: item.companyLogo || item.logo,
+                    cache: 'reload' // Force reload from network, not cache
+                  }}
                   style={styles.businessLogo}
                   resizeMode="cover"
+                  key={`${item.id}-logo-${imageRefreshKey}`} // Force re-render with refresh key
                 />
               ) : (
                 <View style={[styles.logoPlaceholder, { backgroundColor: `${theme.colors.primary}20` }]}>
@@ -338,6 +383,14 @@ const BusinessProfilesScreen: React.FC = () => {
             </Text>
           </View>
         )}
+        {item.alternatePhone && (
+          <View style={styles.contactItem}>
+            <Icon name="phone-in-talk" size={14} color={theme.colors.textSecondary} />
+            <Text style={[styles.contactText, { color: theme.colors.textSecondary }]}>
+              {item.alternatePhone} (Alt)
+            </Text>
+          </View>
+        )}
         {item.email && (
           <View style={styles.contactItem}>
             <Icon name="email" size={14} color={theme.colors.textSecondary} />
@@ -385,7 +438,7 @@ const BusinessProfilesScreen: React.FC = () => {
       )}
     </View>
     );
-  }, [theme, handleEditProfile, handleDeleteProfile]);
+  }, [mainProfileId, imageRefreshKey, theme, handleEditProfile, handleDeleteProfile]);
 
   const keyExtractor = useCallback((item: any) => item.id, []);
 
@@ -427,8 +480,8 @@ const BusinessProfilesScreen: React.FC = () => {
               placeholderTextColor={theme.colors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
-              onSubmitEditing={handleSearch}
-              returnKeyType="search"
+              autoCorrect={false}
+              autoCapitalize="none"
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
@@ -443,13 +496,42 @@ const BusinessProfilesScreen: React.FC = () => {
           data={profiles}
           renderItem={renderBusinessCard}
           keyExtractor={keyExtractor}
-          contentContainerStyle={[styles.listContainer, { paddingBottom: 120 + insets.bottom }]}
+          contentContainerStyle={[
+            styles.listContainer, 
+            { paddingBottom: 120 + insets.bottom },
+            profiles.length === 0 && styles.emptyListContainer
+          ]}
           showsVerticalScrollIndicator={false}
           onRefresh={onRefresh}
           refreshing={refreshing}
           removeClippedSubviews={true}
           maxToRenderPerBatch={5}
           windowSize={10}
+          ListEmptyComponent={
+            !loading && (
+              <View style={styles.emptyStateContainer}>
+                <Icon name="business-center" size={80} color={theme.colors.primary} style={styles.emptyStateIcon} />
+                <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
+                  {searchQuery ? 'No Profiles Found' : 'No Business Profiles'}
+                </Text>
+                <Text style={[styles.emptyStateSubtitle, { color: theme.colors.text }]}>
+                  {searchQuery 
+                    ? `No profiles match "${searchQuery}". Try a different search term.`
+                    : 'You haven\'t created any business profiles yet. Tap the + button to create your first profile.'
+                  }
+                </Text>
+                {!searchQuery && (
+                  <TouchableOpacity
+                    style={[styles.emptyStateButton, { backgroundColor: theme.colors.primary }]}
+                    onPress={handleAddProfile}
+                  >
+                    <Icon name="add" size={20} color="#ffffff" />
+                    <Text style={styles.emptyStateButtonText}>Create Profile</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            )
+          }
         />
 
         {/* Business Profile Form Modal */}
@@ -696,6 +778,49 @@ const styles = StyleSheet.create({
   listContainer: {
     paddingHorizontal: responsiveLayout.containerPaddingHorizontal,
     paddingBottom: 100, // Add padding to account for tab bar
+  },
+  emptyListContainer: {
+    flexGrow: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyStateContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: responsiveSpacing.xl,
+    paddingVertical: screenHeight * 0.1,
+  },
+  emptyStateIcon: {
+    opacity: 0.5,
+    marginBottom: responsiveSpacing.lg,
+  },
+  emptyStateTitle: {
+    fontSize: responsiveText.title,
+    fontWeight: '700',
+    marginBottom: responsiveSpacing.sm,
+    textAlign: 'center',
+  },
+  emptyStateSubtitle: {
+    fontSize: responsiveText.body,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: responsiveSpacing.xl,
+    opacity: 0.85,
+  },
+  emptyStateButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: responsiveSpacing.xl,
+    paddingVertical: responsiveSpacing.md,
+    borderRadius: 25,
+    ...responsiveShadow.medium,
+  },
+  emptyStateButtonText: {
+    color: '#ffffff',
+    fontSize: responsiveText.body,
+    fontWeight: '600',
+    marginLeft: responsiveSpacing.sm,
   },
   businessCard: {
     borderRadius: responsiveSize.cardBorderRadius,

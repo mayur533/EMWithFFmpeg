@@ -79,11 +79,16 @@ const TransactionHistoryScreen: React.FC = () => {
 
   // Handle refresh
   const onRefresh = async () => {
-    console.log('🔄 Manual refresh triggered by user');
+    console.log('================================================================================');
+    console.log('🔄🔄🔄 MANUAL REFRESH TRIGGERED BY USER - TRANSACTION HISTORY 🔄🔄🔄');
+    console.log('================================================================================');
+    console.log('⏰ Refresh Time:', new Date().toISOString());
     setRefreshing(true);
     await refreshTransactions();
     setRefreshing(false);
-    console.log('✅ Manual refresh completed');
+    console.log('================================================================================');
+    console.log('✅✅✅ MANUAL REFRESH COMPLETED - TRANSACTION HISTORY ✅✅✅');
+    console.log('================================================================================');
   };
 
   // Format date

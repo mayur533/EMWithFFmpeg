@@ -225,15 +225,26 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   // Refresh transactions and stats
   const refreshTransactions = useCallback(async () => {
     try {
-      console.log('🔄 SubscriptionContext - Refreshing transactions...');
+      console.log('');
+      console.log('🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦');
+      console.log('🔄 SubscriptionContext - STARTING TRANSACTION REFRESH');
+      console.log('🔄 About to call API endpoints...');
+      console.log('🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦');
+      console.log('');
+      
       const [transactionsData, statsData] = await Promise.all([
         transactionHistoryService.getTransactions(),
         transactionHistoryService.getTransactionStats(),
       ]);
       
+      console.log('');
+      console.log('🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦');
+      console.log('📊 SubscriptionContext - API CALLS COMPLETED');
       console.log('📊 SubscriptionContext - Transactions fetched:', transactionsData.length);
       console.log('📊 SubscriptionContext - Transactions data:', JSON.stringify(transactionsData, null, 2));
       console.log('📊 SubscriptionContext - Stats fetched:', statsData);
+      console.log('🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦🟦');
+      console.log('');
       
       setTransactions(transactionsData);
       setTransactionStats(statsData);

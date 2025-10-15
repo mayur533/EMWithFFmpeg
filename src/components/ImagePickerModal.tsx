@@ -281,22 +281,18 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
     console.log('✂️ Opening crop modal for:', imageUri);
     
     try {
-      // Ensure proper URI format for Android
-      let cleanUri = imageUri;
+      // Use the URI as-is - the cropper library handles file:// prefix correctly
+      let cropperPath = imageUri;
       
-      if (Platform.OS === 'android') {
-        // Remove file:// prefix if present, cropper adds it automatically
-        if (cleanUri.startsWith('file://')) {
-          cleanUri = cleanUri.replace('file://', '');
-        }
-        // Ensure no double slashes
-        cleanUri = cleanUri.replace(/\/\//g, '/');
+      // For Android, ensure we have the full file:// URI
+      if (Platform.OS === 'android' && !cropperPath.startsWith('file://')) {
+        cropperPath = `file://${cropperPath}`;
       }
       
-      console.log('📍 Clean URI for cropper:', cleanUri);
+      console.log('📍 Cropper path:', cropperPath);
       
       const croppedImage = await ImageCropPicker.openCropper({
-        path: cleanUri,
+        path: cropperPath,
         width: 300,
         height: 300,
         cropping: true,
