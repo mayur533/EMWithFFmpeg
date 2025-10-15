@@ -82,12 +82,19 @@ class AuthService {
     try {
       console.log('Registering new user with API...');
       
-      // Prepare registration data
+      // Prepare registration data with all available fields
       const registerData: RegisterRequest = {
         email: userData.email,
         password: userData.password,
         companyName: userData.companyName,
         phoneNumber: userData.phoneNumber,
+        description: userData.description,
+        category: userData.category,
+        address: userData.address,
+        website: userData.website,
+        alternatePhone: userData.alternatePhone,
+        companyLogo: userData.companyLogo,
+        displayName: userData.displayName,
       };
       
       const response = await authApi.register(registerData);

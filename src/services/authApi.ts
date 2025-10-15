@@ -6,6 +6,13 @@ export interface RegisterRequest {
   password: string;
   companyName: string;
   phoneNumber: string;
+  description?: string;
+  category?: string;
+  address?: string;
+  website?: string;
+  alternatePhone?: string;
+  companyLogo?: string;
+  displayName?: string;
 }
 
 export interface LoginRequest {
@@ -42,15 +49,19 @@ export interface UserProfile {
 }
 
 export interface UpdateProfileRequest {
-  companyName?: string;
-  phoneNumber?: string;
-  logo?: string;
-  photo?: string;
-  description?: string;
-  category?: string;
-  address?: string;
-  alternatePhone?: string;
-  website?: string;
+  name?: string;              // Company/user name
+  companyName?: string;       // Alias for name
+  email?: string;             // Email address
+  phone?: string;             // Phone number
+  phoneNumber?: string;       // Alias for phone
+  logo?: string;              // Logo URL
+  photo?: string;             // Photo URL
+  companyLogo?: string;       // Alias for logo
+  description?: string;       // Company/business description
+  category?: string;          // Business category
+  address?: string;           // Business address
+  alternatePhone?: string;    // Alternate phone number
+  website?: string;           // Website URL
 }
 
 export interface AuthResponse {

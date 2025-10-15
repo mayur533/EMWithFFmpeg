@@ -235,65 +235,10 @@ class TemplatesBannersApiService {
     }
   }
 
-  // Get template by ID
+  // Get template by ID (mock data only - API endpoint removed)
   async getTemplateById(id: string): Promise<TemplateResponse> {
-    try {
-      console.log('📡 [TEMPLATE BY ID API] Calling: /api/mobile/templates/' + id);
-      const response = await api.get(`/api/mobile/templates/${id}`);
-      
-      console.log('✅ [TEMPLATE BY ID API] Response received');
-      console.log('📊 [TEMPLATE BY ID API] Full Response:', JSON.stringify(response.data, null, 2));
-      
-      if (response.data.success) {
-        const backendTemplate = response.data.data;
-        const originalUrl = backendTemplate.imageUrl;
-        const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
-        
-        console.log(`📸 [TEMPLATE BY ID API] ${backendTemplate.title}:`, originalUrl, '→', absoluteUrl);
-        
-        // Handle tags - backend returns array, not string
-        let tags: string[] = [];
-        if (Array.isArray(backendTemplate.tags)) {
-          tags = backendTemplate.tags;
-        } else if (typeof backendTemplate.tags === 'string') {
-          try {
-            tags = JSON.parse(backendTemplate.tags);
-          } catch (e) {
-            console.warn('Failed to parse tags for template:', backendTemplate.title);
-            tags = [];
-          }
-        }
-        
-        const mappedTemplate: Template = {
-          id: backendTemplate.id,
-          name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
-          description: backendTemplate.description || '',
-          thumbnail: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
-          imageUrl: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400&fit=crop',
-          category: (backendTemplate.isPremium ? 'premium' : 'free') as 'free' | 'premium',
-          type: backendTemplate.type || 'daily',
-          language: backendTemplate.language || 'English',
-          tags: tags,
-          downloads: backendTemplate.downloads || 0,
- // This would need to be determined by checking user likes
-          createdAt: backendTemplate.createdAt,
-        };
-
-        console.log('✅ [TEMPLATE BY ID API] Mapped template:', JSON.stringify(mappedTemplate, null, 2));
-
-        return {
-          success: true,
-          data: mappedTemplate,
-          message: response.data.message,
-        };
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
-    } catch (error) {
-      console.error('❌ [TEMPLATE BY ID API] Error:', error);
-      console.log('⚠️ [TEMPLATE BY ID API] Using mock template details due to API error');
-      return this.getMockTemplateById(id);
-    }
+    console.log('📡 [TEMPLATE BY ID] Using mock data (API endpoint removed)');
+    return this.getMockTemplateById(id);
   }
 
   // Get available languages
@@ -441,29 +386,10 @@ class TemplatesBannersApiService {
     }
   }
 
-  // Get template categories
+  // Get template categories (mock data only - API endpoint removed)
   async getTemplateCategories(): Promise<{ success: boolean; data: string[]; message: string }> {
-    try {
-      const response = await api.get('/api/mobile/templates/categories');
-      
-      if (response.data.success) {
-        // Map backend category format to frontend format (array of category names)
-        const mappedCategories = response.data.data.map((backendCategory: any) => 
-          backendCategory.name || backendCategory.slug || 'Unknown'
-        );
-
-        return {
-          success: true,
-          data: mappedCategories,
-          message: response.data.message,
-        };
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
-    } catch (error) {
-      console.log('Using mock template categories due to API error:', error);
-      return this.getMockTemplateCategories();
-    }
+    console.log('📡 [TEMPLATE CATEGORIES] Using mock data (API endpoint removed)');
+    return this.getMockTemplateCategories();
   }
 
   // ============================================================================

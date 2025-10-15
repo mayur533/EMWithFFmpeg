@@ -98,38 +98,12 @@ class TemplateService {
     }
   }
 
-  // Get template by ID (API first, mock fallback)
+  // Get template by ID (mock data only - API endpoint removed)
   async getTemplateById(id: string): Promise<Template | null> {
-    try {
-      // Try API first
-      const response = await templatesBannersApi.getTemplateById(id);
-      
-      if (response.success) {
-        // Convert API template to local format
-        const apiTemplate = response.data;
-        const template: Template = {
-          id: apiTemplate.id,
-          title: apiTemplate.name,
-          description: apiTemplate.description,
-          imageUrl: apiTemplate.imageUrl,
-          category: apiTemplate.category,
-          language: apiTemplate.language,
-          tags: apiTemplate.tags,
-          type: apiTemplate.type,
-          createdAt: apiTemplate.createdAt,
-          updatedAt: apiTemplate.createdAt, // API doesn't have updatedAt
-        };
-        
-        return template;
-      } else {
-        throw new Error('Failed to fetch template from API');
-      }
-    } catch (error) {
-      console.error('API get template by ID failed, falling back to mock:', error);
-      // Fallback to mock data
-      const mockTemplates = this.getMockTemplates();
-      return mockTemplates.find(template => template.id === id) || null;
-    }
+    console.log('📡 [TEMPLATE BY ID] Using mock data (API endpoint removed)');
+    // Use mock data only
+    const mockTemplates = this.getMockTemplates();
+    return mockTemplates.find(template => template.id === id) || null;
   }
 
   // Get available languages for filtering (API first, mock fallback)

@@ -14,12 +14,6 @@ export interface BusinessProfile {
   logo?: string;
   companyLogo?: string;
   banner?: string;
-  socialMedia?: {
-    facebook?: string;
-    instagram?: string;
-    twitter?: string;
-    linkedin?: string;
-  };
   services: string[];
   workingHours: {
     [key: string]: {
@@ -83,12 +77,6 @@ class BusinessProfileService {
               logo: profile.logo || '',
               companyLogo: profile.logo || '',
               banner: '',
-              socialMedia: profile.socialMedia || {
-                facebook: '',
-                instagram: '',
-                twitter: '',
-                linkedin: '',
-              },
               services: [],
               workingHours: {
                 monday: { open: '09:00', close: '18:00', isOpen: true },
@@ -261,15 +249,13 @@ class BusinessProfileService {
       // Map frontend data to backend format
       const backendData = {
         businessName: data.name,
-        ownerName: data.name, // Use business name as owner name for now
         email: data.email,
         phone: data.phone,
         address: data.address,
         category: data.category,
         logo: data.companyLogo || '',
         description: data.description || '',
-        website: data.website || '',
-        socialMedia: (data as any).socialMedia || null
+        website: data.website || ''
       };
       
       const response = await api.post('/api/mobile/business-profile', backendData);
@@ -294,12 +280,6 @@ class BusinessProfileService {
           companyLogo: backendProfile.logo || '',
           logo: backendProfile.logo || '',
           banner: '',
-          socialMedia: backendProfile.socialMedia || {
-            facebook: '',
-            instagram: '',
-            twitter: '',
-            linkedin: '',
-          },
           services: [],
           workingHours: {
             monday: { open: '09:00', close: '18:00', isOpen: true },
@@ -336,15 +316,13 @@ class BusinessProfileService {
       // Map frontend data to backend format
       const backendData = {
         businessName: data.name,
-        ownerName: data.name, // Use business name as owner name for now
         email: data.email,
         phone: data.phone,
         address: data.address || '',
         category: data.category,
         logo: data.companyLogo || '',
         description: data.description || '',
-        website: data.website || '',
-        socialMedia: (data as any).socialMedia || null
+        website: data.website || ''
       };
       
       console.log('🔍 Making PUT request to:', `/api/mobile/business-profile/${id}`);
@@ -372,12 +350,6 @@ class BusinessProfileService {
           companyLogo: backendProfile.logo || '',
           logo: backendProfile.logo || '',
           banner: '',
-          socialMedia: backendProfile.socialMedia || {
-            facebook: '',
-            instagram: '',
-            twitter: '',
-            linkedin: '',
-          },
           services: [],
           workingHours: {
             monday: { open: '09:00', close: '18:00', isOpen: true },

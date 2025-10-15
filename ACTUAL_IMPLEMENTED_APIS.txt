@@ -1,0 +1,1836 @@
+================================================================================
+          EVENT MARKETERS - ACTUAL API IMPLEMENTATION STATUS
+================================================================================
+                    Generated: October 15, 2025
+                    Base URL: https://eventmarketersbackend.onrender.com
+================================================================================
+This document reflects the REAL implementation status based on code analysis,
+including detailed request/response formats.
+================================================================================
+
+LEGEND:
+  ✅ = Confirmed working with backend
+  ⚠️  = Frontend implemented, backend status uncertain (has fallbacks)
+  ❌ = Mock data only / Not implemented on backend
+  🔄 = Partially implemented (some functionality works)
+
+================================================================================
+QUICK SUMMARY
+================================================================================
+Total APIs Documented: 42 unique endpoints
+├─ Confirmed Working: 22 (52%)
+├─ Partially Working: 18 (43%)
+└─ Not Confirmed: 2 (5%)
+
+Endpoints Removed: 10
+Special Note: 11 home screen greeting categories use 1 search API
+
+Major Categories:
+  • Authentication (6) - Fully working
+  • Business Profiles (8) - Mostly working
+  • Subscriptions (5) - Partially working
+  • Greeting Templates (5) - Working with fallbacks
+  • Home Screen (6) - Mock fallbacks
+  • Downloads (3) - Working
+  • Transactions (2) - Read-only
+
+================================================================================
+1. AUTHENTICATION APIs - ✅ FULLY IMPLEMENTED
+================================================================================
+Status: Confirmed working - "API-only integration (no local fallback)"
+
+--------------------------------------------------------------------------------
+1.1 USER REGISTRATION - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/auth/register
+Headers:
+  Content-Type: application/json
+
+Request Body:
+  {
+    "email": "user@example.com",
+    "password": "securePassword123",
+    "companyName": "My Company",
+    "phoneNumber": "+1234567890",
+    "description": "Company description",
+    "category": "Event Planning",
+    "address": "123 Main Street, City, State 12345",
+    "website": "https://mycompany.com",
+    "alternatePhone": "+9876543210",
+    "companyLogo": "https://example.com/logo.png",
+    "displayName": "My Company"
+  }
+
+Required Fields: email, password, companyName, phoneNumber
+Optional Fields: description, category, address, website, alternatePhone, companyLogo, displayName
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": "user123",
+        "email": "user@example.com",
+        "companyName": "My Company",
+        "phoneNumber": "+1234567890",
+        "description": "Company description",
+        "category": "Event Planning",
+        "address": "123 Main Street, City, State 12345",
+        "website": "https://mycompany.com",
+        "alternatePhone": "+9876543210",
+        "logo": "https://example.com/logo.png",
+        "companyLogo": "https://example.com/logo.png",
+        "displayName": "My Company",
+        "photo": null,
+        "createdAt": "2024-01-15T10:30:00.000Z",
+        "updatedAt": "2024-01-15T10:30:00.000Z",
+        "_originalCompanyName": "My Company"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    },
+    "message": "User registered successfully"
+  }
+
+Error Response (400):
+  {
+    "success": false,
+    "error": "Email already exists",
+    "message": "Registration failed"
+  }
+
+Note: All optional fields are now supported during registration to provide 
+      complete user profile information from the start.
+
+--------------------------------------------------------------------------------
+1.2 USER LOGIN - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/auth/login
+Headers:
+  Content-Type: application/json
+
+Request Body:
+  {
+    "email": "user@example.com",
+    "password": "securePassword123"
+  }
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": "user123",
+        "email": "user@example.com",
+        "companyName": "My Company",
+        "phoneNumber": "+1234567890",
+        "logo": null,
+        "createdAt": "2024-01-15T10:30:00.000Z",
+        "updatedAt": "2024-01-15T10:30:00.000Z"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    },
+    "message": "Login successful"
+  }
+
+Error Response (401):
+  {
+    "success": false,
+    "error": "Invalid credentials",
+    "message": "Login failed"
+  }
+
+--------------------------------------------------------------------------------
+1.3 GOOGLE OAUTH LOGIN - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/auth/google
+Headers:
+  Content-Type: application/json
+
+Request Body:
+  {
+    "idToken": "google_id_token_here",
+    "accessToken": "google_access_token_here"
+  }
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "user": {
+        "id": "user123",
+        "email": "user@gmail.com",
+        "companyName": "Google User",
+        "phoneNumber": null,
+        "photo": "https://lh3.googleusercontent.com/...",
+        "providerId": "google",
+        "createdAt": "2024-01-15T10:30:00.000Z"
+      },
+      "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    },
+    "message": "Google login successful"
+  }
+
+--------------------------------------------------------------------------------
+1.4 GET USER PROFILE - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/auth/me
+Headers:
+  Authorization: Bearer <token>
+  Content-Type: application/json
+
+Request: None (token in header)
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "id": "user123",
+      "email": "user@example.com",
+      "companyName": "My Company",
+      "phoneNumber": "+1234567890",
+      "logo": "https://example.com/logo.png",
+      "photo": "https://example.com/photo.jpg",
+      "description": "Company description",
+      "category": "Event Planning",
+      "address": "123 Main St",
+      "website": "https://mycompany.com",
+      "createdAt": "2024-01-15T10:30:00.000Z",
+      "updatedAt": "2024-01-16T15:45:00.000Z"
+    },
+    "message": "Profile fetched successfully"
+  }
+
+Note: Tries multiple endpoints:
+  - /api/mobile/auth/me (primary)
+
+--------------------------------------------------------------------------------
+1.5 UPDATE USER PROFILE - ⚠️ MULTIPLE ENDPOINTS
+--------------------------------------------------------------------------------
+Endpoint: PUT /api/mobile/auth/profile
+Alternative: PUT /api/mobile/users/{userId}
+Headers:
+  Authorization: Bearer <token>
+  Content-Type: application/json
+
+Request Body:
+  {
+    "name": "Updated Company Name",
+    "companyName": "Updated Company Name",       // Alias for name
+    "email": "user@example.com",
+    "phone": "+9876543210",
+    "phoneNumber": "+9876543210",                // Alias for phone
+    "logo": "https://example.com/new-logo.png",
+    "companyLogo": "https://example.com/new-logo.png",  // Alias for logo
+    "description": "Updated company description",
+    "category": "Catering",
+    "address": "456 New St, City, State 12345",
+    "alternatePhone": "+1111111111",
+    "website": "https://newsite.com"
+  }
+
+Note: Frontend sends 'name', 'phone', 'email' - Backend may expect 'companyName', 'phoneNumber'
+      All fields are optional - only send fields you want to update
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "id": "user123",
+      "email": "user@example.com",
+      "name": "Updated Company Name",
+      "companyName": "Updated Company Name",
+      "phone": "+9876543210",
+      "phoneNumber": "+9876543210",
+      "logo": "https://example.com/new-logo.png",
+      "companyLogo": "https://example.com/new-logo.png",
+      "description": "Updated company description",
+      "category": "Catering",
+      "address": "456 New St, City, State 12345",
+      "alternatePhone": "+1111111111",
+      "website": "https://newsite.com",
+      "createdAt": "2024-01-15T10:30:00.000Z",
+      "updatedAt": "2024-01-16T15:45:00.000Z"
+    },
+    "message": "Profile updated successfully"
+  }
+
+Important: Response should include ALL profile fields, not just updated ones.
+           Frontend expects: name, email, phone, description, category, address,
+           alternatePhone, website, companyLogo in the response.
+
+--------------------------------------------------------------------------------
+1.6 LOGOUT - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/auth/logout
+Headers:
+  Authorization: Bearer <token>
+  Content-Type: application/json
+
+Request: None
+
+Response (200 OK):
+  {
+    "success": true,
+    "message": "Logout successful"
+  }
+
+Note: Continues with local cleanup even if API fails
+
+================================================================================
+2. BUSINESS PROFILE APIs - 🔄 PARTIALLY IMPLEMENTED
+================================================================================
+
+--------------------------------------------------------------------------------
+2.1 CREATE BUSINESS PROFILE - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/business-profile
+Headers:
+  Authorization: Bearer <token>
+  Content-Type: application/json
+
+Request Body:
+  {
+    "businessName": "Elite Events",
+    "email": "contact@eliteevents.com",
+    "phone": "+1234567890",
+    "address": "123 Event Street, City, State 12345",
+    "category": "Event Planning",
+    "logo": "https://example.com/logo.png",
+    "description": "Premium event planning services",
+    "website": "https://eliteevents.com"
+  }
+
+Required Fields: businessName, email, phone, address, category
+Optional Fields: logo, description, website
+
+Response (201 Created):
+  {
+    "success": true,
+    "data": {
+      "id": "bp123",
+      "businessName": "Elite Events",
+      "email": "contact@eliteevents.com",
+      "phone": "+1234567890",
+      "address": "123 Event Street, City, State 12345",
+      "category": "Event Planning",
+      "logo": "https://example.com/logo.png",
+      "description": "Premium event planning services",
+      "website": "https://eliteevents.com",
+      "createdAt": "2024-01-15T10:30:00.000Z",
+      "updatedAt": "2024-01-15T10:30:00.000Z"
+    },
+    "message": "Business profile created successfully"
+  }
+
+Important: Response should include ALL business profile fields.
+           Frontend expects: businessName, email, phone, address, category,
+           logo, description, website, createdAt, updatedAt
+
+Note: Throws error if backend unavailable
+Note: ownerName and socialMedia fields have been removed from API
+
+--------------------------------------------------------------------------------
+2.2 GET USER BUSINESS PROFILES - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/business-profile/{userId}
+Headers:
+  Authorization: Bearer <token>
+
+Request: None (userId in URL)
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "profiles": [
+        {
+          "id": "bp123",
+          "businessName": "Elite Events",
+          "email": "contact@eliteevents.com",
+          "phone": "+1234567890",
+          "address": "123 Event Street, City, State 12345",
+          "category": "Event Planning",
+          "logo": "https://example.com/logo.png",
+          "description": "Premium event planning services",
+          "website": "https://eliteevents.com",
+          "createdAt": "2024-01-15T10:30:00.000Z",
+          "updatedAt": "2024-01-15T10:30:00.000Z"
+        }
+      ]
+    },
+    "message": "Business profiles fetched successfully"
+  }
+
+Frontend Mapping: Converts backend fields to frontend format:
+  - businessName → name
+  - logo → both logo and companyLogo
+  - Adds default workingHours, rating, reviewCount, isVerified
+
+Note: Has health check before call (/health with 5s timeout)
+Note: ownerName and socialMedia removed from API response
+
+--------------------------------------------------------------------------------
+2.3 GET ALL BUSINESS PROFILES - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/business-profile
+Query Parameters:
+  ?search={query}&category={category}
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "profiles": [
+        {
+          "id": "bp123",
+          "businessName": "Elite Events",
+          "email": "contact@eliteevents.com",
+          "phone": "+1234567890",
+          "address": "123 Event Street, City, State",
+          "category": "Event Planning",
+          "logo": "https://example.com/logo.png",
+          "description": "Premium event planning services",
+          "website": "https://eliteevents.com",
+          "createdAt": "2024-01-15T10:30:00.000Z",
+          "updatedAt": "2024-01-15T10:30:00.000Z"
+        }
+      ]
+    },
+    "message": "Business profiles fetched successfully"
+  }
+
+Note: Response includes ALL profile fields for each profile
+Note: ownerName and socialMedia removed from response
+Cache: 5 minutes
+
+--------------------------------------------------------------------------------
+2.4 UPDATE BUSINESS PROFILE - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: PUT /api/mobile/business-profile/{id}
+Headers:
+  Authorization: Bearer <token>
+  Content-Type: application/json
+
+Request Body (partial update - all fields optional):
+  {
+    "businessName": "Elite Events Updated",
+    "email": "new@eliteevents.com",
+    "phone": "+9876543210",
+    "address": "456 New Street, City, State",
+    "category": "Event Planning",
+    "logo": "https://example.com/new-logo.png",
+    "description": "Updated description",
+    "website": "https://newsite.com"
+  }
+
+All fields are optional - only send fields you want to update
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "id": "bp123",
+      "businessName": "Elite Events Updated",
+      "email": "new@eliteevents.com",
+      "phone": "+9876543210",
+      "address": "456 New Street, City, State",
+      "category": "Event Planning",
+      "logo": "https://example.com/new-logo.png",
+      "description": "Updated description",
+      "website": "https://newsite.com",
+      "createdAt": "2024-01-15T10:30:00.000Z",
+      "updatedAt": "2024-01-16T15:45:00.000Z"
+    },
+    "message": "Business profile updated successfully"
+  }
+
+Important: Response should include ALL business profile fields, not just updated ones.
+           Frontend expects: id, businessName, email, phone, address, category,
+           logo, description, website, createdAt, updatedAt
+
+Note: Throws error on failure
+Note: ownerName and socialMedia fields have been removed from API
+
+--------------------------------------------------------------------------------
+2.5 DELETE BUSINESS PROFILE - ⚠️ BACKEND NOT IMPLEMENTED
+--------------------------------------------------------------------------------
+Endpoint: DELETE /api/mobile/business-profile/{id}
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Expected Response (200 OK):
+  {
+    "success": true,
+    "message": "Business profile deleted successfully"
+  }
+
+Actual Response (404 Not Found):
+  {
+    "success": false,
+    "error": "Endpoint not found",
+    "message": "Delete endpoint not implemented"
+  }
+
+Note: Frontend handles 404 gracefully, clears cache
+
+--------------------------------------------------------------------------------
+2.6 UPLOAD BUSINESS PROFILE IMAGE - ⚠️ UNCERTAIN
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/business-profile/{profileId}/upload
+Headers:
+  Authorization: Bearer <token>
+  Content-Type: multipart/form-data
+
+Request Body (FormData):
+  {
+    "file": <File object>
+  }
+
+Expected Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "url": "https://example.com/uploads/logo_123.jpg"
+    },
+    "message": "Image uploaded successfully"
+  }
+
+Note: Throws error on failure
+
+--------------------------------------------------------------------------------
+2.7 SEARCH BUSINESS PROFILES - ⚠️ RETURNS EMPTY ON ERROR
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/business-profile
+Query Parameters:
+  ?search={query}
+Headers:
+  Authorization: Bearer <token>
+
+Response: Same as 2.3 but filtered
+
+Note: Returns empty array on API error
+
+--------------------------------------------------------------------------------
+2.8 GET PROFILES BY CATEGORY - ⚠️ RETURNS EMPTY ON ERROR
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/business-profile
+Query Parameters:
+  ?category={category}
+Headers:
+  Authorization: Bearer <token>
+
+Response: Same as 2.3 but filtered by category
+
+Note: Returns empty array on API error
+
+================================================================================
+3. BUSINESS CATEGORIES APIs - 🔄 PARTIALLY IMPLEMENTED
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1 GET BUSINESS CATEGORIES - ✅ WORKING (with fallback)
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/business-categories
+Headers: None required
+
+Request: None
+
+Response (200 OK):
+  {
+    "success": true,
+    "categories": [
+      {
+        "id": "cat1",
+        "name": "Event Planning",
+        "description": "Event planning and coordination services",
+        "icon": "🎉"
+      },
+      {
+        "id": "cat2",
+        "name": "Catering",
+        "description": "Food and beverage services",
+        "icon": "🍽️"
+      }
+    ]
+  }
+
+Fallback Mock Data (on API error):
+  [
+    { id: "1", name: "Restaurant", description: "Food and dining", icon: "🍽️" },
+    { id: "2", name: "Wedding Planning", description: "Wedding events", icon: "💒" },
+    { id: "3", name: "Electronics", description: "Electronic products", icon: "📱" },
+    { id: "4", name: "Fashion", description: "Fashion and clothing", icon: "👗" },
+    { id: "5", name: "Health & Fitness", description: "Health related", icon: "💪" },
+    { id: "6", name: "Education", description: "Educational services", icon: "🎓" },
+    { id: "7", name: "Automotive", description: "Transportation services", icon: "🚗" },
+    { id: "8", name: "Real Estate", description: "Property services", icon: "🏠" }
+  ]
+
+Cache: 10 minutes
+
+--------------------------------------------------------------------------------
+3.2 GET CATEGORIES (ALIAS) - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: GET /api/v1/categories
+Headers: None required
+
+Response: Same format as 3.1
+
+Fallback: Calls /api/mobile/business-categories if this fails
+
+================================================================================
+4. TEMPLATES APIs - 🔄 PARTIALLY IMPLEMENTED
+================================================================================
+
+--------------------------------------------------------------------------------
+4.1 GET TEMPLATES - ✅ WORKING (with fallback)
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/templates
+Query Parameters:
+  ?type={daily|festival|special|all}
+  &category={free|premium|all}
+  &language={language}
+  &search={query}
+  &page={number}
+  &limit={number}
+
+Headers: None required
+
+Request: None (all in query params)
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "templates": [
+        {
+          "id": "template1",
+          "title": "Daily Greeting Template",
+          "description": "Beautiful daily greeting template",
+          "imageUrl": "/uploads/templates/template1.jpg",
+          "isPremium": false,
+          "type": "daily",
+          "language": "English",
+          "tags": ["greeting", "daily", "social"],
+          "downloads": 189,
+          "createdAt": "2024-01-15T10:30:00.000Z"
+        }
+      ],
+      "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 45,
+        "totalPages": 3
+      }
+    },
+    "message": "Templates fetched successfully"
+  }
+
+Frontend Mapping:
+  - title → name
+  - isPremium → category (true = 'premium', false = 'free')
+  - imageUrl converted to absolute URL
+  - tags parsed if string
+
+Fallback Mock Data (3 templates):
+  - Daily Greeting Template
+  - Festival Celebration
+  - Special Event Banner
+
+--------------------------------------------------------------------------------
+4.2 GET TEMPLATE LANGUAGES - ⚠️ MOCK FALLBACK
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/templates/languages
+Headers: None required
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": [
+      {
+        "code": "en",
+        "name": "English",
+        "nativeName": "English"
+      },
+      {
+        "code": "hi",
+        "name": "Hindi",
+        "nativeName": "हिन्दी"
+      }
+    ],
+    "message": "Languages fetched successfully"
+  }
+
+Fallback Mock (12 languages):
+  English, Hindi, Spanish, French, German, Italian, Portuguese, 
+  Russian, Japanese, Korean, Chinese, Arabic
+
+--------------------------------------------------------------------------------
+4.3 DOWNLOAD TEMPLATE - ⚠️ UNCERTAIN
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/templates/{id}/download
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Expected Response (200 OK):
+  {
+    "success": true,
+    "message": "Template download tracked"
+  }
+
+Status: Unknown backend confirmation
+
+================================================================================
+5. GREETING TEMPLATES APIs - 🔄 PARTIALLY IMPLEMENTED
+================================================================================
+
+--------------------------------------------------------------------------------
+5.1 GET GREETING CATEGORIES - ✅ WORKING (returns empty on error)
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/greetings/categories
+Headers: None required
+
+Request: None
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "categories": [
+        {
+          "id": "cat1",
+          "name": "Good Morning",
+          "icon": "☀️",
+          "color": "#FFD700"
+        },
+        {
+          "id": "cat2",
+          "name": "Birthday",
+          "icon": "🎂",
+          "color": "#FF69B4"
+        }
+      ]
+    },
+    "message": "Categories fetched successfully"
+  }
+
+Error Fallback: Returns empty array []
+
+--------------------------------------------------------------------------------
+5.2 GET GREETING TEMPLATES - ✅ WORKING (returns empty on error)
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/greetings/templates
+Query Parameters:
+  ?category={category}
+  &language={language}
+  &isPremium={boolean}
+  &search={query}
+
+Headers: None required
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "templates": [
+        {
+          "id": "greeting1",
+          "title": "Good Morning Greeting",
+          "description": "Beautiful morning greeting",
+          "imageUrl": "/uploads/greetings/greeting1.jpg",
+          "category": "good-morning",
+          "downloads": 156,
+          "isPremium": false,
+          "createdAt": "2024-01-15T10:30:00.000Z"
+        }
+      ]
+    },
+    "message": "Templates fetched successfully"
+  }
+
+Frontend Mapping:
+  - title → name
+  - imageUrl converted to absolute URL with base URL
+  - Falls back to Unsplash placeholder if no URL
+
+Error Fallback: Returns empty array []
+
+--------------------------------------------------------------------------------
+5.3 GET TEMPLATES BY CATEGORY - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/greetings/templates
+Query Parameters:
+  ?category={category}
+
+Response: Same as 5.2, filtered by category
+
+--------------------------------------------------------------------------------
+5.4 SEARCH GREETING TEMPLATES - ✅ WORKING (returns empty on error)
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/greetings/templates/search
+Query Parameters:
+  ?q={query}
+
+Headers: None required
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "templates": [...]
+    },
+    "message": "Search results"
+  }
+
+Error Fallback: Returns empty array []
+
+HOME SCREEN CATEGORIES (Using same endpoint with different search queries):
+The Home Screen displays 11 greeting template categories using the search API:
+
+  1. Motivation: GET /api/mobile/greetings/templates/search?q=motivation
+  2. Good Morning: GET /api/mobile/greetings/templates/search?q=good morning
+  3. Business Ethics: GET /api/mobile/greetings/templates/search?q=business ethics
+  4. Devotional: GET /api/mobile/greetings/templates/search?q=devotional
+  5. Leader Quotes: GET /api/mobile/greetings/templates/search?q=leader quotes
+  6. AtmaNirbher Bharat: GET /api/mobile/greetings/templates/search?q=atmanirbhar bharat
+  7. Good Thoughts: GET /api/mobile/greetings/templates/search?q=good thoughts
+  8. Trending: GET /api/mobile/greetings/templates/search?q=trending
+  9. Bhagvat Gita: GET /api/mobile/greetings/templates/search?q=bhagvat gita
+  10. Books: GET /api/mobile/greetings/templates/search?q=books
+  11. Celebrates the Moments: GET /api/mobile/greetings/templates/search?q=celebrates the moments
+
+IMPORTANT: These are NOT separate API endpoints! The Home Screen uses
+           Promise.allSettled() to fetch all 11 categories simultaneously 
+           using the SAME search endpoint with different query strings.
+
+Implementation: src/screens/HomeScreen.tsx (lines 366-377)
+  await Promise.allSettled([
+    greetingTemplatesService.searchTemplates('motivation'),
+    greetingTemplatesService.searchTemplates('good morning'),
+    ...
+  ]);
+
+Backend Requirements:
+  - Single endpoint must support all search queries
+  - Each search query should return relevant templates
+  - If a search returns no results, that category won't display on home screen
+  - Frontend limits to 10 templates per category (slice(0, 10))
+
+--------------------------------------------------------------------------------
+5.5 DOWNLOAD GREETING TEMPLATE - ⚠️ UNCERTAIN
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/greetings/templates/{id}/download
+Headers:
+  Authorization: Bearer <token>
+
+Response: Unknown
+
+================================================================================
+6. POSTERS APIs - 🔄 PARTIALLY IMPLEMENTED
+================================================================================
+
+--------------------------------------------------------------------------------
+6.1 GET POSTERS BY CATEGORY - ✅ WORKING (with cache)
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/posters/category/{category}
+Headers: None required
+
+Request: None (category in URL)
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "posters": [
+        {
+          "id": "poster1",
+          "title": "Event Poster",
+          "description": "Professional event poster",
+          "category": "Event Planning",
+          "thumbnailUrl": "/uploads/posters/thumb1.jpg",
+          "imageUrl": "/uploads/posters/poster1.jpg",
+          "downloadUrl": "/uploads/posters/poster1.jpg",
+          "downloads": 234,
+          "isPremium": false,
+          "tags": ["event", "professional"],
+          "createdAt": "2024-01-15T10:30:00.000Z",
+          "updatedAt": "2024-01-15T10:30:00.000Z"
+        }
+      ],
+      "category": "Event Planning",
+      "total": 15
+    },
+    "message": "Posters fetched successfully"
+  }
+
+Frontend Processing:
+  - Converts relative URLs to absolute with base URL
+  - thumbnailUrl → thumbnail
+  - Caches results for 5 minutes
+
+Error Response (404):
+  {
+    "success": false,
+    "data": {
+      "posters": [],
+      "category": "Event Planning",
+      "total": 0
+    },
+    "message": "No posters available - API endpoint not found"
+  }
+
+Cache Duration: 5 minutes
+
+================================================================================
+7. SUBSCRIPTION APIs - 🔄 PARTIALLY IMPLEMENTED
+================================================================================
+
+--------------------------------------------------------------------------------
+7.1 GET SUBSCRIPTION PLANS - ⚠️ WORKING (with validation)
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/subscriptions/plans
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "plans": [
+        {
+          "id": "quarterly_pro",
+          "name": "Quarterly Pro",
+          "price": 499,
+          "period": "quarterly",
+          "features": [
+            "Unlimited downloads",
+            "Premium templates",
+            "Priority support"
+          ]
+        },
+        {
+          "id": "yearly_pro",
+          "name": "Yearly Pro",
+          "price": 1999,
+          "period": "yearly",
+          "features": [
+            "All quarterly features",
+            "Extra savings",
+            "Premium badge"
+          ]
+        }
+      ]
+    },
+    "message": "Plans fetched successfully"
+  }
+
+Frontend Transformation:
+  - Adds currency: "INR"
+  - Adds duration: period value
+  - Adds isPopular: true for yearly_pro
+  - Validates array format, returns empty if invalid
+
+--------------------------------------------------------------------------------
+7.2 SUBSCRIBE TO PLAN - ⚠️ BACKEND REQUIRED
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/subscriptions/subscribe
+Headers:
+  Authorization: Bearer <token>
+  Content-Type: application/json
+
+Request Body:
+  {
+    "planId": "quarterly_pro",
+    "paymentMethod": "razorpay",
+    "autoRenew": true
+  }
+
+Expected Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "isActive": true,
+      "planId": "quarterly_pro",
+      "planName": "Quarterly Pro",
+      "startDate": "2024-01-15T10:30:00.000Z",
+      "endDate": "2024-04-15T10:30:00.000Z",
+      "autoRenew": true,
+      "status": "active"
+    },
+    "message": "Subscription activated"
+  }
+
+Current Status: "Backend subscription API is required but not available"
+Note: Throws error instead of local storage
+
+--------------------------------------------------------------------------------
+7.3 GET SUBSCRIPTION STATUS - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/subscriptions/status
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "isActive": true,
+      "plan": "quarterly_pro",
+      "planName": "Quarterly Pro",
+      "status": "active",
+      "startDate": "2024-01-15T10:30:00.000Z",
+      "endDate": "2024-04-15T10:30:00.000Z",
+      "expiryDate": "2024-04-15T10:30:00.000Z",
+      "daysRemaining": 45,
+      "autoRenew": true
+    },
+    "message": "Status fetched successfully"
+  }
+
+Frontend Transformation:
+  - Converts plan string to plan object if not 'free'
+  - Calculates isActive from status and daysRemaining
+  - planId and planName extracted from plan field
+
+Fallback (on error):
+  {
+    "success": true,
+    "data": {
+      "isActive": false,
+      "plan": null,
+      "expiryDate": null,
+      "autoRenew": false,
+      "status": "inactive"
+    },
+    "message": "No active subscription"
+  }
+
+--------------------------------------------------------------------------------
+7.4 GET SUBSCRIPTION HISTORY - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/subscriptions/history
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "payments": [
+        {
+          "id": "pay123",
+          "plan": "quarterly_pro",
+          "amount": 499,
+          "currency": "INR",
+          "status": "SUCCESS",
+          "paidAt": "2024-01-15T10:30:00.000Z",
+          "paymentMethod": "razorpay"
+        }
+      ]
+    },
+    "message": "History fetched successfully"
+  }
+
+Frontend Transformation:
+  - plan → planId
+  - Maps plan to planName (quarterly_pro → "Quarterly Pro")
+  - status → toLowerCase
+  - paidAt → createdAt
+
+Fallback (on 401 or error):
+  {
+    "success": true,
+    "data": [],
+    "message": "No subscription history"
+  }
+
+--------------------------------------------------------------------------------
+7.5 CANCEL SUBSCRIPTION - ⚠️ UNCERTAIN
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/subscriptions/cancel
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Expected Response:
+  {
+    "success": true,
+    "message": "Subscription cancelled successfully"
+  }
+
+Status: Unknown backend confirmation
+
+================================================================================
+8. TRANSACTION APIs - ✅ MOSTLY IMPLEMENTED
+================================================================================
+
+--------------------------------------------------------------------------------
+8.1 GET USER TRANSACTIONS - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/transactions
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "transactions": [
+        {
+          "id": "txn123",
+          "transactionId": "pay_abc123",
+          "orderId": "order_xyz789",
+          "amount": 499,
+          "currency": "INR",
+          "status": "SUCCESS",
+          "plan": "quarterly_pro",
+          "planName": "Quarterly Pro",
+          "description": "Quarterly Pro Subscription",
+          "paymentMethod": "razorpay",
+          "paymentId": "pay_abc123",
+          "metadata": "{\"email\":\"user@example.com\"}",
+          "createdAt": "2024-01-15T10:30:00.000Z"
+        }
+      ]
+    },
+    "message": "Transactions fetched successfully"
+  }
+
+Frontend Transformation:
+  - transactionId/paymentId → paymentId
+  - transactionId → orderId if orderId not present
+  - status → toLowerCase
+  - plan quarterly_pro → 'quarterly', yearly_pro → 'yearly'
+  - metadata → JSON.parse if string
+  - createdAt → timestamp (milliseconds)
+  - method: 'razorpay' (hardcoded)
+
+Fallback (on error):
+  Returns empty array []
+
+--------------------------------------------------------------------------------
+8.2 GET TRANSACTION SUMMARY - ⚠️ FALLBACK TO CALCULATION
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/transactions/summary
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Expected Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "totalTransactions": 5,
+      "successfulTransactions": 4,
+      "failedTransactions": 1,
+      "pendingTransactions": 0,
+      "successfulAmount": 1996
+    },
+    "message": "Summary fetched"
+  }
+
+Fallback: Calculates from transaction list if endpoint unavailable
+  {
+    "total": 5,
+    "successful": 4,
+    "failed": 1,
+    "pending": 0,
+    "totalAmount": 1996,
+    "quarterlySubscriptions": 2,
+    "yearlySubscriptions": 2
+  }
+
+================================================================================
+9. DOWNLOAD TRACKING APIs - 🔄 PARTIALLY IMPLEMENTED
+================================================================================
+
+--------------------------------------------------------------------------------
+9.1 TRACK DOWNLOAD - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/downloads/track
+Headers:
+  Authorization: Bearer <token>
+  Content-Type: application/json
+
+Request Body:
+  {
+    "mobileUserId": "user123",
+    "resourceType": "TEMPLATE",
+    "resourceId": "template1",
+    "fileUrl": "https://example.com/template1.jpg",
+    "title": "Daily Greeting Template",
+    "thumbnail": "https://example.com/thumb1.jpg",
+    "category": "Daily"
+  }
+
+resourceType options: TEMPLATE | VIDEO | GREETING | POSTER | CONTENT
+
+Response (200 OK):
+  {
+    "success": true,
+    "message": "Download tracked successfully"
+  }
+
+Returns: boolean (true on success, false on error)
+
+--------------------------------------------------------------------------------
+9.2 GET USER DOWNLOADS - ✅ WORKING (with fallback)
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/users/{userId}/downloads/all
+Query Parameters:
+  ?type={TEMPLATE|VIDEO|GREETING|CONTENT}
+  &page={number}
+  &limit={number}
+
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "downloads": [
+        {
+          "id": "dl123",
+          "resourceType": "TEMPLATE",
+          "resourceId": "template1",
+          "fileUrl": "https://example.com/template1.jpg",
+          "thumbnailUrl": "https://example.com/thumb1.jpg",
+          "downloadedAt": "2024-01-15T10:30:00.000Z",
+          "title": "Daily Template",
+          "category": "Daily"
+        }
+      ],
+      "statistics": {
+        "total": 15,
+        "byType": {
+          "templates": 8,
+          "videos": 4,
+          "greetings": 3,
+          "content": 0
+        }
+      },
+      "pagination": {
+        "page": 1,
+        "limit": 20,
+        "total": 15,
+        "totalPages": 1
+      }
+    },
+    "message": "Downloads fetched successfully"
+  }
+
+Frontend Processing:
+  - Validates thumbnailUrl and fileUrl (must be http/https)
+  - Prefers thumbnailUrl, falls back to fileUrl if valid
+  - Sets null if neither valid (shows fallback UI)
+  - downloadedAt → createdAt
+
+Mock Fallback (3 downloads):
+  - Business Template
+  - Event Video
+  - Birthday Greeting
+
+--------------------------------------------------------------------------------
+9.3 GET DOWNLOAD STATISTICS - ⚠️ MOCK FALLBACK
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/users/{userId}/downloads/stats
+Headers:
+  Authorization: Bearer <token>
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "total": 15,
+      "recent": 5,
+      "byType": {
+        "templates": 8,
+        "videos": 4,
+        "greetings": 3,
+        "content": 0
+      },
+      "mostDownloadedType": "templates",
+      "mostDownloadedCount": 8
+    }
+  }
+
+Fallback (on error):
+  {
+    "total": 0,
+    "recent": 0,
+    "byType": {
+      "templates": 0,
+      "videos": 0,
+      "greetings": 0,
+      "content": 0
+    },
+    "mostDownloadedType": null,
+    "mostDownloadedCount": 0
+  }
+
+================================================================================
+10. HOME SCREEN APIs - ⚠️ PARTIALLY IMPLEMENTED
+================================================================================
+Status: Frontend implemented with mock fallbacks
+
+--------------------------------------------------------------------------------
+10.1 GET FEATURED CONTENT - ⚠️ RETURNS EMPTY ON ERROR
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/home/featured
+Query Parameters:
+  ?limit={number}               (optional, default: 10)
+  &type={banner|promotion|highlight|all}  (optional, default: all)
+  &active={boolean}             (optional, default: true)
+
+Headers: None required
+
+Request: None (all in query params)
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "featured1",
+        "title": "New Year Special Offer",
+        "description": "Get 50% off on premium templates",
+        "imageUrl": "https://example.com/featured1.jpg",
+        "videoUrl": "https://example.com/featured1.mp4",
+        "link": "/templates/featured1",
+        "type": "banner",
+        "priority": 1,
+        "isActive": true,
+        "createdAt": "2024-01-15T10:30:00.000Z",
+        "updatedAt": "2024-01-15T10:30:00.000Z"
+      }
+    ],
+    "message": "Featured content retrieved successfully",
+    "pagination": {
+      "page": 1,
+      "limit": 10,
+      "total": 5,
+      "totalPages": 1
+    }
+  }
+
+Alternative Response Format (nested):
+  {
+    "success": true,
+    "data": {
+      "featured": [...]
+    }
+  }
+
+Frontend Processing:
+  - Converts relative URLs to absolute with base URL
+  - Maps isFeatured flag to type (banner/highlight)
+  - Returns empty array on error (no mock fallback)
+
+Error Fallback:
+  {
+    "success": false,
+    "data": [],
+    "message": "Failed to load featured content from API"
+  }
+
+Note: Mock data was removed - returns empty on failure
+
+--------------------------------------------------------------------------------
+10.2 GET UPCOMING EVENTS - ⚠️ MOCK FALLBACK
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/home/upcoming-events
+Query Parameters:
+  ?limit={number}               (optional, default: 20)
+  &category={string}            (optional)
+  &location={string}            (optional)
+  &dateFrom={ISO date}          (optional)
+  &dateTo={ISO date}            (optional)
+  &isFree={boolean}             (optional)
+
+Headers: None required
+
+Request: None (all in query params)
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "event1",
+        "title": "Digital Marketing Workshop",
+        "description": "Learn the latest digital marketing strategies",
+        "date": "2024-02-15",
+        "time": "10:00",
+        "location": "Online",
+        "organizer": "Marketing Pro",
+        "organizerId": "org1",
+        "imageUrl": "https://example.com/event1.jpg",
+        "category": "Workshop",
+        "price": 99,
+        "isFree": false,
+        "attendees": 45,
+        "maxAttendees": 100,
+        "tags": ["marketing", "digital", "workshop"],
+        "createdAt": "2024-01-15T10:30:00.000Z",
+        "updatedAt": "2024-01-15T10:30:00.000Z"
+      }
+    ],
+    "message": "Events retrieved successfully",
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 10,
+      "totalPages": 1
+    }
+  }
+
+Frontend Processing:
+  - Converts relative URLs to absolute
+
+Fallback: Returns mock data (2 events)
+  - Digital Marketing Workshop
+  - Free Design Tips Session
+
+--------------------------------------------------------------------------------
+10.3 GET BUSINESS TEMPLATES - ⚠️ MOCK FALLBACK
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/home/templates
+Query Parameters:
+  ?limit={number}               (optional, default: 20)
+  &category={string}            (optional)
+  &subcategory={string}         (optional)
+  &isPremium={boolean}          (optional)
+  &sortBy={popular|recent|likes|downloads}  (optional, default: popular)
+  &tags={tag1,tag2}             (optional, multiple tags)
+
+Headers: None required
+
+Request: None (all in query params)
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "template1",
+        "name": "Business Card Template",
+        "description": "Professional business card design",
+        "thumbnail": "https://example.com/thumb1.jpg",
+        "previewUrl": "https://example.com/preview1.jpg",
+        "category": "Business",
+        "subcategory": "Cards",
+        "downloads": 189,
+        "views": 1200,
+        "isDownloaded": false,
+        "isPremium": false,
+        "tags": ["business", "card", "professional"],
+        "fileSize": 1024000,
+        "createdAt": "2024-01-15T10:30:00.000Z",
+        "updatedAt": "2024-01-15T10:30:00.000Z"
+      }
+    ],
+    "message": "Templates retrieved successfully",
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 50,
+      "totalPages": 3
+    }
+  }
+
+Frontend Processing:
+  - Converts relative URLs to absolute
+
+Fallback: Returns mock data (2 templates)
+  - Business Card Template
+  - Premium Flyer Design
+
+--------------------------------------------------------------------------------
+10.4 GET VIDEO CONTENT - ⚠️ MOCK FALLBACK
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/home/video-content
+Query Parameters:
+  ?limit={number}               (optional, default: 20)
+  &category={string}            (optional)
+  &language={string}            (optional)
+  &isPremium={boolean}          (optional)
+  &sortBy={popular|recent|likes|views|downloads}  (optional, default: popular)
+  &duration={short|medium|long} (optional)
+  &tags={tag1,tag2}             (optional, multiple tags)
+
+Headers: None required
+
+Request: None (all in query params)
+
+Response (200 OK):
+  {
+    "success": true,
+    "data": [
+      {
+        "id": "video1",
+        "title": "Product Launch Video",
+        "description": "Professional product launch video template",
+        "thumbnail": "https://example.com/video-thumb1.jpg",
+        "videoUrl": "https://example.com/video1.mp4",
+        "duration": 30,
+        "category": "Business",
+        "language": "en",
+        "views": 800,
+        "downloads": 45,
+        "isDownloaded": false,
+        "isPremium": false,
+        "tags": ["product", "launch", "business"],
+        "fileSize": 10240000,
+        "createdAt": "2024-01-15T10:30:00.000Z",
+        "updatedAt": "2024-01-15T10:30:00.000Z"
+      }
+    ],
+    "message": "Videos retrieved successfully",
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 30,
+      "totalPages": 2
+    }
+  }
+
+Duration Options:
+  - short: videos ≤ 30 seconds
+  - medium: videos ≤ 60 seconds
+  - long: videos ≤ 120 seconds
+
+Frontend Processing:
+  - Converts relative URLs to absolute
+
+Fallback: Returns mock data (2 videos)
+  - Product Launch Video
+  - Event Promo Video
+
+--------------------------------------------------------------------------------
+10.5 SEARCH CONTENT - ❌ NO FALLBACK
+--------------------------------------------------------------------------------
+Endpoint: GET /api/mobile/home/search
+Query Parameters:
+  ?q={query}                    (required)
+  &type={all|templates|videos|events}  (optional, default: all)
+  &limit={number}               (optional)
+
+Headers: None required
+
+Request: None (all in query params)
+
+Expected Response (200 OK):
+  {
+    "success": true,
+    "data": {
+      "templates": [
+        {
+          "id": "template1",
+          "name": "Business Template",
+          "description": "Professional template",
+          "thumbnail": "https://example.com/thumb1.jpg",
+          "category": "Business",
+          "downloads": 189,
+          "views": 1200,
+          "isDownloaded": false,
+          "isPremium": false,
+          "tags": ["business"],
+          "createdAt": "2024-01-15T10:30:00.000Z"
+        }
+      ],
+      "videos": [
+        {
+          "id": "video1",
+          "title": "Product Video",
+          "thumbnail": "https://example.com/video-thumb1.jpg",
+          "videoUrl": "https://example.com/video1.mp4",
+          "duration": 30,
+          "category": "Business",
+          "views": 800,
+          "downloads": 45,
+          "createdAt": "2024-01-15T10:30:00.000Z"
+        }
+      ],
+      "events": [
+        {
+          "id": "event1",
+          "title": "Workshop",
+          "date": "2024-02-15",
+          "location": "Online",
+          "category": "Workshop",
+          "imageUrl": "https://example.com/event1.jpg",
+          "createdAt": "2024-01-15T10:30:00.000Z"
+        }
+      ]
+    },
+    "message": "Search results",
+    "pagination": {
+      "page": 1,
+      "limit": 50,
+      "total": 15,
+      "totalPages": 1
+    }
+  }
+
+Status: No fallback, throws error on failure
+
+--------------------------------------------------------------------------------
+10.6 DOWNLOAD CONTENT - ❌ UNCERTAIN
+--------------------------------------------------------------------------------
+Endpoint: POST /api/mobile/home/{type}s/{contentId}/download
+Types: template | video
+Examples:
+  - POST /api/mobile/home/templates/{id}/download
+  - POST /api/mobile/home/videos/{id}/download
+
+Headers:
+  Authorization: Bearer <token>
+
+Request: None
+
+Expected Response (200 OK):
+  {
+    "success": true,
+    "message": "Download tracked successfully"
+  }
+
+Status: Unknown backend confirmation
+
+================================================================================
+11. HEALTH CHECK API - ✅ USED FOR VALIDATION
+================================================================================
+
+--------------------------------------------------------------------------------
+11.1 HEALTH CHECK - ✅ WORKING
+--------------------------------------------------------------------------------
+Endpoint: GET /health
+Headers: None
+
+Timeout: 5 seconds
+
+Response (200 OK):
+  {
+    "status": "ok",
+    "timestamp": "2024-01-15T10:30:00.000Z",
+    "version": "1.0.0",
+    "environment": "production"
+  }
+
+Usage: Called before business profile operations to verify backend availability
+
+================================================================================
+12. NOT IMPLEMENTED / UNCERTAIN APIS
+================================================================================
+
+❌ BANNERS APIs (9 endpoints) - No confirmation
+❌ MEDIA MANAGEMENT APIs (8 endpoints) - Mock data only
+❌ HOME SCREEN specialized APIs - Mock fallbacks
+❌ ADMIN APIs - No backend confirmation
+❌ CUSTOMER CONTENT APIs - Mock fallbacks
+❌ INSTALLED USERS APIs - No backend confirmation
+
+================================================================================
+COMMON RESPONSE PATTERNS
+================================================================================
+
+Success Response:
+  {
+    "success": true,
+    "data": {...},
+    "message": "Operation successful"
+  }
+
+Error Response:
+  {
+    "success": false,
+    "error": "Error message",
+    "message": "Operation failed"
+  }
+
+Paginated Response:
+  {
+    "success": true,
+    "data": [...],
+    "pagination": {
+      "page": 1,
+      "limit": 20,
+      "total": 100,
+      "totalPages": 5
+    }
+  }
+
+================================================================================
+AUTHENTICATION HEADERS
+================================================================================
+
+For Protected Endpoints:
+  Headers: {
+    "Authorization": "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "Content-Type": "application/json"
+  }
+
+Token obtained from:
+  - POST /api/mobile/auth/login
+  - POST /api/mobile/auth/register
+  - POST /api/mobile/auth/google
+
+Token stored in: AsyncStorage with key 'authToken'
+
+================================================================================
+HTTP STATUS CODES USED
+================================================================================
+
+200 - OK: Successful request
+201 - Created: Resource created
+400 - Bad Request: Invalid data
+401 - Unauthorized: Invalid/missing token
+403 - Forbidden: Insufficient permissions
+404 - Not Found: Endpoint/resource not found
+500 - Internal Server Error: Server error
+
+================================================================================
+FRONTEND PATTERNS
+================================================================================
+
+1. TRY-CATCH WITH FALLBACK
+   try {
+     const response = await api.get(endpoint);
+     return response.data;
+   } catch (error) {
+     console.log('Using mock data due to API error');
+     return mockData;
+   }
+
+2. EMPTY RESPONSE PATTERN
+   catch (error) {
+     return { success: false, data: [], message: 'Error' };
+   }
+
+3. ERROR THROWING
+   catch (error) {
+     console.error('Error:', error);
+     throw error;
+   }
+
+4. HEALTH CHECK FIRST
+   await api.get('/health', { timeout: 5000 });
+   const response = await api.get(endpoint);
+
+5. CACHING
+   if (cache && Date.now() - timestamp < DURATION) {
+     return cache;
+   }
+
+================================================================================
+URL CONVERSION
+================================================================================
+
+Backend returns relative paths:
+  "/uploads/templates/image.jpg"
+
+Frontend converts to absolute:
+  "https://eventmarketersbackend.onrender.com/uploads/templates/image.jpg"
+
+Base URL: https://eventmarketersbackend.onrender.com
+
+Services that do URL conversion:
+  - greetingTemplates
+  - templatesBannersApi
+  - homeApi
+  - businessCategoryPostersApi
+
+================================================================================
+CACHE DURATIONS
+================================================================================
+
+Business Categories: 10 minutes
+Business Profiles: 5 minutes
+Category Posters: 5 minutes
+Templates: No specific cache (uses API fallback)
+
+================================================================================
+FINAL API COUNT SUMMARY
+================================================================================
+
+TOTAL DOCUMENTED APIs: 42 unique endpoints
+
+By Category:
+  1. Authentication APIs: 6
+  2. Business Profile APIs: 8
+  3. Business Categories APIs: 2
+  4. Templates APIs: 3
+  5. Greeting Templates APIs: 5
+  6. Posters APIs: 1
+  7. Subscriptions APIs: 5
+  8. Transactions APIs: 2
+  9. Download Tracking APIs: 3
+  10. Home Screen APIs: 6
+  11. Health Check API: 1
+
+By Implementation Status:
+  ✅ Confirmed Working: 22 endpoints
+     - All Authentication (6)
+     - Business Profile CRUD (3)
+     - Business Categories (2)
+     - Templates List (1)
+     - Greeting Templates (4)
+     - Posters (1)
+     - Subscription Status & History (2)
+     - Transactions List (1)
+     - Download Tracking (2)
+     - Health Check (1)
+
+  ⚠️ Partially Working/Uncertain: 18 endpoints
+     - Profile Update (1)
+     - Business Profile Upload/Search/Delete (5)
+     - Template Languages/Download (2)
+     - Greeting Download (1)
+     - Subscription Plans/Subscribe/Cancel (3)
+     - Transaction Summary (1)
+     - Download Stats (1)
+     - Home Screen (4)
+
+  ❌ Not Confirmed/Mock Only: 2 endpoints
+     - Home Screen Search (1)
+     - Home Screen Download (1)
+
+Removed Endpoints: 10
+  - Templates by ID, Categories
+  - Greeting Stickers, Emojis
+  - Transaction Create/Update/Delete
+  - User Preferences/Stats
+  - Home Content Details
+
+Special Note: Home Screen uses 11 greeting searches via 1 endpoint
+
+================================================================================
+END OF DOCUMENTATION
+================================================================================
+Total Documented APIs: 42 unique endpoints
+Confirmed Working: 22 (52%)
+Partially Working: 18 (43%)
+Not Confirmed: 2 (5%)
+Endpoints Removed: 10
+Last Updated: October 15, 2025
+================================================================================

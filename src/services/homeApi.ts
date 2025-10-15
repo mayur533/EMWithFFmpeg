@@ -538,19 +538,14 @@ class HomeApiService {
     }
   }
 
-  // Get content details
+  // Get content details (API endpoint removed)
   async getContentDetails(contentId: string, contentType: 'template' | 'video' | 'event'): Promise<{
     success: boolean;
     data: ProfessionalTemplate | VideoContent | UpcomingEvent;
     message: string;
   }> {
-    try {
-      const response = await api.get(`/api/mobile/home/${contentType}s/${contentId}`);
-      return response.data;
-    } catch (error) {
-      console.error('Get content details error:', error);
-      throw error;
-    }
+    console.log('⚠️ getContentDetails - API endpoint removed');
+    throw new Error('Content details endpoint has been removed. Use list endpoints instead.');
   }
 
   // ============================================================================
@@ -705,7 +700,7 @@ class HomeApiService {
     if (params?.sortBy) {
       switch (params.sortBy) {
         case 'likes':
-          filteredData.sort((a, b) => b.likes - a.likes);
+          filteredData.sort((a, b) => b.views - a.views);
           break;
         case 'downloads':
           filteredData.sort((a, b) => b.downloads - a.downloads);
@@ -715,7 +710,7 @@ class HomeApiService {
           break;
         case 'popular':
         default:
-          filteredData.sort((a, b) => (b.likes + b.downloads) - (a.likes + a.downloads));
+          filteredData.sort((a, b) => (b.views + b.downloads) - (a.views + a.downloads));
           break;
       }
     }
@@ -813,7 +808,7 @@ class HomeApiService {
     if (params?.sortBy) {
       switch (params.sortBy) {
         case 'likes':
-          filteredData.sort((a, b) => b.likes - a.likes);
+          filteredData.sort((a, b) => b.views - a.views);
           break;
         case 'views':
           filteredData.sort((a, b) => b.views - a.views);
@@ -826,7 +821,7 @@ class HomeApiService {
           break;
         case 'popular':
         default:
-          filteredData.sort((a, b) => (b.likes + b.views + b.downloads) - (a.likes + a.views + a.downloads));
+          filteredData.sort((a, b) => (b.views + b.downloads) - (a.views + a.downloads));
           break;
       }
     }

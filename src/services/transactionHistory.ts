@@ -85,64 +85,18 @@ class TransactionHistoryService {
   }
 
 
-  // Add a new transaction to backend API only
+  // Add a new transaction (API endpoint removed - local only)
   async addTransaction(transaction: Omit<Transaction, 'id' | 'timestamp'>): Promise<Transaction> {
-    try {
-      const currentUser = authService.getCurrentUser();
-      const userId = currentUser?.id;
-      
-      console.log('💳 addTransaction - User ID:', userId);
-      console.log('💳 addTransaction - Transaction data:', transaction);
-      
-      if (!userId) {
-        throw new Error('No user ID available, cannot save transaction');
-      }
-
-      const newTransaction: Transaction = {
-        ...transaction,
-        id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-        timestamp: Date.now(),
-      };
-
-      // Save to backend API
-      // Note: Frontend uses 'quarterly' plan, backend uses 'quarterly_pro'
-      const backendData = {
-        transactionId: newTransaction.paymentId,
-        orderId: newTransaction.orderId,
-        amount: newTransaction.amount,
-        currency: newTransaction.currency,
-        status: newTransaction.status, // Include status field
-        plan: newTransaction.plan === 'quarterly' ? 'quarterly_pro' : 'yearly_pro', // Fixed: Use quarterly_pro for Quarterly Pro plan
-        planName: newTransaction.planName,
-        description: newTransaction.description,
-        paymentMethod: newTransaction.method,
-        paymentId: newTransaction.paymentId,
-        metadata: newTransaction.metadata
-      };
-
-      console.log('📤 Sending transaction to backend:', backendData);
-      const response = await api.post('/api/mobile/transactions', backendData);
-      
-      console.log('📨 Backend response:', response.data);
-      
-      if (response.data.success) {
-        console.log('✅ Transaction saved to backend with ID:', response.data.data.id);
-        // Update the transaction ID with backend ID
-        newTransaction.id = response.data.data.id;
-        return newTransaction;
-      } else {
-        console.error('❌ Backend returned unsuccessful response:', response.data);
-        throw new Error('Failed to save transaction to backend');
-      }
-    } catch (error: any) {
-      console.error('❌ Error adding transaction:', error);
-      console.error('❌ Error details:', {
-        message: error.message,
-        status: error.response?.status,
-        data: error.response?.data
-      });
-      throw error;
-    }
+    console.log('💳 addTransaction - API endpoint removed, transaction not saved to backend');
+    
+    const newTransaction: Transaction = {
+      ...transaction,
+      id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      timestamp: Date.now(),
+    };
+    
+    console.log('⚠️ Transaction created locally only (no backend sync):', newTransaction.id);
+    return newTransaction;
   }
 
   // Get transaction by ID
@@ -156,33 +110,11 @@ class TransactionHistoryService {
     }
   }
 
-  // Update transaction status in backend API only
+  // Update transaction status (API endpoint removed - local only)
   async updateTransactionStatus(id: string, status: Transaction['status']): Promise<boolean> {
-    try {
-      const currentUser = authService.getCurrentUser();
-      const userId = currentUser?.id;
-      
-      if (!userId) {
-        console.log('⚠️ No user ID available, cannot update transaction status');
-        return false;
-      }
-
-      // Update in backend API
-      const response = await api.put(`/api/mobile/transactions/${id}/status`, {
-        status: status.toUpperCase()
-      });
-      
-      if (response.data.success) {
-        console.log('✅ Transaction status updated in backend');
-        return true;
-      } else {
-        console.log('⚠️ Failed to update transaction status in backend');
-        return false;
-      }
-    } catch (error) {
-      console.error('Error updating transaction status:', error);
-      return false;
-    }
+    console.log('⚠️ updateTransactionStatus - API endpoint removed, status not updated in backend');
+    console.log('Transaction ID:', id, 'New Status:', status);
+    return false;
   }
 
   // Get transactions by status
@@ -209,29 +141,11 @@ class TransactionHistoryService {
     }
   }
 
-  // Clear all transactions from backend API only
+  // Clear all transactions (API endpoint removed - not functional)
   async clearTransactions(): Promise<void> {
-    try {
-      const currentUser = authService.getCurrentUser();
-      const userId = currentUser?.id;
-      
-      if (!userId) {
-        console.log('⚠️ No user ID available, cannot clear transactions');
-        return;
-      }
-
-      // Clear from backend API
-      const response = await api.delete(`/api/mobile/transactions`);
-      
-      if (response.data.success) {
-        console.log('✅ All transactions cleared for current user from backend');
-      } else {
-        console.log('⚠️ Failed to clear transactions from backend');
-      }
-    } catch (error) {
-      console.error('Error clearing transactions:', error);
-      throw error;
-    }
+    console.log('⚠️ clearTransactions - API endpoint removed, transactions not cleared in backend');
+    console.log('⚠️ This operation is no longer supported');
+    return;
   }
 
   // Get transaction statistics from backend API only

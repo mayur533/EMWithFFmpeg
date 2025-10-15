@@ -1,0 +1,337 @@
+================================================================================
+              REMOVED ENDPOINTS SUMMARY - API CLEANUP
+================================================================================
+                    Date: October 15, 2025
+================================================================================
+
+This document lists all API endpoints that have been removed from the frontend
+and API documentation.
+
+CURRENT STATUS:
+  Total APIs Documented: 42 unique endpoints
+  Endpoints Removed: 10
+  Endpoints Remaining: 42 active
+  Fields Removed: 2 (ownerName, socialMedia)
+
+================================================================================
+REMOVED ENDPOINTS
+================================================================================
+
+1. GET /api/mobile/templates/{id}
+   - Status: REMOVED
+   - Reason: Not implemented on backend, using mock data only
+   - Affected Files:
+     • src/services/templatesBannersApi.ts (now returns mock data only)
+     • src/services/templates.ts (now returns mock data only)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 4.2 removed)
+     • ALL_IMPLEMENTED_APIS.txt (section 4.2 removed)
+
+2. GET /api/mobile/templates/categories
+   - Status: REMOVED
+   - Reason: Not needed, using mock categories
+   - Affected Files:
+     • src/services/templatesBannersApi.ts (now returns mock data only)
+     • ALL_IMPLEMENTED_APIS.txt (section removed)
+
+3. GET /api/mobile/greetings/stickers
+   - Status: REMOVED
+   - Reason: Not implemented on backend, using mock data only
+   - Mock Data: 50 emoji stickers (🌟, ✨, 💫, ⭐, 🎉, etc.)
+   - Affected Files:
+     • src/services/greetingTemplates.ts (now returns mock data only)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 5.6 removed)
+     • ALL_IMPLEMENTED_APIS.txt (section 6.5 removed)
+
+4. GET /api/mobile/greetings/emojis
+   - Status: REMOVED
+   - Reason: Not implemented on backend, using mock data only
+   - Mock Data: 50 emojis (😀, 😃, 😄, 😁, 😆, etc.)
+   - Affected Files:
+     • src/services/greetingTemplates.ts (now returns mock data only)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 5.7 removed)
+     • ALL_IMPLEMENTED_APIS.txt (section 6.6 removed)
+
+5. POST /api/mobile/transactions
+   - Status: REMOVED
+   - Reason: Not needed, transaction creation done locally
+   - Affected Files:
+     • src/services/transactionHistory.ts (now creates local transaction only)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 8.2 removed)
+     • ALL_IMPLEMENTED_APIS.txt (section 10.2 removed)
+
+6. PUT /api/mobile/transactions/{id}/status
+   - Status: REMOVED
+   - Reason: Not needed, status updates not supported
+   - Affected Files:
+     • src/services/transactionHistory.ts (now returns false)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 8.3 removed)
+     • ALL_IMPLEMENTED_APIS.txt (section 10.3 removed)
+
+7. DELETE /api/mobile/transactions
+   - Status: REMOVED
+   - Reason: Not needed, transaction deletion not supported
+   - Affected Files:
+     • src/services/transactionHistory.ts (now does nothing)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 8.5 removed)
+     • ALL_IMPLEMENTED_APIS.txt (section 10.5 removed)
+
+8. PUT /api/mobile/users/{userId}/preferences
+   - Status: REMOVED
+   - Reason: Preferences stored locally in AsyncStorage
+   - Affected Files:
+     • src/services/userProfile.ts (now throws error)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 10.1 removed)
+     • ALL_IMPLEMENTED_APIS.txt (section 12.1 removed)
+
+9. GET /api/mobile/users/{userId}/stats
+   - Status: REMOVED
+   - Reason: Stats not tracked on backend, returns defaults
+   - Affected Files:
+     • src/services/userProfile.ts (now returns default values)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 10.2 removed)
+     • ALL_IMPLEMENTED_APIS.txt (section 12.2 removed)
+
+10. GET /api/mobile/home/{type}s/{contentId}
+   - Status: REMOVED
+   - Reason: Not needed, content details from list endpoints
+   - Types: templates, videos, events
+   - Affected Files:
+     • src/services/homeApi.ts (now throws error)
+     • ACTUAL_IMPLEMENTED_APIS.txt (section 10.7 removed)
+
+================================================================================
+REMOVED FIELDS FROM BUSINESS PROFILE APIs
+================================================================================
+
+Fields Removed from ALL Business Profile Endpoints:
+  ❌ ownerName
+  ❌ socialMedia (object with facebook, instagram, twitter, linkedin)
+
+Affected Endpoints:
+  • POST /api/mobile/business-profile
+  • PUT /api/mobile/business-profile/{id}
+  • GET /api/mobile/business-profile/{userId}
+  • GET /api/mobile/business-profile
+  • GET /api/mobile/business-profile/{id}
+
+Affected Files:
+  • src/services/businessProfile.ts (interface and all methods updated)
+  • ACTUAL_IMPLEMENTED_APIS.txt (all business profile sections updated)
+  • ALL_IMPLEMENTED_APIS.txt (sections updated)
+  • BUSINESS_PROFILE_API_CHANGES.txt (detailed guide created)
+
+================================================================================
+CURRENT TEMPLATE APIS STATUS
+================================================================================
+
+WORKING:
+  ✅ GET /api/mobile/templates (Get all templates with filters)
+  ✅ GET /api/mobile/templates/languages (Get languages)
+
+REMOVED:
+  ❌ GET /api/mobile/templates/{id} (Get single template by ID)
+  ❌ GET /api/mobile/templates/categories (Get template categories)
+
+UNCERTAIN:
+  ⚠️ POST /api/mobile/templates/{id}/download (Download template)
+
+================================================================================
+CURRENT GREETING APIS STATUS
+================================================================================
+
+WORKING:
+  ✅ GET /api/mobile/greetings/categories (Get greeting categories)
+  ✅ GET /api/mobile/greetings/templates (Get greeting templates)
+  ✅ GET /api/mobile/greetings/templates/search (Search greeting templates)
+
+REMOVED:
+  ❌ GET /api/mobile/greetings/stickers (Get stickers - now mock only)
+  ❌ GET /api/mobile/greetings/emojis (Get emojis - now mock only)
+
+UNCERTAIN:
+  ⚠️ POST /api/mobile/greetings/templates/{id}/download (Download template)
+
+================================================================================
+CURRENT BUSINESS PROFILE APIS STATUS
+================================================================================
+
+SIMPLIFIED REQUEST FORMAT:
+
+Create Business Profile (POST):
+  Before: 10 fields
+  After: 8 fields
+  Removed: ownerName, socialMedia
+
+Update Business Profile (PUT):
+  Before: 10 optional fields  
+  After: 8 optional fields
+  Removed: ownerName, socialMedia
+
+All GET Endpoints:
+  Response no longer includes: ownerName, socialMedia
+
+================================================================================
+IMPACT ANALYSIS
+================================================================================
+
+Frontend Impact:
+  ✅ All changes implemented
+  ✅ No breaking changes for existing functionality
+  ✅ Mock data used for removed endpoints
+  ✅ No linter errors
+
+Backend Impact:
+  📝 Backend should NOT implement these removed endpoints:
+     - GET /api/mobile/templates/{id}
+     - GET /api/mobile/templates/categories
+  📝 Backend should NOT expect/return:
+     - ownerName in business profiles
+     - socialMedia in business profiles
+
+User Impact:
+  ✅ No user-facing changes
+  ✅ Same functionality maintained with mock data
+  ✅ Cleaner business profile data structure
+
+================================================================================
+BACKEND ACTIONS REQUIRED
+================================================================================
+
+DO NOT IMPLEMENT:
+  ❌ GET /api/mobile/templates/{id}
+  ❌ GET /api/mobile/templates/categories
+
+UPDATE EXISTING:
+  🔧 Remove ownerName from all business profile endpoints
+  🔧 Remove socialMedia from all business profile endpoints
+  🔧 Ensure all profile responses include: description field
+
+CONFIRM WORKING:
+  ✅ POST /api/mobile/auth/register (with new optional fields)
+  ✅ PUT /api/mobile/auth/profile (return ALL fields including description)
+  ✅ POST /api/mobile/business-profile (without ownerName, socialMedia)
+  ✅ PUT /api/mobile/business-profile/{id} (return ALL fields)
+
+================================================================================
+DOCUMENTATION UPDATED
+================================================================================
+
+Files Updated:
+  ✅ ACTUAL_IMPLEMENTED_APIS.txt
+     - Removed template by ID endpoint (section 4.2)
+     - Removed template categories endpoint (section 4.3)
+     - Renumbered remaining sections
+     - Updated all business profile sections
+     - Updated profile update response to include description
+
+  ✅ ALL_IMPLEMENTED_APIS.txt
+     - Removed template by ID endpoint
+     - Removed template categories endpoint
+     - Updated business profile endpoints
+     - Updated profile update endpoint
+
+  ✅ BUSINESS_PROFILE_API_CHANGES.txt (NEW)
+     - Complete guide for business profile changes
+     - Before/after comparison
+     - Testing checklist
+
+  ✅ PROFILE_UPDATE_API_SPEC.txt (NEW)
+     - Specification for profile update API
+     - Field requirements
+     - Response requirements
+
+  ✅ REGISTRATION_API_CHANGES.txt (NEW)
+     - Registration API updated with optional fields
+     - Database schema updates
+     - Implementation guide
+
+  ✅ REMOVED_ENDPOINTS_SUMMARY.txt (NEW - THIS FILE)
+     - Summary of all removed endpoints
+     - Impact analysis
+
+================================================================================
+API COUNT SUMMARY
+================================================================================
+
+Before Cleanup:
+  Total API calls in code: ~100+
+  Confirmed working: ~15-20
+  Uncertain/Mock: ~80+
+
+After Cleanup:
+  Total documented APIs: ~90
+  Confirmed working: ~15-20
+  Removed from docs: 2 endpoints
+  Simplified: Business profile APIs (removed 2 fields)
+
+================================================================================
+TESTING RECOMMENDATIONS
+================================================================================
+
+Frontend Testing:
+  □ Test template browsing (should work with templates list API)
+  □ Test template selection (should work with mock data for details)
+  □ Test business profile creation (without ownerName, socialMedia)
+  □ Test business profile update (verify description in response)
+  □ Test user registration (with all optional fields)
+  □ Test profile update (verify description in response)
+
+Backend Testing:
+  □ Verify removed endpoints return 404
+  □ Verify business profile APIs don't expect ownerName/socialMedia
+  □ Verify profile update returns ALL fields including description
+  □ Verify registration accepts optional fields
+
+================================================================================
+ROLLBACK PLAN (If Needed)
+================================================================================
+
+If these changes cause issues:
+
+1. Template by ID:
+   - Can be re-enabled by reverting src/services/templatesBannersApi.ts
+   - Currently uses mock data, no backend implementation needed
+
+2. Template Categories:
+   - Can be re-enabled by reverting src/services/templatesBannersApi.ts
+   - Currently uses mock data (10 categories)
+
+3. Business Profile Fields:
+   - Backend can still accept ownerName/socialMedia but ignore them
+   - Frontend will not send these fields
+   - Old data in database can remain
+
+================================================================================
+END OF SUMMARY
+================================================================================
+Total Endpoints Removed: 10
+
+Templates & Greetings:
+  1. GET /api/mobile/templates/{id}
+  2. GET /api/mobile/templates/categories
+  3. GET /api/mobile/greetings/stickers
+  4. GET /api/mobile/greetings/emojis
+
+Transactions:
+  5. POST /api/mobile/transactions
+  6. PUT /api/mobile/transactions/{id}/status
+  7. DELETE /api/mobile/transactions
+
+User Preferences & Stats:
+  8. PUT /api/mobile/users/{userId}/preferences
+  9. GET /api/mobile/users/{userId}/stats
+
+Home Screen:
+  10. GET /api/mobile/home/{type}s/{contentId}
+
+Total Fields Removed: 2 (ownerName, socialMedia from business profiles)
+
+Total Home Screen APIs Documented: 6 (Featured, Events, Templates, Videos, Search, Download)
+
+Home Screen Greeting Categories: 11 categories using 1 search API
+  (See HOME_SCREEN_API_REQUIREMENTS.txt for details)
+
+Status: Cleanup complete, Home Screen APIs documented
+Last Updated: October 15, 2025
+================================================================================
+

@@ -1,0 +1,381 @@
+================================================================================
+          BUSINESS PROFILE API CHANGES - BACKEND IMPLEMENTATION GUIDE
+================================================================================
+                    Date: October 15, 2025
+                    Priority: HIGH
+================================================================================
+
+SUMMARY:
+Business Profile API has been simplified by removing ownerName and socialMedia
+fields from both request and response.
+
+================================================================================
+CHANGES MADE TO FRONTEND
+================================================================================
+
+1. Removed Fields from BusinessProfile Interface:
+   - socialMedia (object with facebook, instagram, twitter, linkedin)
+
+2. Removed Fields from API Requests:
+   - ownerName (was using businessName as ownerName)
+   - socialMedia (was sending null)
+
+3. Removed Fields from Response Mapping:
+   - socialMedia handling removed from all methods
+
+================================================================================
+AFFECTED ENDPOINTS
+================================================================================
+
+1. POST /api/mobile/business-profile (Create)
+2. PUT /api/mobile/business-profile/{id} (Update)
+3. GET /api/mobile/business-profile/{userId} (Get User Profiles)
+4. GET /api/mobile/business-profile (Get All Profiles)
+5. GET /api/mobile/business-profile/{id} (Get Single Profile)
+
+================================================================================
+1. CREATE BUSINESS PROFILE
+================================================================================
+
+Endpoint: POST /api/mobile/business-profile
+
+OLD REQUEST (Before):
+{
+  "businessName": "Elite Events",
+  "ownerName": "John Doe",                    ❌ REMOVE
+  "email": "contact@eliteevents.com",
+  "phone": "+1234567890",
+  "address": "123 Event Street",
+  "category": "Event Planning",
+  "logo": "https://example.com/logo.png",
+  "description": "Premium event planning",
+  "website": "https://eliteevents.com",
+  "socialMedia": {                            ❌ REMOVE
+    "facebook": "...",
+    "instagram": "...",
+    "twitter": "...",
+    "linkedin": "..."
+  }
+}
+
+NEW REQUEST (Now):
+{
+  "businessName": "Elite Events",
+  "email": "contact@eliteevents.com",
+  "phone": "+1234567890",
+  "address": "123 Event Street, City, State 12345",
+  "category": "Event Planning",
+  "logo": "https://example.com/logo.png",
+  "description": "Premium event planning services",
+  "website": "https://eliteevents.com"
+}
+
+FIELD SPECIFICATIONS:
+---------------------
+
+Required Fields:
+  ✓ businessName (string, 2-100 chars)
+  ✓ email (string, valid email format)
+  ✓ phone (string, 10 digits, starts with 6-9)
+  ✓ address (string, max 200 chars)
+  ✓ category (string, max 100 chars)
+
+Optional Fields:
+  ✓ logo (string, URL)
+  ✓ description (string, max 500 chars)
+  ✓ website (string, valid URL)
+
+NEW RESPONSE (Required):
+{
+  "success": true,
+  "data": {
+    "id": "bp123",
+    "businessName": "Elite Events",
+    "email": "contact@eliteevents.com",
+    "phone": "+1234567890",
+    "address": "123 Event Street, City, State 12345",
+    "category": "Event Planning",
+    "logo": "https://example.com/logo.png",
+    "description": "Premium event planning services",
+    "website": "https://eliteevents.com",
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-15T10:30:00.000Z"
+  },
+  "message": "Business profile created successfully"
+}
+
+⚠️ DO NOT include in response:
+  ❌ ownerName
+  ❌ socialMedia
+  ❌ services
+  ❌ workingHours
+  ❌ rating
+  ❌ reviewCount
+  ❌ isVerified
+  ❌ banner
+
+================================================================================
+2. UPDATE BUSINESS PROFILE
+================================================================================
+
+Endpoint: PUT /api/mobile/business-profile/{id}
+
+NEW REQUEST:
+{
+  "businessName": "Elite Events Updated",
+  "email": "new@eliteevents.com",
+  "phone": "+9876543210",
+  "address": "456 New Street, City, State",
+  "category": "Event Planning",
+  "logo": "https://example.com/new-logo.png",
+  "description": "Updated description",
+  "website": "https://newsite.com"
+}
+
+All fields are optional - only send fields being updated
+
+NEW RESPONSE (Must include ALL fields):
+{
+  "success": true,
+  "data": {
+    "id": "bp123",
+    "businessName": "Elite Events Updated",
+    "email": "new@eliteevents.com",
+    "phone": "+9876543210",
+    "address": "456 New Street, City, State",
+    "category": "Event Planning",
+    "logo": "https://example.com/new-logo.png",
+    "description": "Updated description",
+    "website": "https://newsite.com",
+    "createdAt": "2024-01-15T10:30:00.000Z",
+    "updatedAt": "2024-01-16T15:45:00.000Z"
+  },
+  "message": "Business profile updated successfully"
+}
+
+⚠️ CRITICAL: Response MUST include ALL profile fields from database,
+             not just the fields that were updated.
+
+⚠️ DO NOT include in response:
+  ❌ ownerName
+  ❌ socialMedia
+
+================================================================================
+3. GET BUSINESS PROFILES
+================================================================================
+
+All GET endpoints should return profiles WITHOUT ownerName and socialMedia:
+
+GET /api/mobile/business-profile/{userId}
+GET /api/mobile/business-profile
+GET /api/mobile/business-profile/{id}
+
+Response Format:
+{
+  "success": true,
+  "data": {
+    "profiles": [
+      {
+        "id": "bp123",
+        "businessName": "Elite Events",
+        "email": "contact@eliteevents.com",
+        "phone": "+1234567890",
+        "address": "123 Event Street",
+        "category": "Event Planning",
+        "logo": "https://example.com/logo.png",
+        "description": "Premium event planning",
+        "website": "https://eliteevents.com",
+        "createdAt": "2024-01-15T10:30:00.000Z",
+        "updatedAt": "2024-01-15T10:30:00.000Z"
+      }
+    ]
+  }
+}
+
+⚠️ DO NOT include:
+  ❌ ownerName
+  ❌ socialMedia
+
+================================================================================
+DATABASE SCHEMA UPDATES
+================================================================================
+
+If your database has these columns, you can:
+
+Option 1: Remove columns (Breaking Change)
+  ALTER TABLE business_profiles DROP COLUMN ownerName;
+  ALTER TABLE business_profiles DROP COLUMN socialMedia;
+
+Option 2: Keep columns but don't use them (Safer)
+  - Keep columns in database
+  - Don't send them in API responses
+  - Frontend will no longer send these fields
+  - Existing data preserved
+
+Recommended: Option 2 for backward compatibility
+
+================================================================================
+MIGRATION GUIDE
+================================================================================
+
+Step 1: Update API Endpoints (Backend)
+  - Remove ownerName from request validation
+  - Remove socialMedia from request validation
+  - Don't include ownerName in response
+  - Don't include socialMedia in response
+
+Step 2: Test Thoroughly
+  - Test create with new request format
+  - Test update with new request format
+  - Verify response doesn't include removed fields
+  - Test backward compatibility (old data still readable)
+
+Step 3: Deploy
+  - Deploy backend changes
+  - Frontend already updated
+  - Monitor for errors
+
+================================================================================
+WHAT'S SIMPLIFIED
+================================================================================
+
+Before:
+  Request: 10 fields (businessName, ownerName, email, phone, address, 
+                       category, logo, description, website, socialMedia)
+  Response: 12 fields including nested socialMedia object
+
+After:
+  Request: 8 fields (businessName, email, phone, address, category,
+                     logo, description, website)
+  Response: 10 fields (+ id, createdAt, updatedAt)
+
+Benefits:
+  ✓ Simpler API contract
+  ✓ Less data to validate
+  ✓ Cleaner database structure
+  ✓ No redundant ownerName field
+  ✓ Social media can be added later as separate feature if needed
+
+================================================================================
+VALIDATION RULES (Updated)
+================================================================================
+
+Required Fields:
+  ✓ businessName (2-100 chars)
+  ✓ email (valid email, max 100 chars)
+  ✓ phone (10 digits, starts with 6-9)
+  ✓ address (max 200 chars)
+  ✓ category (max 100 chars)
+
+Optional Fields:
+  ✓ logo (URL, max 1000 chars)
+  ✓ description (max 500 chars)
+  ✓ website (valid URL, max 200 chars)
+
+Removed Validations:
+  ❌ ownerName (no longer needed)
+  ❌ socialMedia (no longer needed)
+
+================================================================================
+ERROR HANDLING
+================================================================================
+
+Error Response (400 - Validation Error):
+{
+  "success": false,
+  "error": "businessName is required",
+  "message": "Validation failed"
+}
+
+Error Response (404 - Not Found):
+{
+  "success": false,
+  "error": "Business profile not found",
+  "message": "Profile not found"
+}
+
+================================================================================
+TESTING CHECKLIST
+================================================================================
+
+Backend Team Should Test:
+
+Create Profile:
+□ Create with all required fields
+□ Create with optional fields (logo, description, website)
+□ Create without optional fields
+□ Verify response doesn't include ownerName
+□ Verify response doesn't include socialMedia
+□ Verify response includes description
+□ Verify all timestamps are correct
+
+Update Profile:
+□ Update single field (e.g., description only)
+□ Update multiple fields
+□ Verify response includes ALL profile fields
+□ Verify response doesn't include ownerName
+□ Verify response doesn't include socialMedia
+□ Verify updatedAt changes, createdAt doesn't
+
+Get Profiles:
+□ Get user profiles - verify no ownerName/socialMedia
+□ Get single profile - verify no ownerName/socialMedia
+□ Search profiles - verify no ownerName/socialMedia
+
+Error Cases:
+□ Missing required field (businessName)
+□ Invalid email format
+□ Invalid phone format
+□ Profile not found (404)
+
+================================================================================
+BEFORE/AFTER COMPARISON
+================================================================================
+
+CREATE REQUEST:
+  Before: 10 fields → After: 8 fields (-2)
+  Removed: ownerName, socialMedia
+
+CREATE RESPONSE:
+  Before: businessName, ownerName, email, phone, address, category, 
+          logo, description, website, socialMedia, createdAt, updatedAt
+  After: businessName, email, phone, address, category, 
+         logo, description, website, createdAt, updatedAt
+  Removed: ownerName, socialMedia
+
+UPDATE REQUEST:
+  Before: 10 optional fields
+  After: 8 optional fields
+  Removed: ownerName, socialMedia
+
+UPDATE RESPONSE:
+  Same as create response (must include ALL fields)
+
+GET RESPONSES:
+  Same simplified format (no ownerName, no socialMedia)
+
+================================================================================
+CONTACT & REFERENCES
+================================================================================
+
+Frontend Files Updated:
+  - src/services/businessProfile.ts (main service)
+  - src/services/businessProfile.ts (interface definitions)
+
+API Documentation Updated:
+  - ACTUAL_IMPLEMENTED_APIS.txt (detailed specs)
+  - ALL_IMPLEMENTED_APIS.txt (quick reference)
+
+Backend Needs to Update:
+  - POST /api/mobile/business-profile endpoint
+  - PUT /api/mobile/business-profile/{id} endpoint
+  - GET endpoints response format
+
+================================================================================
+END OF DOCUMENT
+================================================================================
+Last Updated: October 15, 2025
+Status: Frontend updated, backend must implement changes
+Priority: HIGH - API contract changed, must be synchronized
+================================================================================
+

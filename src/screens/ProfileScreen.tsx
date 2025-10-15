@@ -74,22 +74,22 @@ const ProfileScreen: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || '',
-    description: currentUser?.description || currentUser?.bio || '',
-    category: currentUser?.category || currentUser?.businessCategory || '',
-    address: currentUser?.address || currentUser?.businessAddress || '',
+    name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
+    description: currentUser?.description || '',
+    category: currentUser?.category || '',
+    address: currentUser?.address || '',
     phone: currentUser?.phoneNumber || currentUser?.phone || '',
     alternatePhone: currentUser?.alternatePhone || '',
     email: currentUser?.email || '',
     website: currentUser?.website || '',
-    companyLogo: currentUser?.companyLogo || currentUser?.logo || '',
+    companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
   });
   const [isUpdating, setIsUpdating] = useState(false);
   const [posterStats, setPosterStats] = useState({ total: 0, recentCount: 0 });
   const [businessProfileStats, setBusinessProfileStats] = useState({ total: 0, recentCount: 0 });
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
   const [profileImageUri, setProfileImageUri] = useState<string | null>(
-    currentUser?.companyLogo || currentUser?.logo || null
+    currentUser?.logo || currentUser?.companyLogo || null
   );
   const [userPreferences, setUserPreferences] = useState<any>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -98,6 +98,8 @@ const ProfileScreen: React.FC = () => {
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [comingSoonTitle, setComingSoonTitle] = useState('');
   const [comingSoonSubtitle, setComingSoonSubtitle] = useState('');
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [errorModalMessage, setErrorModalMessage] = useState('');
   const { isDarkMode, toggleDarkMode, theme } = useTheme();
   const { isSubscribed, subscriptionStatus, transactionStats, clearSubscriptionData } = useSubscription();
   const insets = useSafeAreaInsets();
@@ -200,9 +202,9 @@ const ProfileScreen: React.FC = () => {
             console.log('✅ User data updated (business profiles AND companyName excluded from API)');
             console.log('✅ Preserved original registered company name:', updatedUserData.companyName);
             
-            // Update profile image from companyLogo
-            if (completeUserData?.companyLogo || completeUserData?.logo) {
-              setProfileImageUri(completeUserData?.companyLogo || completeUserData?.logo || null);
+            // Update profile image from logo field
+            if (completeUserData?.logo || completeUserData?.companyLogo) {
+              setProfileImageUri(completeUserData?.logo || completeUserData?.companyLogo || null);
             }
             
             console.log('✅ User profile data loaded and updated');
@@ -378,25 +380,26 @@ const ProfileScreen: React.FC = () => {
       }
       
       // Check if we already have complete user data from registration
-      if (currentUser && currentUser.email && currentUser.phone && currentUser.name) {
+      if (currentUser && currentUser.email && (currentUser.phone || currentUser.phoneNumber) && (currentUser.companyName || currentUser.name)) {
         console.log('✅ User data already complete from registration, skipping API call');
         
-        // Update edit form with existing data
+        // Update edit form with existing registered user data
+        // Map stored user fields to form fields
         setEditFormData({
-          name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || '',
-          description: currentUser?.description || currentUser?.bio || '',
-          category: currentUser?.category || currentUser?.businessCategory || '',
-          address: currentUser?.address || currentUser?.businessAddress || '',
+          name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
+          description: currentUser?.description || '',
+          category: currentUser?.category || '',
+          address: currentUser?.address || '',
           phone: currentUser?.phoneNumber || currentUser?.phone || '',
           alternatePhone: currentUser?.alternatePhone || '',
           email: currentUser?.email || '',
           website: currentUser?.website || '',
-          companyLogo: currentUser?.companyLogo || currentUser?.logo || '',
+          companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
         });
         
         // Update profile image if available
-        if (currentUser?.companyLogo || currentUser?.logo) {
-          setProfileImageUri(currentUser?.companyLogo || currentUser?.logo);
+        if (currentUser?.logo || currentUser?.companyLogo) {
+          setProfileImageUri(currentUser?.logo || currentUser?.companyLogo);
         }
         
         setShowEditProfileModal(true);
@@ -420,17 +423,17 @@ const ProfileScreen: React.FC = () => {
         token = await AsyncStorage.getItem('authToken');
         if (!token) {
           console.log('⚠️ Token still not available, skipping API fetch and using current user data');
-          // Use current user data instead of failing
+          // Use current registered user data instead of failing
           setEditFormData({
-            name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || '',
+            name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
             description: currentUser?.description || '',
             category: currentUser?.category || '',
             address: currentUser?.address || '',
-            phone: currentUser?.phoneNumber || '',
+            phone: currentUser?.phoneNumber || currentUser?.phone || '',
             alternatePhone: currentUser?.alternatePhone || '',
             email: currentUser?.email || '',
             website: currentUser?.website || '',
-            companyLogo: currentUser?.companyLogo || '',
+            companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
           });
           setShowEditProfileModal(true);
           return;
@@ -459,19 +462,20 @@ const ProfileScreen: React.FC = () => {
       // Update auth service with clean data
       authService.setCurrentUser(updatedUserData);
       
-      console.log('🔍 Using stored companyName (not from API):', currentUser?.companyName);
+      console.log('🔍 Using registered user data from API');
       
-      const userData = completeUserData as any;
+      // Use only registered user's profile data, NOT business profile data
+      // Map API response fields to form fields
       setEditFormData({
-        name: currentUser?.companyName || currentUser?.displayName || currentUser?.name || '',
-        description: completeUserData?.description || completeUserData?.bio || '',
-        category: completeUserData?.category || userData?.businessCategory || '',
-        address: completeUserData?.address || userData?.businessAddress || '',
+        name: completeUserData?.companyName || completeUserData?.name || '',
+        description: completeUserData?.description || '',
+        category: completeUserData?.category || '',
+        address: completeUserData?.address || '',
         phone: completeUserData?.phoneNumber || completeUserData?.phone || '',
         alternatePhone: completeUserData?.alternatePhone || '',
         email: completeUserData?.email || '',
         website: completeUserData?.website || '',
-        companyLogo: completeUserData?.companyLogo || completeUserData?.logo || '',
+        companyLogo: completeUserData?.logo || completeUserData?.companyLogo || '',
       });
       
       setShowEditProfileModal(true);
@@ -591,7 +595,8 @@ const ProfileScreen: React.FC = () => {
       }
     } catch (error) {
       console.error('Profile update error:', error);
-      Alert.alert('Error', 'Failed to update profile. Please try again.');
+      setErrorModalMessage('Failed to update profile. Please try again.');
+      setShowErrorModal(true);
     } finally {
       setIsUpdating(false);
     }
@@ -601,15 +606,15 @@ const ProfileScreen: React.FC = () => {
     const user = authService.getCurrentUser();
     setShowEditProfileModal(false);
     setEditFormData({
-      name: user?._originalCompanyName || user?.companyName || user?.displayName || user?.name || '',
-      description: user?.description || user?.bio || '',
-      category: user?.category || user?.businessCategory || '',
-      address: user?.address || user?.businessAddress || '',
+      name: user?.companyName || user?._originalCompanyName || user?.name || '',
+      description: user?.description || '',
+      category: user?.category || '',
+      address: user?.address || '',
       phone: user?.phoneNumber || user?.phone || '',
       alternatePhone: user?.alternatePhone || '',
       email: user?.email || '',
       website: user?.website || '',
-      companyLogo: user?.companyLogo || user?.logo || '',
+      companyLogo: user?.logo || user?.companyLogo || '',
     });
   };
 
@@ -631,15 +636,16 @@ const ProfileScreen: React.FC = () => {
       console.log('✅ Setting profile image URI...');
       setProfileImageUri(imageUri);
       
-      // Update the current user's profile picture and company logo
+      // Update the current user's profile picture (logo field from API)
       const currentUser = authService.getCurrentUser();
       if (currentUser) {
         console.log('✅ Updating user profile data...');
         const updatedUser = {
           ...currentUser,
+          logo: imageUri, // Primary field from API
           photoURL: imageUri,
           profileImage: imageUri,
-          companyLogo: imageUri,
+          companyLogo: imageUri, // Keep for backward compatibility
         };
         
         // Update in auth service
@@ -756,10 +762,10 @@ const ProfileScreen: React.FC = () => {
           <View style={[styles.profileCard, { backgroundColor: theme.colors.cardBackground }]}>
             <View style={styles.profileHeader}>
               <View style={styles.avatarContainer}>
-                {profileImageUri || currentUser?.companyLogo || currentUser?.businessLogo || currentUser?.logo || currentUser?.photoURL || currentUser?.profileImage ? (
+                {profileImageUri || currentUser?.logo || currentUser?.companyLogo || currentUser?.photoURL || currentUser?.profileImage ? (
                   <View style={styles.avatarImageContainer}>
                     <Image
-                      source={{ uri: profileImageUri || currentUser?.companyLogo || currentUser?.businessLogo || currentUser?.logo || currentUser?.photoURL || currentUser?.profileImage }}
+                      source={{ uri: profileImageUri || currentUser?.logo || currentUser?.companyLogo || currentUser?.photoURL || currentUser?.profileImage }}
                       style={styles.avatarImage}
                       resizeMode="cover"
                     />
@@ -770,7 +776,7 @@ const ProfileScreen: React.FC = () => {
                     style={styles.avatarGradient}
                   >
                     <Text style={styles.avatarText}>
-                      {(currentUser?._originalCompanyName || currentUser?.companyName)?.charAt(0) || currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
+                      {(currentUser?.companyName || currentUser?._originalCompanyName)?.charAt(0) || currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
                     </Text>
                   </LinearGradient>
                 )}
@@ -783,7 +789,7 @@ const ProfileScreen: React.FC = () => {
               </View>
               <View style={styles.profileInfo}>
                 <Text style={[styles.userName, { color: theme.colors.text }]}>
-                  {currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
+                  {currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
                 </Text>
                 <Text style={[styles.userEmail, { color: theme.colors.textSecondary }]}>
                   {currentUser?.email || 'eventmarketer@example.com'}
@@ -1316,6 +1322,58 @@ const ProfileScreen: React.FC = () => {
         </TouchableOpacity>
       </Modal>
 
+      {/* Error Modal */}
+      <Modal
+        visible={showErrorModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowErrorModal(false)}
+        statusBarTranslucent={true}
+      >
+        <TouchableOpacity 
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setShowErrorModal(false)}
+        >
+          <TouchableOpacity 
+            activeOpacity={1}
+            onPress={() => {}} // Prevent closing when tapping inside modal
+          >
+            <View style={[styles.errorModalContainer, { backgroundColor: theme.colors.surface }]}>
+              <View style={styles.errorModalHeader}>
+                <View style={[styles.errorIconContainer, { backgroundColor: '#ff444420' }]}>
+                  <Icon name="error-outline" size={Math.min(screenWidth * 0.08, 32)} color="#ff4444" />
+                </View>
+                <Text 
+                  style={[styles.errorModalTitle, { color: theme.colors.text }]}
+                >
+                  Error
+                </Text>
+                <TouchableOpacity 
+                  style={[styles.closeModalButton, { backgroundColor: theme.colors.inputBackground }]}
+                  onPress={() => setShowErrorModal(false)}
+                  activeOpacity={0.7}
+                >
+                  <Icon name="close" size={Math.min(screenWidth * 0.06, 24)} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              
+              <View style={styles.errorModalContent}>
+                <Text style={[styles.errorModalMessage, { color: theme.colors.text }]}>
+                  {errorModalMessage}
+                </Text>
+              </View>
+              
+              <TouchableOpacity 
+                style={[styles.errorModalButton, { backgroundColor: '#ff4444' }]}
+                onPress={() => setShowErrorModal(false)}
+              >
+                <Text style={styles.errorModalButtonText}>OK</Text>
+              </TouchableOpacity>
+            </View>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {/* Coming Soon Modal */}
       <ComingSoonModal
@@ -2048,6 +2106,65 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   signOutConfirmButtonText: {
+    color: '#FFFFFF',
+    fontSize: Math.min(screenWidth * 0.042, 17),
+    fontWeight: '600',
+  },
+  // Error Modal Styles
+  errorModalContainer: {
+    width: screenWidth * 0.85,
+    maxWidth: 400,
+    borderRadius: 20,
+    padding: screenWidth * 0.06,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  errorModalHeader: {
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.02,
+    position: 'relative',
+  },
+  errorIconContainer: {
+    width: Math.min(screenWidth * 0.18, 72),
+    height: Math.min(screenWidth * 0.18, 72),
+    borderRadius: Math.min(screenWidth * 0.09, 36),
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: screenHeight * 0.015,
+  },
+  errorModalTitle: {
+    fontSize: Math.min(screenWidth * 0.06, 24),
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  errorModalContent: {
+    marginBottom: screenHeight * 0.025,
+  },
+  errorModalMessage: {
+    fontSize: Math.min(screenWidth * 0.04, 16),
+    textAlign: 'center',
+    lineHeight: Math.min(screenWidth * 0.06, 24),
+  },
+  errorModalButton: {
+    paddingVertical: screenHeight * 0.018,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  errorModalButtonText: {
     color: '#FFFFFF',
     fontSize: Math.min(screenWidth * 0.042, 17),
     fontWeight: '600',

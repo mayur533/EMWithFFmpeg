@@ -35,63 +35,34 @@ export interface UserStats {
 }
 
 class UserProfileService {
-  // Update user preferences in backend
+  // Update user preferences (API endpoint removed - not functional)
   async updateUserPreferences(userId: string, preferences: PreferenceUpdate): Promise<UserPreferences> {
-    try {
-      console.log('🔍 Updating user preferences in backend for user:', userId);
-      const response = await api.put(`/api/mobile/users/${userId}/preferences`, preferences);
-      
-      if (response.data.success) {
-        console.log('✅ User preferences updated in backend');
-        return response.data.data;
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
-    } catch (error) {
-      console.error('❌ Error updating user preferences in backend:', error);
-      throw error;
-    }
+    console.log('⚠️ updateUserPreferences - API endpoint removed');
+    console.log('⚠️ User preferences should be stored locally (AsyncStorage)');
+    throw new Error('User preferences API endpoint has been removed. Use local storage instead.');
   }
 
-  // Update specific preference
+  // Update specific preference (API endpoint removed - not functional)
   async updatePreference(userId: string, key: keyof PreferenceUpdate, value: any): Promise<UserPreferences> {
-    try {
-      const update: PreferenceUpdate = { [key]: value };
-      return await this.updateUserPreferences(userId, update);
-    } catch (error) {
-      console.error('❌ Error updating specific preference:', error);
-      throw error;
-    }
+    console.log('⚠️ updatePreference - API endpoint removed');
+    throw new Error('User preferences API endpoint has been removed. Use local storage instead.');
   }
 
-  // Get user statistics from backend
+  // Get user statistics (API endpoint removed - returns defaults)
   async getUserStats(userId: string): Promise<UserStats> {
-    try {
-      console.log('🔍 Fetching user stats from backend for user:', userId);
-      const response = await api.get(`/api/mobile/users/${userId}/stats`);
-      
-      if (response.data.success) {
-        console.log('✅ User stats fetched from backend');
-        return response.data.data;
-      } else {
-        throw new Error('API returned unsuccessful response');
+    console.log('⚠️ getUserStats - API endpoint removed, returning default values');
+    
+    // Return default stats
+    return {
+      businessProfiles: {
+        total: 0,
+        recentCount: 0
+      },
+      downloads: {
+        total: 0,
+        recentCount: 0
       }
-    } catch (error) {
-      console.error('❌ Error fetching user stats from backend:', error);
-      console.log('⚠️ Returning default stats due to API error');
-      
-      // Return default stats
-      return {
-        businessProfiles: {
-          total: 0,
-          recentCount: 0
-        },
-        downloads: {
-          total: 0,
-          recentCount: 0
-        }
-      };
-    }
+    };
   }
 
   // Get business profile stats

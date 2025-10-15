@@ -280,38 +280,16 @@ class GreetingTemplatesService {
     }
   }
 
-  // Get available stickers
+  // Get available stickers (mock data only - API endpoint removed)
   async getStickers(): Promise<string[]> {
-    try {
-      const response = await api.get('/api/mobile/greetings/stickers');
-      
-      if (response.data.success) {
-        // Map backend response to frontend format
-        return response.data.data.stickers.map((sticker: any) => sticker.emoji || sticker.name);
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
-    } catch (error) {
-      console.log('Using mock stickers due to API error:', error);
-      return this.getMockStickers();
-    }
+    console.log('📡 [STICKERS] Using mock data (API endpoint removed)');
+    return this.getMockStickers();
   }
 
-  // Get available emojis
+  // Get available emojis (mock data only - API endpoint removed)
   async getEmojis(): Promise<string[]> {
-    try {
-      const response = await api.get('/api/mobile/greetings/emojis');
-      
-      if (response.data.success) {
-        // Map backend response to frontend format
-        return response.data.data.emojis.map((emoji: any) => emoji.emoji || emoji.name);
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
-    } catch (error) {
-      console.log('Using mock emojis due to API error:', error);
-      return this.getMockEmojis();
-    }
+    console.log('📡 [EMOJIS] Using mock data (API endpoint removed)');
+    return this.getMockEmojis();
   }
 
   // Mock data methods
