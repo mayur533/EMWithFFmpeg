@@ -2282,17 +2282,26 @@ const styles = StyleSheet.create({
       paddingBottom: responsiveSpacing.xl,
     },
     upcomingEventModalRow: {
-      justifyContent: 'space-between', // Equal spacing between cards
+      justifyContent: 'flex-start', // Start from left for incomplete rows
+      gap: (() => {
+        // Calculate gap to distribute space evenly
+        const modalWidth = isTablet ? Math.min(screenWidth * 0.85, 900) : screenWidth * 0.95;
+        const contentPadding = responsiveSpacing.lg * 2;
+        const availableWidth = modalWidth - contentPadding;
+        const cardWidth = availableWidth * 0.3; // 30% for each card
+        const totalCardWidth = cardWidth * 3;
+        const remainingSpace = availableWidth - totalCardWidth;
+        return remainingSpace / 2; // Divide remaining space equally between 2 gaps
+      })(),
       marginBottom: responsiveSpacing.md,
     },
     upcomingEventModalCard: {
-      // Calculate card width properly: (container width - left padding - right padding) / 3 columns
-      // This ensures equal spacing on both sides
+      // Calculate card width properly with equal spacing on both sides
       width: (() => {
         const modalWidth = isTablet ? Math.min(screenWidth * 0.85, 900) : screenWidth * 0.95;
         const contentPadding = responsiveSpacing.lg * 2; // left + right padding
         const availableWidth = modalWidth - contentPadding;
-        return availableWidth / 3; // 3 columns, justifyContent handles spacing
+        return availableWidth * 0.3; // 30% of available width for each card (leaves 10% for gaps)
       })(),
       backgroundColor: '#ffffff',
       borderRadius: responsiveSize.cardBorderRadius,
