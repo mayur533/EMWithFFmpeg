@@ -4,6 +4,13 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 // Toolbar is fixed on screen (no vertical scroll) with horizontal scroll for buttons
 // All sections (toolbar, toggle fields, templates) have fixed heights and are fully responsive
 // Layout ensures no overlapping between canvas and controls across all screen sizes
+// 
+// FRAME POSITION LOGIC:
+// - Original layer positions are stored ONCE when first frame is applied
+// - Original layers are preserved when frame is removed (not cleared)
+// - When applying another frame, same original positions are used
+// - Original layers are only cleared when: template changes OR business profile changes
+// This ensures consistent element positions across multiple frame applications
 import {
   View,
   Text,
@@ -886,6 +893,10 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     setSelectedBusinessProfile(profile);
     setShowProfileSelectionModal(false);
     
+    // Clear original layers when changing business profile so new positions become the baseline
+    setOriginalLayers([]);
+    console.log('🔄 [APPLY BUSINESS PROFILE] Cleared original layers for new profile:', profile.name);
+    
     // Auto-set template based on business profile category
     if (profile.category) {
       const categoryToTemplate: { [key: string]: string } = {
@@ -1533,6 +1544,10 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     setSelectedTemplate(templateType);
     setShowTemplatesModal(false);
     
+    // Clear original layers when changing templates so new positions can be stored
+    setOriginalLayers([]);
+    console.log('🔄 [APPLY TEMPLATE] Cleared original layers for new template:', templateType);
+    
     // Apply different poster layouts and styles based on template
     setLayers(prev => prev.map(layer => {
       if (layer.fieldType === 'footerBackground') {
@@ -1649,17 +1664,21 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const applyFrame = useCallback((frame: Frame) => {
     setApplyingFrame(true);
     
-    // Store current layers and template as original before applying frame (deep clone)
-    const clonedLayers = layers.map(layer => ({
-      ...layer,
-      position: { ...layer.position },
-      size: { ...layer.size },
-      style: { ...layer.style }
-    }));
-    setOriginalLayers(clonedLayers);
-    setOriginalTemplate(selectedTemplate);
-    
-    console.log('📦 Stored original layers for restoration:', clonedLayers.length, 'layers');
+    // ONLY store original layers if they haven't been stored yet
+    // This ensures we always return to the TRUE original template positions
+    if (originalLayers.length === 0) {
+      const clonedLayers = layers.map(layer => ({
+        ...layer,
+        position: { ...layer.position },
+        size: { ...layer.size },
+        style: { ...layer.style }
+      }));
+      setOriginalLayers(clonedLayers);
+      setOriginalTemplate(selectedTemplate);
+      console.log('📦 [FIRST TIME] Stored original layers for restoration:', clonedLayers.length, 'layers');
+    } else {
+      console.log('✅ [ALREADY STORED] Using existing original layers, not overwriting');
+    }
     
     setSelectedFrame(frame);
     setShowFrameSelector(false);
@@ -3301,13 +3320,15 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                     
                     // Restore layers with their original positions
                     setLayers(originalLayers);
-                    setOriginalLayers([]); // Clear stored original layers
+                    // DON'T clear originalLayers - keep them for future frame applications
+                    // This ensures consistent positions when applying multiple frames
                     
                     // Restore original template
                     setSelectedTemplate(originalTemplate);
                     
                     console.log('✅ [REMOVE FRAME] Frame removed and original layout restored');
                     console.log('📋 [REMOVE FRAME] Template restored:', originalTemplate);
+                    console.log('💾 [REMOVE FRAME] Original layers preserved for future frame applications');
                   } else {
                     console.log('⚠️ [REMOVE FRAME] No original layers found, using fallback');
                     if (selectedBusinessProfile) {
