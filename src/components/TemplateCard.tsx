@@ -17,6 +17,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { Template } from '../services/templates';
 import { useTheme } from '../context/ThemeContext';
 import templatesBannersApi from '../services/templatesBannersApi';
+import OptimizedImage from './OptimizedImage';
 
 interface TemplateCardProps {
   template: Template;
@@ -126,24 +127,14 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ template, onPres
 
           {/* Image Section */}
           <View style={[styles.modalImageContainer, { backgroundColor: theme.colors.inputBackground }]}>
-            <Image
-              source={{ 
-                uri: template.imageUrl,
-                cache: 'force-cache'
-              }}
+            <OptimizedImage
+              uri={template.imageUrl}
               style={styles.modalImage}
               resizeMode="contain"
-              onLoad={() => setPreviewImageLoaded(true)}
-              onLoadStart={() => setPreviewImageLoaded(false)}
+              showLoader={true}
+              loaderColor={theme.colors.primary}
+              loaderSize="large"
             />
-            
-            {/* Loading Overlay */}
-            {!previewImageLoaded && (
-              <View style={[styles.modalLoadingOverlay, { backgroundColor: theme.colors.inputBackground }]}>
-                <ActivityIndicator size="large" color={theme.colors.primary} />
-                <Text style={[styles.modalLoadingText, { color: theme.colors.primary }]}>Loading preview...</Text>
-              </View>
-            )}
           </View>
 
           {/* Template Details */}
@@ -254,24 +245,14 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ template, onPres
         >
           {/* Image Container */}
           <View style={styles.imageContainer}>
-            <Image
-              source={{ 
-                uri: template.imageUrl,
-                cache: 'force-cache'
-              }}
+            <OptimizedImage
+              uri={template.imageUrl}
               style={styles.image}
               resizeMode="cover"
-              onLoad={() => setImageLoaded(true)}
-              onLoadStart={() => setImageLoaded(false)}
-              fadeDuration={0}
+              showLoader={true}
+              loaderColor={theme.colors.primary}
+              loaderSize="small"
             />
-            
-            {/* Loading Overlay */}
-            {!imageLoaded && (
-              <View style={[styles.loadingOverlay, { backgroundColor: theme.colors.inputBackground }]}>
-                <ActivityIndicator size="small" color={theme.colors.primary} />
-              </View>
-            )}
             
             {/* Category Badge */}
             <LinearGradient

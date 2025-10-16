@@ -12,6 +12,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { GreetingTemplate } from '../services/greetingTemplates';
 import { useTheme } from '../context/ThemeContext';
+import OptimizedImage from './OptimizedImage';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -152,10 +153,13 @@ const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
 
       {/* Template Image */}
       <View style={styles.imageContainer}>
-        <Image
-          source={{ uri: template.thumbnail }}
+        <OptimizedImage
+          uri={template.thumbnail}
           style={styles.image}
           resizeMode="cover"
+          showLoader={true}
+          loaderColor={theme.colors.primary}
+          loaderSize="small"
         />
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.7)']}

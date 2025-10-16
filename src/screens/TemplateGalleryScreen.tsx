@@ -23,6 +23,7 @@ import { StackNavigationProp } from '@react-navigation/stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
 
 import TemplateCard from '../components/TemplateCard';
+import OptimizedImage from '../components/OptimizedImage';
 import templateService, { Template, TemplateFilters } from '../services/templates';
 import templatesBannersApi from '../services/templatesBannersApi';
 import { useTheme } from '../context/ThemeContext';

@@ -19,6 +19,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import businessCategoryPostersApi, { BusinessCategoryPoster } from '../services/businessCategoryPostersApi';
 import ComingSoonModal from '../components/ComingSoonModal';
+import OptimizedImage from '../components/OptimizedImage';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -184,16 +185,13 @@ const MyBusinessScreen: React.FC = () => {
         onPress={() => handlePosterPress(item)}
         activeOpacity={0.8}
       >
-        <Image 
-          source={{ 
-            uri: item.thumbnail,
-            cache: 'force-cache',
-          }} 
+        <OptimizedImage 
+          uri={item.thumbnail} 
           style={styles.posterImage}
           resizeMode="cover"
-          onError={(error) => {
-            console.error('Image load error for poster:', item.id, item.thumbnail);
-          }}
+          showLoader={true}
+          loaderColor={theme.colors.primary}
+          loaderSize="small"
         />
       </TouchableOpacity>
     );
