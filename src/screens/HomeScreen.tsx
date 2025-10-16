@@ -1576,9 +1576,22 @@ const HomeScreen: React.FC = React.memo(() => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        <View style={styles.upcomingEventModalBadge}>
-                          <Text style={styles.upcomingEventModalBadgeText}>{event.category}</Text>
-                        </View>
+                        {event.isFree ? (
+                          <LinearGradient
+                            colors={['#4ecdc4', '#44a08d']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.upcomingEventModalBadge}
+                          >
+                            <Icon name="star" size={12} color="#ffffff" />
+                            <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                          </LinearGradient>
+                        ) : (
+                          <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
+                            <Icon name="star" size={12} color="#FFD700" />
+                            <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
+                          </View>
+                        )}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -1649,9 +1662,22 @@ const HomeScreen: React.FC = React.memo(() => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        <View style={styles.upcomingEventModalBadge}>
-                          <Text style={styles.upcomingEventModalBadgeText}>{template.category}</Text>
-                        </View>
+                        {template.isPremium ? (
+                          <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
+                            <Icon name="star" size={12} color="#FFD700" />
+                            <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
+                          </View>
+                        ) : (
+                          <LinearGradient
+                            colors={['#4ecdc4', '#44a08d']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.upcomingEventModalBadge}
+                          >
+                            <Icon name="star" size={12} color="#ffffff" />
+                            <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                          </LinearGradient>
+                        )}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -1722,9 +1748,22 @@ const HomeScreen: React.FC = React.memo(() => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        <View style={styles.upcomingEventModalBadge}>
-                          <Text style={styles.upcomingEventModalBadgeText}>{video.category}</Text>
-                        </View>
+                        {video.isPremium ? (
+                          <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
+                            <Icon name="star" size={12} color="#FFD700" />
+                            <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
+                          </View>
+                        ) : (
+                          <LinearGradient
+                            colors={['#4ecdc4', '#44a08d']}
+                            start={{ x: 0, y: 0 }}
+                            end={{ x: 1, y: 0 }}
+                            style={styles.upcomingEventModalBadge}
+                          >
+                            <Icon name="star" size={12} color="#ffffff" />
+                            <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                          </LinearGradient>
+                        )}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -2328,19 +2367,35 @@ const styles = StyleSheet.create({
     },
     upcomingEventModalBadge: {
       position: 'absolute',
-      top: responsiveSpacing.xs,
-      left: responsiveSpacing.xs,
-      backgroundColor: 'rgba(0,0,0,0.8)',
-      paddingHorizontal: responsiveSpacing.xs,
-      paddingVertical: responsiveSpacing.xs / 2,
-      borderRadius: isTablet ? 14 : 12,
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.2)',
+      top: 12,
+      left: 12,
+      flexDirection: 'row',
+      alignItems: 'center',
+      paddingHorizontal: 10,
+      paddingVertical: 6,
+      borderRadius: 16,
+      gap: 4,
+      // Premium shadow effect matching TemplateCard exactly
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: 2,
+      },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 3,
     },
     upcomingEventModalBadgeText: {
-      fontSize: isTablet ? 11 : Math.min(screenWidth * 0.025, 10),
+      fontSize: 10,
       color: '#ffffff',
-      fontWeight: '600',
+      fontWeight: '700',
+      letterSpacing: 0.5,
+    },
+    premiumEventBadge: {
+      backgroundColor: 'rgba(0,0,0,0.8)',
+    },
+    premiumEventBadgeText: {
+      color: '#FFD700',
     },
     upcomingEventModalContent: {
       padding: responsiveSpacing.sm,
