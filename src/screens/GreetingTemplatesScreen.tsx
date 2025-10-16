@@ -180,8 +180,7 @@ const GreetingTemplatesScreen: React.FC = () => {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Clear cache and fetch fresh data
-    greetingTemplatesService.clearCache();
+    // Fetch fresh data
     await fetchData(true);
     setRefreshing(false);
   }, [fetchData]);

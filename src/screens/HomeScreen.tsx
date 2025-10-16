@@ -36,7 +36,7 @@ import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 // import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
 import ComingSoonModal from '../components/ComingSoonModal';
-import OptimizedImage, { preloadImages } from '../components/OptimizedImage';
+import OptimizedImage from '../components/OptimizedImage';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -77,6 +77,19 @@ const HomeScreen: React.FC = React.memo(() => {
   const [isUpcomingEventsModalVisible, setIsUpcomingEventsModalVisible] = useState(false);
   const [isTemplatesModalVisible, setIsTemplatesModalVisible] = useState(false);
   const [isVideosModalVisible, setIsVideosModalVisible] = useState(false);
+  
+  // Greeting section modal states
+  const [isMotivationModalVisible, setIsMotivationModalVisible] = useState(false);
+  const [isGoodMorningModalVisible, setIsGoodMorningModalVisible] = useState(false);
+  const [isBusinessEthicsModalVisible, setIsBusinessEthicsModalVisible] = useState(false);
+  const [isDevotionalModalVisible, setIsDevotionalModalVisible] = useState(false);
+  const [isLeaderQuotesModalVisible, setIsLeaderQuotesModalVisible] = useState(false);
+  const [isAtmanirbharBharatModalVisible, setIsAtmanirbharBharatModalVisible] = useState(false);
+  const [isGoodThoughtsModalVisible, setIsGoodThoughtsModalVisible] = useState(false);
+  const [isTrendingModalVisible, setIsTrendingModalVisible] = useState(false);
+  const [isBhagvatGitaModalVisible, setIsBhagvatGitaModalVisible] = useState(false);
+  const [isBooksModalVisible, setIsBooksModalVisible] = useState(false);
+  const [isCelebratesMomentsModalVisible, setIsCelebratesMomentsModalVisible] = useState(false);
 
   // New API data states
   const [featuredContent, setFeaturedContent] = useState<FeaturedContent[]>([]);
@@ -487,7 +500,6 @@ const HomeScreen: React.FC = React.memo(() => {
     try {
       // Clear all caches before refreshing
       homeApi.clearCache();
-      greetingTemplatesService.clearCache();
       
       // Refresh API data
       await loadApiData(true);
@@ -728,7 +740,94 @@ const HomeScreen: React.FC = React.memo(() => {
     setIsVideosModalVisible(false);
   }, []);
 
+  // Greeting section modal handlers
+  const handleViewAllMotivation = useCallback(() => {
+    setIsMotivationModalVisible(true);
+  }, []);
 
+  const closeMotivationModal = useCallback(() => {
+    setIsMotivationModalVisible(false);
+  }, []);
+
+  const handleViewAllGoodMorning = useCallback(() => {
+    setIsGoodMorningModalVisible(true);
+  }, []);
+
+  const closeGoodMorningModal = useCallback(() => {
+    setIsGoodMorningModalVisible(false);
+  }, []);
+
+  const handleViewAllBusinessEthics = useCallback(() => {
+    setIsBusinessEthicsModalVisible(true);
+  }, []);
+
+  const closeBusinessEthicsModal = useCallback(() => {
+    setIsBusinessEthicsModalVisible(false);
+  }, []);
+
+  const handleViewAllDevotional = useCallback(() => {
+    setIsDevotionalModalVisible(true);
+  }, []);
+
+  const closeDevotionalModal = useCallback(() => {
+    setIsDevotionalModalVisible(false);
+  }, []);
+
+  const handleViewAllLeaderQuotes = useCallback(() => {
+    setIsLeaderQuotesModalVisible(true);
+  }, []);
+
+  const closeLeaderQuotesModal = useCallback(() => {
+    setIsLeaderQuotesModalVisible(false);
+  }, []);
+
+  const handleViewAllAtmanirbharBharat = useCallback(() => {
+    setIsAtmanirbharBharatModalVisible(true);
+  }, []);
+
+  const closeAtmanirbharBharatModal = useCallback(() => {
+    setIsAtmanirbharBharatModalVisible(false);
+  }, []);
+
+  const handleViewAllGoodThoughts = useCallback(() => {
+    setIsGoodThoughtsModalVisible(true);
+  }, []);
+
+  const closeGoodThoughtsModal = useCallback(() => {
+    setIsGoodThoughtsModalVisible(false);
+  }, []);
+
+  const handleViewAllTrending = useCallback(() => {
+    setIsTrendingModalVisible(true);
+  }, []);
+
+  const closeTrendingModal = useCallback(() => {
+    setIsTrendingModalVisible(false);
+  }, []);
+
+  const handleViewAllBhagvatGita = useCallback(() => {
+    setIsBhagvatGitaModalVisible(true);
+  }, []);
+
+  const closeBhagvatGitaModal = useCallback(() => {
+    setIsBhagvatGitaModalVisible(false);
+  }, []);
+
+  const handleViewAllBooks = useCallback(() => {
+    setIsBooksModalVisible(true);
+  }, []);
+
+  const closeBooksModal = useCallback(() => {
+    setIsBooksModalVisible(false);
+  }, []);
+
+  const handleViewAllCelebratesMoments = useCallback(() => {
+    setIsCelebratesMomentsModalVisible(true);
+  }, []);
+
+  const closeCelebratesMomentsModal = useCallback(() => {
+    setIsCelebratesMomentsModalVisible(false);
+  }, []);
 
 
   // Memoized render functions to prevent unnecessary re-renders
@@ -899,52 +998,43 @@ const HomeScreen: React.FC = React.memo(() => {
   // Memoized key extractors
   const keyExtractor = useCallback((item: any) => item.id, []);
 
-  // Render greeting card (used for all 11 greeting sections) - Poster only, no text
-  const renderGreetingCard = useCallback(({ item }: { item: any }) => {
-    const scaleAnim = new Animated.Value(1);
+  // Factory function to create category-specific render functions for greeting cards
+  const createGreetingCardRenderer = useCallback((categoryTemplates: any[]) => {
+    return ({ item }: { item: any }) => {
+      if (!item || !item.thumbnail) {
+        console.error('❌ [RENDER GREETING CARD] Invalid item:', item);
+        return null;
+      }
 
-    const handlePressIn = () => {
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const handlePressOut = () => {
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    return (
-      <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={() => {
-          navigation.navigate('GreetingEditor', { template: item });
-        }}
-        style={{ marginRight: responsiveSpacing.sm }}
-      >
-        <Animated.View
-          style={[
-            styles.templateCard,
-            {
-              backgroundColor: theme.colors.cardBackground,
-              transform: [{ scale: scaleAnim }],
-            }
-          ]}
+      return (
+        <TouchableOpacity
+          activeOpacity={0.7}
+          onPress={() => {
+            // Navigate to PosterPlayer with category-specific templates
+            const relatedTemplates = categoryTemplates.filter(template => template.id !== item.id);
+            navigation.navigate('PosterPlayer', {
+              selectedPoster: item,
+              relatedPosters: relatedTemplates,
+            });
+          }}
+          style={styles.templateCardWrapper}
         >
-          <View style={styles.templateImageContainer}>
-            <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
+          <View
+            style={[
+              styles.templateCard,
+              {
+                backgroundColor: theme.colors.cardBackground,
+              }
+            ]}
+          >
+            <View style={styles.templateImageContainer}>
+              <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
+            </View>
           </View>
-        </Animated.View>
-      </TouchableOpacity>
-    );
-  }, [navigation, theme, responsiveSpacing]);
+        </TouchableOpacity>
+      );
+    };
+  }, [navigation, theme]);
 
 
 
@@ -1186,42 +1276,44 @@ const HomeScreen: React.FC = React.memo(() => {
           </View>
 
           {/* Video Section */}
-          <View style={styles.videoSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Video Content</Text>
-              <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllVideos}>
-                <Text style={styles.viewAllButtonText}>Browse All</Text>
-              </TouchableOpacity>
+          {videoContent.length > 0 && (
+            <View style={styles.videoSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Video Content</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllVideos}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
+              <FlatList
+                key={`video-content-${videoContent.length}`}
+                data={videoContent}
+                renderItem={renderVideoTemplate}
+                keyExtractor={keyExtractor}
+                numColumns={3}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={6}
+                windowSize={10}
+                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              />
             </View>
-            <FlatList
-              key={`video-content-${videoContent.length}`}
-              data={videoContent}
-              renderItem={renderVideoTemplate}
-              keyExtractor={keyExtractor}
-              numColumns={3}
-              columnWrapperStyle={styles.templateRow}
-              showsVerticalScrollIndicator={false}
-              scrollEnabled={false}
-              nestedScrollEnabled={true}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={6}
-              windowSize={10}
-              contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
-            />
-          </View>
+          )}
 
           {/* Motivation Section */}
           {motivationTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Motivation</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllMotivation}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={motivationTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(motivationTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1237,13 +1329,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Good Morning</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllGoodMorning}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={goodMorningTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(goodMorningTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1259,13 +1351,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Business Ethics</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllBusinessEthics}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={businessEthicsTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(businessEthicsTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1281,13 +1373,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Devotional</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllDevotional}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={devotionalTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(devotionalTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1303,13 +1395,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Leader Quotes</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllLeaderQuotes}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={leaderQuotesTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(leaderQuotesTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1325,13 +1417,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Atmanirbhar Bharat</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllAtmanirbharBharat}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={atmanirbharBharatTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(atmanirbharBharatTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1347,13 +1439,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Good Thoughts</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllGoodThoughts}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={goodThoughtsTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(goodThoughtsTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1369,13 +1461,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Trending</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllTrending}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={trendingTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(trendingTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1391,13 +1483,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Bhagvat Gita</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllBhagvatGita}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={bhagvatGitaTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(bhagvatGitaTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1413,13 +1505,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Books</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllBooks}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={booksTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(booksTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1435,13 +1527,13 @@ const HomeScreen: React.FC = React.memo(() => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Celebrates the Moments</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={() => navigation.navigate('GreetingTemplates')}>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllCelebratesMoments}>
                   <Text style={styles.viewAllButtonText}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
                 data={celebratesMomentsTemplates}
-                renderItem={renderGreetingCard}
+                renderItem={createGreetingCardRenderer(celebratesMomentsTemplates)}
                 keyExtractor={keyExtractor}
                 numColumns={3}
                 columnWrapperStyle={styles.templateRow}
@@ -1760,6 +1852,631 @@ const HomeScreen: React.FC = React.memo(() => {
                             <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
                           </LinearGradient>
                         )}
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Motivation Modal */}
+        <Modal
+          visible={isMotivationModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeMotivationModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.upcomingEventsModalGradient}
+              >
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Motivation</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all motivational templates</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upcomingEventsCloseButton}
+                    onPress={closeMotivationModal}
+                  >
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`motivation-modal-${motivationTemplates.length}`}
+                  data={motivationTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.upcomingEventModalCard}
+                      onPress={() => {
+                        closeMotivationModal();
+                        navigation.navigate('PosterPlayer', {
+                          selectedPoster: template,
+                          relatedPosters: motivationTemplates.filter(t => t.id !== template.id),
+                        });
+                      }}
+                    >
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient
+                          colors={['transparent', 'rgba(0,0,0,0.8)']}
+                          style={styles.upcomingEventModalOverlay}
+                        />
+                        <LinearGradient
+                          colors={['#4ecdc4', '#44a08d']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.upcomingEventModalBadge}
+                        >
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Good Morning Modal */}
+        <Modal
+          visible={isGoodMorningModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeGoodMorningModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.upcomingEventsModalGradient}
+              >
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Good Morning</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all good morning templates</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upcomingEventsCloseButton}
+                    onPress={closeGoodMorningModal}
+                  >
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`goodmorning-modal-${goodMorningTemplates.length}`}
+                  data={goodMorningTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.upcomingEventModalCard}
+                      onPress={() => {
+                        closeGoodMorningModal();
+                        navigation.navigate('PosterPlayer', {
+                          selectedPoster: template,
+                          relatedPosters: goodMorningTemplates.filter(t => t.id !== template.id),
+                        });
+                      }}
+                    >
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient
+                          colors={['transparent', 'rgba(0,0,0,0.8)']}
+                          style={styles.upcomingEventModalOverlay}
+                        />
+                        <LinearGradient
+                          colors={['#4ecdc4', '#44a08d']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.upcomingEventModalBadge}
+                        >
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Business Ethics Modal */}
+        <Modal
+          visible={isBusinessEthicsModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeBusinessEthicsModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.upcomingEventsModalGradient}
+              >
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Business Ethics</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all business ethics templates</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upcomingEventsCloseButton}
+                    onPress={closeBusinessEthicsModal}
+                  >
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`businessethics-modal-${businessEthicsTemplates.length}`}
+                  data={businessEthicsTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.upcomingEventModalCard}
+                      onPress={() => {
+                        closeBusinessEthicsModal();
+                        navigation.navigate('PosterPlayer', {
+                          selectedPoster: template,
+                          relatedPosters: businessEthicsTemplates.filter(t => t.id !== template.id),
+                        });
+                      }}
+                    >
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient
+                          colors={['transparent', 'rgba(0,0,0,0.8)']}
+                          style={styles.upcomingEventModalOverlay}
+                        />
+                        <LinearGradient
+                          colors={['#4ecdc4', '#44a08d']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.upcomingEventModalBadge}
+                        >
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Devotional Modal */}
+        <Modal
+          visible={isDevotionalModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeDevotionalModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.upcomingEventsModalGradient}
+              >
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Devotional</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all devotional templates</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upcomingEventsCloseButton}
+                    onPress={closeDevotionalModal}
+                  >
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`devotional-modal-${devotionalTemplates.length}`}
+                  data={devotionalTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.upcomingEventModalCard}
+                      onPress={() => {
+                        closeDevotionalModal();
+                        navigation.navigate('PosterPlayer', {
+                          selectedPoster: template,
+                          relatedPosters: devotionalTemplates.filter(t => t.id !== template.id),
+                        });
+                      }}
+                    >
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient
+                          colors={['transparent', 'rgba(0,0,0,0.8)']}
+                          style={styles.upcomingEventModalOverlay}
+                        />
+                        <LinearGradient
+                          colors={['#4ecdc4', '#44a08d']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.upcomingEventModalBadge}
+                        >
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Leader Quotes Modal */}
+        <Modal
+          visible={isLeaderQuotesModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeLeaderQuotesModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.upcomingEventsModalGradient}
+              >
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Leader Quotes</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all leader quotes templates</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upcomingEventsCloseButton}
+                    onPress={closeLeaderQuotesModal}
+                  >
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`leaderquotes-modal-${leaderQuotesTemplates.length}`}
+                  data={leaderQuotesTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity
+                      activeOpacity={0.8}
+                      style={styles.upcomingEventModalCard}
+                      onPress={() => {
+                        closeLeaderQuotesModal();
+                        navigation.navigate('PosterPlayer', {
+                          selectedPoster: template,
+                          relatedPosters: leaderQuotesTemplates.filter(t => t.id !== template.id),
+                        });
+                      }}
+                    >
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient
+                          colors={['transparent', 'rgba(0,0,0,0.8)']}
+                          style={styles.upcomingEventModalOverlay}
+                        />
+                        <LinearGradient
+                          colors={['#4ecdc4', '#44a08d']}
+                          start={{ x: 0, y: 0 }}
+                          end={{ x: 1, y: 0 }}
+                          style={styles.upcomingEventModalBadge}
+                        >
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Atmanirbhar Bharat Modal */}
+        <Modal visible={isAtmanirbharBharatModalVisible} transparent={true} animationType="slide" onRequestClose={closeAtmanirbharBharatModal}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Atmanirbhar Bharat</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all Atmanirbhar Bharat templates</Text>
+                  </View>
+                  <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeAtmanirbharBharatModal}>
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`atmanirbhar-modal-${atmanirbharBharatTemplates.length}`}
+                  data={atmanirbharBharatTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                      closeAtmanirbharBharatModal();
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: atmanirbharBharatTemplates.filter(t => t.id !== template.id) });
+                    }}>
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.upcomingEventModalOverlay} />
+                        <LinearGradient colors={['#4ecdc4', '#44a08d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.upcomingEventModalBadge}>
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Good Thoughts Modal */}
+        <Modal visible={isGoodThoughtsModalVisible} transparent={true} animationType="slide" onRequestClose={closeGoodThoughtsModal}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Good Thoughts</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all good thoughts templates</Text>
+                  </View>
+                  <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeGoodThoughtsModal}>
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`goodthoughts-modal-${goodThoughtsTemplates.length}`}
+                  data={goodThoughtsTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                      closeGoodThoughtsModal();
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: goodThoughtsTemplates.filter(t => t.id !== template.id) });
+                    }}>
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.upcomingEventModalOverlay} />
+                        <LinearGradient colors={['#4ecdc4', '#44a08d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.upcomingEventModalBadge}>
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Trending Modal */}
+        <Modal visible={isTrendingModalVisible} transparent={true} animationType="slide" onRequestClose={closeTrendingModal}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Trending</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all trending templates</Text>
+                  </View>
+                  <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeTrendingModal}>
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`trending-modal-${trendingTemplates.length}`}
+                  data={trendingTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                      closeTrendingModal();
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: trendingTemplates.filter(t => t.id !== template.id) });
+                    }}>
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.upcomingEventModalOverlay} />
+                        <LinearGradient colors={['#4ecdc4', '#44a08d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.upcomingEventModalBadge}>
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Bhagvat Gita Modal */}
+        <Modal visible={isBhagvatGitaModalVisible} transparent={true} animationType="slide" onRequestClose={closeBhagvatGitaModal}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Bhagvat Gita</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all Bhagvat Gita templates</Text>
+                  </View>
+                  <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeBhagvatGitaModal}>
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`bhagvatgita-modal-${bhagvatGitaTemplates.length}`}
+                  data={bhagvatGitaTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                      closeBhagvatGitaModal();
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: bhagvatGitaTemplates.filter(t => t.id !== template.id) });
+                    }}>
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.upcomingEventModalOverlay} />
+                        <LinearGradient colors={['#4ecdc4', '#44a08d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.upcomingEventModalBadge}>
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Books Modal */}
+        <Modal visible={isBooksModalVisible} transparent={true} animationType="slide" onRequestClose={closeBooksModal}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Books</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all books templates</Text>
+                  </View>
+                  <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeBooksModal}>
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`books-modal-${booksTemplates.length}`}
+                  data={booksTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                      closeBooksModal();
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: booksTemplates.filter(t => t.id !== template.id) });
+                    }}>
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.upcomingEventModalOverlay} />
+                        <LinearGradient colors={['#4ecdc4', '#44a08d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.upcomingEventModalBadge}>
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
+                      </View>
+                    </TouchableOpacity>
+                  )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Celebrates the Moments Modal */}
+        <Modal visible={isCelebratesMomentsModalVisible} transparent={true} animationType="slide" onRequestClose={closeCelebratesMomentsModal}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Celebrates the Moments</Text>
+                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all celebrates the moments templates</Text>
+                  </View>
+                  <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeCelebratesMomentsModal}>
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`celebrates-modal-${celebratesMomentsTemplates.length}`}
+                  data={celebratesMomentsTemplates}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={3}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: template }) => (
+                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                      closeCelebratesMomentsModal();
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: celebratesMomentsTemplates.filter(t => t.id !== template.id) });
+                    }}>
+                      <View style={styles.upcomingEventModalImageContainer}>
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                        <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.upcomingEventModalOverlay} />
+                        <LinearGradient colors={['#4ecdc4', '#44a08d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.upcomingEventModalBadge}>
+                          <Icon name="star" size={12} color="#ffffff" />
+                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
+                        </LinearGradient>
                       </View>
                     </TouchableOpacity>
                   )}

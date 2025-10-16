@@ -212,6 +212,19 @@ class HomeApiService {
       return undefined;
     }
     
+    // Filter out emojis - they are not valid image URLs
+    // Emoji regex covers most common emoji ranges
+    if (/[\u{1F000}-\u{1FFFF}]|[\u{2600}-\u{27BF}]|[\u{1F300}-\u{1F9FF}]/u.test(url)) {
+      console.warn('⚠️ [HOME API] Filtering out emoji as image URL:', url);
+      return undefined; // Return undefined so fallback image is used
+    }
+    
+    // Filter out placeholder paths - these don't actually exist on the server
+    if (url.includes('/api/placeholder/') || url.includes('placeholder')) {
+      console.warn('⚠️ [HOME API] Filtering out placeholder URL:', url);
+      return undefined; // Return undefined so fallback image is used
+    }
+    
     // Already absolute URL
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
@@ -272,12 +285,11 @@ class HomeApiService {
    */
   private convertUpcomingEventsUrls(events: UpcomingEvent[]): UpcomingEvent[] {
     return events.map(event => {
-      const originalUrl = event.imageUrl;
       const convertedUrl = this.convertToAbsoluteUrl(event.imageUrl);
       
       return {
         ...event,
-        imageUrl: convertedUrl || originalUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop',
+        imageUrl: convertedUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop',
       };
     });
   }
@@ -286,11 +298,15 @@ class HomeApiService {
    * Convert image URLs in professional templates
    */
   private convertProfessionalTemplatesUrls(templates: ProfessionalTemplate[]): ProfessionalTemplate[] {
-    return templates.map(template => ({
-      ...template,
-      thumbnail: this.convertToAbsoluteUrl(template.thumbnail) || template.thumbnail,
-      previewUrl: template.previewUrl ? this.convertToAbsoluteUrl(template.previewUrl) : template.previewUrl,
-    }));
+    return templates.map(template => {
+      const convertedThumbnail = this.convertToAbsoluteUrl(template.thumbnail);
+      
+      return {
+        ...template,
+        thumbnail: convertedThumbnail || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
+        previewUrl: template.previewUrl ? this.convertToAbsoluteUrl(template.previewUrl) : template.previewUrl,
+      };
+    });
   }
 
   /**
@@ -299,7 +315,7 @@ class HomeApiService {
   private convertVideoContentUrls(videos: VideoContent[]): VideoContent[] {
     return videos.map(video => ({
       ...video,
-      thumbnail: this.convertToAbsoluteUrl(video.thumbnail) || video.thumbnail,
+      thumbnail: this.convertToAbsoluteUrl(video.thumbnail) || 'https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?w=300&h=200&fit=crop',
       videoUrl: this.convertToAbsoluteUrl(video.videoUrl) || video.videoUrl,
     }));
   }
