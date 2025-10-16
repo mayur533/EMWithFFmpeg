@@ -63,7 +63,7 @@ const TemplateGalleryScreen: React.FC = () => {
   const { isSubscribed, checkPremiumAccess, refreshSubscription } = useSubscription();
   const [templates, setTemplates] = useState<Template[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -87,20 +87,28 @@ const TemplateGalleryScreen: React.FC = () => {
     { id: 'hindi', label: 'Hindi', value: 'Hindi', icon: 'translate' },
   ];
 
-  // Fetch templates
-  const fetchTemplates = useCallback(async (filters?: TemplateFilters) => {
+  // Optimized fetch templates with instant cache loading
+  const fetchTemplates = useCallback(async (filters?: TemplateFilters, isRefresh: boolean = false) => {
     try {
-      setLoading(true);
+      // Cache will make this instant on subsequent loads
       const data = await templateService.getTemplates(filters);
       setTemplates(data);
       setFilteredTemplates(data);
+      
+      // Hide initial loading after first fetch
+      if (initialLoading) {
+        setInitialLoading(false);
+      }
     } catch (error) {
       console.error('Error fetching templates:', error);
-      Alert.alert('Error', 'Failed to load templates. Please try again.');
-    } finally {
-      setLoading(false);
+      if (initialLoading) {
+        setInitialLoading(false);
+      }
+      if (!isRefresh) {
+        Alert.alert('Error', 'Failed to load templates. Please try again.');
+      }
     }
-  }, []);
+  }, [initialLoading]);
 
 
 
@@ -168,7 +176,7 @@ const TemplateGalleryScreen: React.FC = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     templateService.clearCache(); // Clear cache on refresh
-    await fetchTemplates();
+    await fetchTemplates(undefined, true);
     setRefreshing(false);
   }, [fetchTemplates]);
 
@@ -450,20 +458,6 @@ const TemplateGalleryScreen: React.FC = () => {
     </Modal>
   );
 
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
-        <LinearGradient
-          colors={theme.colors.gradient}
-          style={styles.loadingContainer}
-        >
-          <ActivityIndicator size="large" color="#ffffff" />
-          <Text style={styles.loadingText}>Loading templates...</Text>
-        </LinearGradient>
-      </SafeAreaView>
-    );
-  }
-
   return (
     <SafeAreaView 
       style={[styles.container, { backgroundColor: theme.colors.background }]}
@@ -550,22 +544,31 @@ const TemplateGalleryScreen: React.FC = () => {
 
           {/* Templates Grid */}
           <View style={styles.templatesSection}>
-            <FlatList
-              data={filteredTemplates}
-              renderItem={renderTemplateItem}
-              keyExtractor={keyExtractor}
-              numColumns={2}
-              columnWrapperStyle={styles.templateRow}
-              showsVerticalScrollIndicator={false}
-              scrollEnabled={false}
-              nestedScrollEnabled={true}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={6}
-              windowSize={10}
-              initialNumToRender={4}
-              contentContainerStyle={{ paddingBottom: 40 }}
-              ListEmptyComponent={renderEmptyState}
-            />
+            {initialLoading && filteredTemplates.length === 0 ? (
+              <View style={styles.inlineLoadingContainer}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={[styles.inlineLoadingText, { color: theme.colors.text }]}>
+                  Loading templates...
+                </Text>
+              </View>
+            ) : (
+              <FlatList
+                data={filteredTemplates}
+                renderItem={renderTemplateItem}
+                keyExtractor={keyExtractor}
+                numColumns={2}
+                columnWrapperStyle={styles.templateRow}
+                showsVerticalScrollIndicator={false}
+                scrollEnabled={false}
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={6}
+                windowSize={10}
+                initialNumToRender={4}
+                contentContainerStyle={{ paddingBottom: 40 }}
+                ListEmptyComponent={renderEmptyState}
+              />
+            )}
           </View>
         </ScrollView>
 
@@ -594,16 +597,15 @@ const styles = StyleSheet.create({
   gradientBackground: {
     flex: 1,
   },
-  loadingContainer: {
-    flex: 1,
+  inlineLoadingContainer: {
+    paddingVertical: 80,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  loadingText: {
-    marginTop: 20,
-    fontSize: 18,
-    color: '#ffffff',
-    fontWeight: '600',
+  inlineLoadingText: {
+    marginTop: 16,
+    fontSize: 16,
+    fontWeight: '500',
   },
   header: {
     paddingTop: 0,

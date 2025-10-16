@@ -33,95 +33,120 @@ export interface GreetingFilters {
 
 class GreetingTemplatesService {
   private readonly BASE_URL = 'https://eventmarketersbackend.onrender.com';
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
+  // Cache storage
+  private cache: {
+    categories: { data: GreetingCategory[] | null; timestamp: number };
+    templates: { data: GreetingTemplate[] | null; timestamp: number };
+  } = {
+    categories: { data: null, timestamp: 0 },
+    templates: { data: null, timestamp: 0 },
+  };
 
   /**
-   * Convert relative image URLs to absolute URLs
+   * Check if cached data is still valid
+   */
+  private isCacheValid(cacheKey: 'categories' | 'templates'): boolean {
+    const cached = this.cache[cacheKey];
+    return cached.data !== null && (Date.now() - cached.timestamp) < this.CACHE_DURATION;
+  }
+
+  /**
+   * Clear cache for a specific key or all cache
+   */
+  clearCache(cacheKey?: 'categories' | 'templates'): void {
+    if (cacheKey) {
+      this.cache[cacheKey] = { data: null, timestamp: 0 };
+      console.log(`🧹 [CACHE] Cleared ${cacheKey} cache`);
+    } else {
+      this.cache = {
+        categories: { data: null, timestamp: 0 },
+        templates: { data: null, timestamp: 0 },
+      };
+      console.log('🧹 [CACHE] Cleared all greeting templates cache');
+    }
+  }
+
+  /**
+   * Convert relative image URLs to absolute URLs (optimized - minimal logging)
    */
   private convertToAbsoluteUrl(url: string | undefined | null): string | undefined {
     if (!url) {
-      console.log('⚠️ [URL CONVERSION] No URL provided, returning undefined');
       return undefined;
     }
     
     // Already absolute URL
     if (url.startsWith('http://') || url.startsWith('https://')) {
-      console.log('✅ [URL CONVERSION] Already absolute:', url);
       return url;
     }
     
     // Handle URLs that don't start with /
     const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
-    const absoluteUrl = `${this.BASE_URL}${normalizedUrl}`;
-    
-    console.log('🔧 [URL CONVERSION] Converted:', url, '→', absoluteUrl);
-    return absoluteUrl;
+    return `${this.BASE_URL}${normalizedUrl}`;
   }
 
-  // Get all greeting categories
+  // Get all greeting categories (with caching)
   async getCategories(): Promise<GreetingCategory[]> {
+    // Check cache first
+    if (this.isCacheValid('categories')) {
+      console.log('✅ [CACHE] Returning cached categories');
+      return this.cache.categories.data!;
+    }
+
     try {
-      console.log('📡 [GREETING CATEGORIES API] Calling: /api/mobile/greetings/categories');
+      console.log('📡 [GREETING CATEGORIES API] Fetching from server...');
       const response = await api.get('/api/mobile/greetings/categories');
-      
-      console.log('✅ [GREETING CATEGORIES API] Response received');
-      console.log('📊 [GREETING CATEGORIES API] Full Response:', JSON.stringify(response.data, null, 2));
       
       if (response.data.success) {
         // Extract categories array - backend returns { data: { categories: [...] } }
         const categoriesArray = response.data.data.categories || response.data.data;
         
         if (!Array.isArray(categoriesArray)) {
-          console.error('❌ [GREETING CATEGORIES API] Categories is not an array:', typeof categoriesArray);
+          console.error('❌ [GREETING CATEGORIES API] Invalid format');
           throw new Error('Invalid categories format');
         }
-        
-        console.log('📊 [GREETING CATEGORIES API] Categories count:', categoriesArray.length);
         
         // Map backend response to frontend format
         const mappedCategories = categoriesArray.map((backendCategory: any) => ({
           id: backendCategory.id,
           name: backendCategory.name,
-          icon: backendCategory.icon, // Don't provide fallback - show nothing if backend doesn't provide icon
+          icon: backendCategory.icon,
           color: backendCategory.color || '#4A90E2'
         }));
         
-        console.log('✅ [GREETING CATEGORIES API] Mapped', mappedCategories.length, 'categories');
+        // Cache the result
+        this.cache.categories = {
+          data: mappedCategories,
+          timestamp: Date.now(),
+        };
+        
+        console.log(`✅ [GREETING CATEGORIES API] Fetched and cached ${mappedCategories.length} categories`);
         return mappedCategories;
       } else {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
       console.error('❌ [GREETING CATEGORIES API] Error:', error);
-      console.log('⚠️ [GREETING CATEGORIES API] Returning empty array - no mock data');
       return []; // Return empty array instead of mock data
     }
   }
 
-  // Get greeting templates by category
+  // Get greeting templates by category (optimized logging)
   async getTemplatesByCategory(category: string): Promise<GreetingTemplate[]> {
     try {
-      console.log('📡 [GREETING BY CATEGORY API] Calling: /api/mobile/greetings/templates?category=' + category);
+      console.log(`📡 [GREETING BY CATEGORY API] Fetching category: ${category}`);
       const response = await api.get(`/api/mobile/greetings/templates?category=${category}`);
       
-      console.log('✅ [GREETING BY CATEGORY API] Response received');
-      console.log('📊 [GREETING BY CATEGORY API] Full Response:', JSON.stringify(response.data, null, 2));
-      
       if (response.data.success) {
-        // Map backend response to frontend format with URL conversion
+        // Map backend response to frontend format with URL conversion (optimized - no per-item logging)
         const mappedTemplates = response.data.data.templates.map((backendTemplate: any) => {
-          const originalUrl = backendTemplate.imageUrl;
           const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
-          
           const finalThumbnail = absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
-          
-          console.log(`📸 [GREETING BY CATEGORY API] Template: ${backendTemplate.title}`);
-          console.log(`   Original URL: ${originalUrl}`);
-          console.log(`   Absolute URL: ${absoluteUrl}`);
-          console.log(`   Final URL: ${finalThumbnail}`);
           
           return {
             id: backendTemplate.id,
-            name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
+            name: backendTemplate.title,
             thumbnail: finalThumbnail,
             category: backendTemplate.category,
             content: {
@@ -135,20 +160,28 @@ class GreetingTemplatesService {
           };
         });
         
-        console.log('✅ [GREETING BY CATEGORY API] Mapped', mappedTemplates.length, 'templates');
+        console.log(`✅ [GREETING BY CATEGORY API] Fetched ${mappedTemplates.length} templates`);
         return mappedTemplates;
       } else {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
       console.error('❌ [GREETING BY CATEGORY API] Error:', error);
-      console.log('⚠️ [GREETING BY CATEGORY API] Returning empty array - no mock data');
       return []; // Return empty array instead of mock data
     }
   }
 
-  // Get all greeting templates with filters
+  // Get all greeting templates with filters (with caching)
   async getTemplates(filters?: GreetingFilters): Promise<GreetingTemplate[]> {
+    // Only cache when no filters are applied (base template list)
+    const shouldCache = !filters || Object.keys(filters).length === 0;
+    
+    // Check cache first for unfiltered requests
+    if (shouldCache && this.isCacheValid('templates')) {
+      console.log('✅ [CACHE] Returning cached templates');
+      return this.cache.templates.data!;
+    }
+
     try {
       const params = new URLSearchParams();
       if (filters?.category) params.append('category', filters.category);
@@ -156,30 +189,18 @@ class GreetingTemplatesService {
       if (filters?.isPremium !== undefined) params.append('isPremium', filters.isPremium.toString());
       if (filters?.search) params.append('search', filters.search);
 
-      console.log('📡 [GREETING TEMPLATES API] Calling: /api/mobile/greetings/templates?' + params.toString());
+      console.log('📡 [GREETING TEMPLATES API] Fetching from server...');
       const response = await api.get(`/api/mobile/greetings/templates?${params.toString()}`);
       
-      console.log('✅ [GREETING TEMPLATES API] Response received');
-      console.log('📊 [GREETING TEMPLATES API] Full Response:', JSON.stringify(response.data, null, 2));
-      
       if (response.data.success) {
-        console.log('📊 [GREETING TEMPLATES API] Templates count:', response.data.data.templates.length);
-        
-        // Map backend response to frontend format with URL conversion
+        // Map backend response to frontend format with URL conversion (optimized - no per-item logging)
         const mappedTemplates = response.data.data.templates.map((backendTemplate: any) => {
-          const originalUrl = backendTemplate.imageUrl;
           const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
-          
           const finalThumbnail = absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
-          
-          console.log(`📸 [GREETING TEMPLATES API] Template: ${backendTemplate.title}`);
-          console.log(`   Original URL: ${originalUrl}`);
-          console.log(`   Absolute URL: ${absoluteUrl}`);
-          console.log(`   Final URL: ${finalThumbnail}`);
           
           return {
             id: backendTemplate.id,
-            name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
+            name: backendTemplate.title,
             thumbnail: finalThumbnail,
             category: backendTemplate.category,
             content: {
@@ -193,52 +214,48 @@ class GreetingTemplatesService {
           };
         });
         
-        console.log('✅ [GREETING TEMPLATES API] Mapped', mappedTemplates.length, 'templates with absolute URLs');
+        // Cache the result if unfiltered
+        if (shouldCache) {
+          this.cache.templates = {
+            data: mappedTemplates,
+            timestamp: Date.now(),
+          };
+        }
+        
+        console.log(`✅ [GREETING TEMPLATES API] Fetched ${mappedTemplates.length} templates ${shouldCache ? '(cached)' : '(not cached - filtered)'}`);
         return mappedTemplates;
       } else {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
       console.error('❌ [GREETING TEMPLATES API] Error:', error);
-      console.log('⚠️ [GREETING TEMPLATES API] Returning empty array - no mock data');
       return []; // Return empty array instead of mock data
     }
   }
 
-  // Search greeting templates
+  // Search greeting templates (optimized logging)
   async searchTemplates(query: string): Promise<GreetingTemplate[]> {
     try {
-      console.log('📡 [GREETING SEARCH API] Calling: /api/mobile/greetings/templates/search?q=' + query);
+      console.log(`📡 [GREETING SEARCH API] Searching for: "${query}"`);
       const response = await api.get(`/api/mobile/greetings/templates/search?q=${query}`);
-      
-      console.log('✅ [GREETING SEARCH API] Response received');
-      console.log('📊 [GREETING SEARCH API] Full Response:', JSON.stringify(response.data, null, 2));
       
       if (response.data.success) {
         // Check if templates array exists and has items
         const templates = response.data.data?.templates || [];
         
         if (templates.length === 0) {
-          console.log('⚠️ [GREETING SEARCH API] No templates found for query:', query);
+          console.log('⚠️ [GREETING SEARCH API] No templates found');
           return [];
         }
         
-        // Map backend response to frontend format with URL conversion
+        // Map backend response to frontend format with URL conversion (optimized - no per-item logging)
         const mappedTemplates = templates.map((backendTemplate: any) => {
-          const originalUrl = backendTemplate.imageUrl;
           const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
-          
-          // Fallback to Unsplash if no URL
           const finalThumbnail = absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
-          
-          console.log(`📸 [GREETING SEARCH API] Template: ${backendTemplate.title}`);
-          console.log(`   Original URL: ${originalUrl}`);
-          console.log(`   Absolute URL: ${absoluteUrl}`);
-          console.log(`   Final URL: ${finalThumbnail}`);
           
           return {
             id: backendTemplate.id,
-            name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
+            name: backendTemplate.title,
             thumbnail: finalThumbnail,
             category: backendTemplate.category,
             content: {
@@ -252,14 +269,13 @@ class GreetingTemplatesService {
           };
         });
         
-        console.log('✅ [GREETING SEARCH API] Found', mappedTemplates.length, 'templates');
+        console.log(`✅ [GREETING SEARCH API] Found ${mappedTemplates.length} templates`);
         return mappedTemplates;
       } else {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
       console.error('❌ [GREETING SEARCH API] Error:', error);
-      console.log('⚠️ [GREETING SEARCH API] Returning empty array - no mock data');
       return []; // Return empty array instead of mock data
     }
   }

@@ -100,17 +100,30 @@ class AuthService {
       const response = await authApi.register(registerData);
       
       if (response.success) {
-        // Save user and token, protect companyName from future API contamination
+        // Save user and token, protect ALL registration fields from future contamination
         const userData = {
           ...response.data.user,
-          // Store original companyName to protect from business profile contamination
+          // Store original values to protect from business profile contamination
           _originalCompanyName: response.data.user.companyName,
+          _originalAddress: response.data.user.address || registerData.address || '',
+          _originalWebsite: response.data.user.website || registerData.website || '',
+          _originalCategory: response.data.user.category || registerData.category || '',
+          _originalDescription: response.data.user.description || registerData.description || '',
+          _originalAlternatePhone: response.data.user.alternatePhone || registerData.alternatePhone || '',
         };
+        
+        console.log('✅ User registration successful via API:', userData.id);
+        console.log('🔒 Protected original registration values:');
+        console.log('   - _originalAddress:', userData._originalAddress);
+        console.log('   - _originalWebsite:', userData._originalWebsite);
+        console.log('   - _originalCategory:', userData._originalCategory);
+        console.log('   - _originalDescription:', userData._originalDescription);
+        console.log('   - _originalAlternatePhone:', userData._originalAlternatePhone);
+        
         this.currentUser = userData;
         await this.saveUserToStorage(userData, response.data.token);
         this.notifyAuthStateListeners(this.currentUser);
         
-        console.log('User registration successful via API:', userData.id);
         return { success: true, user: userData };
       } else {
         throw new Error('Registration failed');
@@ -135,19 +148,35 @@ class AuthService {
       const response = await authApi.login(loginData);
       
       if (response.success) {
-        // Save user and token
-        this.currentUser = response.data.user;
-        await this.saveUserToStorage(response.data.user, response.data.token);
+        // Save user and token, ensure _original* fields are preserved if they exist
+        const userData = {
+          ...response.data.user,
+          // Preserve or create _original* fields to protect from contamination
+          _originalCompanyName: response.data.user._originalCompanyName || response.data.user.companyName,
+          _originalAddress: response.data.user._originalAddress || response.data.user.address || '',
+          _originalWebsite: response.data.user._originalWebsite || response.data.user.website || '',
+          _originalCategory: response.data.user._originalCategory || response.data.user.category || '',
+          _originalDescription: response.data.user._originalDescription || response.data.user.description || '',
+          _originalAlternatePhone: response.data.user._originalAlternatePhone || response.data.user.alternatePhone || '',
+        };
+        
+        this.currentUser = userData;
+        await this.saveUserToStorage(userData, response.data.token);
         this.notifyAuthStateListeners(this.currentUser);
         
-        console.log('✅ Email sign-in successful via API:', response.data.user.id);
+        console.log('✅ Email sign-in successful via API:', userData.id);
+        console.log('🔒 Protected values preserved:', {
+          _originalAddress: userData._originalAddress,
+          _originalWebsite: userData._originalWebsite,
+          _originalCategory: userData._originalCategory
+        });
         console.log('═══════════════════════════════════════════════════════════');
         console.log('🔑 AUTH TOKEN (auth.ts):');
         console.log('Token:', response.data.token);
         console.log('Token Length:', response.data.token?.length || 0);
         console.log('Token Preview:', response.data.token?.substring(0, 50) + '...');
         console.log('═══════════════════════════════════════════════════════════');
-        return { success: true, user: response.data.user };
+        return { success: true, user: userData };
       } else {
         throw new Error('Login failed');
       }
@@ -179,19 +208,35 @@ class AuthService {
       const response = await authApi.googleLogin(googleAuthData);
       
       if (response.success) {
-        // Save user and token
-        this.currentUser = response.data.user;
-        await this.saveUserToStorage(response.data.user, response.data.token);
+        // Save user and token, ensure _original* fields are preserved if they exist
+        const userData = {
+          ...response.data.user,
+          // Preserve or create _original* fields to protect from contamination
+          _originalCompanyName: response.data.user._originalCompanyName || response.data.user.companyName,
+          _originalAddress: response.data.user._originalAddress || response.data.user.address || '',
+          _originalWebsite: response.data.user._originalWebsite || response.data.user.website || '',
+          _originalCategory: response.data.user._originalCategory || response.data.user.category || '',
+          _originalDescription: response.data.user._originalDescription || response.data.user.description || '',
+          _originalAlternatePhone: response.data.user._originalAlternatePhone || response.data.user.alternatePhone || '',
+        };
+        
+        this.currentUser = userData;
+        await this.saveUserToStorage(userData, response.data.token);
         this.notifyAuthStateListeners(this.currentUser);
         
-        console.log('✅ Google sign-in successful via API:', response.data.user.id);
+        console.log('✅ Google sign-in successful via API:', userData.id);
+        console.log('🔒 Protected values preserved:', {
+          _originalAddress: userData._originalAddress,
+          _originalWebsite: userData._originalWebsite,
+          _originalCategory: userData._originalCategory
+        });
         console.log('═══════════════════════════════════════════════════════════');
         console.log('🔑 GOOGLE AUTH TOKEN (auth.ts):');
         console.log('Token:', response.data.token);
         console.log('Token Length:', response.data.token?.length || 0);
         console.log('Token Preview:', response.data.token?.substring(0, 50) + '...');
         console.log('═══════════════════════════════════════════════════════════');
-        return { success: true, user: response.data.user };
+        return { success: true, user: userData };
       } else {
         throw new Error('Google login failed');
       }

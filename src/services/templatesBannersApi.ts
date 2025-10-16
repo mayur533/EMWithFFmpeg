@@ -148,7 +148,7 @@ class TemplatesBannersApiService {
     return absoluteUrl;
   }
 
-  // Get templates
+  // Get templates (optimized logging)
   async getTemplates(filters?: TemplateFilters): Promise<TemplatesResponse> {
     try {
       const params = new URLSearchParams();
@@ -159,26 +159,13 @@ class TemplatesBannersApiService {
       if (filters?.page) params.append('page', filters.page.toString());
       if (filters?.limit) params.append('limit', filters.limit.toString());
 
-      console.log('📡 [TEMPLATES API] Calling: /api/mobile/templates?' + params.toString());
+      console.log('📡 [TEMPLATES API] Fetching templates...');
       const response = await api.get(`/api/mobile/templates?${params.toString()}`);
       
-      console.log('✅ [TEMPLATES API] Response received');
-      console.log('📊 [TEMPLATES API] Full Response:', JSON.stringify(response.data, null, 2));
-      console.log('📊 [TEMPLATES API] Success:', response.data.success);
-      
       if (response.data.success) {
-        console.log('📊 [TEMPLATES API] Templates count:', response.data.data.templates.length);
-        
-        if (response.data.data.templates.length > 0) {
-          console.log('📊 [TEMPLATES API] First template (raw):', JSON.stringify(response.data.data.templates[0], null, 2));
-        }
-        
-        // Map backend response to frontend format and convert URLs
+        // Map backend response to frontend format and convert URLs (optimized - no per-item logging)
         const mappedTemplates = response.data.data.templates.map((backendTemplate: any) => {
-          const originalUrl = backendTemplate.imageUrl;
           const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
-          
-          console.log(`📸 [TEMPLATES API] ${backendTemplate.title}:`, originalUrl, '→', absoluteUrl);
           
           // Handle tags - backend returns array, not string
           let tags: string[] = [];
@@ -188,14 +175,13 @@ class TemplatesBannersApiService {
             try {
               tags = JSON.parse(backendTemplate.tags);
             } catch (e) {
-              console.warn('Failed to parse tags for template:', backendTemplate.title);
               tags = [];
             }
           }
           
           return {
             id: backendTemplate.id,
-            name: backendTemplate.title, // Backend uses 'title', frontend expects 'name'
+            name: backendTemplate.title,
             description: backendTemplate.description || '',
             thumbnail: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
             imageUrl: absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=400&fit=crop',
@@ -203,16 +189,12 @@ class TemplatesBannersApiService {
             type: backendTemplate.type || 'daily',
             language: backendTemplate.language || 'English',
             tags: tags,
-
             downloads: backendTemplate.downloads || 0,
             createdAt: backendTemplate.createdAt,
           };
         });
 
-        console.log('✅ [TEMPLATES API] Mapped templates count:', mappedTemplates.length);
-        if (mappedTemplates.length > 0) {
-          console.log('📊 [TEMPLATES API] First mapped template:', JSON.stringify(mappedTemplates[0], null, 2));
-        }
+        console.log(`✅ [TEMPLATES API] Fetched ${mappedTemplates.length} templates`);
 
         return {
           success: true,
@@ -229,8 +211,7 @@ class TemplatesBannersApiService {
       }
     } catch (error) {
       console.error('❌ [TEMPLATES API] Error:', error);
-      console.error('❌ [TEMPLATES API] Error details:', JSON.stringify(error, null, 2));
-      console.log('⚠️ [TEMPLATES API] Using mock templates due to API error');
+      console.log('⚠️ [TEMPLATES API] Using mock templates');
       return this.getMockTemplates(filters);
     }
   }

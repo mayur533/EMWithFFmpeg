@@ -782,7 +782,7 @@ Error Fallback: Returns empty array []
 HOME SCREEN CATEGORIES (Using same endpoint with different search queries):
 The Home Screen displays 11 greeting template categories using the search API:
 
-  1. Motivation: GET /api/mobile/greetings/templates/search?q=motivation
+  1. Motivation: GET /api/mobile/greetings/templates/search?q=motivational
   2. Good Morning: GET /api/mobile/greetings/templates/search?q=good morning
   3. Business Ethics: GET /api/mobile/greetings/templates/search?q=business ethics
   4. Devotional: GET /api/mobile/greetings/templates/search?q=devotional

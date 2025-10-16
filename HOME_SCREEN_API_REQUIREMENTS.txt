@@ -19,7 +19,7 @@ Query Parameter: ?q={search_query}
 
 This SINGLE endpoint is called 11 times with different search terms:
 
-1. ?q=motivation
+1. ?q=motivational
 2. ?q=good morning
 3. ?q=business ethics
 4. ?q=devotional
@@ -40,7 +40,7 @@ Implementation: src/screens/HomeScreen.tsx (lines 365-377)
 Code:
 ```javascript
 const [
-  motivationResponse,
+  motivationalResponse,
   goodMorningResponse,
   businessEthicsResponse,
   devotionalResponse,
@@ -52,7 +52,7 @@ const [
   booksResponse,
   celebratesResponse
 ] = await Promise.allSettled([
-  greetingTemplatesService.searchTemplates('motivation'),
+  greetingTemplatesService.searchTemplates('motivational'),
   greetingTemplatesService.searchTemplates('good morning'),
   greetingTemplatesService.searchTemplates('business ethics'),
   greetingTemplatesService.searchTemplates('devotional'),
@@ -80,7 +80,7 @@ API REQUEST EXAMPLES
 Example 1: Motivation Category
 -------------------------------
 Request:
-  GET /api/mobile/greetings/templates/search?q=motivation
+  GET /api/mobile/greetings/templates/search?q=motivational
 
 Expected Response:
   {
@@ -90,9 +90,9 @@ Expected Response:
         {
           "id": "greeting1",
           "title": "Stay Motivated Daily",
-          "description": "Inspirational motivation quote",
-          "imageUrl": "/uploads/greetings/motivation1.jpg",
-          "category": "motivation",
+          "description": "Inspirational motivational quote",
+          "imageUrl": "/uploads/greetings/motivational1.jpg",
+          "category": "motivational",
           "downloads": 156,
           "isPremium": false,
           "createdAt": "2024-01-15T10:30:00.000Z"
@@ -101,8 +101,8 @@ Expected Response:
           "id": "greeting2",
           "title": "Success Motivation",
           "description": "Motivational success message",
-          "imageUrl": "/uploads/greetings/motivation2.jpg",
-          "category": "motivation",
+          "imageUrl": "/uploads/greetings/motivational2.jpg",
+          "category": "motivational",
           "downloads": 234,
           "isPremium": false,
           "createdAt": "2024-01-14T10:30:00.000Z"
@@ -163,7 +163,7 @@ BACKEND IMPLEMENTATION REQUIREMENTS
    - Must return relevant results for each search term
 
 2. SEARCH TERMS TO SUPPORT (11 categories)
-   ✓ "motivation" - Motivational quotes and messages
+   ✓ "motivational" - Motivational quotes and messages
    ✓ "good morning" - Morning greetings
    ✓ "business ethics" - Business ethics content
    ✓ "devotional" - Religious/spiritual content
@@ -199,7 +199,7 @@ TESTING REQUIREMENTS
 Backend Team Should Test:
 
 Single Search:
-□ Search for "motivation" returns relevant templates
+□ Search for "motivational" returns relevant templates
 □ Search for "good morning" returns morning greetings
 □ Search for "business ethics" returns ethics content
 □ Search for each of the 11 categories
@@ -230,7 +230,7 @@ EXAMPLE HOME SCREEN API CALLS
 
 When user opens Home Screen, these 11 API calls are made:
 
-1. GET https://eventmarketersbackend.onrender.com/api/mobile/greetings/templates/search?q=motivation
+1. GET https://eventmarketersbackend.onrender.com/api/mobile/greetings/templates/search?q=motivational
 2. GET https://eventmarketersbackend.onrender.com/api/mobile/greetings/templates/search?q=good%20morning
 3. GET https://eventmarketersbackend.onrender.com/api/mobile/greetings/templates/search?q=business%20ethics
 4. GET https://eventmarketersbackend.onrender.com/api/mobile/greetings/templates/search?q=devotional
@@ -263,7 +263,7 @@ Templates Table:
 - updatedAt
 
 Recommended Tags for Categories:
-- Motivation: ["motivation", "inspiration", "quotes", "success"]
+- Motivation: ["motivational", "motivation", "inspiration", "quotes", "success"]
 - Good Morning: ["good-morning", "morning", "greeting", "sunrise"]
 - Business Ethics: ["business", "ethics", "professional", "corporate"]
 - Devotional: ["devotional", "spiritual", "religious", "faith"]
@@ -279,10 +279,10 @@ Search Implementation Example:
 ```sql
 SELECT * FROM greeting_templates 
 WHERE 
-  LOWER(title) LIKE LOWER('%motivation%') OR
-  LOWER(description) LIKE LOWER('%motivation%') OR
-  LOWER(category) LIKE LOWER('%motivation%') OR
-  tags LIKE '%motivation%'
+  LOWER(title) LIKE LOWER('%motivational%') OR
+  LOWER(description) LIKE LOWER('%motivational%') OR
+  LOWER(category) LIKE LOWER('%motivational%') OR
+  tags LIKE '%motivational%'
 ORDER BY downloads DESC
 LIMIT 50;
 ```
@@ -346,7 +346,7 @@ Ideal Content Per Category: 20+ templates
 
 Priority Categories (must have content):
 1. Good Morning (most used)
-2. Motivation (popular)
+2. Motivational (popular)
 3. Trending (social proof)
 4. Celebrates the Moments (emotional connection)
 
@@ -436,7 +436,7 @@ Response:
 {
   "success": true,
   "data": {
-    "motivation": [...],
+    "motivational": [...],
     "goodMorning": [...],
     "businessEthics": [...],
     "devotional": [...],
@@ -491,7 +491,7 @@ API Documentation:
   - Endpoint: GET /api/mobile/greetings/templates/search
 
 Search Terms Used:
-  motivation, good morning, business ethics, devotional, leader quotes,
+  motivational, good morning, business ethics, devotional, leader quotes,
   atmanirbhar bharat, good thoughts, trending, bhagvat gita, books,
   celebrates the moments
 

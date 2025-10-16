@@ -51,17 +51,45 @@ export interface UpdateBannerRequest {
 }
 
 class TemplateService {
-  private cache: { [key: string]: { data: any; timestamp: number } } = {};
+  private cache: {
+    templates: { data: Template[] | null; timestamp: number };
+  } = {
+    templates: { data: null, timestamp: 0 },
+  };
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
-  private isCacheValid(key: string): boolean {
-    const cached = this.cache[key];
-    return cached && (Date.now() - cached.timestamp) < this.CACHE_DURATION;
+  /**
+   * Check if cached data is still valid
+   */
+  private isCacheValid(): boolean {
+    const cached = this.cache.templates;
+    return cached.data !== null && (Date.now() - cached.timestamp) < this.CACHE_DURATION;
   }
 
-  // Fetch all templates with optional filtering (API first, mock fallback)
+  /**
+   * Clear all cache
+   */
+  clearCache(): void {
+    this.cache = {
+      templates: { data: null, timestamp: 0 },
+    };
+    console.log('🧹 [CACHE] Cleared templates cache');
+  }
+
+  // Fetch all templates with optional filtering (with caching)
   async getTemplates(filters?: TemplateFilters): Promise<Template[]> {
+    // Only cache when no filters are applied (base template list)
+    const shouldCache = !filters || Object.keys(filters).length === 0;
+    
+    // Check cache first for unfiltered requests
+    if (shouldCache && this.isCacheValid()) {
+      console.log('✅ [CACHE] Returning cached templates');
+      return this.cache.templates.data!;
+    }
+
     try {
+      console.log('📡 [TEMPLATES] Fetching from server...');
+      
       // Try API first
       const apiFilters: ApiTemplateFilters = {
         type: filters?.type,
@@ -84,15 +112,24 @@ class TemplateService {
           tags: apiTemplate.tags,
           type: apiTemplate.type,
           createdAt: apiTemplate.createdAt,
-          updatedAt: apiTemplate.createdAt, // API doesn't have updatedAt
+          updatedAt: apiTemplate.createdAt,
         }));
         
+        // Cache the result if unfiltered
+        if (shouldCache) {
+          this.cache.templates = {
+            data: templates,
+            timestamp: Date.now(),
+          };
+        }
+        
+        console.log(`✅ [TEMPLATES] Fetched ${templates.length} templates ${shouldCache ? '(cached)' : '(not cached - filtered)'}`);
         return templates;
       } else {
         throw new Error('Failed to fetch templates from API');
       }
     } catch (error) {
-      console.error('API get templates failed, falling back to mock:', error);
+      console.error('❌ [TEMPLATES] API failed, using mock data:', error);
       // Fallback to mock data
       return this.getMockTemplates(filters);
     }
@@ -356,11 +393,6 @@ class TemplateService {
     }
 
     return filteredTemplates;
-  }
-
-  // Clear cache method
-  clearCache(): void {
-    this.cache = {};
   }
 }
 

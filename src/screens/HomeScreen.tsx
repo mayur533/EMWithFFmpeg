@@ -289,15 +289,15 @@ const HomeScreen: React.FC = React.memo(() => {
 
 
 
-  // Load data from APIs only - no mock data fallback
-  const loadApiData = useCallback(async () => {
+  // Load data from APIs with caching for instant loads
+  const loadApiData = useCallback(async (isRefresh: boolean = false) => {
     setApiLoading(true);
     setApiError(null);
     
     try {
-      console.log('Loading home screen data from APIs...');
+      console.log(isRefresh ? '🔄 Refreshing home screen data...' : '📡 Loading home screen data...');
       
-      // Load all 4 APIs in parallel
+      // Load all 4 APIs in parallel (cache will make this instant on repeat loads)
       const [featuredResponse, eventsResponse, templatesResponse, videosResponse] = await Promise.allSettled([
         homeApi.getFeaturedContent({ limit: 10 }),
         homeApi.getUpcomingEvents({ limit: 20 }),
@@ -363,7 +363,7 @@ const HomeScreen: React.FC = React.memo(() => {
         booksResponse,
         celebratesResponse
       ] = await Promise.allSettled([
-        greetingTemplatesService.searchTemplates('motivation'),
+        greetingTemplatesService.searchTemplates('motivational'),
         greetingTemplatesService.searchTemplates('good morning'),
         greetingTemplatesService.searchTemplates('business ethics'),
         greetingTemplatesService.searchTemplates('devotional'),
@@ -483,8 +483,12 @@ const HomeScreen: React.FC = React.memo(() => {
     setRefreshing(true);
     
     try {
-      // Refresh API data only
-      await loadApiData();
+      // Clear all caches before refreshing
+      homeApi.clearCache();
+      greetingTemplatesService.clearCache();
+      
+      // Refresh API data
+      await loadApiData(true);
     } catch (error) {
       console.log('Error refreshing data:', error);
     } finally {

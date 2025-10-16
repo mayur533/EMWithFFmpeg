@@ -379,26 +379,33 @@ const ProfileScreen: React.FC = () => {
         throw new Error('No user data available');
       }
       
+      // Check if _original* fields exist - if not, we need to fetch from API to populate them
+      const hasProtectedFields = currentUser?._originalAddress !== undefined || 
+                                  currentUser?._originalWebsite !== undefined ||
+                                  currentUser?._originalCategory !== undefined;
+      
       // Check if we already have complete user data from registration
-      if (currentUser && currentUser.email && (currentUser.phone || currentUser.phoneNumber) && (currentUser.companyName || currentUser.name)) {
-        console.log('✅ User data already complete from registration, skipping API call');
-        console.log('📋 Loading Edit Form Data from REGISTRATION:');
-        console.log('   - Address:', currentUser?.address || '(empty)');
-        console.log('   - Website:', currentUser?.website || '(empty)');
-        console.log('   - Category:', currentUser?.category || '(empty)');
-        console.log('   - Description:', currentUser?.description || '(empty)');
+      if (currentUser && currentUser.email && (currentUser.phone || currentUser.phoneNumber) && 
+          (currentUser.companyName || currentUser.name) && hasProtectedFields) {
+        console.log('✅ User data already complete with protected fields, skipping API call');
+        console.log('📋 Loading Edit Form Data from PROTECTED REGISTRATION:');
+        console.log('   - Address (_original):', currentUser?._originalAddress || '(not set)');
+        console.log('   - Website (_original):', currentUser?._originalWebsite || '(not set)');
+        console.log('   - Category (_original):', currentUser?._originalCategory || '(not set)');
+        console.log('   - Description (_original):', currentUser?._originalDescription || '(not set)');
         
         // Update edit form with existing registered user data
         // Map stored user fields to form fields
+        // Use _original* fields if available to prevent contamination from business profiles
         setEditFormData({
           name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
-          description: currentUser?.description || '',
-          category: currentUser?.category || '',
-          address: currentUser?.address || '', // FROM USER REGISTRATION
+          description: currentUser?._originalDescription || currentUser?.description || '',
+          category: currentUser?._originalCategory || currentUser?.category || '',
+          address: currentUser?._originalAddress || currentUser?.address || '', // FROM USER REGISTRATION
           phone: currentUser?.phoneNumber || currentUser?.phone || '',
           alternatePhone: currentUser?.alternatePhone || '',
           email: currentUser?.email || '',
-          website: currentUser?.website || '', // FROM USER REGISTRATION
+          website: currentUser?._originalWebsite || currentUser?.website || '', // FROM USER REGISTRATION
           companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
         });
         
@@ -409,6 +416,11 @@ const ProfileScreen: React.FC = () => {
         
         setShowEditProfileModal(true);
         return;
+      }
+      
+      // If _original* fields are missing, we MUST fetch from API to get clean user data
+      if (!hasProtectedFields) {
+        console.log('⚠️ Protected fields missing - fetching from API to populate _original* values');
       }
       
       // Only fetch from API if we don't have complete data
@@ -429,15 +441,16 @@ const ProfileScreen: React.FC = () => {
         if (!token) {
           console.log('⚠️ Token still not available, skipping API fetch and using current user data');
           // Use current registered user data instead of failing
+          // Use _original* fields to prevent contamination from business profiles
           setEditFormData({
             name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
-            description: currentUser?.description || '',
-            category: currentUser?.category || '',
-            address: currentUser?.address || '',
+            description: currentUser?._originalDescription || currentUser?.description || '',
+            category: currentUser?._originalCategory || currentUser?.category || '',
+            address: currentUser?._originalAddress || currentUser?.address || '',
             phone: currentUser?.phoneNumber || currentUser?.phone || '',
             alternatePhone: currentUser?.alternatePhone || '',
             email: currentUser?.email || '',
-            website: currentUser?.website || '',
+            website: currentUser?._originalWebsite || currentUser?.website || '',
             companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
           });
           setShowEditProfileModal(true);
@@ -455,41 +468,56 @@ const ProfileScreen: React.FC = () => {
       console.log('🔍 Complete Profile Data from API:', JSON.stringify(completeUserData, null, 2));
       
       // Update current user with complete profile data
-      // CRITICAL: Exclude companyName from API to prevent business profile contamination
+      // CRITICAL: Set _original* fields from API response (this is the CLEAN user profile data)
       const { businessProfiles, companyName: apiCompanyName, ...cleanUserData } = completeUserData as any;
       const updatedUserData = {
         ...currentUser,
         ...cleanUserData,
         // ALWAYS preserve the original registered company name
         companyName: currentUser?.companyName,
+        // Set _original* fields from API (this is the REAL user data from backend)
+        _originalCompanyName: currentUser?._originalCompanyName || currentUser?.companyName,
+        _originalAddress: currentUser?._originalAddress || completeUserData?.address || '',
+        _originalWebsite: currentUser?._originalWebsite || completeUserData?.website || '',
+        _originalCategory: currentUser?._originalCategory || completeUserData?.category || '',
+        _originalDescription: currentUser?._originalDescription || completeUserData?.description || '',
+        _originalAlternatePhone: currentUser?._originalAlternatePhone || completeUserData?.alternatePhone || '',
       };
       
-      // Update auth service with clean data
+      console.log('🔒 Setting protected fields from API response:');
+      console.log('   - _originalAddress:', updatedUserData._originalAddress);
+      console.log('   - _originalWebsite:', updatedUserData._originalWebsite);
+      console.log('   - _originalCategory:', updatedUserData._originalCategory);
+      console.log('   - _originalDescription:', updatedUserData._originalDescription);
+      
+      // Update auth service with clean data AND save to storage
       authService.setCurrentUser(updatedUserData);
+      await authService.saveUserToStorage(updatedUserData, await AsyncStorage.getItem('authToken') || '');
       
       console.log('🔍 Using registered user data (EXCLUDING business profile fields)');
-      console.log('📋 Loading Edit Form Data from REGISTRATION (prioritized):');
-      console.log('   - Address from currentUser:', currentUser?.address || '(empty)');
-      console.log('   - Website from currentUser:', currentUser?.website || '(empty)');
-      console.log('   - Category from currentUser:', currentUser?.category || '(empty)');
-      console.log('   - Description from currentUser:', currentUser?.description || '(empty)');
-      console.log('📋 API data (for reference only):');
-      console.log('   - Address from API:', completeUserData?.address || '(not used)');
-      console.log('   - Website from API:', completeUserData?.website || '(not used)');
+      console.log('📋 Loading Edit Form Data from ORIGINAL REGISTRATION (now protected):');
+      console.log('   - Address (_original):', updatedUserData?._originalAddress || '(not set)');
+      console.log('   - Address (current):', updatedUserData?.address || '(empty)');
+      console.log('   - Website (_original):', updatedUserData?._originalWebsite || '(not set)');
+      console.log('   - Website (current):', updatedUserData?.website || '(empty)');
+      console.log('   - Category (_original):', updatedUserData?._originalCategory || '(not set)');
+      console.log('   - Category (current):', updatedUserData?.category || '(empty)');
+      console.log('📋 API data:');
+      console.log('   - Address from API:', completeUserData?.address || '(empty)');
+      console.log('   - Website from API:', completeUserData?.website || '(empty)');
       
-      // IMPORTANT: Use ONLY registered user's profile data from currentUser
-      // NOT from API response which may contain business profile data
-      // Website and Address should come from user registration, not business profiles
+      // IMPORTANT: Use _original* fields which we just populated from API
+      // This is the REAL user profile data from backend (not business profile data)
       setEditFormData({
-        name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
-        description: currentUser?.description || completeUserData?.description || '',
-        category: currentUser?.category || completeUserData?.category || '',
-        address: currentUser?.address || '', // FROM USER REGISTRATION ONLY
-        phone: currentUser?.phoneNumber || currentUser?.phone || completeUserData?.phone || '',
-        alternatePhone: currentUser?.alternatePhone || completeUserData?.alternatePhone || '',
-        email: currentUser?.email || completeUserData?.email || '',
-        website: currentUser?.website || '', // FROM USER REGISTRATION ONLY
-        companyLogo: currentUser?.logo || currentUser?.companyLogo || completeUserData?.logo || '',
+        name: updatedUserData?.companyName || updatedUserData?._originalCompanyName || updatedUserData?.name || '',
+        description: updatedUserData?._originalDescription || '',
+        category: updatedUserData?._originalCategory || '',
+        address: updatedUserData?._originalAddress || '', // FROM API - NOW PROTECTED
+        phone: updatedUserData?.phoneNumber || updatedUserData?.phone || '',
+        alternatePhone: updatedUserData?.alternatePhone || '',
+        email: updatedUserData?.email || '',
+        website: updatedUserData?._originalWebsite || '', // FROM API - NOW PROTECTED
+        companyLogo: updatedUserData?.logo || updatedUserData?.companyLogo || '',
       });
       
       setShowEditProfileModal(true);
@@ -581,23 +609,38 @@ const ProfileScreen: React.FC = () => {
       
       if (response.success) {
         // Update the current user object with the response
+        // CRITICAL: Store BOTH current AND original values to prevent contamination
         const updatedUser = {
           ...currentUser,
           ...response.data,
+          // User profile fields
           displayName: response.data.name,
           companyName: response.data.name,
           phoneNumber: response.data.phone,
           bio: response.data.description,
-          businessName: response.data.name,
-          businessEmail: response.data.email,
-          businessPhone: response.data.phone,
-          businessDescription: response.data.description,
-          businessCategory: response.data.category,
-          businessAddress: response.data.address,
-          alternateBusinessPhone: response.data.alternatePhone,
-          businessWebsite: response.data.website,
-          businessLogo: response.data.companyLogo,
+          // Current values (can be updated)
+          address: response.data.address || currentUser?.address || '',
+          website: response.data.website || currentUser?.website || '',
+          category: response.data.category || currentUser?.category || '',
+          description: response.data.description || currentUser?.description || '',
+          alternatePhone: response.data.alternatePhone || currentUser?.alternatePhone || '',
+          // Original values (NEVER overwritten - stored on first save only)
+          _originalAddress: currentUser?._originalAddress || response.data.address || '',
+          _originalWebsite: currentUser?._originalWebsite || response.data.website || '',
+          _originalCategory: currentUser?._originalCategory || response.data.category || '',
+          _originalDescription: currentUser?._originalDescription || response.data.description || '',
+          _originalAlternatePhone: currentUser?._originalAlternatePhone || response.data.alternatePhone || '',
         };
+        
+        console.log('✅ Updated user object (USER FIELDS ONLY):');
+        console.log('   - address:', updatedUser.address);
+        console.log('   - website:', updatedUser.website);
+        console.log('   - category:', updatedUser.category);
+        console.log('   - description:', updatedUser.description);
+        console.log('✅ Protected original values:');
+        console.log('   - _originalAddress:', updatedUser._originalAddress);
+        console.log('   - _originalWebsite:', updatedUser._originalWebsite);
+        console.log('   - _originalCategory:', updatedUser._originalCategory);
         
         authService.setCurrentUser(updatedUser);
         

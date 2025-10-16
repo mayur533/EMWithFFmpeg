@@ -13,6 +13,7 @@ import {
   ScrollView,
   Modal,
   Image,
+  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -67,22 +68,36 @@ const GreetingTemplatesScreen: React.FC = () => {
   const [upgradeModalVisible, setUpgradeModalVisible] = useState(false);
   const [selectedPremiumTemplate, setSelectedPremiumTemplate] = useState<GreetingTemplate | null>(null);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
 
-  // Memoized data fetching functions
-  const fetchData = useCallback(async () => {
+  // Optimized data fetching with instant cache loading
+  const fetchData = useCallback(async (isRefresh: boolean = false) => {
     try {
+      // Fetch categories and templates in parallel
+      // Cache will make this instant on subsequent loads
       const [categoriesData, templatesData] = await Promise.all([
         greetingTemplatesService.getCategories(),
         greetingTemplatesService.getTemplates(),
       ]);
+      
       setCategories(categoriesData);
       setAllTemplates(templatesData);
       setFilteredTemplates(templatesData);
+      
+      // Hide initial loading after first fetch
+      if (initialLoading) {
+        setInitialLoading(false);
+      }
     } catch (error) {
       console.error('Error fetching data:', error);
-      Alert.alert('Error', 'Failed to load greeting templates. Please try again.');
+      if (initialLoading) {
+        setInitialLoading(false);
+      }
+      if (!isRefresh) {
+        Alert.alert('Error', 'Failed to load greeting templates. Please try again.');
+      }
     }
-  }, []);
+  }, [initialLoading]);
 
   // Client-side filtering for instant category switching
   const filterTemplatesByCategory = useCallback((categoryFilter: string, templates: GreetingTemplate[]) => {
@@ -165,7 +180,9 @@ const GreetingTemplatesScreen: React.FC = () => {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    await fetchData();
+    // Clear cache and fetch fresh data
+    greetingTemplatesService.clearCache();
+    await fetchData(true);
     setRefreshing(false);
   }, [fetchData]);
 
@@ -536,18 +553,34 @@ const GreetingTemplatesScreen: React.FC = () => {
         </View>
 
         {/* Templates Grid - Optimized FlatList */}
-        <FlatList
-          {...flatListProps}
-          refreshControl={
-            <RefreshControl
-              refreshing={refreshing}
-              onRefresh={handleRefresh}
-              colors={[theme.colors.primary]}
-              tintColor={theme.colors.primary}
-            />
-          }
-          ListEmptyComponent={renderEmptyState}
-        />
+        {initialLoading && filteredTemplates.length === 0 ? (
+          <View style={[styles.loadingContainer, { paddingTop: responsiveSpacing.xl }]}>
+            <ActivityIndicator size="large" color={theme.colors.primary} />
+            <Text style={[
+              styles.loadingText, 
+              { 
+                color: theme.colors.text,
+                marginTop: responsiveSpacing.md,
+                fontSize: responsiveText.body,
+              }
+            ]}>
+              Loading templates...
+            </Text>
+          </View>
+        ) : (
+          <FlatList
+            {...flatListProps}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={handleRefresh}
+                colors={[theme.colors.primary]}
+                tintColor={theme.colors.primary}
+              />
+            }
+            ListEmptyComponent={renderEmptyState}
+          />
+        )}
       </LinearGradient>
       
       {/* Premium Modal */}
@@ -654,6 +687,16 @@ const styles = StyleSheet.create({
   emptySubtitle: {
     textAlign: 'center',
     lineHeight: 20,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingVertical: 60,
+  },
+  loadingText: {
+    fontWeight: '500',
+    textAlign: 'center',
   },
   
   // Premium Modal Styles

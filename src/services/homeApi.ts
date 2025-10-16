@@ -163,6 +163,46 @@ export interface ActionResponse {
 class HomeApiService {
   // Base URL for converting relative paths to absolute URLs
   private readonly BASE_URL = 'https://eventmarketersbackend.onrender.com';
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
+
+  // Cache storage for all home screen data
+  private cache: {
+    featuredContent: { data: FeaturedContent[] | null; timestamp: number };
+    upcomingEvents: { data: UpcomingEvent[] | null; timestamp: number };
+    professionalTemplates: { data: ProfessionalTemplate[] | null; timestamp: number };
+    videoContent: { data: VideoContent[] | null; timestamp: number };
+  } = {
+    featuredContent: { data: null, timestamp: 0 },
+    upcomingEvents: { data: null, timestamp: 0 },
+    professionalTemplates: { data: null, timestamp: 0 },
+    videoContent: { data: null, timestamp: 0 },
+  };
+
+  /**
+   * Check if cached data is still valid
+   */
+  private isCacheValid(cacheKey: keyof typeof this.cache): boolean {
+    const cached = this.cache[cacheKey];
+    return cached.data !== null && (Date.now() - cached.timestamp) < this.CACHE_DURATION;
+  }
+
+  /**
+   * Clear cache for a specific key or all cache
+   */
+  clearCache(cacheKey?: keyof typeof this.cache): void {
+    if (cacheKey) {
+      this.cache[cacheKey] = { data: null, timestamp: 0 };
+      console.log(`🧹 [CACHE] Cleared ${cacheKey} cache`);
+    } else {
+      this.cache = {
+        featuredContent: { data: null, timestamp: 0 },
+        upcomingEvents: { data: null, timestamp: 0 },
+        professionalTemplates: { data: null, timestamp: 0 },
+        videoContent: { data: null, timestamp: 0 },
+      };
+      console.log('🧹 [CACHE] Cleared all home screen cache');
+    }
+  }
 
   /**
    * Convert relative image URLs to absolute URLs
@@ -279,7 +319,22 @@ class HomeApiService {
     type?: 'banner' | 'promotion' | 'highlight' | 'all';
     active?: boolean;
   }): Promise<FeaturedContentResponse> {
+    // Only cache when no params are provided (default request)
+    const shouldCache = !params || Object.keys(params).length === 0;
+    
+    // Check cache first for default requests
+    if (shouldCache && this.isCacheValid('featuredContent')) {
+      console.log('✅ [CACHE] Returning cached featured content');
+      return {
+        success: true,
+        data: this.cache.featuredContent.data!,
+        message: 'Featured content retrieved from cache',
+      };
+    }
+
     try {
+      console.log('📡 [HOME API] Fetching featured content...');
+      
       const queryParams = new URLSearchParams();
       
       if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -313,10 +368,8 @@ class HomeApiService {
       let featuredData: FeaturedContent[];
       
       if (Array.isArray(response.data.data)) {
-        // Direct array format
         featuredData = response.data.data;
       } else if (response.data.data.featured && Array.isArray(response.data.data.featured)) {
-        // Nested format: { data: { featured: [...] } }
         featuredData = response.data.data.featured;
       } else {
         return {
@@ -328,14 +381,23 @@ class HomeApiService {
       
       const convertedData = this.convertFeaturedContentUrls(featuredData);
       
+      // Cache the result if default request
+      if (shouldCache) {
+        this.cache.featuredContent = {
+          data: convertedData,
+          timestamp: Date.now(),
+        };
+      }
+      
+      console.log(`✅ [HOME API] Fetched ${convertedData.length} featured items ${shouldCache ? '(cached)' : '(not cached)'}`);
+      
       return {
         success: true,
         data: convertedData,
         message: response.data.message || 'Featured content retrieved successfully',
       };
     } catch (error) {
-      console.error('Featured Content API error:', error);
-      // Return empty response instead of mock data
+      console.error('❌ [HOME API] Featured content error:', error);
       return {
         success: false,
         data: [],
@@ -366,7 +428,22 @@ class HomeApiService {
     dateTo?: string;
     isFree?: boolean;
   }): Promise<UpcomingEventsResponse> {
+    // Only cache when no params are provided (default request)
+    const shouldCache = !params || Object.keys(params).length === 0;
+    
+    // Check cache first for default requests
+    if (shouldCache && this.isCacheValid('upcomingEvents')) {
+      console.log('✅ [CACHE] Returning cached upcoming events');
+      return {
+        success: true,
+        data: this.cache.upcomingEvents.data!,
+        message: 'Upcoming events retrieved from cache',
+      };
+    }
+
     try {
+      console.log('📡 [HOME API] Fetching upcoming events...');
+      
       const queryParams = new URLSearchParams();
       
       if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -384,10 +461,21 @@ class HomeApiService {
       // Convert relative URLs to absolute URLs
       if (response.data.success && response.data.data) {
         response.data.data = this.convertUpcomingEventsUrls(response.data.data);
+        
+        // Cache the result if default request
+        if (shouldCache) {
+          this.cache.upcomingEvents = {
+            data: response.data.data,
+            timestamp: Date.now(),
+          };
+        }
+        
+        console.log(`✅ [HOME API] Fetched ${response.data.data.length} events ${shouldCache ? '(cached)' : '(not cached)'}`);
       }
       
       return response.data;
     } catch (error) {
+      console.error('❌ [HOME API] Upcoming events error:', error);
       return this.getMockUpcomingEvents(params);
     }
   }
@@ -414,7 +502,22 @@ class HomeApiService {
     sortBy?: 'popular' | 'recent' | 'likes' | 'downloads';
     tags?: string[];
   }): Promise<ProfessionalTemplatesResponse> {
+    // Only cache when no params are provided (default request)
+    const shouldCache = !params || Object.keys(params).length === 0;
+    
+    // Check cache first for default requests
+    if (shouldCache && this.isCacheValid('professionalTemplates')) {
+      console.log('✅ [CACHE] Returning cached professional templates');
+      return {
+        success: true,
+        data: this.cache.professionalTemplates.data!,
+        message: 'Professional templates retrieved from cache',
+      };
+    }
+
     try {
+      console.log('📡 [HOME API] Fetching professional templates...');
+      
       const queryParams = new URLSearchParams();
       
       if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -433,13 +536,22 @@ class HomeApiService {
       
       // Convert relative URLs to absolute URLs
       if (response.data.success && response.data.data) {
-        console.log('🔧 [Home API] Converting professional templates URLs to absolute');
         response.data.data = this.convertProfessionalTemplatesUrls(response.data.data);
+        
+        // Cache the result if default request
+        if (shouldCache) {
+          this.cache.professionalTemplates = {
+            data: response.data.data,
+            timestamp: Date.now(),
+          };
+        }
+        
+        console.log(`✅ [HOME API] Fetched ${response.data.data.length} templates ${shouldCache ? '(cached)' : '(not cached)'}`);
       }
       
       return response.data;
     } catch (error) {
-      console.log('Using mock professional templates due to API error:', error);
+      console.error('❌ [HOME API] Professional templates error:', error);
       return this.getMockProfessionalTemplates(params);
     }
   }
@@ -468,7 +580,22 @@ class HomeApiService {
     duration?: 'short' | 'medium' | 'long';
     tags?: string[];
   }): Promise<VideoContentResponse> {
+    // Only cache when no params are provided (default request)
+    const shouldCache = !params || Object.keys(params).length === 0;
+    
+    // Check cache first for default requests
+    if (shouldCache && this.isCacheValid('videoContent')) {
+      console.log('✅ [CACHE] Returning cached video content');
+      return {
+        success: true,
+        data: this.cache.videoContent.data!,
+        message: 'Video content retrieved from cache',
+      };
+    }
+
     try {
+      console.log('📡 [HOME API] Fetching video content...');
+      
       const queryParams = new URLSearchParams();
       
       if (params?.limit) queryParams.append('limit', params.limit.toString());
@@ -488,13 +615,22 @@ class HomeApiService {
       
       // Convert relative URLs to absolute URLs
       if (response.data.success && response.data.data) {
-        console.log('🔧 [Home API] Converting video content URLs to absolute');
         response.data.data = this.convertVideoContentUrls(response.data.data);
+        
+        // Cache the result if default request
+        if (shouldCache) {
+          this.cache.videoContent = {
+            data: response.data.data,
+            timestamp: Date.now(),
+          };
+        }
+        
+        console.log(`✅ [HOME API] Fetched ${response.data.data.length} videos ${shouldCache ? '(cached)' : '(not cached)'}`);
       }
       
       return response.data;
     } catch (error) {
-      console.log('Using mock video content due to API error:', error);
+      console.error('❌ [HOME API] Video content error:', error);
       return this.getMockVideoContent(params);
     }
   }

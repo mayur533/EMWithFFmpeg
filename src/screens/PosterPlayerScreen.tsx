@@ -78,10 +78,12 @@ const PosterPlayerScreen: React.FC = () => {
   // Filter posters by selected language
   const filteredPosters = useMemo(() => {
     return relatedPosters.filter(poster => {
-      // For demo purposes, we'll simulate language filtering
-      // In real app, this would be based on actual poster language metadata
-      const posterLanguages = poster.languages || ['english'];
-      return posterLanguages.includes(selectedLanguage);
+      // If poster doesn't have languages property, show it for all languages
+      if (!poster.languages || poster.languages.length === 0) {
+        return true;
+      }
+      // Otherwise, filter based on poster's supported languages
+      return poster.languages.includes(selectedLanguage);
     });
   }, [relatedPosters, selectedLanguage]);
 

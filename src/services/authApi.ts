@@ -44,6 +44,13 @@ export interface UserProfile {
   website?: string;
   createdAt: string;
   updatedAt: string;
+  // Protected original values from registration (never overwritten)
+  _originalCompanyName?: string;
+  _originalAddress?: string;
+  _originalWebsite?: string;
+  _originalCategory?: string;
+  _originalDescription?: string;
+  _originalAlternatePhone?: string;
   // Note: businessProfiles array removed - should not be part of user object
   // Business profiles should be fetched separately via businessProfileService
 }
