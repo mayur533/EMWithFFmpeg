@@ -43,18 +43,9 @@ class BusinessCategoryPostersApiService {
       if (this.postersCache.has(cacheKey)) {
         const cached = this.postersCache.get(cacheKey)!;
         const cacheAge = now - cached.timestamp;
-        console.log('💾 [CACHE CHECK] Cache exists for:', category);
-        console.log('💾 [CACHE CHECK] Cache age (ms):', cacheAge);
-        console.log('💾 [CACHE CHECK] Cache duration (ms):', this.CACHE_DURATION);
-        console.log('💾 [CACHE CHECK] Is valid:', cacheAge < this.CACHE_DURATION);
-        console.log('💾 [CACHE CHECK] Cached posters count:', cached.data.length);
         
         if (cacheAge < this.CACHE_DURATION) {
-          console.log('✅ [CACHE HIT] Returning cached posters');
-          if (cached.data.length > 0) {
-            console.log('📸 [CACHE] First cached poster thumbnail:', cached.data[0]?.thumbnail);
-            console.log('📸 [CACHE] First cached poster full:', JSON.stringify(cached.data[0], null, 2));
-          }
+          console.log(`✅ [CACHE] Returning ${cached.data.length} cached posters for: ${category}`);
           return {
             success: true,
             data: {
@@ -64,30 +55,16 @@ class BusinessCategoryPostersApiService {
             },
             message: 'Posters fetched from cache'
           };
-        } else {
-          console.log('⏰ [CACHE EXPIRED] Cache too old, fetching fresh data');
         }
-      } else {
-        console.log('❌ [CACHE MISS] No cache for category:', category);
       }
 
-      console.log('📡 [CATEGORY POSTERS API] Calling: /api/mobile/posters/category/' + category);
+      console.log(`📡 [CATEGORY POSTERS API] Fetching posters for: ${category}`);
       const response = await api.get(`/api/mobile/posters/category/${encodeURIComponent(category)}`);
-      
-      console.log('✅ [CATEGORY POSTERS API] Response received');
-      console.log('📊 [CATEGORY POSTERS API] Full Response:', JSON.stringify(response.data, null, 2));
-      console.log('📊 [CATEGORY POSTERS API] Success:', response.data.success);
-      console.log('📊 [CATEGORY POSTERS API] Category:', category);
       
       if (response.data.success) {
         const posters = response.data.data.posters;
-        console.log('📊 [CATEGORY POSTERS API] Posters count:', posters.length);
         
-        if (posters.length > 0) {
-          console.log('📊 [CATEGORY POSTERS API] First poster:', JSON.stringify(posters[0], null, 2));
-        }
-        
-        // Convert backend response to frontend format and fix URLs
+        // Convert backend response to frontend format and fix URLs (optimized - no per-item logging)
         const baseUrl = 'https://eventmarketersbackend.onrender.com';
         const postersWithAbsoluteUrls = posters.map((poster: any) => {
           // Backend returns 'thumbnailUrl', frontend expects 'thumbnail'
@@ -109,7 +86,6 @@ class BusinessCategoryPostersApiService {
             downloadUrl: downloadUrl && !downloadUrl.startsWith('http')
               ? `${baseUrl}${downloadUrl}`
               : downloadUrl,
-
             downloads: poster.downloads || 0,
             isPremium: poster.isPremium || false,
             tags: poster.tags || [],
@@ -118,20 +94,13 @@ class BusinessCategoryPostersApiService {
           } as BusinessCategoryPoster;
         });
         
-        console.log('🔧 [CATEGORY POSTERS API] Converted relative paths to absolute URLs');
-        if (postersWithAbsoluteUrls.length > 0) {
-          console.log('📸 [CATEGORY POSTERS API] First converted poster:', JSON.stringify(postersWithAbsoluteUrls[0], null, 2));
-          console.log('📸 [CATEGORY POSTERS API] Thumbnail URL:', postersWithAbsoluteUrls[0]?.thumbnail);
-          console.log('📸 [CATEGORY POSTERS API] Image URL:', postersWithAbsoluteUrls[0]?.imageUrl);
-        }
-        
         // Cache the results with absolute URLs
         this.postersCache.set(cacheKey, {
           data: postersWithAbsoluteUrls,
           timestamp: now
         });
         
-        console.log('✅ [CATEGORY POSTERS API] Posters fetched and cached:', postersWithAbsoluteUrls.length);
+        console.log(`✅ [CATEGORY POSTERS API] Fetched and cached ${postersWithAbsoluteUrls.length} posters`);
         return {
           ...response.data,
           data: {
@@ -144,7 +113,6 @@ class BusinessCategoryPostersApiService {
       }
     } catch (error: any) {
       console.error('❌ [CATEGORY POSTERS API] Error:', error);
-      console.error('❌ [CATEGORY POSTERS API] Error details:', JSON.stringify(error, null, 2));
       
       // Return empty data when API fails
       return {
@@ -160,39 +128,33 @@ class BusinessCategoryPostersApiService {
   }
 
   /**
-   * Get user's business category and fetch relevant posters
+   * Get user's business category and fetch relevant posters (optimized logging)
    */
   async getUserCategoryPosters(): Promise<BusinessCategoryPostersResponse> {
     try {
-      console.log('🎯 [getUserCategoryPosters] Starting...');
+      console.log('📡 [USER CATEGORY POSTERS] Fetching...');
       const currentUser = authService.getCurrentUser();
       const userId = currentUser?.id;
       
-      console.log('🎯 [getUserCategoryPosters] User ID:', userId);
-      
       if (!userId) {
-        console.log('🎯 [getUserCategoryPosters] No user ID, using General category');
+        console.log('⚠️ [USER CATEGORY POSTERS] No user ID, using General category');
         return this.getPostersByCategory('General');
       }
 
       // Get user's business profiles to determine category
-      console.log('🎯 [getUserCategoryPosters] Fetching business profiles...');
       const businessProfileService = (await import('./businessProfile')).default;
       const userProfiles = await businessProfileService.getUserBusinessProfiles(userId);
       
-      console.log('🎯 [getUserCategoryPosters] Profiles found:', userProfiles.length);
-      
       if (userProfiles.length > 0) {
         const primaryCategory = userProfiles[0].category;
-        console.log('🎯 [getUserCategoryPosters] Primary category:', primaryCategory);
-        console.log('🎯 [getUserCategoryPosters] Calling getPostersByCategory...');
+        console.log(`✅ [USER CATEGORY POSTERS] Using category: ${primaryCategory}`);
         return this.getPostersByCategory(primaryCategory);
       } else {
-        console.log('🎯 [getUserCategoryPosters] No profiles, using General category');
+        console.log('⚠️ [USER CATEGORY POSTERS] No profiles, using General category');
         return this.getPostersByCategory('General');
       }
     } catch (error) {
-      console.error('❌ Error getting user category posters:', error);
+      console.error('❌ [USER CATEGORY POSTERS] Error:', error);
       // Return empty data when there's an error
       return {
         success: false,

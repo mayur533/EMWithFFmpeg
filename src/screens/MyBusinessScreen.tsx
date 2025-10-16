@@ -98,6 +98,7 @@ const MyBusinessScreen: React.FC = () => {
   // Business category posters state
   const [businessCategoryPosters, setBusinessCategoryPosters] = useState<BusinessCategoryPoster[]>([]);
   const [postersLoading, setPostersLoading] = useState(false);
+  const [initialLoading, setInitialLoading] = useState(true);
   const [userBusinessCategory, setUserBusinessCategory] = useState<string>('General');
   const [refreshing, setRefreshing] = useState(false);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
@@ -117,10 +118,11 @@ const MyBusinessScreen: React.FC = () => {
   // Get dynamic dimensions
   const { cardWidth, cardHeight, columns } = getPosterCardDimensions(screenData.width);
 
-  // Load business category posters
-  const loadBusinessCategoryPosters = useCallback(async () => {
+  // Optimized load with cache support
+  const loadBusinessCategoryPosters = useCallback(async (isRefresh: boolean = false) => {
     setPostersLoading(true);
     try {
+      // Cache will make this instant on subsequent loads
       const response = await businessCategoryPostersApi.getUserCategoryPosters();
       
       if (response.success) {
@@ -129,13 +131,21 @@ const MyBusinessScreen: React.FC = () => {
       } else {
         setBusinessCategoryPosters([]);
       }
+      
+      // Hide initial loading after first fetch
+      if (initialLoading) {
+        setInitialLoading(false);
+      }
     } catch (error) {
       console.error('Error loading business category posters:', error);
       setBusinessCategoryPosters([]);
+      if (initialLoading) {
+        setInitialLoading(false);
+      }
     } finally {
       setPostersLoading(false);
     }
-  }, []);
+  }, [initialLoading]);
 
   useEffect(() => {
     loadBusinessCategoryPosters();
@@ -144,7 +154,9 @@ const MyBusinessScreen: React.FC = () => {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      await loadBusinessCategoryPosters();
+      // Clear cache before refreshing
+      businessCategoryPostersApi.clearCache();
+      await loadBusinessCategoryPosters(true);
     } catch (error) {
       console.error('Error refreshing posters:', error);
     } finally {

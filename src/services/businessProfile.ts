@@ -36,9 +36,17 @@ class BusinessProfileService {
   private cacheTimestamp: number = 0;
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
 
-  // Get user-specific business profiles
+  // Get user-specific business profiles (with caching)
   async getUserBusinessProfiles(userId: string): Promise<BusinessProfile[]> {
+    // Check cache first
+    if (this.profilesCache && (Date.now() - this.cacheTimestamp) < this.CACHE_DURATION) {
+      console.log('✅ [CACHE] Returning cached business profiles');
+      return this.profilesCache;
+    }
+
     try {
+      console.log('📡 [BUSINESS PROFILES] Fetching from server...');
+      
       // First check if backend is available with a quick health check
       try {
         await api.get('/health', { timeout: 5000 });
@@ -52,38 +60,30 @@ class BusinessProfileService {
         const profiles = response.data.data.profiles;
         
         if (profiles && profiles.length > 0) {
-          // Convert backend profiles to frontend format
-          const businessProfiles: BusinessProfile[] = profiles.map((profile: any) => {
-            console.log('📋 Mapping backend profile to frontend:', profile.id);
-            console.log('   - Name:', profile.name || profile.businessName);
-            console.log('   - Description:', profile.description || '(empty)');
-            console.log('   - Category:', profile.category);
-            console.log('   - Address:', profile.address || '(empty)');
-            console.log('   - Phone:', profile.phone || '(empty)');
-            console.log('   - Alternate Phone:', profile.alternatePhone || '(empty)');
-            console.log('   - Email:', profile.email || '(empty)');
-            console.log('   - Website:', profile.website || '(empty)');
-            console.log('   - Logo:', profile.logo || '(empty)');
-            
-            return {
-              id: profile.id,
-              name: profile.name || profile.businessName,
-              description: profile.description || '',
-              category: profile.category,
-              address: profile.address || '',
-              phone: profile.phone || '',
-              alternatePhone: profile.alternatePhone || '',
-              email: profile.email || '',
-              website: profile.website || '',
-              logo: profile.logo || '',
-              companyLogo: profile.logo || '',
-              banner: '',
-              services: [],
-              createdAt: profile.createdAt,
-              updatedAt: profile.updatedAt,
-            };
-          });
+          // Convert backend profiles to frontend format (optimized - no per-item logging)
+          const businessProfiles: BusinessProfile[] = profiles.map((profile: any) => ({
+            id: profile.id,
+            name: profile.name || profile.businessName,
+            description: profile.description || '',
+            category: profile.category,
+            address: profile.address || '',
+            phone: profile.phone || '',
+            alternatePhone: profile.alternatePhone || '',
+            email: profile.email || '',
+            website: profile.website || '',
+            logo: profile.logo || '',
+            companyLogo: profile.logo || '',
+            banner: '',
+            services: [],
+            createdAt: profile.createdAt,
+            updatedAt: profile.updatedAt,
+          }));
           
+          // Cache the result
+          this.profilesCache = businessProfiles;
+          this.cacheTimestamp = Date.now();
+          
+          console.log(`✅ [BUSINESS PROFILES] Fetched and cached ${businessProfiles.length} profiles`);
           return businessProfiles;
         }
         return [];
