@@ -1453,71 +1453,134 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
 
   // Handle camera access
   const handleCameraAccess = async () => {
-    const hasPermission = await requestCameraPermission();
-    if (!hasPermission) {
-      Alert.alert('Permission Denied', 'Camera permission is required to take photos.');
-      return;
-    }
-
-    const options = {
-      mediaType: 'photo' as const,
-      includeBase64: false,
-      maxHeight: 2000,
-      maxWidth: 2000,
-      quality: 0.8 as const,
-    };
-
     try {
+      const hasPermission = await requestCameraPermission();
+      if (!hasPermission) {
+        Alert.alert('Permission Denied', 'Camera permission is required to take photos.');
+        return;
+      }
+
+      const options = {
+        mediaType: 'photo' as const,
+        includeBase64: false,
+        maxHeight: 2000,
+        maxWidth: 2000,
+        quality: 0.8 as const,
+        saveToPhotos: false,
+      };
+
       const result = await launchCamera(options);
-      if (result.assets && result.assets[0]) {
+      
+      // User cancelled
+      if (result.didCancel) {
+        console.log('User cancelled camera');
+        return;
+      }
+      
+      // Error occurred
+      if (result.errorCode) {
+        console.error('Camera error code:', result.errorCode);
+        Alert.alert('Camera Error', result.errorMessage || 'Failed to access camera');
+        return;
+      }
+      
+      // Success - process image
+      if (result.assets && result.assets[0] && result.assets[0].uri) {
         const imageUri = result.assets[0].uri;
-        if (imageUri) {
-          addLogoLayerFromImage(imageUri);
-        }
+        console.log('✅ Camera image captured:', imageUri);
+        addLogoLayerFromImage(imageUri);
+      } else {
+        console.warn('No image URI in camera result');
       }
     } catch (error) {
-      console.error('Camera error:', error);
+      console.error('❌ Camera error:', error);
       Alert.alert('Error', 'Failed to access camera. Please try again.');
     }
   };
 
   // Handle gallery access
   const handleGalleryAccess = async () => {
-    const options = {
-      mediaType: 'photo' as const,
-      includeBase64: false,
-      maxHeight: 2000,
-      maxWidth: 2000,
-      quality: 0.8 as const,
-    };
-
     try {
+      const options = {
+        mediaType: 'photo' as const,
+        includeBase64: false,
+        maxHeight: 2000,
+        maxWidth: 2000,
+        quality: 0.8 as const,
+        selectionLimit: 1,
+      };
+
       const result = await launchImageLibrary(options);
-      if (result.assets && result.assets[0]) {
+      
+      // User cancelled
+      if (result.didCancel) {
+        console.log('User cancelled image picker');
+        return;
+      }
+      
+      // Error occurred
+      if (result.errorCode) {
+        console.error('Gallery error code:', result.errorCode);
+        Alert.alert('Gallery Error', result.errorMessage || 'Failed to access gallery');
+        return;
+      }
+      
+      // Success - process image
+      if (result.assets && result.assets[0] && result.assets[0].uri) {
         const imageUri = result.assets[0].uri;
-        if (imageUri) {
-          addLogoLayerFromImage(imageUri);
-        }
+        console.log('✅ Gallery image selected:', imageUri);
+        addLogoLayerFromImage(imageUri);
+      } else {
+        console.warn('No image URI in gallery result');
       }
     } catch (error) {
-      console.error('Gallery error:', error);
+      console.error('❌ Gallery error:', error);
       Alert.alert('Error', 'Failed to access gallery. Please try again.');
     }
   };
 
   // Add logo layer from image
   const addLogoLayerFromImage = useCallback((imageUri: string) => {
-    const newLayer: Layer = {
-      id: generateId(),
-      type: 'logo',
-      content: imageUri,
-      position: { x: 20, y: 20 },
-      size: { width: 80, height: 80 },
-      rotation: 0,
-      zIndex: layers.length,
-    };
-    setLayers(prev => [...prev, newLayer]);
-  }, [layers.length]);
+    try {
+      const layerId = generateId();
+      const newLayer: Layer = {
+        id: layerId,
+        type: 'logo',
+        content: imageUri,
+        position: { x: 20, y: 20 },
+        size: { width: 80, height: 80 },
+        rotation: 0,
+        zIndex: layers.length,
+        fieldType: 'logo',
+      };
+      
+      // Initialize animated values for the new layer
+      if (!layerAnimations[layerId]) {
+        layerAnimations[layerId] = {
+          x: new Animated.Value(20),
+          y: new Animated.Value(20)
+        };
+      }
+      
+      if (!translationValues[layerId]) {
+        translationValues[layerId] = {
+          x: new Animated.Value(0),
+          y: new Animated.Value(0)
+        };
+      }
+      
+      if (!scaleValues[layerId]) {
+        scaleValues[layerId] = new Animated.Value(1);
+      }
+      
+      setLayers(prev => [...prev, newLayer]);
+      setShowLogoModal(false);
+      console.log('✅ Logo layer added from image:', imageUri);
+    } catch (error) {
+      console.error('❌ Error adding logo layer:', error);
+      Alert.alert('Error', 'Failed to add logo. Please try again.');
+    }
+  }, [layers.length, layerAnimations, translationValues, scaleValues]);
 
   // Add logo layer (fallback)
   const addLogoLayer = useCallback(() => {

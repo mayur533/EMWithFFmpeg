@@ -153,51 +153,61 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
         cameraType: 'back' as const,
       };
 
-      launchCamera(options, async (response) => {
-        try {
-          console.log('📸 Camera response:', response);
-          
-          if (response.didCancel) {
-            console.log('User cancelled camera');
-            return;
-          }
-
-          if (response.errorCode) {
-            console.error('Camera error:', response.errorCode, response.errorMessage);
-            Alert.alert(
-              'Camera Error',
-              response.errorMessage || 'Failed to take photo. Please try again.',
-              [{ text: 'OK' }]
-            );
-            return;
-          }
-
-          if (response.assets && response.assets[0] && response.assets[0].uri) {
-            const imageUri = response.assets[0].uri;
-            console.log('✅ Photo captured successfully');
-            console.log('📍 Image URI:', imageUri);
-            console.log('📏 Image size:', response.assets[0].fileSize, 'bytes');
-            console.log('📐 Image dimensions:', response.assets[0].width, 'x', response.assets[0].height);
+      launchCamera(options, (response) => {
+        // Wrap in setTimeout to avoid callback issues
+        setTimeout(async () => {
+          try {
+            console.log('📸 Camera response received');
             
-            // Open crop modal with error handling
-            await openCropModal(imageUri);
-          } else {
-            console.error('❌ No image URI in response');
-            console.error('Response assets:', response.assets);
+            if (response.didCancel) {
+              console.log('User cancelled camera');
+              return;
+            }
+
+            if (response.errorCode) {
+              console.error('Camera error:', response.errorCode, response.errorMessage);
+              Alert.alert(
+                'Camera Error',
+                response.errorMessage || 'Failed to take photo. Please try again.',
+                [{ text: 'OK' }]
+              );
+              return;
+            }
+
+            if (response.assets && response.assets[0] && response.assets[0].uri) {
+              const imageUri = response.assets[0].uri;
+              console.log('✅ Photo captured successfully');
+              console.log('📍 Image URI:', imageUri);
+              console.log('📏 Image size:', response.assets[0].fileSize, 'bytes');
+              console.log('📐 Image dimensions:', response.assets[0].width, 'x', response.assets[0].height);
+              
+              // Open crop modal with error handling
+              try {
+                await openCropModal(imageUri);
+              } catch (cropError) {
+                console.error('❌ Unexpected crop error:', cropError);
+                // Fallback - use image without cropping
+                onImageSelected(imageUri);
+                onClose();
+              }
+            } else {
+              console.error('❌ No image URI in response');
+              console.error('Response assets:', response.assets);
+              Alert.alert(
+                'Error',
+                'Failed to capture photo. Please try again.',
+                [{ text: 'OK' }]
+              );
+            }
+          } catch (error) {
+            console.error('❌ Error processing camera response:', error);
             Alert.alert(
               'Error',
-              'Failed to capture photo. Please try again.',
+              'An error occurred while processing the photo. Please try again.',
               [{ text: 'OK' }]
             );
           }
-        } catch (error) {
-          console.error('❌ Error processing camera response:', error);
-          Alert.alert(
-            'Error',
-            'An error occurred while processing the photo. Please try again.',
-            [{ text: 'OK' }]
-          );
-        }
+        }, 100);
       });
     } catch (error) {
       console.error('❌ Camera error:', error);
@@ -222,50 +232,60 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
         selectionLimit: 1,
       };
 
-      launchImageLibrary(options, async (response) => {
-        try {
-          console.log('📸 Gallery response:', response);
-          
-          if (response.didCancel) {
-            console.log('User cancelled gallery picker');
-            return;
-          }
-
-          if (response.errorCode) {
-            console.error('Gallery error:', response.errorCode, response.errorMessage);
-            Alert.alert(
-              'Gallery Error',
-              response.errorMessage || 'Failed to select photo. Please try again.',
-              [{ text: 'OK' }]
-            );
-            return;
-          }
-
-          if (response.assets && response.assets[0] && response.assets[0].uri) {
-            const imageUri = response.assets[0].uri;
-            console.log('✅ Photo selected from gallery');
-            console.log('📍 Image URI:', imageUri);
-            console.log('📏 Image size:', response.assets[0].fileSize, 'bytes');
+      launchImageLibrary(options, (response) => {
+        // Wrap in setTimeout to avoid callback issues
+        setTimeout(async () => {
+          try {
+            console.log('📸 Gallery response received');
             
-            // Open crop modal with error handling
-            await openCropModal(imageUri);
-          } else {
-            console.error('❌ No image URI in response');
-            console.error('Response assets:', response.assets);
+            if (response.didCancel) {
+              console.log('User cancelled gallery picker');
+              return;
+            }
+
+            if (response.errorCode) {
+              console.error('Gallery error:', response.errorCode, response.errorMessage);
+              Alert.alert(
+                'Gallery Error',
+                response.errorMessage || 'Failed to select photo. Please try again.',
+                [{ text: 'OK' }]
+              );
+              return;
+            }
+
+            if (response.assets && response.assets[0] && response.assets[0].uri) {
+              const imageUri = response.assets[0].uri;
+              console.log('✅ Photo selected from gallery');
+              console.log('📍 Image URI:', imageUri);
+              console.log('📏 Image size:', response.assets[0].fileSize, 'bytes');
+              
+              // Open crop modal with error handling
+              try {
+                await openCropModal(imageUri);
+              } catch (cropError) {
+                console.error('❌ Unexpected crop error:', cropError);
+                // Fallback - use image without cropping
+                onImageSelected(imageUri);
+                onClose();
+              }
+            } else {
+              console.error('❌ No image URI in response');
+              console.error('Response assets:', response.assets);
+              Alert.alert(
+                'Error',
+                'Failed to select photo. Please try again.',
+                [{ text: 'OK' }]
+              );
+            }
+          } catch (error) {
+            console.error('❌ Error processing gallery response:', error);
             Alert.alert(
               'Error',
-              'Failed to select photo. Please try again.',
+              'An error occurred while processing the photo. Please try again.',
               [{ text: 'OK' }]
             );
           }
-        } catch (error) {
-          console.error('❌ Error processing gallery response:', error);
-          Alert.alert(
-            'Error',
-            'An error occurred while processing the photo. Please try again.',
-            [{ text: 'OK' }]
-          );
-        }
+        }, 100);
       });
     } catch (error) {
       console.error('❌ Gallery error:', error);
@@ -324,16 +344,33 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
       console.log('❌ Crop error:', error);
       console.log('Error details:', JSON.stringify(error, null, 2));
       
-      // Don't show alert if user just cancelled
-      if (error.message && 
-          error.message !== 'User cancelled image selection' &&
-          error.code !== 'E_PICKER_CANCELLED') {
-        Alert.alert(
-          'Crop Error',
-          `Failed to crop image: ${error.message || 'Unknown error'}. Please try again.`,
-          [{ text: 'OK' }]
-        );
+      // User cancelled cropping
+      if (error.code === 'E_PICKER_CANCELLED' || 
+          error.message === 'User cancelled image selection') {
+        console.log('User cancelled cropping');
+        return;
       }
+      
+      // Crop failed - offer to use image without cropping
+      Alert.alert(
+        'Cropping Failed',
+        'The image cropping tool encountered an error. Would you like to use the image without cropping?',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+            onPress: () => console.log('User cancelled after crop error')
+          },
+          {
+            text: 'Use Without Crop',
+            onPress: () => {
+              console.log('✅ Using image without cropping:', imageUri);
+              onImageSelected(imageUri);
+              onClose();
+            },
+          },
+        ]
+      );
     }
   };
 
