@@ -1,4 +1,5 @@
 // HomeScreen comprehensively optimized for all device sizes with ultra-compact header, search bar, and content sizing
+// Performance optimizations: FastImage for better image loading and caching, lazy loading for lists
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
@@ -35,6 +36,7 @@ import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 // import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
 import ComingSoonModal from '../components/ComingSoonModal';
+import OptimizedImage, { preloadImages } from '../components/OptimizedImage';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -752,10 +754,11 @@ const HomeScreen: React.FC = React.memo(() => {
         }}
       >
                  <View style={styles.bannerContainer}>
-           <Image 
-             source={{ uri: item.imageUrl }} 
-             style={styles.bannerImage}
-           />
+          <OptimizedImage 
+            uri={item.imageUrl} 
+            style={styles.bannerImage}
+            resizeMode="cover"
+          />
            <LinearGradient
              colors={['transparent', 'rgba(0,0,0,0.7)']}
              style={styles.bannerOverlay}
@@ -831,7 +834,7 @@ const HomeScreen: React.FC = React.memo(() => {
           ]}
         >
           <View style={styles.templateImageContainer}>
-            <Image source={{ uri: item.thumbnail }} style={styles.templateImage} />
+            <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
           </View>
         </Animated.View>
       </TouchableOpacity>
@@ -883,7 +886,7 @@ const HomeScreen: React.FC = React.memo(() => {
           ]}
         >
           <View style={styles.templateImageContainer}>
-            <Image source={{ uri: item.thumbnail }} style={styles.templateImage} />
+            <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
             <View style={styles.videoPlayOverlay}>
               <Icon name="play-arrow" size={32} color="#ffffff" />
             </View>
@@ -936,7 +939,7 @@ const HomeScreen: React.FC = React.memo(() => {
           ]}
         >
           <View style={styles.templateImageContainer}>
-            <Image source={{ uri: item.thumbnail }} style={styles.templateImage} />
+            <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
           </View>
         </Animated.View>
       </TouchableOpacity>
@@ -1138,16 +1141,11 @@ const HomeScreen: React.FC = React.memo(() => {
                     }}
                   >
                     <View style={styles.upcomingEventImageContainer}>
-                      <Image 
-                        source={{ uri: event.imageUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop' }} 
+                      <OptimizedImage 
+                        uri={event.imageUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop'} 
                         style={styles.upcomingEventImage}
-                        defaultSource={require('../assets/MainLogo/MB.png')}
-                        onError={(error) => {
-                          console.log('Event image load error:', event.id, event.imageUrl);
-                        }}
-                        onLoad={() => {
-                          console.log('Event image loaded successfully:', event.id);
-                        }}
+                        resizeMode="cover"
+                        fallbackSource={require('../assets/MainLogo/MB.png')}
                       />
                       <LinearGradient
                         colors={['transparent', 'rgba(0,0,0,0.7)']}
@@ -1479,8 +1477,8 @@ const HomeScreen: React.FC = React.memo(() => {
                {selectedTemplate && (
                  <>
                    <View style={styles.modalImageContainer}>
-                     <Image 
-                       source={{ uri: selectedTemplate.thumbnail }} 
+                     <OptimizedImage 
+                       uri={selectedTemplate.thumbnail} 
                        style={styles.modalImage}
                        resizeMode="cover"
                      />
@@ -1564,13 +1562,11 @@ const HomeScreen: React.FC = React.memo(() => {
                       }}
                     >
                       <View style={styles.upcomingEventModalImageContainer}>
-                        <Image 
-                          source={{ uri: event.imageUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop' }} 
+                        <OptimizedImage 
+                          uri={event.imageUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop'} 
                           style={styles.upcomingEventModalImage}
-                          defaultSource={require('../assets/MainLogo/MB.png')}
-                          onError={(error) => {
-                            console.log('Event modal image load error:', event.id, event.imageUrl);
-                          }}
+                          resizeMode="cover"
+                          fallbackSource={require('../assets/MainLogo/MB.png')}
                         />
                         <LinearGradient
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
@@ -1657,7 +1653,7 @@ const HomeScreen: React.FC = React.memo(() => {
                       }}
                     >
                       <View style={styles.upcomingEventModalImageContainer}>
-                        <Image source={{ uri: template.thumbnail }} style={styles.upcomingEventModalImage} />
+                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
                         <LinearGradient
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
@@ -1743,7 +1739,7 @@ const HomeScreen: React.FC = React.memo(() => {
                       }}
                     >
                       <View style={styles.upcomingEventModalImageContainer}>
-                        <Image source={{ uri: video.thumbnail }} style={styles.upcomingEventModalImage} />
+                        <OptimizedImage uri={video.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
                         <LinearGradient
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
