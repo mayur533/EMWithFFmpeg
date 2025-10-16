@@ -1,8 +1,9 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-// Optimized for small screen devices with responsive design improvements
-// Canvas now gets 70% height on ultra-small screens, 65% on small screens, and 60% on larger screens
-// Toolbar is now ultra-compact with responsive button sizes and optimized spacing
-// Floating toolbar is optimized for small screens with responsive positioning and sizing
+// Optimized for all screen devices with responsive design improvements
+// Canvas height: 38-45% on portrait mode, 65% on landscape (prevents toolbar overlap)
+// Toolbar is fixed on screen (no vertical scroll) with horizontal scroll for buttons
+// All sections (toolbar, toggle fields, templates) have fixed heights and are fully responsive
+// Layout ensures no overlapping between canvas and controls across all screen sizes
 import {
   View,
   Text,
@@ -97,22 +98,25 @@ const getResponsiveDimensions = (insets: any) => {
     canvasWidthRatio = isTablet ? 0.7 : 0.8;
     canvasHeightRatio = isTablet ? 0.8 : 0.7;
   } else {
-    // Portrait mode - adjusted ratios for better space distribution
-    if (isUltraSmallScreen) {
+    // Portrait mode - adjusted ratios to prevent toolbar overlap
+    if (isTablet) {
+      canvasWidthRatio = 0.9;
+      canvasHeightRatio = 0.42; // Reduced for tablets to give more space for toolbar
+    } else if (isUltraSmallScreen) {
       canvasWidthRatio = 0.98;
-      canvasHeightRatio = 0.48; // Reduced from 0.7 to 0.48 for ultra-small screens
+      canvasHeightRatio = 0.38; // Further reduced to prevent overlap
     } else if (isSmallScreen) {
       canvasWidthRatio = 0.96;
-      canvasHeightRatio = 0.50; // Reduced from 0.65 to 0.50
+      canvasHeightRatio = 0.40; // Reduced to give toolbar more space
     } else if (isMediumScreen) {
       canvasWidthRatio = 0.94;
-      canvasHeightRatio = 0.52; // Reduced from 0.6 to 0.52
+      canvasHeightRatio = 0.42; // Reduced from 0.52
     } else if (isLargeScreen) {
       canvasWidthRatio = 0.92;
-      canvasHeightRatio = 0.55;
+      canvasHeightRatio = 0.44; // Reduced from 0.55
     } else {
       canvasWidthRatio = 0.9;
-      canvasHeightRatio = 0.5;
+      canvasHeightRatio = 0.45; // Reduced from 0.5
     }
   }
   
@@ -737,6 +741,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [frameContent, setFrameContent] = useState<{[key: string]: string}>({});
   const [applyingFrame, setApplyingFrame] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [showRemoveFrameWarningModal, setShowRemoveFrameWarningModal] = useState(false);
   const [currentPositions, setCurrentPositions] = useState<{ [key: string]: { x: number; y: number } }>({});
   const currentPositionsRef = useRef<{ [key: string]: { x: number; y: number } }>({});
   const [showRemoveFrameModal, setShowRemoveFrameModal] = useState(false);
@@ -1519,6 +1524,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
 
   // Apply template to poster
   const applyTemplate = useCallback((templateType: string) => {
+    // Check if a frame is already selected
+    if (selectedFrame) {
+      setShowRemoveFrameWarningModal(true);
+      return; // Don't apply template if frame is selected
+    }
+    
     setSelectedTemplate(templateType);
     setShowTemplatesModal(false);
     
@@ -1610,7 +1621,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       
       return layer;
     }));
-  }, []);
+  }, [selectedFrame]);
 
   // Update layer position
   const updateLayerPosition = useCallback((layerId: string, position: { x: number; y: number }) => {
@@ -2203,16 +2214,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           />
         )}
         
-        {/* Controls Container - Scrollable to prevent overlap */}
-        <ScrollView 
+        {/* Controls Container - Fixed layout with responsive heights */}
+        <View 
           style={[
             styles.controlsContainer, 
             { 
               paddingBottom: Math.max(insets.bottom + responsiveSpacing.md, responsiveSpacing.lg)
             }
           ]}
-          showsVerticalScrollIndicator={false}
-          nestedScrollEnabled={true}
         >
         
         {/* Toolbar Below Canvas */}
@@ -2843,7 +2852,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             </TouchableOpacity>
           </ScrollView>
         </View>
-        </ScrollView>
+        </View>
 
       {/* Business Profile Selection Modal */}
       <Modal
@@ -3323,6 +3332,105 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         </View>
       </Modal>
 
+      {/* Frame Warning Modal - Responsive across all screen sizes */}
+      <Modal
+        visible={showRemoveFrameWarningModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRemoveFrameWarningModal(false)}
+      >
+        <View style={[styles.modalOverlay, { paddingHorizontal: isTablet ? responsiveSpacing.xl : isLandscape ? responsiveSpacing.lg : responsiveSpacing.md }]}>
+          <View style={[
+            themeStyles.modalContent,
+            {
+              width: isTablet 
+                ? screenWidth * 0.5 
+                : isLandscape 
+                  ? screenWidth * 0.6 
+                  : isUltraSmallScreen 
+                    ? screenWidth * 0.92 
+                    : isSmallScreen 
+                      ? screenWidth * 0.9 
+                      : screenWidth * 0.85,
+              maxHeight: isTablet 
+                ? screenHeight * 0.5 
+                : isLandscape 
+                  ? screenHeight * 0.5 
+                  : screenHeight * 0.4,
+            }
+          ]}>
+            <View style={{ alignItems: 'center', marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md }}>
+              <View style={{ 
+                width: isTablet ? 70 : isLandscape ? 60 : isUltraSmallScreen ? 50 : 60, 
+                height: isTablet ? 70 : isLandscape ? 60 : isUltraSmallScreen ? 50 : 60, 
+                borderRadius: isTablet ? 35 : isLandscape ? 30 : isUltraSmallScreen ? 25 : 30, 
+                backgroundColor: '#fff8f0', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                marginBottom: isTablet ? responsiveSpacing.md : responsiveSpacing.sm
+              }}>
+                <Icon 
+                  name="warning" 
+                  size={isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 24 : 32} 
+                  color="#ff9800" 
+                />
+              </View>
+              <Text style={[
+                themeStyles.modalTitle, 
+                { 
+                  fontSize: isTablet ? 24 : isLandscape ? 20 : isUltraSmallScreen ? 18 : 20,
+                  marginBottom: responsiveSpacing.sm,
+                  textAlign: 'center'
+                }
+              ]}>
+                Remove Frame First
+              </Text>
+              <Text style={[
+                themeStyles.modalSubtitle, 
+                { 
+                  fontSize: isTablet ? 15 : isLandscape ? 13 : isUltraSmallScreen ? 12 : 14,
+                  textAlign: 'center',
+                  lineHeight: isTablet ? 22 : isLandscape ? 18 : isUltraSmallScreen ? 16 : 20,
+                  paddingHorizontal: isTablet ? responsiveSpacing.md : responsiveSpacing.sm
+                }
+              ]}>
+                Please remove the current frame before applying a new template. You can remove the frame by clicking the "Remove Frame" button.
+              </Text>
+            </View>
+            <View style={[
+              styles.modalButtons,
+              {
+                flexDirection: 'row',
+                gap: isTablet ? responsiveSpacing.md : responsiveSpacing.sm
+              }
+            ]}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  {
+                    flex: 1,
+                    backgroundColor: '#ff9800',
+                    paddingVertical: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 12 : 14,
+                    borderRadius: isTablet ? 12 : isLandscape ? 10 : isUltraSmallScreen ? 8 : 10,
+                    marginHorizontal: 0
+                  }
+                ]}
+                onPress={() => setShowRemoveFrameWarningModal(false)}
+              >
+                <Text style={[
+                  styles.addButtonText,
+                  {
+                    fontSize: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 13 : 15
+                  }
+                ]}>
+                  Got it
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </Animated.View>
   );
 };
@@ -3383,13 +3491,21 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     padding: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.sm),
     paddingBottom: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.sm),
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : 0,
-    maxHeight: isLandscape ? screenHeight * 0.7 : (isUltraSmallScreen ? screenHeight * 0.5 : isSmallScreen ? screenHeight * 0.48 : screenHeight * 0.45),
+    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : responsiveSpacing.xs,
+    maxHeight: isLandscape 
+      ? screenHeight * 0.65 
+      : isTablet 
+        ? screenHeight * 0.50
+        : isUltraSmallScreen 
+          ? screenHeight * 0.42 
+          : isSmallScreen 
+            ? screenHeight * 0.44 
+            : screenHeight * 0.45,
   },
   controlsContainer: {
-    maxHeight: isLandscape ? screenHeight * 0.25 : (isUltraSmallScreen ? screenHeight * 0.45 : isSmallScreen ? screenHeight * 0.48 : screenHeight * 0.5),
+    flex: 0, // Don't use flex to prevent expansion
     paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.sm),
-    paddingVertical: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : 0,
+    paddingTop: responsiveSpacing.xs,
   },
   viewShotContainer: {
     // These will be set dynamically based on responsive dimensions
@@ -3515,13 +3631,14 @@ const styles = StyleSheet.create({
     borderColor: '#667eea',
     borderRadius: 8,
   },
-  // Bottom toolbar styles (replacing floating toolbar)
+  // Bottom toolbar styles (replacing floating toolbar) - Fully responsive
   bottomToolbar: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14),
-    padding: isLandscape ? (isTablet ? 12 : 8) : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12),
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.md),
-    marginHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md),
+    borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
+    padding: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    marginTop: isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm,
+    marginBottom: isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.md,
+    marginHorizontal: isTablet ? responsiveSpacing.lg : isLandscape ? responsiveSpacing.md : isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -3762,8 +3879,8 @@ const styles = StyleSheet.create({
   fieldToggleSection: {
     width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: isLandscape ? (isTablet ? 20 : 16) : (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14),
-    padding: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.md),
+    borderRadius: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
+    padding: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -3774,8 +3891,8 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: '#e9ecef',
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.md),
-    marginHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md),
+    marginBottom: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
+    marginHorizontal: isTablet ? responsiveSpacing.lg : isLandscape ? responsiveSpacing.md : isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md,
   },
   fieldToggleHeader: {
     alignItems: 'center',
@@ -3792,7 +3909,7 @@ const styles = StyleSheet.create({
     marginTop: isLandscape ? (isTablet ? responsiveSpacing.xs : 1) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : responsiveSpacing.xs),
   },
   fieldToggleContent: {
-    maxHeight: getResponsiveSectionHeight(),
+    height: isTablet ? 80 : isLandscape ? 70 : isUltraSmallScreen ? 60 : isSmallScreen ? 65 : 70,
   },
   fieldToggleScrollContent: {
     paddingHorizontal: 5,
@@ -4710,12 +4827,12 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#333333',
   },
-  // Templates Section Styles
+  // Templates Section Styles - Fixed height, fully responsive
   templatesSection: {
     width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12),
-    padding: isLandscape ? getResponsiveSectionPadding() : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : getResponsiveSectionPadding()),
+    borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
+    padding: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -4726,8 +4843,8 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: '#e9ecef',
-    marginBottom: isLandscape ? getResponsiveSectionMargin() : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : getResponsiveSectionMargin()),
-    marginHorizontal: getResponsiveSectionPadding(),
+    marginBottom: 0, // No bottom margin - last section
+    marginHorizontal: isTablet ? responsiveSpacing.lg : isLandscape ? responsiveSpacing.md : isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md,
   },
   templatesHeader: {
     alignItems: 'center',
@@ -4744,7 +4861,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   templatesContent: {
-    maxHeight: getResponsiveSectionHeight(),
+    height: isTablet ? 100 : isLandscape ? 90 : isUltraSmallScreen ? 80 : isSmallScreen ? 85 : 90,
   },
   templatesScrollContent: {
     paddingHorizontal: 5,
