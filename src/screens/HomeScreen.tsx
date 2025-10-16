@@ -2211,12 +2211,13 @@ const styles = StyleSheet.create({
      fontWeight: 'bold',
      color: '#333333',
    },
-   // Upcoming Festivals Modal Styles
+   // Upcoming Festivals Modal Styles - Responsive across all screen sizes
    upcomingEventsModalContent: {
-      width: screenWidth * 0.95,
+      width: isTablet ? screenWidth * 0.85 : screenWidth * 0.95,
+      maxWidth: isTablet ? 900 : screenWidth * 0.95,
       height: screenHeight * 0.9,
       backgroundColor: '#ffffff',
-      borderRadius: 25,
+      borderRadius: isTablet ? 30 : 25,
       overflow: 'hidden',
       position: 'relative',
       shadowColor: '#000',
@@ -2236,14 +2237,14 @@ const styles = StyleSheet.create({
       flexDirection: 'row',
       justifyContent: 'space-between',
       alignItems: 'flex-start',
-      paddingHorizontal: screenWidth * 0.05,
+      paddingHorizontal: responsiveSpacing.lg,
     },
     upcomingEventsModalTitleContainer: {
       flex: 1,
-      marginRight: screenWidth * 0.03,
+      marginRight: responsiveSpacing.md,
     },
     upcomingEventsModalTitle: {
-      fontSize: Math.min(screenWidth * 0.055, 22),
+      fontSize: isTablet ? 28 : Math.min(screenWidth * 0.055, 22),
       fontWeight: 'bold',
       color: '#ffffff',
       marginBottom: screenHeight * 0.005,
@@ -2252,14 +2253,14 @@ const styles = StyleSheet.create({
       textShadowRadius: 3,
     },
     upcomingEventsModalSubtitle: {
-      fontSize: Math.min(screenWidth * 0.035, 14),
+      fontSize: isTablet ? 16 : Math.min(screenWidth * 0.035, 14),
       color: 'rgba(255,255,255,0.9)',
       fontWeight: '500',
     },
     upcomingEventsCloseButton: {
-      width: 40,
-      height: 40,
-      borderRadius: 20,
+      width: isTablet ? 48 : 40,
+      height: isTablet ? 48 : 40,
+      borderRadius: isTablet ? 24 : 20,
       backgroundColor: 'rgba(255,255,255,0.2)',
       justifyContent: 'center',
       alignItems: 'center',
@@ -2267,7 +2268,7 @@ const styles = StyleSheet.create({
       borderColor: 'rgba(255,255,255,0.3)',
     },
     upcomingEventsCloseButtonText: {
-      fontSize: 18,
+      fontSize: isTablet ? 22 : 18,
       color: '#ffffff',
       fontWeight: 'bold',
     },
@@ -2276,17 +2277,23 @@ const styles = StyleSheet.create({
       backgroundColor: '#f8f9fa',
     },
     upcomingEventsModalScroll: {
-      paddingHorizontal: screenWidth * 0.05,
-      paddingTop: screenHeight * 0.03,
-      paddingBottom: screenHeight * 0.05,
+      paddingHorizontal: responsiveSpacing.lg,
+      paddingTop: responsiveSpacing.xl,
+      paddingBottom: responsiveSpacing.xl,
     },
     upcomingEventModalRow: {
-      justifyContent: 'flex-start',
+      justifyContent: 'space-between', // Equal spacing between cards
       marginBottom: responsiveSpacing.md,
-      gap: responsiveSpacing.sm,
     },
     upcomingEventModalCard: {
-      width: (screenWidth * 0.85 - responsiveSpacing.lg * 2 - responsiveSpacing.sm * 2) / 3, // Always 3 columns
+      // Calculate card width properly: (container width - left padding - right padding) / 3 columns
+      // This ensures equal spacing on both sides
+      width: (() => {
+        const modalWidth = isTablet ? Math.min(screenWidth * 0.85, 900) : screenWidth * 0.95;
+        const contentPadding = responsiveSpacing.lg * 2; // left + right padding
+        const availableWidth = modalWidth - contentPadding;
+        return availableWidth / 3; // 3 columns, justifyContent handles spacing
+      })(),
       backgroundColor: '#ffffff',
       borderRadius: responsiveSize.cardBorderRadius,
       ...responsiveShadow.medium,
@@ -2295,11 +2302,8 @@ const styles = StyleSheet.create({
       borderColor: 'rgba(0,0,0,0.05)',
     },
     upcomingEventModalImageContainer: {
-      height: isTablet 
-        ? screenHeight * 0.15  // Taller on tablet for better proportions
-        : isLandscape 
-          ? screenHeight * 0.18  // Taller in landscape
-          : screenHeight * 0.12, // Default height on phone
+      width: '100%',
+      aspectRatio: isTablet ? 1 : 0.85, // Responsive aspect ratio for images
       position: 'relative',
     },
     upcomingEventModalImage: {
@@ -2311,42 +2315,42 @@ const styles = StyleSheet.create({
       bottom: 0,
       left: 0,
       right: 0,
-      height: 60,
+      height: isTablet ? 80 : 60,
     },
     upcomingEventModalBadge: {
       position: 'absolute',
-      top: 10,
-      left: 10,
+      top: responsiveSpacing.xs,
+      left: responsiveSpacing.xs,
       backgroundColor: 'rgba(0,0,0,0.8)',
-      paddingHorizontal: 8,
-      paddingVertical: 4,
-      borderRadius: 12,
+      paddingHorizontal: responsiveSpacing.xs,
+      paddingVertical: responsiveSpacing.xs / 2,
+      borderRadius: isTablet ? 14 : 12,
       borderWidth: 1,
       borderColor: 'rgba(255,255,255,0.2)',
     },
     upcomingEventModalBadgeText: {
-      fontSize: Math.min(screenWidth * 0.025, 10),
+      fontSize: isTablet ? 11 : Math.min(screenWidth * 0.025, 10),
       color: '#ffffff',
       fontWeight: '600',
     },
     upcomingEventModalContent: {
-      padding: screenWidth * 0.04,
+      padding: responsiveSpacing.sm,
     },
     upcomingEventModalTitle: {
-      fontSize: Math.min(screenWidth * 0.04, 16),
+      fontSize: isTablet ? 16 : Math.min(screenWidth * 0.04, 14),
       fontWeight: 'bold',
       color: '#333333',
-      marginBottom: screenHeight * 0.01,
+      marginBottom: responsiveSpacing.xs,
     },
     upcomingEventModalDetails: {
-      gap: screenHeight * 0.005,
+      gap: responsiveSpacing.xs,
     },
     upcomingEventModalDetail: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     upcomingEventModalDetailLabel: {
-      fontSize: Math.min(screenWidth * 0.035, 14),
+      fontSize: isTablet ? 14 : Math.min(screenWidth * 0.035, 13),
       color: '#666666',
       fontWeight: '500',
     },
