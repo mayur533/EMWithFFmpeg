@@ -13,6 +13,7 @@ import {
   Modal,
   TextInput,
   Share,
+  RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -71,19 +72,23 @@ const ProfileScreen: React.FC = () => {
   console.log('🔍 ProfileScreen - _originalCompanyName:', currentUser?._originalCompanyName);
   console.log('🔍 ProfileScreen - displayName:', currentUser?.displayName);
   console.log('🔍 ProfileScreen - name:', currentUser?.name);
+  console.log('🖼️ ProfileScreen - User Logo:', currentUser?.logo || '(empty)');
+  console.log('🖼️ ProfileScreen - Company Logo:', currentUser?.companyLogo || '(empty)');
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
-    description: currentUser?.description || '',
-    category: currentUser?.category || '',
-    address: currentUser?.address || '',
+    name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.name || '',
+    description: currentUser?._originalDescription || currentUser?.description || '',
+    category: currentUser?._originalCategory || currentUser?.category || '',
+    address: currentUser?._originalAddress || currentUser?.address || '',
     phone: currentUser?.phoneNumber || currentUser?.phone || '',
-    alternatePhone: currentUser?.alternatePhone || '',
+    alternatePhone: currentUser?.alternatePhone || '', // Use current value, not _original (can be updated)
     email: currentUser?.email || '',
-    website: currentUser?.website || '',
+    website: currentUser?._originalWebsite || currentUser?.website || '',
     companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
   });
+  const [phoneValidationError, setPhoneValidationError] = useState<string>('');
+  const [alternatePhoneValidationError, setAlternatePhoneValidationError] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
   const [posterStats, setPosterStats] = useState({ total: 0, recentCount: 0 });
   const [businessProfileStats, setBusinessProfileStats] = useState({ total: 0, recentCount: 0 });
@@ -100,10 +105,21 @@ const ProfileScreen: React.FC = () => {
   const [comingSoonSubtitle, setComingSoonSubtitle] = useState('');
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorModalMessage, setErrorModalMessage] = useState('');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [lastCacheUpdate, setLastCacheUpdate] = useState<number>(0);
   const { isDarkMode, toggleDarkMode, theme } = useTheme();
   const { isSubscribed, subscriptionStatus, transactionStats, clearSubscriptionData } = useSubscription();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<ProfileScreenNavigationProp>();
+
+  // Cache configuration
+  const CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  const CACHE_KEYS = {
+    PROFILE_DATA: 'profile_cache_data',
+    DOWNLOAD_STATS: 'profile_cache_download_stats',
+    BUSINESS_STATS: 'profile_cache_business_stats',
+    LAST_UPDATE: 'profile_cache_last_update',
+  };
 
   // Business categories (same as registration)
   const categories = [
@@ -127,10 +143,68 @@ const ProfileScreen: React.FC = () => {
     darkModeAnimation.setValue(isDarkMode ? 1 : 0);
   }, [isDarkMode]);
 
+  // Cache utility functions
+  const isCacheValid = async (): Promise<boolean> => {
+    try {
+      const lastUpdate = await AsyncStorage.getItem(CACHE_KEYS.LAST_UPDATE);
+      if (!lastUpdate) return false;
+      
+      const timeSinceUpdate = Date.now() - parseInt(lastUpdate, 10);
+      return timeSinceUpdate < CACHE_DURATION;
+    } catch (error) {
+      console.error('❌ Error checking cache validity:', error);
+      return false;
+    }
+  };
+
+  const getCachedData = async <T,>(key: string): Promise<T | null> => {
+    try {
+      const cachedData = await AsyncStorage.getItem(key);
+      if (!cachedData) return null;
+      return JSON.parse(cachedData) as T;
+    } catch (error) {
+      console.error(`❌ Error reading cache for ${key}:`, error);
+      return null;
+    }
+  };
+
+  const setCachedData = async (key: string, data: any): Promise<void> => {
+    try {
+      await AsyncStorage.setItem(key, JSON.stringify(data));
+    } catch (error) {
+      console.error(`❌ Error writing cache for ${key}:`, error);
+    }
+  };
+
+  const invalidateCache = async (): Promise<void> => {
+    try {
+      console.log('🗑️ Invalidating profile cache');
+      await AsyncStorage.multiRemove([
+        CACHE_KEYS.PROFILE_DATA,
+        CACHE_KEYS.DOWNLOAD_STATS,
+        CACHE_KEYS.BUSINESS_STATS,
+        CACHE_KEYS.LAST_UPDATE,
+      ]);
+      setLastCacheUpdate(0);
+    } catch (error) {
+      console.error('❌ Error invalidating cache:', error);
+    }
+  };
+
+  const updateCacheTimestamp = async (): Promise<void> => {
+    try {
+      const now = Date.now();
+      await AsyncStorage.setItem(CACHE_KEYS.LAST_UPDATE, now.toString());
+      setLastCacheUpdate(now);
+    } catch (error) {
+      console.error('❌ Error updating cache timestamp:', error);
+    }
+  };
+
   // Load user profile data and stats when screen is focused
   useFocusEffect(
     React.useCallback(() => {
-      const loadUserProfileData = async () => {
+      const loadUserProfileData = async (forceRefresh: boolean = false) => {
         try {
           // Get current user ID for user-specific data
           let currentUser = authService.getCurrentUser();
@@ -139,6 +213,48 @@ const ProfileScreen: React.FC = () => {
           if (!userId) {
             console.log('⚠️ No user ID available for loading profile data');
             return;
+          }
+
+          // Check cache validity unless force refresh
+          if (!forceRefresh) {
+            const cacheValid = await isCacheValid();
+            if (cacheValid) {
+              console.log('📦 Loading profile data from cache');
+              
+              // Load from cache
+              const cachedProfile = await getCachedData<any>(CACHE_KEYS.PROFILE_DATA);
+              const cachedDownloadStats = await getCachedData<any>(CACHE_KEYS.DOWNLOAD_STATS);
+              const cachedBusinessStats = await getCachedData<any>(CACHE_KEYS.BUSINESS_STATS);
+              
+              if (cachedProfile) {
+                authService.setCurrentUser(cachedProfile);
+                currentUser = cachedProfile;
+                if (cachedProfile?.logo || cachedProfile?.companyLogo) {
+                  setProfileImageUri(cachedProfile?.logo || cachedProfile?.companyLogo || null);
+                }
+                console.log('✅ Profile data loaded from cache');
+              }
+              
+              if (cachedDownloadStats) {
+                setPosterStats(cachedDownloadStats);
+                console.log('✅ Download stats loaded from cache');
+              }
+              
+              if (cachedBusinessStats) {
+                setBusinessProfileStats(cachedBusinessStats);
+                console.log('✅ Business stats loaded from cache');
+              }
+              
+              // If all cache data is available, return early
+              if (cachedProfile && cachedDownloadStats && cachedBusinessStats) {
+                console.log('✅ All data loaded from cache, skipping API calls');
+                return;
+              }
+            } else {
+              console.log('⏰ Cache expired or invalid, fetching fresh data');
+            }
+          } else {
+            console.log('🔄 Force refresh requested, fetching fresh data');
           }
 
           // IMMEDIATE FIX: Check AsyncStorage for original registered company name
@@ -194,13 +310,19 @@ const ProfileScreen: React.FC = () => {
               ...userDataWithoutProfiles,
               // ALWAYS use the stored companyName, NEVER from API (API may return business profile data)
               companyName: currentUser?._originalCompanyName || currentUser?.companyName,
+              // Ensure _originalCompanyName is always set and preserved
+              _originalCompanyName: currentUser?._originalCompanyName || currentUser?.companyName,
             };
             
             // Update auth service with complete data (without business profiles)
             authService.setCurrentUser(updatedUserData);
             
+            // Cache the updated profile data
+            await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUserData);
+            
             console.log('✅ User data updated (business profiles AND companyName excluded from API)');
             console.log('✅ Preserved original registered company name:', updatedUserData.companyName);
+            console.log('💾 Profile data cached');
             
             // Update profile image from logo field
             if (completeUserData?.logo || completeUserData?.companyLogo) {
@@ -216,11 +338,17 @@ const ProfileScreen: React.FC = () => {
           // Load download stats from backend API
           try {
             const downloadStats = await downloadTrackingService.getDownloadStats(userId);
-            setPosterStats({
+            const posterStatsData = {
               total: downloadStats.total || 0,
               recentCount: downloadStats.recent || 0,
-            });
+            };
+            setPosterStats(posterStatsData);
+            
+            // Cache download stats
+            await setCachedData(CACHE_KEYS.DOWNLOAD_STATS, posterStatsData);
+            
             console.log('✅ [PROFILE] Download stats loaded:', downloadStats);
+            console.log('💾 Download stats cached');
           } catch (error) {
             console.log('⚠️ [PROFILE] Failed to load download stats:', error);
             setPosterStats({ total: 0, recentCount: 0 });
@@ -242,13 +370,22 @@ const ProfileScreen: React.FC = () => {
             };
             
             setBusinessProfileStats(businessStats);
+            
+            // Cache business stats
+            await setCachedData(CACHE_KEYS.BUSINESS_STATS, businessStats);
+            
             console.log('📊 Business profile stats loaded:', businessStats);
+            console.log('💾 Business stats cached');
           } catch (error) {
             console.log('⚠️ Failed to load business profile stats:', error);
             setBusinessProfileStats({ total: 0, recentCount: 0 });
           }
           
+          // Update cache timestamp after successful data load
+          await updateCacheTimestamp();
+          
           console.log('📊 Loaded stats for user:', userId, 'Posters:', posterStats?.total || 0, 'Business Profiles:', businessStats?.total || 0);
+          console.log('✅ All profile data cached successfully');
         } catch (error) {
           console.error('Error loading user profile data:', error);
         }
@@ -258,6 +395,93 @@ const ProfileScreen: React.FC = () => {
     }, [])
   );
 
+  const handleRefresh = async () => {
+    setIsRefreshing(true);
+    try {
+      console.log('🔄 Manual refresh triggered');
+      
+      // Get current user
+      let currentUser = authService.getCurrentUser();
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        console.log('⚠️ No user ID available for refresh');
+        setIsRefreshing(false);
+        return;
+      }
+      
+      // Invalidate cache first
+      await invalidateCache();
+      
+      // Fetch fresh profile data
+      try {
+        const profileResponse = await authApi.getProfile(userId);
+        const completeUserData = profileResponse.data;
+        
+        const { businessProfiles, companyName: apiCompanyName, ...cleanUserData } = completeUserData as any;
+        const updatedUserData = {
+          ...currentUser,
+          ...cleanUserData,
+          companyName: currentUser?._originalCompanyName || currentUser?.companyName,
+          // Ensure _originalCompanyName is always set and preserved
+          _originalCompanyName: currentUser?._originalCompanyName || currentUser?.companyName,
+        };
+        
+        authService.setCurrentUser(updatedUserData);
+        await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUserData);
+        
+        if (completeUserData?.logo || completeUserData?.companyLogo) {
+          setProfileImageUri(completeUserData?.logo || completeUserData?.companyLogo || null);
+        }
+      } catch (error) {
+        console.log('⚠️ Failed to refresh profile data:', error);
+      }
+      
+      // Fetch fresh download stats
+      try {
+        const downloadStats = await downloadTrackingService.getDownloadStats(userId);
+        const posterStatsData = {
+          total: downloadStats.total || 0,
+          recentCount: downloadStats.recent || 0,
+        };
+        setPosterStats(posterStatsData);
+        await setCachedData(CACHE_KEYS.DOWNLOAD_STATS, posterStatsData);
+      } catch (error) {
+        console.log('⚠️ Failed to refresh download stats:', error);
+      }
+      
+      // Fetch fresh business stats
+      try {
+        const profiles = await businessProfileService.getUserBusinessProfiles(userId);
+        const oneWeekAgo = new Date();
+        oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+        const recentCount = profiles.filter(profile => 
+          new Date(profile.createdAt) > oneWeekAgo
+        ).length;
+        
+        const businessStats = {
+          total: profiles.length,
+          recentCount: recentCount,
+        };
+        
+        setBusinessProfileStats(businessStats);
+        await setCachedData(CACHE_KEYS.BUSINESS_STATS, businessStats);
+      } catch (error) {
+        console.log('⚠️ Failed to refresh business stats:', error);
+      }
+      
+      // Update cache timestamp
+      await updateCacheTimestamp();
+      
+      console.log('✅ Profile data refreshed successfully');
+    } catch (error) {
+      console.error('❌ Error during refresh:', error);
+      Alert.alert('Error', 'Failed to refresh data. Please try again.');
+    } finally {
+      setIsRefreshing(false);
+    }
+  };
+
   const handleSignOut = () => {
     setShowSignOutModal(true);
   };
@@ -266,6 +490,10 @@ const ProfileScreen: React.FC = () => {
     try {
       setShowSignOutModal(false);
       console.log('ProfileScreen: Starting sign out process...');
+      
+      // Clear profile cache before signing out
+      console.log('🗑️ Clearing profile cache before sign out...');
+      await invalidateCache();
       
       // Clear subscription data FIRST before signing out
       console.log('🧹 Clearing subscription data before sign out...');
@@ -359,10 +587,11 @@ const ProfileScreen: React.FC = () => {
 
   const handleShareApp = async () => {
     try {
+      const playStoreUrl = 'https://play.google.com/store/apps/details?id=com.marketbrand';
       await Share.share({
-        message: 'Check out EventMarketers - Create amazing event posters and marketing materials! Download now and start creating professional posters for your events.',
-        title: 'EventMarketers - Event Poster Creator',
-        url: 'https://eventmarketers.app', // Replace with actual app store URL
+        message: `Check out MarketBrand - Create amazing event posters and marketing materials! Download now and start creating professional posters for your events.\n\n${playStoreUrl}`,
+        title: 'MarketBrand - Event Poster Creator',
+        url: playStoreUrl,
       });
     } catch (error) {
       console.error('Error sharing app:', error);
@@ -398,12 +627,12 @@ const ProfileScreen: React.FC = () => {
         // Map stored user fields to form fields
         // Use _original* fields if available to prevent contamination from business profiles
         setEditFormData({
-          name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
+          name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.name || '',
           description: currentUser?._originalDescription || currentUser?.description || '',
           category: currentUser?._originalCategory || currentUser?.category || '',
           address: currentUser?._originalAddress || currentUser?.address || '', // FROM USER REGISTRATION
           phone: currentUser?.phoneNumber || currentUser?.phone || '',
-          alternatePhone: currentUser?.alternatePhone || '',
+          alternatePhone: currentUser?.alternatePhone || '', // Use current value (can be updated)
           email: currentUser?.email || '',
           website: currentUser?._originalWebsite || currentUser?.website || '', // FROM USER REGISTRATION
           companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
@@ -443,12 +672,12 @@ const ProfileScreen: React.FC = () => {
           // Use current registered user data instead of failing
           // Use _original* fields to prevent contamination from business profiles
           setEditFormData({
-            name: currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.name || '',
+            name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.name || '',
             description: currentUser?._originalDescription || currentUser?.description || '',
             category: currentUser?._originalCategory || currentUser?.category || '',
             address: currentUser?._originalAddress || currentUser?.address || '',
             phone: currentUser?.phoneNumber || currentUser?.phone || '',
-            alternatePhone: currentUser?.alternatePhone || '',
+            alternatePhone: currentUser?.alternatePhone || '', // Use current value (can be updated)
             email: currentUser?.email || '',
             website: currentUser?._originalWebsite || currentUser?.website || '',
             companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
@@ -461,11 +690,52 @@ const ProfileScreen: React.FC = () => {
       }
       
       console.log('🔍 Fetching profile using userId:', userId);
+      console.log('📡 Making GET request to profile API...');
       
       const profileResponse = await authApi.getProfile(userId);
-      const completeUserData = profileResponse.data;
       
-      console.log('🔍 Complete Profile Data from API:', JSON.stringify(completeUserData, null, 2));
+      console.log('═══════════════════════════════════════════════');
+      console.log('📥 GET PROFILE RESPONSE - START');
+      console.log('═══════════════════════════════════════════════');
+      console.log('📦 Full Response Object:', JSON.stringify(profileResponse, null, 2));
+      console.log('───────────────────────────────────────────────');
+      console.log('✅ Response Status:', (profileResponse as any)?.status || 'N/A');
+      console.log('✅ Response Success:', profileResponse?.success || 'N/A');
+      console.log('───────────────────────────────────────────────');
+      
+      const completeUserData = profileResponse.data;
+      const userDataAny = completeUserData as any;
+      
+      console.log('📋 Response Data Fields:', Object.keys(completeUserData || {}));
+      console.log('───────────────────────────────────────────────');
+      console.log('🔍 Complete Profile Data (Formatted):');
+      console.log(JSON.stringify(completeUserData, null, 2));
+      console.log('───────────────────────────────────────────────');
+      console.log('📊 Individual Fields:');
+      console.log('   - ID:', completeUserData?.id || '(not set)');
+      console.log('   - Email:', completeUserData?.email || '(not set)');
+      console.log('   - Company Name:', userDataAny?.companyName || '(not set)');
+      console.log('   - Phone:', userDataAny?.phoneNumber || userDataAny?.phone || '(not set)');
+      console.log('   - Address:', userDataAny?.address || '(not set)');
+      console.log('   - Website:', userDataAny?.website || '(not set)');
+      console.log('   - Category:', userDataAny?.category || '(not set)');
+      console.log('   - Description:', userDataAny?.description || '(not set)');
+      console.log('   - Alternate Phone:', userDataAny?.alternatePhone || '(not set)');
+      console.log('   - Logo:', userDataAny?.logo || '(not set)');
+      console.log('   - Photo:', userDataAny?.photo || '(not set)');
+      console.log('   - Total Views:', userDataAny?.totalViews || 0);
+      console.log('   - Is Converted:', userDataAny?.isConverted || false);
+      console.log('   - Created At:', userDataAny?.createdAt || '(not set)');
+      console.log('   - Updated At:', userDataAny?.updatedAt || '(not set)');
+      console.log('───────────────────────────────────────────────');
+      console.log('⚠️  Business Profiles Present?', !!userDataAny?.businessProfiles);
+      if (userDataAny?.businessProfiles) {
+        console.log('📋 Business Profiles Count:', userDataAny.businessProfiles.length || 0);
+        console.log('📋 Business Profiles:', JSON.stringify(userDataAny.businessProfiles, null, 2));
+      }
+      console.log('═══════════════════════════════════════════════');
+      console.log('📥 GET PROFILE RESPONSE - END');
+      console.log('═══════════════════════════════════════════════');
       
       // Update current user with complete profile data
       // CRITICAL: Set _original* fields from API response (this is the CLEAN user profile data)
@@ -509,7 +779,7 @@ const ProfileScreen: React.FC = () => {
       // IMPORTANT: Use _original* fields which we just populated from API
       // This is the REAL user profile data from backend (not business profile data)
       setEditFormData({
-        name: updatedUserData?.companyName || updatedUserData?._originalCompanyName || updatedUserData?.name || '',
+        name: updatedUserData?._originalCompanyName || updatedUserData?.companyName || updatedUserData?.name || '',
         description: updatedUserData?._originalDescription || '',
         category: updatedUserData?._originalCategory || '',
         address: updatedUserData?._originalAddress || '', // FROM API - NOW PROTECTED
@@ -561,6 +831,38 @@ const ProfileScreen: React.FC = () => {
       return;
     }
 
+    // Validate phone number - must be exactly 10 digits
+    const phoneDigits = editFormData.phone.trim().replace(/\D/g, ''); // Remove non-digit characters
+    if (phoneDigits.length !== 10) {
+      setPhoneValidationError('Phone number must be exactly 10 digits');
+      Alert.alert(
+        'Invalid Phone Number',
+        'Phone number must be exactly 10 digits. Please enter a valid phone number.',
+        [{ text: 'OK' }]
+      );
+      return;
+    } else {
+      setPhoneValidationError(''); // Clear error if valid
+    }
+
+    // Validate alternate phone - if provided, must be exactly 10 digits
+    if (editFormData.alternatePhone.trim()) {
+      const alternatePhoneDigits = editFormData.alternatePhone.trim().replace(/\D/g, '');
+      if (alternatePhoneDigits.length !== 10) {
+        setAlternatePhoneValidationError('Alternate phone must be exactly 10 digits');
+        Alert.alert(
+          'Invalid Alternate Phone',
+          'Alternate phone number must be exactly 10 digits. Please enter a valid phone number or leave it empty.',
+          [{ text: 'OK' }]
+        );
+        return;
+      } else {
+        setAlternatePhoneValidationError(''); // Clear error if valid
+      }
+    } else {
+      setAlternatePhoneValidationError(''); // Clear error if empty (optional field)
+    }
+
     if (!editFormData.category.trim()) {
       Alert.alert('Error', 'Business category is required');
       return;
@@ -593,56 +895,83 @@ const ProfileScreen: React.FC = () => {
       }
 
       // Update profile via backend API
+      // Send null for empty fields to allow clearing them
       const updateData = {
         name: editFormData.name.trim(),
         email: editFormData.email.trim(),
         phone: editFormData.phone.trim(),
-        description: editFormData.description.trim(),
+        description: editFormData.description.trim() || null,
         category: editFormData.category.trim(),
-        address: editFormData.address.trim(),
-        alternatePhone: editFormData.alternatePhone.trim(),
-        website: editFormData.website.trim(),
-        companyLogo: editFormData.companyLogo.trim()
+        address: editFormData.address.trim() || null,
+        alternatePhone: editFormData.alternatePhone.trim() || null, // Send null to clear
+        website: editFormData.website.trim() || null,
+        companyLogo: editFormData.companyLogo.trim() || null
       };
 
       const response = await authApi.updateProfile(updateData, userId);
       
+      console.log('📥 API Update Response:', JSON.stringify(response, null, 2));
+      console.log('📥 Response data fields:', Object.keys(response.data || {}));
+      
       if (response.success) {
+        // API returns user data nested under response.data.user (or directly in response.data)
+        const responseData: any = response.data;
+        const apiUserData = responseData.user || response.data;
+        
+        console.log('📥 Extracted user data:', JSON.stringify(apiUserData, null, 2));
+        
         // Update the current user object with the response
-        // CRITICAL: Store BOTH current AND original values to prevent contamination
+        // CRITICAL: Since API doesn't return all fields, merge with what we sent
         const updatedUser = {
           ...currentUser,
-          ...response.data,
-          // User profile fields
-          displayName: response.data.name,
-          companyName: response.data.name,
-          phoneNumber: response.data.phone,
-          bio: response.data.description,
-          // Current values (can be updated)
-          address: response.data.address || currentUser?.address || '',
-          website: response.data.website || currentUser?.website || '',
-          category: response.data.category || currentUser?.category || '',
-          description: response.data.description || currentUser?.description || '',
-          alternatePhone: response.data.alternatePhone || currentUser?.alternatePhone || '',
+          ...apiUserData,
+          // User profile fields - map API fields to local fields
+          displayName: apiUserData.name || apiUserData.companyName || currentUser?.companyName,
+          companyName: apiUserData.name || apiUserData.companyName || currentUser?.companyName,
+          name: apiUserData.name || apiUserData.companyName || currentUser?.companyName,
+          phoneNumber: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
+          phone: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
+          bio: updateData.description || '',
+          // Current values - Use what we SENT (since API doesn't return these fields)
+          address: updateData.address || '',
+          website: updateData.website || '',
+          category: updateData.category || '',
+          description: updateData.description || '',
+          alternatePhone: updateData.alternatePhone || '',
           // Original values (NEVER overwritten - stored on first save only)
-          _originalAddress: currentUser?._originalAddress || response.data.address || '',
-          _originalWebsite: currentUser?._originalWebsite || response.data.website || '',
-          _originalCategory: currentUser?._originalCategory || response.data.category || '',
-          _originalDescription: currentUser?._originalDescription || response.data.description || '',
-          _originalAlternatePhone: currentUser?._originalAlternatePhone || response.data.alternatePhone || '',
+          _originalCompanyName: currentUser?._originalCompanyName || apiUserData.name || apiUserData.companyName || '',
+          _originalAddress: currentUser?._originalAddress || updateData.address || '',
+          _originalWebsite: currentUser?._originalWebsite || updateData.website || '',
+          _originalCategory: currentUser?._originalCategory || updateData.category || '',
+          _originalDescription: currentUser?._originalDescription || updateData.description || '',
+          _originalAlternatePhone: currentUser?._originalAlternatePhone || updateData.alternatePhone || '',
         };
         
         console.log('✅ Updated user object (USER FIELDS ONLY):');
+        console.log('   - companyName:', updatedUser.companyName);
         console.log('   - address:', updatedUser.address);
         console.log('   - website:', updatedUser.website);
         console.log('   - category:', updatedUser.category);
         console.log('   - description:', updatedUser.description);
+        console.log('   - alternatePhone:', updatedUser.alternatePhone);
         console.log('✅ Protected original values:');
+        console.log('   - _originalCompanyName:', updatedUser._originalCompanyName);
         console.log('   - _originalAddress:', updatedUser._originalAddress);
         console.log('   - _originalWebsite:', updatedUser._originalWebsite);
         console.log('   - _originalCategory:', updatedUser._originalCategory);
+        console.log('   - _originalDescription:', updatedUser._originalDescription);
+        console.log('   - _originalAlternatePhone:', updatedUser._originalAlternatePhone);
         
         authService.setCurrentUser(updatedUser);
+        
+        // Invalidate profile cache to force fresh data on next load
+        console.log('🗑️ Invalidating profile cache after update');
+        await invalidateCache();
+        
+        // Cache the newly updated profile data
+        await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUser);
+        await updateCacheTimestamp();
+        console.log('💾 Updated profile data cached');
         
         // Clear business profile cache to force refresh on next visit
         console.log('🔄 Clearing business profile cache after profile update');
@@ -672,16 +1001,26 @@ const ProfileScreen: React.FC = () => {
     const user = authService.getCurrentUser();
     setShowEditProfileModal(false);
     setEditFormData({
-      name: user?.companyName || user?._originalCompanyName || user?.name || '',
-      description: user?.description || '',
-      category: user?.category || '',
-      address: user?.address || '',
+      name: user?._originalCompanyName || user?.companyName || user?.name || '',
+      description: user?._originalDescription || user?.description || '',
+      category: user?._originalCategory || user?.category || '',
+      address: user?._originalAddress || user?.address || '',
       phone: user?.phoneNumber || user?.phone || '',
-      alternatePhone: user?.alternatePhone || '',
+      alternatePhone: user?.alternatePhone || '', // Use current value (can be updated)
       email: user?.email || '',
-      website: user?.website || '',
+      website: user?._originalWebsite || user?.website || '',
       companyLogo: user?.logo || user?.companyLogo || '',
     });
+  };
+
+  // Validate phone number (exactly 10 digits)
+  const validatePhone = (phone: string): string => {
+    if (!phone || !phone.trim()) return ''; // Empty is OK for optional fields
+    const digits = phone.trim().replace(/\D/g, ''); // Remove non-digits
+    if (digits.length === 0) return '';
+    if (digits.length < 10) return `Phone must be 10 digits (currently ${digits.length})`;
+    if (digits.length > 10) return `Phone must be 10 digits (currently ${digits.length})`;
+    return ''; // Valid
   };
 
   const handleImagePickerPress = () => {
@@ -689,24 +1028,45 @@ const ProfileScreen: React.FC = () => {
   };
 
   const handleImageSelected = async (imageUri: string) => {
+    console.log('🖼️ [START] handleImageSelected called with:', imageUri);
+    
     try {
-      console.log('🖼️ Image selected in ProfileScreen:', imageUri);
-      
-      // Validate image URI
+      // Validate image URI first
       if (!imageUri || imageUri.trim() === '') {
         console.error('❌ Invalid image URI received');
         Alert.alert('Error', 'Invalid image. Please try again.');
         return;
       }
       
-      console.log('✅ Setting profile image URI...');
-      setProfileImageUri(imageUri);
-      
-      // Update the current user's profile picture (logo field from API)
+      // Get current user at the start
       const currentUser = authService.getCurrentUser();
-      if (currentUser) {
-        console.log('✅ Updating user profile data...');
-        const updatedUser = {
+      console.log('📍 Current user info:', {
+        id: currentUser?.id,
+        logo: currentUser?.logo,
+        companyLogo: currentUser?.companyLogo,
+      });
+      
+      if (!currentUser) {
+        console.error('❌ No current user available');
+        Alert.alert('Error', 'User session not found. Please try again.');
+        return;
+      }
+      
+      // Step 1: Update UI state
+      try {
+        console.log('✅ Step 1: Setting profile image URI...');
+        setProfileImageUri(imageUri);
+        console.log('✅ Step 1 complete');
+      } catch (error) {
+        console.error('❌ Step 1 failed:', error);
+        throw error;
+      }
+      
+      // Step 2: Update user object
+      let updatedUser;
+      try {
+        console.log('✅ Step 2: Creating updated user object...');
+        updatedUser = {
           ...currentUser,
           logo: imageUri, // Primary field from API
           photoURL: imageUri,
@@ -716,19 +1076,122 @@ const ProfileScreen: React.FC = () => {
         
         // Update in auth service
         authService.setCurrentUser(updatedUser);
-        
-        // Save to storage
-        await authService.saveUserToStorage(updatedUser, await AsyncStorage.getItem('authToken') || '');
-        
-        console.log('✅ Profile picture updated in storage');
+        console.log('✅ Step 2 complete');
+      } catch (error) {
+        console.error('❌ Step 2 failed:', error);
+        throw error;
       }
       
-      setSuccessMessage('Profile picture updated successfully!');
-      setShowSuccessModal(true);
+      // Step 3: Save to storage
+      try {
+        console.log('✅ Step 3: Saving to storage...');
+        const authToken = await AsyncStorage.getItem('authToken');
+        await authService.saveUserToStorage(updatedUser, authToken || '');
+        console.log('✅ Step 3 complete');
+      } catch (error) {
+        console.error('❌ Step 3 failed:', error);
+        // Continue anyway - this is not critical
+      }
       
-      console.log('✅ Profile picture update complete');
+      // Step 4: Update cache
+      try {
+        console.log('✅ Step 4: Updating cache...');
+        await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUser);
+        await updateCacheTimestamp();
+        console.log('✅ Step 4 complete');
+      } catch (error) {
+        console.error('❌ Step 4 failed:', error);
+        // Continue anyway - this is not critical
+      }
+      
+      console.log('✅ Profile picture updated in storage');
+      console.log('💾 Profile picture cached');
+      
+      // Step 5: Update ONLY the MAIN business profile (first profile from registration) with the new logo
+      try {
+        console.log('✅ Step 5: Updating MAIN business profile with new logo...');
+        console.log('🔍 Image URI to sync:', imageUri);
+        const userId = currentUser?.id;
+        
+        if (!userId) {
+          console.log('⚠️ No user ID available for business profile update, skipping');
+        } else {
+          console.log('🔍 User ID for business profile update:', userId);
+          const businessProfileService = require('../services/businessProfile').default;
+          
+          const profiles = await businessProfileService.getUserBusinessProfiles(userId);
+          console.log(`📋 Found ${profiles.length} business profiles`);
+          
+          if (profiles.length > 0) {
+            // Sort to get the FIRST/MAIN profile (created during registration)
+            const sortedByDate = [...profiles].sort((a: any, b: any) => 
+              new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+            );
+            
+            const mainProfile = sortedByDate[0]; // First profile = user's main profile
+            const otherProfiles = sortedByDate.slice(1); // All other profiles
+            
+            console.log(`📍 MAIN profile identified: ${mainProfile.name} (created: ${mainProfile.createdAt})`);
+            
+            // Update MAIN profile with new logo
+            try {
+              await businessProfileService.updateBusinessProfile(mainProfile.id, {
+                companyLogo: imageUri,
+              });
+              console.log(`✅ Logo updated for MAIN profile: ${mainProfile.name}`);
+            } catch (error) {
+              console.error(`❌ Failed to update logo for main profile:`, error);
+            }
+            
+            // REMOVE user's logo FROM other business profiles
+            console.log(`📋 Checking ${otherProfiles.length} other profiles for cleanup...`);
+            let removedCount = 0;
+            for (const profile of otherProfiles) {
+              const profileLogo = profile.logo || profile.companyLogo;
+              const oldUserLogo = currentUser?.logo || currentUser?.companyLogo;
+              if (profileLogo && (profileLogo === oldUserLogo || profileLogo === imageUri)) {
+                try {
+                  await businessProfileService.updateBusinessProfile(profile.id, {
+                    companyLogo: '',
+                  });
+                  removedCount++;
+                } catch (error) {
+                  console.error(`❌ Failed to remove logo from ${profile.name}:`, error);
+                }
+              }
+            }
+            
+            if (removedCount > 0) {
+              console.log(`✅ Removed user logo from ${removedCount} other profiles`);
+            }
+            
+            businessProfileService.clearCache();
+          } else {
+            console.log('ℹ️ No business profiles found, skipping logo sync');
+          }
+        }
+        console.log('✅ Step 5 complete');
+      } catch (error) {
+        console.error('❌ Step 5 failed:', error);
+        // Don't fail the user profile update if business profile update fails
+      }
+      
+      // Step 6: Show success message
+      try {
+        console.log('✅ Step 6: Showing success message...');
+        setSuccessMessage('Profile picture updated successfully!');
+        setShowSuccessModal(true);
+        console.log('✅ Step 6 complete');
+      } catch (error) {
+        console.error('❌ Step 6 failed:', error);
+      }
+      
+      console.log('✅ [COMPLETE] Profile picture update complete');
     } catch (error) {
-      console.error('❌ Error handling selected image:', error);
+      console.error('❌ [ERROR] Fatal error in handleImageSelected:', error);
+      console.error('❌ [ERROR] Error stack:', error instanceof Error ? error.stack : 'No stack trace');
+      console.error('❌ [ERROR] Error message:', error instanceof Error ? error.message : String(error));
+      
       Alert.alert(
         'Update Error',
         'Failed to update profile picture. Please try again.',
@@ -823,6 +1286,16 @@ const ProfileScreen: React.FC = () => {
           style={styles.content}
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[styles.contentContainer, { paddingBottom: 120 + insets.bottom }]}
+          refreshControl={
+            <RefreshControl
+              refreshing={isRefreshing}
+              onRefresh={handleRefresh}
+              tintColor="#ffffff"
+              colors={['#667eea', '#764ba2']}
+              title="Pull to refresh"
+              titleColor="#ffffff"
+            />
+          }
         >
           {/* Profile Card */}
           <View style={[styles.profileCard, { backgroundColor: theme.colors.cardBackground }]}>
@@ -842,7 +1315,7 @@ const ProfileScreen: React.FC = () => {
                     style={styles.avatarGradient}
                   >
                     <Text style={styles.avatarText}>
-                      {(currentUser?.companyName || currentUser?._originalCompanyName)?.charAt(0) || currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
+                      {(currentUser?._originalCompanyName || currentUser?.companyName)?.charAt(0) || currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
                     </Text>
                   </LinearGradient>
                 )}
@@ -855,7 +1328,7 @@ const ProfileScreen: React.FC = () => {
               </View>
               <View style={styles.profileInfo}>
                 <Text style={[styles.userName, { color: theme.colors.text }]}>
-                  {currentUser?.companyName || currentUser?._originalCompanyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
+                  {currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
                 </Text>
                 <Text style={[styles.userEmail, { color: theme.colors.textSecondary }]}>
                   {currentUser?.email || 'eventmarketer@example.com'}
@@ -891,7 +1364,8 @@ const ProfileScreen: React.FC = () => {
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>Account Settings</Text>
             {renderMenuItem('business', 'Business Profiles', `${businessProfileStats.total} profiles • ${businessProfileStats.recentCount} recent`, handleBusinessProfiles)}
-            {renderMenuItem('notifications', 'Notifications', 'Manage notification preferences', undefined, true, notificationsEnabled, handleNotificationToggle, notificationsAnimation)}
+            {/* Notifications temporarily hidden */}
+            {/* {renderMenuItem('notifications', 'Notifications', 'Manage notification preferences', undefined, true, notificationsEnabled, handleNotificationToggle, notificationsAnimation)} */}
           </View>
 
           {/* My Posters Section */}
@@ -1013,7 +1487,7 @@ const ProfileScreen: React.FC = () => {
                   </View>
                   <View style={styles.shareAppInfo}>
                     <Text style={[styles.shareAppTitle, { color: theme.colors.text }]}>
-                      Share EventMarketers
+                      Share MarketBrand
                     </Text>
                     <Text style={[styles.shareAppSubtitle, { color: theme.colors.textSecondary }]}>
                       Help others discover amazing event posters
@@ -1165,15 +1639,34 @@ const ProfileScreen: React.FC = () => {
                 <TextInput
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
+                    borderColor: phoneValidationError ? '#ff4444' : theme.colors.border,
                     color: theme.colors.text
                   }]}
                   value={editFormData.phone}
-                  onChangeText={(text) => setEditFormData({...editFormData, phone: text})}
-                  placeholder="Enter your phone number"
+                  onChangeText={(text) => {
+                    // Only allow digits
+                    const digitsOnly = text.replace(/\D/g, '');
+                    setEditFormData({...editFormData, phone: digitsOnly});
+                    
+                    // Validate as user types
+                    const error = validatePhone(digitsOnly);
+                    setPhoneValidationError(error);
+                  }}
+                  placeholder="Enter 10 digit phone number"
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="phone-pad"
+                  maxLength={10}
                 />
+                {phoneValidationError ? (
+                  <Text style={[styles.validationError, { color: '#ff4444' }]}>
+                    {phoneValidationError}
+                  </Text>
+                ) : null}
+                {!phoneValidationError && editFormData.phone.trim() && editFormData.phone.replace(/\D/g, '').length === 10 ? (
+                  <Text style={[styles.validationSuccess, { color: '#4CAF50' }]}>
+                    ✓ Valid phone number
+                  </Text>
+                ) : null}
               </View>
 
               {/* Alternate Phone */}
@@ -1182,15 +1675,38 @@ const ProfileScreen: React.FC = () => {
                 <TextInput
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
-                    borderColor: theme.colors.border,
+                    borderColor: alternatePhoneValidationError ? '#ff4444' : theme.colors.border,
                     color: theme.colors.text
                   }]}
                   value={editFormData.alternatePhone}
-                  onChangeText={(text) => setEditFormData({...editFormData, alternatePhone: text})}
-                  placeholder="Enter alternate phone number"
+                  onChangeText={(text) => {
+                    // Only allow digits
+                    const digitsOnly = text.replace(/\D/g, '');
+                    setEditFormData({...editFormData, alternatePhone: digitsOnly});
+                    
+                    // Validate as user types (optional field)
+                    if (digitsOnly.trim()) {
+                      const error = validatePhone(digitsOnly);
+                      setAlternatePhoneValidationError(error);
+                    } else {
+                      setAlternatePhoneValidationError(''); // Clear error if empty
+                    }
+                  }}
+                  placeholder="Enter 10 digit alternate phone (optional)"
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="phone-pad"
+                  maxLength={10}
                 />
+                {alternatePhoneValidationError ? (
+                  <Text style={[styles.validationError, { color: '#ff4444' }]}>
+                    {alternatePhoneValidationError}
+                  </Text>
+                ) : null}
+                {!alternatePhoneValidationError && editFormData.alternatePhone.trim() && editFormData.alternatePhone.replace(/\D/g, '').length === 10 ? (
+                  <Text style={[styles.validationSuccess, { color: '#4CAF50' }]}>
+                    ✓ Valid phone number
+                  </Text>
+                ) : null}
               </View>
 
               {/* Email */}
@@ -1922,6 +2438,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: screenWidth * 0.04,
     paddingVertical: screenHeight * 0.012,
     fontSize: Math.min(screenWidth * 0.04, 16),
+  },
+  validationError: {
+    fontSize: Math.min(screenWidth * 0.032, 13),
+    marginTop: screenHeight * 0.005,
+    marginLeft: screenWidth * 0.01,
+    fontWeight: '500',
+  },
+  validationSuccess: {
+    fontSize: Math.min(screenWidth * 0.032, 13),
+    marginTop: screenHeight * 0.005,
+    marginLeft: screenWidth * 0.01,
+    fontWeight: '500',
   },
   textArea: {
     borderWidth: 1,

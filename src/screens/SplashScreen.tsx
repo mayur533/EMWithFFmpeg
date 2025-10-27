@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useMemo } from 'react';
+import React, { useEffect, useRef, useMemo, useState } from 'react';
 import {
   View,
   Text,
@@ -13,34 +13,73 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import Video from 'react-native-video';
 import { useTheme } from '../context/ThemeContext';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-// Responsive design helpers
-const isSmallScreen = screenWidth < 375;
-const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
-const isLargeScreen = screenWidth >= 414;
-
-// Responsive spacing and sizing
-const responsiveSpacing = {
-  xs: isSmallScreen ? 8 : isMediumScreen ? 12 : 16,
-  sm: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
-  md: isSmallScreen ? 16 : isMediumScreen ? 20 : 24,
-  lg: isSmallScreen ? 20 : isMediumScreen ? 24 : 32,
-  xl: isSmallScreen ? 24 : isMediumScreen ? 32 : 40,
-};
-
-const responsiveFontSize = {
-  xs: isSmallScreen ? 10 : isMediumScreen ? 12 : 14,
-  sm: isSmallScreen ? 12 : isMediumScreen ? 14 : 16,
-  md: isSmallScreen ? 14 : isMediumScreen ? 16 : 18,
-  lg: isSmallScreen ? 16 : isMediumScreen ? 18 : 20,
-  xl: isSmallScreen ? 18 : isMediumScreen ? 20 : 22,
-  xxl: isSmallScreen ? 20 : isMediumScreen ? 22 : 24,
-  xxxl: isSmallScreen ? 24 : isMediumScreen ? 28 : 32,
+// Get responsive dimensions function
+const getResponsiveDimensions = () => {
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  
+  // Enhanced responsive design helpers with more granular breakpoints
+  const isUltraSmallScreen = screenWidth < 360;
+  const isSmallScreen = screenWidth >= 360 && screenWidth < 375;
+  const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
+  const isLargeScreen = screenWidth >= 414 && screenWidth < 480;
+  const isXLargeScreen = screenWidth >= 480 && screenWidth < 768;
+  const isTablet = screenWidth >= 768;
+  
+  // Orientation detection
+  const isPortrait = screenHeight > screenWidth;
+  const isLandscape = screenWidth > screenHeight;
+  
+  // Enhanced responsive spacing and sizing
+  const responsiveSpacing = {
+    xs: isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : isTablet ? 16 : 12,
+    sm: isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 12 : isLargeScreen ? 14 : isTablet ? 20 : 16,
+    md: isUltraSmallScreen ? 8 : isSmallScreen ? 12 : isMediumScreen ? 16 : isLargeScreen ? 18 : isTablet ? 24 : 20,
+    lg: isUltraSmallScreen ? 12 : isSmallScreen ? 16 : isMediumScreen ? 20 : isLargeScreen ? 22 : isTablet ? 32 : 24,
+    xl: isUltraSmallScreen ? 16 : isSmallScreen ? 20 : isMediumScreen ? 24 : isLargeScreen ? 28 : isTablet ? 40 : 32,
+    xxl: isUltraSmallScreen ? 20 : isSmallScreen ? 24 : isMediumScreen ? 28 : isLargeScreen ? 32 : isTablet ? 48 : 40,
+  };
+  
+  const responsiveFontSize = {
+    xs: isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : isTablet ? 14 : 12,
+    sm: isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : isTablet ? 16 : 14,
+    md: isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : isTablet ? 18 : 16,
+    lg: isUltraSmallScreen ? 14 : isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : isTablet ? 20 : 18,
+    xl: isUltraSmallScreen ? 16 : isSmallScreen ? 17 : isMediumScreen ? 18 : isLargeScreen ? 19 : isTablet ? 24 : 20,
+    xxl: isUltraSmallScreen ? 18 : isSmallScreen ? 19 : isMediumScreen ? 20 : isLargeScreen ? 21 : isTablet ? 26 : 22,
+    xxxl: isUltraSmallScreen ? 20 : isSmallScreen ? 22 : isMediumScreen ? 24 : isLargeScreen ? 26 : isTablet ? 32 : 28,
+    xxxxl: isUltraSmallScreen ? 24 : isSmallScreen ? 26 : isMediumScreen ? 28 : isLargeScreen ? 30 : isTablet ? 38 : 32,
+  };
+  
+  return {
+    screenWidth,
+    screenHeight,
+    isUltraSmallScreen,
+    isSmallScreen,
+    isMediumScreen,
+    isLargeScreen,
+    isXLargeScreen,
+    isTablet,
+    isPortrait,
+    isLandscape,
+    responsiveSpacing,
+    responsiveFontSize,
+  };
 };
 
 const SplashScreen: React.FC = () => {
   const { isDarkMode, theme } = useTheme();
+  
+  // Responsive dimensions state
+  const [dimensions, setDimensions] = useState(getResponsiveDimensions());
+  
+  // Listen for orientation changes
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', () => {
+      setDimensions(getResponsiveDimensions());
+    });
+    
+    return () => subscription?.remove();
+  }, []);
   
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -50,10 +89,10 @@ const SplashScreen: React.FC = () => {
   const videoOpacity = useRef(new Animated.Value(1)).current;
   
   // Video state
-  const [showVideo, setShowVideo] = React.useState(true);
-  const [videoEnded, setVideoEnded] = React.useState(false);
-  const [videoTimeout, setVideoTimeout] = React.useState<NodeJS.Timeout | null>(null);
-  const [videoReady, setVideoReady] = React.useState(false);
+  const [showVideo, setShowVideo] = useState(true);
+  const [videoEnded, setVideoEnded] = useState(false);
+  const [videoTimeout, setVideoTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [videoReady, setVideoReady] = useState(false);
 
   // Video event handlers
   const onVideoEnd = () => {
@@ -185,10 +224,19 @@ const SplashScreen: React.FC = () => {
       
       {/* Video Background */}
       {showVideo && (
-        <Animated.View style={[styles.videoContainer, { opacity: videoOpacity }]}>
+        <Animated.View style={[
+          styles.videoContainer, 
+          { opacity: videoOpacity }
+        ]}>
           <Video
             source={require('../assets/intro/MarketBrand_App_Intro_Video.mp4')}
-            style={styles.video}
+            style={[
+              styles.video,
+              {
+                width: dimensions.screenWidth,
+                height: dimensions.screenHeight,
+              }
+            ]}
             resizeMode="cover"
             onEnd={onVideoEnd}
             onError={onVideoError}
@@ -318,8 +366,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 0,
     left: 0,
-    width: screenWidth,
-    height: screenHeight,
+    // Width and height are set dynamically inline
   },
   gradientBackground: {
     flex: 1,
@@ -328,16 +375,11 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: screenWidth * 0.05,
   },
   logoContainer: {
     alignItems: 'center',
-    marginBottom: screenHeight * 0.05,
   },
   logoCircle: {
-    width: screenWidth * 0.25,
-    height: screenWidth * 0.25,
-    borderRadius: screenWidth * 0.125,
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -350,27 +392,21 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   logoImage: {
-    width: screenWidth * 0.2,
-    height: screenWidth * 0.2,
+    // Dimensions set dynamically
   },
   logoText: {
-    fontSize: Math.min(screenWidth * 0.08, 32),
     fontWeight: 'bold',
     letterSpacing: 2,
   },
   titleContainer: {
     alignItems: 'center',
-    marginBottom: screenHeight * 0.08,
   },
   appTitle: {
-    fontSize: Math.min(screenWidth * 0.08, 32),
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: screenHeight * 0.01,
     letterSpacing: 3,
   },
   appSubtitle: {
-    fontSize: Math.min(screenWidth * 0.035, 14),
     color: 'rgba(255,255,255,0.8)',
     textAlign: 'center',
     lineHeight: 20,
@@ -380,8 +416,6 @@ const styles = StyleSheet.create({
   },
   loadingDots: {
     flexDirection: 'row',
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.015,
     borderRadius: 25,
     shadowColor: '#000',
     shadowOffset: {
@@ -400,12 +434,10 @@ const styles = StyleSheet.create({
   },
   poweredByContainer: {
     position: 'absolute',
-    bottom: screenHeight * 0.06,
     alignItems: 'center',
     width: '100%',
   },
   poweredByText: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
     letterSpacing: 0.5,

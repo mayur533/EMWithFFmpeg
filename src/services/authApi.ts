@@ -134,6 +134,57 @@ class AuthApiService {
           console.log(`📡 Attempting profile endpoint: ${endpoint}`);
           const response = await api.get(endpoint);
           console.log(`✅ Profile endpoint ${endpoint} succeeded`);
+          
+          // Print detailed response for /api/mobile/auth/me
+          console.log('═══════════════════════════════════════════════════════════');
+          console.log('📥 /api/mobile/auth/me RESPONSE - START');
+          console.log('═══════════════════════════════════════════════════════════');
+          console.log('📦 Full Response Object:', JSON.stringify(response, null, 2));
+          console.log('─────────────────────────────────────────────────────────');
+          console.log('✅ Response Status:', response?.status || 'N/A');
+          console.log('✅ Response Status Text:', response?.statusText || 'N/A');
+          console.log('─────────────────────────────────────────────────────────');
+          console.log('📋 Response Data:', JSON.stringify(response?.data, null, 2));
+          console.log('─────────────────────────────────────────────────────────');
+          console.log('📊 Data Fields Present:', Object.keys(response?.data || {}));
+          console.log('─────────────────────────────────────────────────────────');
+          console.log('🔍 Individual Field Values:');
+          const data = response?.data as any;
+          console.log('   - id:', data?.id || '(not set)');
+          console.log('   - email:', data?.email || '(not set)');
+          console.log('   - companyName:', data?.companyName || '(not set)');
+          console.log('   - phoneNumber:', data?.phoneNumber || '(not set)');
+          console.log('   - description:', data?.description || '(not set)');
+          console.log('   - category:', data?.category || '(not set)');
+          console.log('   - address:', data?.address || '(not set)');
+          console.log('   - alternatePhone:', data?.alternatePhone || '(not set)');
+          console.log('   - website:', data?.website || '(not set)');
+          console.log('   - logo:', data?.logo || '(not set)');
+          console.log('   - photo:', data?.photo || '(not set)');
+          console.log('   - totalViews:', data?.totalViews || 0);
+          console.log('   - isConverted:', data?.isConverted || false);
+          console.log('   - createdAt:', data?.createdAt || '(not set)');
+          console.log('   - updatedAt:', data?.updatedAt || '(not set)');
+          console.log('─────────────────────────────────────────────────────────');
+          console.log('⚠️ WARNING - CONTAMINATION CHECK:');
+          console.log('   These fields should NOT come from business profiles:');
+          console.log('   - companyName:', data?.companyName || '(empty)');
+          console.log('   - address:', data?.address || '(empty)');
+          console.log('   - website:', data?.website || '(empty)');
+          console.log('   - category:', data?.category || '(empty)');
+          console.log('   - description:', data?.description || '(empty)');
+          console.log('   - alternatePhone:', data?.alternatePhone || '(empty)');
+          console.log('─────────────────────────────────────────────────────────');
+          if (data?.businessProfiles) {
+            console.log('🏢 Business Profiles in Response:', data.businessProfiles.length || 0);
+            console.log('📋 Business Profiles Data:', JSON.stringify(data.businessProfiles, null, 2));
+          } else {
+            console.log('🏢 Business Profiles in Response: None');
+          }
+          console.log('═══════════════════════════════════════════════════════════');
+          console.log('📥 /api/mobile/auth/me RESPONSE - END');
+          console.log('═══════════════════════════════════════════════════════════');
+          
           return response.data;
         } catch (error: any) {
           console.log(`❌ Profile endpoint ${endpoint} failed:`, error.response?.status || error.message);
@@ -151,33 +202,20 @@ class AuthApiService {
   // Update user profile
   async updateProfile(data: UpdateProfileRequest, userId?: string): Promise<ProfileResponse> {
     try {
-      // Try multiple update endpoints
-      const endpoints = [];
-      
-      if (userId) {
-        endpoints.push(`/api/mobile/users/${userId}`);
+      if (!userId) {
+        throw new Error('User ID is required for profile update');
       }
       
-      // Add fallback endpoint
-      endpoints.push('/api/mobile/auth/profile');
+      // Use the correct update endpoint with user ID
+      const endpoint = `/api/mobile/users/${userId}`;
       
-      console.log('🔍 Trying profile update endpoints:', endpoints);
-      
-      for (const endpoint of endpoints) {
-        try {
-          console.log(`📡 Attempting profile update endpoint: ${endpoint}`);
-          const response = await api.put(endpoint, data);
-          console.log(`✅ Profile update endpoint ${endpoint} succeeded`);
-          return response.data;
-        } catch (error: any) {
-          console.log(`❌ Profile update endpoint ${endpoint} failed:`, error.response?.status || error.message);
-          // Continue to next endpoint
-        }
-      }
-      
-      throw new Error('All profile update endpoints failed');
+      console.log('📡 Updating profile using endpoint:', endpoint);
+      console.log('📤 Update data:', data);
+      const response = await api.put(endpoint, data);
+      console.log('✅ Profile updated successfully');
+      return response.data;
     } catch (error) {
-      console.error('Update profile error:', error);
+      console.error('❌ Update profile error:', error);
       throw error;
     }
   }

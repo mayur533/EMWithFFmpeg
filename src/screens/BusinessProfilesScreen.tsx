@@ -107,6 +107,8 @@ const BusinessProfilesScreen: React.FC = () => {
       const userId = currentUser?.id;
       
       console.log('🔍 BusinessProfilesScreen - User ID:', userId);
+      console.log('🖼️ Current user logo:', currentUser?.logo || '(empty)');
+      console.log('🖼️ Current user companyLogo:', currentUser?.companyLogo || '(empty)');
       
       if (!userId) {
         console.log('⚠️ No user ID available, no profiles to load');
@@ -118,6 +120,118 @@ const BusinessProfilesScreen: React.FC = () => {
       
       // Try to get user-specific profiles from API first
       const apiProfiles = await businessProfileService.getUserBusinessProfiles(userId);
+      
+      // Auto-sync ALL user profile fields to the MAIN/FIRST business profile (user's profile from registration)
+      if (apiProfiles.length > 0) {
+        // Sort to ensure we get the oldest profile (created during registration)
+        const sortedByDate = [...apiProfiles].sort((a, b) => 
+          new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+        );
+        
+        const mainProfile = sortedByDate[0]; // First profile = user's main profile
+        const otherProfiles = sortedByDate.slice(1); // All other profiles
+        
+        // Check if ANY user profile field needs to be synced
+        const userName = currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.name;
+        const userPhone = currentUser?.phoneNumber || currentUser?.phone;
+        const userEmail = currentUser?.email;
+        const userAddress = currentUser?._originalAddress || currentUser?.address || '';
+        const userWebsite = currentUser?._originalWebsite || currentUser?.website || '';
+        const userCategory = currentUser?._originalCategory || currentUser?.category || '';
+        const userDescription = currentUser?._originalDescription || currentUser?.description || '';
+        const userAlternatePhone = currentUser?._originalAlternatePhone || currentUser?.alternatePhone || '';
+        const userLogo = currentUser?.logo || currentUser?.companyLogo || '';
+        
+        // Check if sync is needed
+        const needsSync = 
+          mainProfile.name !== userName ||
+          mainProfile.phone !== userPhone ||
+          mainProfile.email !== userEmail ||
+          mainProfile.address !== userAddress ||
+          mainProfile.website !== userWebsite ||
+          mainProfile.category !== userCategory ||
+          mainProfile.description !== userDescription ||
+          mainProfile.alternatePhone !== userAlternatePhone ||
+          (mainProfile.logo || mainProfile.companyLogo || '') !== userLogo;
+        
+        if (needsSync) {
+          console.log('🔄 Auto-syncing user profile data to MAIN business profile...');
+          console.log('📍 Target profile:', mainProfile.name, '(created:', mainProfile.createdAt, ')');
+          console.log('📋 Syncing fields:');
+          console.log('   - Name:', userName);
+          console.log('   - Phone:', userPhone);
+          console.log('   - Email:', userEmail);
+          console.log('   - Category:', userCategory);
+          console.log('   - Logo:', userLogo ? 'Yes' : 'No');
+          
+          try {
+            // Sync ALL user fields to main business profile
+            await businessProfileService.updateBusinessProfile(mainProfile.id, {
+              name: userName,
+              phone: userPhone,
+              email: userEmail,
+              address: userAddress,
+              website: userWebsite,
+              category: userCategory,
+              description: userDescription,
+              alternatePhone: userAlternatePhone,
+              companyLogo: userLogo,
+            });
+            
+            // Update the profile in the array
+            mainProfile.name = userName;
+            mainProfile.phone = userPhone;
+            mainProfile.email = userEmail;
+            mainProfile.address = userAddress;
+            mainProfile.website = userWebsite;
+            mainProfile.category = userCategory;
+            mainProfile.description = userDescription;
+            mainProfile.alternatePhone = userAlternatePhone;
+            mainProfile.logo = userLogo;
+            mainProfile.companyLogo = userLogo;
+            
+            console.log(`✅ All user fields synced to MAIN profile: ${userName}`);
+            
+            // Clear cache after sync
+            businessProfileService.clearCache();
+          } catch (error) {
+            console.error(`❌ Failed to sync user data to main profile:`, error);
+          }
+        } else {
+          console.log('ℹ️ Main profile already has all current user data, skipping sync');
+        }
+        
+        // REMOVE user's logo FROM other business profiles (they should have their own logos)
+        if (userLogo) {
+          let removedCount = 0;
+          for (const profile of otherProfiles) {
+            const profileLogo = profile.logo || profile.companyLogo;
+            // If other profile has the user's logo, remove it
+            if (profileLogo === userLogo) {
+              console.log(`🗑️ Removing user logo from other profile: ${profile.name}`);
+              try {
+                await businessProfileService.updateBusinessProfile(profile.id, {
+                  companyLogo: '', // Clear the logo
+                });
+                
+                // Update in array
+                profile.logo = '';
+                profile.companyLogo = '';
+                
+                console.log(`✅ User logo removed from: ${profile.name}`);
+                removedCount++;
+              } catch (error) {
+                console.error(`❌ Failed to remove logo from ${profile.name}:`, error);
+              }
+            }
+          }
+          
+          if (removedCount > 0) {
+            console.log(`✅ Removed user logo from ${removedCount} other business profiles`);
+            businessProfileService.clearCache();
+          }
+        }
+      }
       
       if (apiProfiles.length > 0) {
         // Sort profiles by creation date - OLDEST first (so first profile created stays at index 0)
@@ -138,6 +252,13 @@ const BusinessProfilesScreen: React.FC = () => {
         
         console.log('✅ Loaded user-specific business profiles from API:', sortedProfiles.length);
         console.log('🔍 First profile (Your Profile):', sortedProfiles[0]?.name, '- Created:', sortedProfiles[0]?.createdAt);
+        
+        // Log logo URLs for debugging
+        sortedProfiles.forEach((profile, index) => {
+          console.log(`🖼️ Profile ${index + 1} - ${profile.name}:`);
+          console.log(`   - Logo: ${profile.logo || '(empty)'}`);
+          console.log(`   - CompanyLogo: ${profile.companyLogo || '(empty)'}`);
+        });
       } else {
         // No profiles found from API
         setAllProfiles([]);
@@ -320,12 +441,18 @@ const BusinessProfilesScreen: React.FC = () => {
               {item.companyLogo || item.logo ? (
                 <Image
                   source={{ 
-                    uri: item.companyLogo || item.logo,
+                    uri: `${item.companyLogo || item.logo}?t=${imageRefreshKey}`,
                     cache: 'reload' // Force reload from network, not cache
                   }}
                   style={styles.businessLogo}
                   resizeMode="cover"
                   key={`${item.id}-logo-${imageRefreshKey}`} // Force re-render with refresh key
+                  onError={(error) => {
+                    console.log(`❌ Failed to load logo for ${item.name}:`, error.nativeEvent);
+                  }}
+                  onLoad={() => {
+                    console.log(`✅ Logo loaded for ${item.name}`);
+                  }}
                 />
               ) : (
                 <View style={[styles.logoPlaceholder, { backgroundColor: `${theme.colors.primary}20` }]}>
@@ -508,7 +635,7 @@ const BusinessProfilesScreen: React.FC = () => {
           maxToRenderPerBatch={5}
           windowSize={10}
           ListEmptyComponent={
-            !loading && (
+            !loading ? (
               <View style={styles.emptyStateContainer}>
                 <Icon name="business-center" size={80} color={theme.colors.primary} style={styles.emptyStateIcon} />
                 <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
@@ -530,7 +657,7 @@ const BusinessProfilesScreen: React.FC = () => {
                   </TouchableOpacity>
                 )}
               </View>
-            )
+            ) : null
           }
         />
 

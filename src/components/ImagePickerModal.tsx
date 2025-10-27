@@ -181,14 +181,28 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
               console.log('📏 Image size:', response.assets[0].fileSize, 'bytes');
               console.log('📐 Image dimensions:', response.assets[0].width, 'x', response.assets[0].height);
               
-              // Open crop modal with error handling
+              // Try to crop the image
               try {
+                console.log('✂️ Opening crop modal...');
                 await openCropModal(imageUri);
               } catch (cropError) {
-                console.error('❌ Unexpected crop error:', cropError);
-                // Fallback - use image without cropping
-                onImageSelected(imageUri);
-                onClose();
+                console.error('❌ Crop error:', cropError);
+                // If crop fails, use image without cropping
+                try {
+                  console.log('⚠️ Using image without crop due to error');
+                  console.log('📸 Calling onImageSelected callback...');
+                  onImageSelected(imageUri);
+                  console.log('✅ onImageSelected callback completed');
+                  
+                  // Close modal after callback completes
+                  console.log('🚪 Closing image picker modal...');
+                  onClose();
+                  console.log('✅ Image selection complete (without crop)');
+                } catch (selectionError) {
+                  console.error('❌ Error during image selection callback:', selectionError);
+                  console.error('❌ Error stack:', selectionError instanceof Error ? selectionError.stack : 'No stack trace');
+                  Alert.alert('Error', 'Failed to use captured image. Please try again.');
+                }
               }
             } else {
               console.error('❌ No image URI in response');
@@ -237,6 +251,7 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
         setTimeout(async () => {
           try {
             console.log('📸 Gallery response received');
+            console.log('📋 Full response:', JSON.stringify(response, null, 2));
             
             if (response.didCancel) {
               console.log('User cancelled gallery picker');
@@ -258,15 +273,30 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
               console.log('✅ Photo selected from gallery');
               console.log('📍 Image URI:', imageUri);
               console.log('📏 Image size:', response.assets[0].fileSize, 'bytes');
+              console.log('📐 Image dimensions:', response.assets[0].width, 'x', response.assets[0].height);
               
-              // Open crop modal with error handling
+              // Try to crop the image
               try {
+                console.log('✂️ Opening crop modal...');
                 await openCropModal(imageUri);
               } catch (cropError) {
-                console.error('❌ Unexpected crop error:', cropError);
-                // Fallback - use image without cropping
-                onImageSelected(imageUri);
-                onClose();
+                console.error('❌ Crop error:', cropError);
+                // If crop fails, use image without cropping
+                try {
+                  console.log('⚠️ Using image without crop due to error');
+                  console.log('🖼️ Calling onImageSelected callback...');
+                  onImageSelected(imageUri);
+                  console.log('✅ onImageSelected callback completed');
+                  
+                  // Close modal after callback completes
+                  console.log('🚪 Closing image picker modal...');
+                  onClose();
+                  console.log('✅ Image selection complete (without crop)');
+                } catch (selectionError) {
+                  console.error('❌ Error during image selection callback:', selectionError);
+                  console.error('❌ Error stack:', selectionError instanceof Error ? selectionError.stack : 'No stack trace');
+                  Alert.alert('Error', 'Failed to use selected image. Please try again.');
+                }
               }
             } else {
               console.error('❌ No image URI in response');
@@ -279,6 +309,7 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
             }
           } catch (error) {
             console.error('❌ Error processing gallery response:', error);
+            console.error('❌ Error stack:', error);
             Alert.alert(
               'Error',
               'An error occurred while processing the photo. Please try again.',
@@ -298,79 +329,113 @@ const ImagePickerModal: React.FC<ImagePickerModalProps> = ({
   };
 
   const openCropModal = async (imageUri: string) => {
-    console.log('✂️ Opening crop modal for:', imageUri);
+    console.log('✂️ [CROP START] Opening crop modal for:', imageUri);
     
     try {
-      // Use the URI as-is - the cropper library handles file:// prefix correctly
-      let cropperPath = imageUri;
-      
-      // For Android, ensure we have the full file:// URI
-      if (Platform.OS === 'android' && !cropperPath.startsWith('file://')) {
-        cropperPath = `file://${cropperPath}`;
+      // Validate input
+      if (!imageUri || imageUri.trim() === '') {
+        console.error('❌ [CROP] Invalid image URI');
+        throw new Error('Invalid image URI');
       }
       
-      console.log('📍 Cropper path:', cropperPath);
+      // Prepare path for cropper
+      let cropperPath = imageUri;
       
+      // For Android, ensure proper file:// prefix
+      if (Platform.OS === 'android') {
+        if (!cropperPath.startsWith('file://')) {
+          cropperPath = `file://${cropperPath}`;
+        }
+      }
+      
+      console.log('📍 [CROP] Platform:', Platform.OS);
+      console.log('📍 [CROP] Original path:', imageUri);
+      console.log('📍 [CROP] Cropper path:', cropperPath);
+      console.log('📍 [CROP] Starting ImageCropPicker.openCropper...');
+      
+      // Open cropper with defensive configuration
       const croppedImage = await ImageCropPicker.openCropper({
         path: cropperPath,
-        width: 300,
-        height: 300,
+        width: 400,
+        height: 400,
         cropping: true,
         cropperCircleOverlay: true,
         compressImageQuality: 0.8,
+        compressImageMaxWidth: 1024,
+        compressImageMaxHeight: 1024,
         includeBase64: false,
+        includeExif: false,
         cropperToolbarTitle: 'Crop Profile Picture',
-        cropperStatusBarColor: theme.colors.primary,
-        cropperToolbarColor: theme.colors.primary,
-        cropperActiveWidgetColor: theme.colors.primary,
+        cropperStatusBarColor: '#667eea',
+        cropperToolbarColor: '#667eea',
+        cropperActiveWidgetColor: '#667eea',
         cropperToolbarWidgetColor: '#ffffff',
         freeStyleCropEnabled: false,
         enableRotationGesture: true,
         avoidEmptySpaceAroundImage: true,
         mediaType: 'photo',
+        forceJpg: true, // Force JPG to avoid format issues
+      }).catch((cropError: any) => {
+        console.log('⚠️ [CROP] ImageCropPicker.openCropper threw error:', cropError);
+        console.log('⚠️ [CROP] Error type:', typeof cropError);
+        console.log('⚠️ [CROP] Error constructor:', cropError?.constructor?.name);
+        throw cropError;
       });
       
-      console.log('✅ Image cropped successfully:', croppedImage.path);
+      console.log('✅ [CROP] Image cropped successfully');
+      console.log('📍 [CROP] Cropped image path:', croppedImage.path);
+      console.log('📏 [CROP] Cropped image size:', croppedImage.size);
+      console.log('📐 [CROP] Cropped dimensions:', croppedImage.width, 'x', croppedImage.height);
       
-      // Ensure the cropped image path is properly formatted
-      const finalPath = Platform.OS === 'android' && !croppedImage.path.startsWith('file://')
-        ? `file://${croppedImage.path}`
-        : croppedImage.path;
-      
-      onImageSelected(finalPath);
-      onClose();
-      
-    } catch (error: any) {
-      console.log('❌ Crop error:', error);
-      console.log('Error details:', JSON.stringify(error, null, 2));
-      
-      // User cancelled cropping
-      if (error.code === 'E_PICKER_CANCELLED' || 
-          error.message === 'User cancelled image selection') {
-        console.log('User cancelled cropping');
-        return;
+      // Validate cropped image
+      if (!croppedImage || !croppedImage.path) {
+        console.error('❌ [CROP] Invalid cropped image result');
+        throw new Error('Invalid cropped image');
       }
       
-      // Crop failed - offer to use image without cropping
-      Alert.alert(
-        'Cropping Failed',
-        'The image cropping tool encountered an error. Would you like to use the image without cropping?',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-            onPress: () => console.log('User cancelled after crop error')
-          },
-          {
-            text: 'Use Without Crop',
-            onPress: () => {
-              console.log('✅ Using image without cropping:', imageUri);
-              onImageSelected(imageUri);
-              onClose();
-            },
-          },
-        ]
-      );
+      // Ensure proper file:// prefix for the result
+      let finalPath = croppedImage.path;
+      if (Platform.OS === 'android' && !finalPath.startsWith('file://')) {
+        finalPath = `file://${finalPath}`;
+      }
+      
+      console.log('📍 [CROP] Final path:', finalPath);
+      console.log('📸 [CROP] Calling onImageSelected with cropped image...');
+      
+      // Call callback
+      try {
+        onImageSelected(finalPath);
+        console.log('✅ [CROP] onImageSelected callback completed');
+        
+        // Close modal
+        console.log('🚪 [CROP] Closing modal...');
+        onClose();
+        console.log('✅ [CROP] Modal closed successfully');
+      } catch (callbackError) {
+        console.error('❌ [CROP] Error in callback:', callbackError);
+        console.error('❌ [CROP] Callback error stack:', callbackError instanceof Error ? callbackError.stack : 'No stack');
+        throw callbackError;
+      }
+      
+    } catch (error: any) {
+      console.log('❌ [CROP ERROR] Caught error in openCropModal');
+      console.log('❌ [CROP ERROR] Error code:', error?.code);
+      console.log('❌ [CROP ERROR] Error message:', error?.message);
+      console.log('❌ [CROP ERROR] Error stack:', error?.stack);
+      console.log('❌ [CROP ERROR] Error type:', typeof error);
+      console.log('❌ [CROP ERROR] Full error:', JSON.stringify(error, null, 2));
+      
+      // Check if user cancelled
+      if (error?.code === 'E_PICKER_CANCELLED' || 
+          error?.message?.includes('cancelled') ||
+          error?.message?.includes('User cancelled') ||
+          error?.message?.includes('User canceled')) {
+        console.log('ℹ️ [CROP] User cancelled cropping');
+        return; // Just return, don't show error
+      }
+      
+      // Re-throw to be handled by caller
+      throw error;
     }
   };
 

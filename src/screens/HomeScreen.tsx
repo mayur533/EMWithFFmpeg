@@ -1193,15 +1193,15 @@ const HomeScreen: React.FC = React.memo(() => {
             />
           </View>
 
-                                {/* Upcoming Festivals */}
+          {/* Upcoming Festivals */}
+          {upcomingEvents.length > 0 && (
             <View style={styles.upcomingEventsSection}>
-                             <View style={styles.sectionHeader}>
-                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Upcoming Festivals</Text>
-                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllUpcomingEvents}>
-                   <Text style={styles.viewAllButtonText}>Browse All</Text>
-                 </TouchableOpacity>
-               </View>
-
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Upcoming Festivals</Text>
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllUpcomingEvents}>
+                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                </TouchableOpacity>
+              </View>
 
               <ScrollView
                 horizontal
@@ -1249,6 +1249,7 @@ const HomeScreen: React.FC = React.memo(() => {
                 ))}
               </ScrollView>
             </View>
+          )}
 
           {/* Templates Grid */}
           <View style={styles.templatesSection}>

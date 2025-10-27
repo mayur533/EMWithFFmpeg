@@ -254,20 +254,20 @@ class BusinessProfileService {
     try {
       console.log('Updating business profile via API:', id);
       
-      // Map frontend data to backend format
-      const backendData = {
-        businessName: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address || '',
-        category: data.category,
-        logo: data.companyLogo || '',
-        description: data.description || '',
-        website: data.website || ''
-      };
+      // Map frontend data to backend format - only include fields that are provided
+      const backendData: any = {};
+      
+      if (data.name !== undefined) backendData.businessName = data.name;
+      if (data.email !== undefined) backendData.email = data.email;
+      if (data.phone !== undefined) backendData.phone = data.phone;
+      if (data.address !== undefined) backendData.address = data.address;
+      if (data.category !== undefined) backendData.category = data.category;
+      if (data.companyLogo !== undefined) backendData.logo = data.companyLogo;
+      if (data.description !== undefined) backendData.description = data.description;
+      if (data.website !== undefined) backendData.website = data.website;
       
       console.log('🔍 Making PUT request to:', `/api/mobile/business-profile/${id}`);
-      console.log('📤 Request data:', backendData);
+      console.log('📤 Request data (partial update):', backendData);
       
       const response = await api.put(`/api/mobile/business-profile/${id}`, backendData);
       

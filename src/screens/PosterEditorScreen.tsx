@@ -672,6 +672,90 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       elevation: 8,
       zIndex: 100,
     },
+    // Delete Modal Styles - Fully responsive
+    deleteModalContainer: {
+      borderRadius: isTablet ? 24 : isLandscape ? 20 : isUltraSmallScreen ? 16 : 20,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: isTablet ? 8 : isLandscape ? 6 : isUltraSmallScreen ? 4 : 6,
+      },
+      shadowOpacity: isDarkMode ? 0.4 : 0.3,
+      shadowRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 8 : 12,
+      elevation: isTablet ? 12 : isLandscape ? 10 : isUltraSmallScreen ? 8 : 10,
+    },
+    deleteModalHeader: {
+      alignItems: 'center' as const,
+      position: 'relative' as const,
+    },
+    deleteIconContainer: {
+      width: isTablet ? 72 : isLandscape ? 64 : isUltraSmallScreen ? 48 : 64,
+      height: isTablet ? 72 : isLandscape ? 64 : isUltraSmallScreen ? 48 : 64,
+      borderRadius: isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 24 : 32,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    },
+    deleteModalTitle: {
+      fontSize: isTablet ? 24 : isLandscape ? 22 : isUltraSmallScreen ? 18 : 22,
+      fontWeight: '700' as const,
+      textAlign: 'center' as const,
+    },
+    closeModalButton: {
+      position: 'absolute' as const,
+      top: 0,
+      right: 0,
+      width: isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 28 : 32,
+      height: isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 28 : 32,
+      borderRadius: isTablet ? 18 : isLandscape ? 16 : isUltraSmallScreen ? 14 : 16,
+      justifyContent: 'center' as const,
+      alignItems: 'center' as const,
+    },
+    deleteModalContent: {
+      // Dynamic marginBottom handled inline
+    },
+    deleteModalMessage: {
+      textAlign: 'center' as const,
+      // Dynamic fontSize and lineHeight handled inline
+    },
+    deleteModalButtons: {
+      flexDirection: 'row' as const,
+      // Dynamic gap handled inline
+    },
+    deleteModalCancelButton: {
+      flex: 1,
+      alignItems: 'center' as const,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: isTablet ? 3 : 2,
+      },
+      shadowOpacity: isDarkMode ? 0.2 : 0.1,
+      shadowRadius: isTablet ? 6 : 4,
+      elevation: isTablet ? 4 : 3,
+      // Dynamic paddingVertical and borderRadius handled inline
+    },
+    deleteModalCancelText: {
+      fontWeight: '600' as const,
+      // Dynamic fontSize handled inline
+    },
+    deleteModalDeleteButton: {
+      flex: 1,
+      alignItems: 'center' as const,
+      shadowColor: '#000',
+      shadowOffset: {
+        width: 0,
+        height: isTablet ? 3 : 2,
+      },
+      shadowOpacity: 0.2,
+      shadowRadius: isTablet ? 6 : 4,
+      elevation: isTablet ? 4 : 3,
+      // Dynamic paddingVertical and borderRadius handled inline
+    },
+    deleteModalDeleteText: {
+      fontWeight: '600' as const,
+      color: '#ffffff',
+      // Dynamic fontSize handled inline
+    },
   });
 
   const themeStyles = getThemeStyles();
@@ -752,6 +836,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [currentPositions, setCurrentPositions] = useState<{ [key: string]: { x: number; y: number } }>({});
   const currentPositionsRef = useRef<{ [key: string]: { x: number; y: number } }>({});
   const [showRemoveFrameModal, setShowRemoveFrameModal] = useState(false);
+  const [showDeleteElementModal, setShowDeleteElementModal] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -1000,12 +1085,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     const footerTextSize = getResponsiveFooterFontSize(10);
     
     // Footer background overlay for better readability
+    // Footer background covers full width, text has padding
+    const footerInset = 8; // Padding from edges for footer text content
     const footerBackgroundLayer: Layer = {
       id: generateId(),
       type: 'text',
       content: '',
-      position: { x: 0, y: footerY },
-      size: { width: canvasWidth, height: footerHeight },
+      position: { x: 0, y: footerY }, // Start from left edge
+      size: { width: canvasWidth, height: footerHeight }, // Full width
       rotation: 0,
       zIndex: 5,
       fieldType: 'footerBackground',
@@ -1025,8 +1112,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         id: generateId(),
         type: 'text',
         content: profile.name,
-        position: { x: 20, y: footerY + 15 }, // Keep same position
-        size: { width: canvasWidth - 40, height: 25 }, // Keep same size
+        position: { x: 20, y: footerY + 15 }, // Standard padding from edge
+        size: { width: canvasWidth - 40, height: 25 }, // Full width minus padding
         rotation: 0,
         zIndex: 10,
         fieldType: 'footerCompanyName',
@@ -1041,7 +1128,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     }
 
     // Contact information in two columns
-    const leftColumnX = 20;
+    const leftColumnX = 20; // Standard padding from edge
     const rightColumnX = canvasWidth / 2 + 10;
     const contactStartY = footerY + 45;
     const contactLineHeight = 16;
@@ -1134,8 +1221,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         id: generateId(),
         type: 'text',
         content: `📍 ${profile.address}`,
-        position: { x: 20, y: contactStartY + contactLineHeight * 2 + 8 }, // Keep same position
-        size: { width: canvasWidth - 40, height: contactLineHeight * 2 }, // Increased height for text wrapping
+        position: { x: 20, y: contactStartY + contactLineHeight * 2 + 8 }, // Standard padding from edge
+        size: { width: canvasWidth - 40, height: contactLineHeight * 2 }, // Full width minus padding
         rotation: 0,
         zIndex: 10,
         fieldType: 'address',
@@ -1156,8 +1243,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         id: generateId(),
         type: 'text',
         content: `🛠️ ${servicesText}${profile.services.length > 3 ? '...' : ''}`,
-        position: { x: 20, y: contactStartY + contactLineHeight * 3 + 15 }, // Keep same position
-        size: { width: canvasWidth - 40, height: contactLineHeight * 2 }, // Increased height for text wrapping
+        position: { x: 20, y: contactStartY + contactLineHeight * 3 + 15 }, // Standard padding from edge
+        size: { width: canvasWidth - 40, height: contactLineHeight * 2 }, // Full width minus padding
         rotation: 0,
         zIndex: 10,
         fieldType: 'services',
@@ -1721,7 +1808,13 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     setSelectedLayer(null);
   }, []);
 
-
+  // Confirm delete element
+  const confirmDeleteElement = useCallback(() => {
+    if (selectedLayer) {
+      deleteLayer(selectedLayer);
+      setShowDeleteElementModal(false);
+    }
+  }, [selectedLayer, deleteLayer]);
 
   // Apply frame
   const applyFrame = useCallback((frame: Frame) => {
@@ -2383,23 +2476,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             {selectedLayer && (
               <TouchableOpacity
                 style={styles.toolbarButton}
-                onPress={() => {
-                  Alert.alert(
-                    'Delete Element',
-                    'Are you sure you want to delete this element?',
-                    [
-                      {
-                        text: 'Cancel',
-                        style: 'cancel',
-                      },
-                      {
-                        text: 'Delete',
-                        style: 'destructive',
-                        onPress: () => deleteLayer(selectedLayer),
-                      },
-                    ]
-                  );
-                }}
+                onPress={() => setShowDeleteElementModal(true)}
               >
                 <LinearGradient
                   colors={['#ff4757', '#ff3742']}
@@ -3515,6 +3592,146 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         </View>
       </Modal>
 
+      {/* Delete Element Confirmation Modal - Responsive across all screen sizes */}
+      <Modal
+        visible={showDeleteElementModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setShowDeleteElementModal(false)}
+        statusBarTranslucent={true}
+      >
+        <View style={[styles.modalOverlay, { paddingHorizontal: isTablet ? responsiveSpacing.xl : isLandscape ? responsiveSpacing.lg : responsiveSpacing.md }]}>
+          <View style={[
+            themeStyles.deleteModalContainer,
+            {
+              backgroundColor: theme.colors.surface,
+              width: isTablet 
+                ? screenWidth * 0.5 
+                : isLandscape 
+                  ? screenWidth * 0.6 
+                  : isUltraSmallScreen 
+                    ? screenWidth * 0.92 
+                    : isSmallScreen 
+                      ? screenWidth * 0.9 
+                      : screenWidth * 0.85,
+              maxWidth: isTablet ? 500 : 450,
+              paddingHorizontal: isTablet ? responsiveSpacing.xl : isLandscape ? responsiveSpacing.lg : isUltraSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg,
+              paddingVertical: isTablet ? responsiveSpacing.xl : isLandscape ? responsiveSpacing.lg : isUltraSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg,
+            }
+          ]}>
+            <View style={themeStyles.deleteModalHeader}>
+              <View style={[
+                themeStyles.deleteIconContainer, 
+                { 
+                  backgroundColor: '#ff444420',
+                  marginBottom: isTablet ? responsiveSpacing.md : responsiveSpacing.sm
+                }
+              ]}>
+                <Icon 
+                  name="warning" 
+                  size={isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 24 : 32} 
+                  color="#ff4444" 
+                />
+              </View>
+              <Text 
+                style={[
+                  themeStyles.deleteModalTitle, 
+                  { 
+                    color: theme.colors.text,
+                    marginBottom: isTablet ? responsiveSpacing.sm : responsiveSpacing.xs
+                  }
+                ]}
+              >
+                Delete Element
+              </Text>
+              <TouchableOpacity 
+                style={[
+                  themeStyles.closeModalButton, 
+                  { backgroundColor: theme.colors.inputBackground }
+                ]}
+                onPress={() => setShowDeleteElementModal(false)}
+                activeOpacity={0.7}
+              >
+                <Icon 
+                  name="close" 
+                  size={isTablet ? 24 : isLandscape ? 22 : isUltraSmallScreen ? 18 : 20} 
+                  color={theme.colors.textSecondary} 
+                />
+              </TouchableOpacity>
+            </View>
+            
+            <View style={[
+              themeStyles.deleteModalContent,
+              {
+                marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
+                paddingHorizontal: isTablet ? responsiveSpacing.md : isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm
+              }
+            ]}>
+              <Text style={[
+                themeStyles.deleteModalMessage, 
+                { 
+                  color: theme.colors.text,
+                  fontSize: isTablet ? 16 : isLandscape ? 15 : isUltraSmallScreen ? 13 : 15,
+                  lineHeight: isTablet ? 24 : isLandscape ? 22 : isUltraSmallScreen ? 18 : 22,
+                }
+              ]}>
+                Are you sure you want to delete this element? This action cannot be undone.
+              </Text>
+            </View>
+            
+            <View style={[
+              themeStyles.deleteModalButtons,
+              {
+                gap: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm
+              }
+            ]}>
+              <TouchableOpacity 
+                style={[
+                  themeStyles.deleteModalCancelButton, 
+                  { 
+                    backgroundColor: theme.colors.inputBackground,
+                    paddingVertical: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 12 : 14,
+                    borderRadius: isTablet ? 12 : isLandscape ? 10 : isUltraSmallScreen ? 8 : 10,
+                  }
+                ]}
+                onPress={() => setShowDeleteElementModal(false)}
+              >
+                <Text style={[
+                  themeStyles.deleteModalCancelText, 
+                  { 
+                    color: theme.colors.text,
+                    fontSize: isTablet ? 17 : isLandscape ? 16 : isUltraSmallScreen ? 14 : 16,
+                  }
+                ]}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              
+              <TouchableOpacity 
+                style={[
+                  themeStyles.deleteModalDeleteButton, 
+                  { 
+                    backgroundColor: '#ff4444',
+                    paddingVertical: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 12 : 14,
+                    borderRadius: isTablet ? 12 : isLandscape ? 10 : isUltraSmallScreen ? 8 : 10,
+                  }
+                ]}
+                onPress={confirmDeleteElement}
+              >
+                <Text style={[
+                  themeStyles.deleteModalDeleteText,
+                  {
+                    fontSize: isTablet ? 17 : isLandscape ? 16 : isUltraSmallScreen ? 14 : 16,
+                  }
+                ]}>
+                  Delete
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
     </Animated.View>
   );
 };
@@ -3607,7 +3824,7 @@ const styles = StyleSheet.create({
   canvas: {
     // These will be set dynamically based on responsive dimensions
     backgroundColor: '#ffffff',
-    borderRadius: isSmallScreen ? 8 : 16,
+    borderRadius: 0, // Remove rounded corners
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -3617,7 +3834,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
     position: 'relative',
-    overflow: 'visible',
+    overflow: 'hidden', // Clip content to prevent footer overflow
     marginBottom: isSmallScreen ? 6 : 15,
   },
   instructionsContainer: {
@@ -3676,7 +3893,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 16,
+    borderRadius: 0, // Remove rounded corners
     overflow: 'hidden', // Hidden to ensure poster fits within canvas
     justifyContent: 'center', // Back to center for proper alignment
     alignItems: 'center',
@@ -3685,7 +3902,7 @@ const styles = StyleSheet.create({
   backgroundImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 16,
+    borderRadius: 0, // Remove rounded corners
     resizeMode: 'stretch', // Stretch to match exact canvas dimensions
   },
   layer: {
@@ -3867,6 +4084,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     marginBottom: 20,
     backgroundColor: '#f8f9fa',
+    color: '#333333', // Dark text color for visibility on white background
   },
   modalButtons: {
     flexDirection: 'row',

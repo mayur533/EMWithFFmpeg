@@ -224,8 +224,8 @@ const PrivacyPolicyScreen = () => {
       fontSize: isTablet ? responsiveFontSize.xxl : responsiveFontSize.xl,
       fontWeight: '700',
       color: '#667eea',
-      marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
       letterSpacing: 0.5,
+      flex: 1,
     },
     sectionContent: {
       fontSize: isTablet ? responsiveFontSize.lg : (isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
@@ -332,7 +332,10 @@ const PrivacyPolicyScreen = () => {
     sectionHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: responsiveSpacing.md,
+      marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
+    },
+    sectionHeaderIcon: {
+      marginRight: responsiveSpacing.sm,
     },
   });
 
@@ -380,7 +383,7 @@ const PrivacyPolicyScreen = () => {
           {/* Introduction */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="info" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="info" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>Introduction</Text>
             </View>
             <Text style={styles.sectionContent}>
@@ -396,7 +399,7 @@ const PrivacyPolicyScreen = () => {
           {/* Information We Collect */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="folder-open" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="folder-open" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>Information We Collect</Text>
             </View>
             
@@ -446,7 +449,7 @@ const PrivacyPolicyScreen = () => {
           {/* How We Use Information */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="settings" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="settings" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>How We Use Your Information</Text>
             </View>
             <Text style={styles.sectionContent}>
@@ -481,7 +484,7 @@ const PrivacyPolicyScreen = () => {
           {/* Information Sharing */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="share" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="share" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>Information Sharing</Text>
             </View>
             <Text style={styles.sectionContent}>
@@ -508,7 +511,7 @@ const PrivacyPolicyScreen = () => {
           {/* Data Security */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="verified-user" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="verified-user" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>Data Security</Text>
             </View>
             <Text style={styles.sectionContent}>
@@ -536,7 +539,7 @@ const PrivacyPolicyScreen = () => {
           {/* Your Rights */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="account-circle" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="account-circle" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>Your Rights and Choices</Text>
             </View>
             <Text style={styles.sectionContent}>
@@ -567,7 +570,7 @@ const PrivacyPolicyScreen = () => {
           {/* Cookies and Tracking */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="cookie" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="cookie" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>Cookies and Tracking</Text>
             </View>
             <Text style={styles.sectionContent}>
@@ -580,7 +583,7 @@ const PrivacyPolicyScreen = () => {
           {/* Third-Party Services */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="extension" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="extension" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>Third-Party Services</Text>
             </View>
             <Text style={styles.sectionContent}>
@@ -606,7 +609,7 @@ const PrivacyPolicyScreen = () => {
           {/* Children's Privacy */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="child-care" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="child-care" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>Children's Privacy</Text>
             </View>
             <Text style={styles.sectionContent}>
@@ -619,7 +622,7 @@ const PrivacyPolicyScreen = () => {
           {/* Changes to Privacy Policy */}
           <HoverableCard>
             <View style={styles.sectionHeader}>
-              <Icon name="update" size={responsiveSize.iconLarge} color="#ffffff" style={{ marginRight: responsiveSpacing.sm }} />
+              <Icon name="update" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
               <Text style={styles.sectionTitle}>Changes to This Privacy Policy</Text>
             </View>
             <Text style={styles.sectionContent}>
