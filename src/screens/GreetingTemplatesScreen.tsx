@@ -428,7 +428,7 @@ const GreetingTemplatesScreen: React.FC = () => {
       edges={['top', 'left', 'right']}
     >
       <StatusBar 
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor="transparent" 
         translucent={true}
       />
@@ -605,7 +605,7 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontWeight: '600',
-    color: '#FFFFFF',
+    color: '#333333',
     flex: 1,
     textAlign: 'center',
   },

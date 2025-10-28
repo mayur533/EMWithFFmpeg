@@ -82,10 +82,6 @@ const PosterPlayerScreen: React.FC = () => {
     });
   }, [currentRelatedPosters, selectedLanguage]);
 
-  const handleBackPress = useCallback(() => {
-    navigation.goBack();
-  }, [navigation]);
-
   const handlePosterSelect = useCallback((poster: Template) => {
     // Update state instead of navigating to prevent full page refresh
     setCurrentPoster(poster);
@@ -165,7 +161,7 @@ const PosterPlayerScreen: React.FC = () => {
   ), [handlePosterSelect, selectedLanguage, languages, cardWidth, cardHeight]);
 
   const renderLanguageButton = useCallback((language: typeof languages[0]) => {
-    const iconSize = getIconSize(14);
+    const iconSize = getIconSize(12);
     
     return (
       <TouchableOpacity
@@ -193,9 +189,9 @@ const PosterPlayerScreen: React.FC = () => {
   }, [selectedLanguage, handleLanguageChange, getIconSize, screenWidth]);
 
      return (
-     <View style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#667eea' }]}>
+     <View style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#e8e8e8' }]}>
        <StatusBar 
-         barStyle="light-content"
+         barStyle="dark-content"
          backgroundColor="transparent" 
          translucent={true}
        />
@@ -207,25 +203,7 @@ const PosterPlayerScreen: React.FC = () => {
          end={{ x: 1, y: 1 }}
        >
          {/* Safe Area Top Spacing */}
-         <View style={{ height: insets.top }} />
-         
-         {/* Compact Header with Back and Next Arrows */}
-         <View style={styles.header}>
-           <TouchableOpacity
-             style={styles.backButton}
-             onPress={handleBackPress}
-             activeOpacity={0.7}
-           >
-             <Icon name="arrow-back" size={getIconSize(16)} color="#ffffff" />
-           </TouchableOpacity>
-           <TouchableOpacity
-             style={styles.nextArrowButton}
-             onPress={handleNextPress}
-             activeOpacity={0.7}
-           >
-             <Icon name="arrow-forward" size={getIconSize(16)} color="#ffffff" />
-           </TouchableOpacity>
-         </View>
+         <View style={{ height: insets.top + moderateScale(12) }} />
 
          {/* Compact Poster Section */}
          <View style={[styles.posterContainer, { height: posterHeight }]}>
@@ -234,13 +212,22 @@ const PosterPlayerScreen: React.FC = () => {
              style={styles.posterImage}
              resizeMode="contain"
            />
-                        <View style={styles.posterOverlay}>
-               <View style={styles.languageBadge}>
-                 <Text style={styles.languageBadgeText}>
-                   {selectedLanguage.toUpperCase()}
-                 </Text>
-               </View>
+           <View style={styles.posterOverlay}>
+             <View style={styles.languageBadge}>
+               <Text style={styles.languageBadgeText}>
+                 {selectedLanguage.toUpperCase()}
+               </Text>
              </View>
+             
+             {/* Edit Button Overlay */}
+             <TouchableOpacity
+               style={styles.editButton}
+               onPress={handleNextPress}
+               activeOpacity={0.8}
+             >
+               <Icon name="edit" size={getIconSize(14)} color="#ffffff" />
+             </TouchableOpacity>
+           </View>
          </View>
 
          {/* Compact Language Selection Section */}
@@ -314,7 +301,7 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between', // Space between back and next arrows
+    justifyContent: 'flex-start',
     paddingHorizontal: moderateScale(8), // Reduced padding
     paddingTop: moderateScale(4), // Reduced padding
     paddingBottom: moderateScale(4),
@@ -323,7 +310,7 @@ const styles = StyleSheet.create({
     width: moderateScale(32), // Reduced from 36-52
     height: moderateScale(32),
     borderRadius: moderateScale(16),
-    backgroundColor: 'rgba(255,255,255,0.12)', // Lighter
+    backgroundColor: 'rgba(0,0,0,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -335,21 +322,24 @@ const styles = StyleSheet.create({
     shadowRadius: moderateScale(3), // Reduced from 4
     elevation: 2, // Reduced from 3
   },
-  nextArrowButton: {
+  editButton: {
+    position: 'absolute',
+    bottom: moderateScale(8),
+    right: moderateScale(8),
     width: moderateScale(32),
     height: moderateScale(32),
     borderRadius: moderateScale(16),
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    backgroundColor: '#667eea',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: moderateScale(1),
+      height: moderateScale(2),
     },
-    shadowOpacity: 0.08,
-    shadowRadius: moderateScale(3),
-    elevation: 2,
+    shadowOpacity: 0.25,
+    shadowRadius: moderateScale(4),
+    elevation: 6,
   },
   headerContent: {
     flex: 1,
@@ -464,7 +454,7 @@ const styles = StyleSheet.create({
   relatedTitle: {
     fontSize: moderateScale(13), // Compact font
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#333333',
     letterSpacing: 0.3,
     marginBottom: 0,
   },
@@ -581,7 +571,7 @@ const styles = StyleSheet.create({
   },
   noPostersText: {
     fontSize: moderateScale(12), // Compact
-    color: 'rgba(255,255,255,0.7)',
+    color: 'rgba(51,51,51,0.8)',
     fontWeight: '600',
     textAlign: 'center',
     marginTop: moderateScale(4),
@@ -589,7 +579,7 @@ const styles = StyleSheet.create({
   },
   noPostersSubtext: {
     fontSize: moderateScale(10), // Compact
-    color: 'rgba(255,255,255,0.5)',
+    color: 'rgba(102,102,102,0.8)',
     textAlign: 'center',
   },
   languageSection: {
@@ -623,24 +613,24 @@ const styles = StyleSheet.create({
     gap: moderateScale(4),
   },
   languageButton: {
-    paddingVertical: moderateScale(6), // Compact
-    paddingHorizontal: moderateScale(12), // Compact
-    borderRadius: moderateScale(12), // Compact
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    borderWidth: moderateScale(1.5), // Thinner
-    borderColor: 'rgba(255,255,255,0.5)',
+    paddingVertical: moderateScale(4), // More compact
+    paddingHorizontal: moderateScale(8), // More compact
+    borderRadius: moderateScale(10), // Smaller
+    backgroundColor: 'rgba(0,0,0,0.08)',
+    borderWidth: moderateScale(1), // Thinner
+    borderColor: 'rgba(0,0,0,0.15)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: moderateScale(2), // Reduced
+      height: moderateScale(1), // Smaller
     },
-    shadowOpacity: 0.15, // Reduced
-    shadowRadius: moderateScale(4), // Reduced
-    elevation: 4, // Reduced
+    shadowOpacity: 0.12, // Reduced
+    shadowRadius: moderateScale(3), // Smaller
+    elevation: 2, // Reduced
     marginHorizontal: moderateScale(2),
-    minWidth: moderateScale(80), // Minimum width for readability
+    minWidth: moderateScale(65), // Smaller minimum width
   },
   languageButtonSelected: {
     backgroundColor: '#667eea',
@@ -657,9 +647,9 @@ const styles = StyleSheet.create({
     gap: moderateScale(4), // Compact
   },
   languageButtonText: {
-    fontSize: moderateScale(11), // Compact
+    fontSize: moderateScale(9), // Smaller
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#333333',
     letterSpacing: 0.2,
   },
   languageButtonTextSelected: {

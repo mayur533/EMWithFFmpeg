@@ -261,15 +261,15 @@ const PrivacyPolicyScreen = () => {
     backButton: {
       marginRight: moderateScale(8),
       borderRadius: moderateScale(8),
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: 'rgba(0, 0, 0, 0.05)',
     },
     headerTitle: {
       fontWeight: '600',
-      color: '#ffffff',
+      color: '#333333',
       flex: 1,
-      textShadowColor: 'rgba(0, 0, 0, 0.3)',
+      textShadowColor: 'rgba(255, 255, 255, 0.5)',
       textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 3,
+      textShadowRadius: 2,
     },
     scrollContainer: {
       flex: 1,
@@ -280,7 +280,7 @@ const PrivacyPolicyScreen = () => {
       // Inline styles used
     },
     lastUpdated: {
-      color: 'rgba(255, 255, 255, 0.7)',
+      color: 'rgba(102, 102, 102, 0.8)',
       textAlign: 'center',
       fontStyle: 'italic',
     },
@@ -388,20 +388,20 @@ const PrivacyPolicyScreen = () => {
     },
     heroTitle: {
       fontWeight: '800',
-      color: '#ffffff',
+      color: '#333333',
       textAlign: 'center',
-      textShadowColor: 'rgba(0, 0, 0, 0.4)',
-      textShadowOffset: { width: 0, height: 2 },
-      textShadowRadius: 4,
+      textShadowColor: 'rgba(255, 255, 255, 0.5)',
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
       letterSpacing: isTablet ? 1 : 0.5,
     },
     heroSubtitle: {
-      color: 'rgba(255, 255, 255, 0.8)',
+      color: 'rgba(102, 102, 102, 0.9)',
       textAlign: 'center',
       maxWidth: isTablet ? 700 : '100%',
     },
     divider: {
-      backgroundColor: 'rgba(255, 255, 255, 0.2)',
+      backgroundColor: 'rgba(0, 0, 0, 0.1)',
       borderRadius: 1,
     },
     sectionIcon: {
@@ -439,7 +439,7 @@ const PrivacyPolicyScreen = () => {
             <Icon 
               name="arrow-back" 
               size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
-              color="#ffffff" 
+              color="#333333" 
             />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, {
@@ -465,7 +465,7 @@ const PrivacyPolicyScreen = () => {
             paddingHorizontal: dynamicModerateScale(8),
             marginBottom: dynamicModerateScale(8),
           }]}>
-            <Icon name="security" size={isTabletDevice ? getIconSize(32) : getIconSize(24)} color="#ffffff" style={[styles.sectionIcon, {
+            <Icon name="security" size={isTabletDevice ? getIconSize(32) : getIconSize(24)} color="#667eea" style={[styles.sectionIcon, {
               marginBottom: dynamicModerateScale(6),
             }]} />
             <Text style={[styles.heroTitle, {

@@ -2144,23 +2144,23 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       ]}
     >
       <StatusBar 
-        barStyle="light-content" 
+        barStyle="dark-content" 
         backgroundColor="transparent" 
         translucent={true}
       />
       
       {/* Professional Header */}
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
+      <View
         style={[styles.header, { 
-          paddingTop: insets.top + (isUltraSmallScreen ? 2 : isSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm) 
+          paddingTop: insets.top + (isUltraSmallScreen ? 2 : isSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm),
+          backgroundColor: theme?.colors?.surface || '#ffffff'
         }]}
       >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={getResponsiveIconSize()} color="#ffffff" />
+          <Icon name="arrow-back" size={getResponsiveIconSize()} color="#333333" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Poster Editor</Text>
@@ -2284,9 +2284,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             }
           }}
         >
-          <Icon name="arrow-forward" size={getResponsiveIconSize()} color="#ffffff" />
+          <Icon name="arrow-forward" size={getResponsiveIconSize()} color="#333333" />
         </TouchableOpacity>
-      </LinearGradient>
+      </View>
 
                         {/* Canvas Container */}
           <View style={styles.canvasContainer}>
@@ -3784,7 +3784,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: getHeaderPadding(),
     borderRadius: isLandscape ? (isTablet ? 12 : 8) : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     minWidth: getHeaderButtonSize(),
     minHeight: getHeaderButtonSize(),
     justifyContent: 'center',
@@ -3799,13 +3799,13 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: getHeaderTitleSize(),
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#333333',
     textAlign: 'center',
     marginBottom: isLandscape ? (isTablet ? 2 : 1) : (isUltraSmallScreen ? 0 : isSmallScreen ? 1 : 2),
   },
   headerSubtitle: {
     fontSize: getHeaderSubtitleSize(),
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(102, 102, 102, 0.8)',
     marginTop: isLandscape ? (isTablet ? 2 : 1) : (isUltraSmallScreen ? 0 : isSmallScreen ? 1 : 2),
     textAlign: 'center',
     lineHeight: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16),
@@ -3813,7 +3813,7 @@ const styles = StyleSheet.create({
   nextButton: {
     padding: getHeaderPadding(),
     borderRadius: isLandscape ? (isTablet ? 12 : 8) : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
     minWidth: getHeaderButtonSize(),
     minHeight: getHeaderButtonSize(),
     justifyContent: 'center',

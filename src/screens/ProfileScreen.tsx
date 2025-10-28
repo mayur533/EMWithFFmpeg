@@ -1338,7 +1338,7 @@ const ProfileScreen: React.FC = () => {
       edges={['top', 'left', 'right']}
     >
       <StatusBar 
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor="transparent" 
         translucent={true}
       />
@@ -1368,10 +1368,10 @@ const ProfileScreen: React.FC = () => {
             <RefreshControl
               refreshing={isRefreshing}
               onRefresh={handleRefresh}
-              tintColor="#ffffff"
+              tintColor="#333333"
               colors={['#667eea', '#764ba2']}
               title="Pull to refresh"
-              titleColor="#ffffff"
+              titleColor="#333333"
             />
           }
         >
@@ -1786,8 +1786,8 @@ const ProfileScreen: React.FC = () => {
           </TouchableOpacity>
 
           {/* App Version */}
-          <Text style={[styles.versionText, { 
-            color: 'rgba(255,255,255,0.6)',
+            <Text style={[styles.versionText, { 
+            color: 'rgba(102, 102, 102, 0.8)',
             fontSize: dynamicModerateScale(8),
             marginTop: dynamicModerateScale(14),
           }]}>Version 1.0.0</Text>
@@ -2531,7 +2531,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: moderateScale(12),
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#333333',
     textAlign: 'center',
   },
   content: {
@@ -2570,7 +2570,7 @@ const styles = StyleSheet.create({
   },
   avatarText: {
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#ffffff', // Keep white for gradient avatar background
   },
   editAvatarButton: {
     position: 'absolute',
@@ -2618,7 +2618,7 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#333333',
   },
   menuItem: {
     flexDirection: 'row',

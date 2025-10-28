@@ -264,7 +264,7 @@ const HelpSupportScreen: React.FC = () => {
 
   return (
     <SafeAreaView style={styles.container} edges={['top']}>
-      <StatusBar barStyle="light-content" backgroundColor="transparent" translucent={true} />
+      <StatusBar barStyle="dark-content" backgroundColor="transparent" translucent={true} />
 
       <LinearGradient
         colors={theme.colors.gradient}
@@ -285,7 +285,7 @@ const HelpSupportScreen: React.FC = () => {
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#ffffff" />
+            <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#333333" />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, {
             fontSize: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12),
@@ -341,7 +341,7 @@ const HelpSupportScreen: React.FC = () => {
             marginBottom: dynamicModerateScale(12),
           }]}>
             <Text style={[styles.sectionTitle, { 
-              color: '#ffffff',
+              color: '#333333',
               fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginBottom: dynamicModerateScale(8),
             }]}>Contact Us</Text>
@@ -357,7 +357,7 @@ const HelpSupportScreen: React.FC = () => {
             marginBottom: dynamicModerateScale(12),
           }]}>
             <Text style={[styles.sectionTitle, { 
-              color: '#ffffff',
+              color: '#333333',
               fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginBottom: dynamicModerateScale(8),
             }]}>
@@ -375,7 +375,7 @@ const HelpSupportScreen: React.FC = () => {
             marginBottom: dynamicModerateScale(12),
           }]}>
             <Text style={[styles.sectionTitle, { 
-              color: '#ffffff',
+              color: '#333333',
               fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginBottom: dynamicModerateScale(8),
             }]}>Quick Links</Text>
@@ -424,14 +424,14 @@ const HelpSupportScreen: React.FC = () => {
             marginTop: dynamicModerateScale(8),
           }]}>
             <Text style={[styles.footerText, { 
-              color: 'rgba(255, 255, 255, 0.8)',
+              color: 'rgba(51, 51, 51, 0.7)',
               fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
               marginBottom: dynamicModerateScale(2),
             }]}>
               Powered by RSL Solution Private Limited
             </Text>
             <Text style={[styles.footerVersion, { 
-              color: 'rgba(255, 255, 255, 0.6)',
+              color: 'rgba(102, 102, 102, 0.8)',
               fontSize: isTabletDevice ? dynamicModerateScale(7.5) : dynamicModerateScale(7),
             }]}>
               Version 1.0.0
@@ -468,9 +468,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
-  headerTitle: {
+    headerTitle: {
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#333333',
   },
   scrollView: {
     flex: 1,

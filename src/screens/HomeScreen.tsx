@@ -1085,9 +1085,9 @@ const HomeScreen: React.FC = React.memo(() => {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#667eea' }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#e8e8e8' }]}>
         <StatusBar 
-          barStyle="light-content"
+          barStyle="dark-content"
           backgroundColor="transparent" 
           translucent={true}
         />
@@ -1095,7 +1095,7 @@ const HomeScreen: React.FC = React.memo(() => {
           colors={theme.colors.gradient}
           style={styles.loadingContainer}
         >
-          <ActivityIndicator size="large" color="#ffffff" />
+          <ActivityIndicator size="large" color="#667eea" />
           <Text style={styles.loadingText}>Loading dashboard...</Text>
         </LinearGradient>
       </SafeAreaView>
@@ -1104,11 +1104,11 @@ const HomeScreen: React.FC = React.memo(() => {
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#667eea' }]}
+      style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#e8e8e8' }]}
       edges={['top', 'left', 'right']}
     >
       <StatusBar 
-        barStyle="light-content"
+        barStyle="dark-content"
         backgroundColor="transparent" 
         translucent={true}
       />
@@ -1643,7 +1643,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
               <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#f5f5f5', '#ffffff']}
                 style={styles.upcomingEventsModalGradient}
               >
                 <View style={styles.upcomingEventsModalHeader}>
@@ -1733,7 +1733,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
               <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#f5f5f5', '#ffffff']}
                 style={styles.upcomingEventsModalGradient}
               >
                 <View style={styles.upcomingEventsModalHeader}>
@@ -1818,7 +1818,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
               <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#f5f5f5', '#ffffff']}
                 style={styles.upcomingEventsModalGradient}
               >
                 <View style={styles.upcomingEventsModalHeader}>
@@ -1903,7 +1903,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
               <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#f5f5f5', '#ffffff']}
                 style={styles.upcomingEventsModalGradient}
               >
                 <View style={styles.upcomingEventsModalHeader}>
@@ -1973,7 +1973,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
               <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#f5f5f5', '#ffffff']}
                 style={styles.upcomingEventsModalGradient}
               >
                 <View style={styles.upcomingEventsModalHeader}>
@@ -2043,7 +2043,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
               <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#f5f5f5', '#ffffff']}
                 style={styles.upcomingEventsModalGradient}
               >
                 <View style={styles.upcomingEventsModalHeader}>
@@ -2113,7 +2113,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
               <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#f5f5f5', '#ffffff']}
                 style={styles.upcomingEventsModalGradient}
               >
                 <View style={styles.upcomingEventsModalHeader}>
@@ -2183,7 +2183,7 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
               <LinearGradient
-                colors={['#667eea', '#764ba2']}
+                colors={['#f5f5f5', '#ffffff']}
                 style={styles.upcomingEventsModalGradient}
               >
                 <View style={styles.upcomingEventsModalHeader}>
@@ -2247,7 +2247,7 @@ const HomeScreen: React.FC = React.memo(() => {
         <Modal visible={isAtmanirbharBharatModalVisible} transparent={true} animationType="slide" onRequestClose={closeAtmanirbharBharatModal}>
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
-              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+              <LinearGradient colors={['#f5f5f5', '#ffffff']} style={styles.upcomingEventsModalGradient}>
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Atmanirbhar Bharat</Text>
@@ -2291,7 +2291,7 @@ const HomeScreen: React.FC = React.memo(() => {
         <Modal visible={isGoodThoughtsModalVisible} transparent={true} animationType="slide" onRequestClose={closeGoodThoughtsModal}>
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
-              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+              <LinearGradient colors={['#f5f5f5', '#ffffff']} style={styles.upcomingEventsModalGradient}>
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Good Thoughts</Text>
@@ -2335,7 +2335,7 @@ const HomeScreen: React.FC = React.memo(() => {
         <Modal visible={isTrendingModalVisible} transparent={true} animationType="slide" onRequestClose={closeTrendingModal}>
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
-              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+              <LinearGradient colors={['#f5f5f5', '#ffffff']} style={styles.upcomingEventsModalGradient}>
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Trending</Text>
@@ -2379,7 +2379,7 @@ const HomeScreen: React.FC = React.memo(() => {
         <Modal visible={isBhagvatGitaModalVisible} transparent={true} animationType="slide" onRequestClose={closeBhagvatGitaModal}>
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
-              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+              <LinearGradient colors={['#f5f5f5', '#ffffff']} style={styles.upcomingEventsModalGradient}>
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Bhagvat Gita</Text>
@@ -2423,7 +2423,7 @@ const HomeScreen: React.FC = React.memo(() => {
         <Modal visible={isBooksModalVisible} transparent={true} animationType="slide" onRequestClose={closeBooksModal}>
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
-              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+              <LinearGradient colors={['#f5f5f5', '#ffffff']} style={styles.upcomingEventsModalGradient}>
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Books</Text>
@@ -2467,7 +2467,7 @@ const HomeScreen: React.FC = React.memo(() => {
         <Modal visible={isCelebratesMomentsModalVisible} transparent={true} animationType="slide" onRequestClose={closeCelebratesMomentsModal}>
           <View style={styles.modalOverlay}>
             <View style={styles.upcomingEventsModalContent}>
-              <LinearGradient colors={['#667eea', '#764ba2']} style={styles.upcomingEventsModalGradient}>
+              <LinearGradient colors={['#f5f5f5', '#ffffff']} style={styles.upcomingEventsModalGradient}>
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Celebrates the Moments</Text>
@@ -2551,7 +2551,7 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 20,
     fontSize: 18,
-    color: '#ffffff',
+    color: '#333333',
     fontWeight: '600',
   },
   header: {
@@ -2567,13 +2567,13 @@ const styles = StyleSheet.create({
   },
   greetingText: {
     fontSize: moderateScale(8),
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(51,51,51,0.7)',
     marginBottom: moderateScale(1.5),
   },
   userName: {
     fontSize: moderateScale(12),
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#333333',
   },
   apiStatusIndicator: {
     flexDirection: 'row',
@@ -2675,7 +2675,7 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: moderateScale(12),
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#333333',
     marginBottom: verticalScale(4),
     paddingHorizontal: moderateScale(10),
   },
@@ -2740,12 +2740,12 @@ const styles = StyleSheet.create({
    viewAllButton: {
      paddingHorizontal: moderateScale(5),
      paddingVertical: moderateScale(2),
-     backgroundColor: 'rgba(255,255,255,0.2)',
+     backgroundColor: 'rgba(0,0,0,0.08)',
      borderRadius: moderateScale(8),
    },
    viewAllButtonText: {
      fontSize: moderateScale(8),
-     color: '#ffffff',
+     color: '#333333',
      fontWeight: '600',
    },
        upcomingEventsList: {
@@ -3029,9 +3029,9 @@ const styles = StyleSheet.create({
     upcomingEventsModalTitle: {
       fontSize: isTablet ? moderateScale(15) : moderateScale(13), // Further reduced from 18/16
       fontWeight: 'bold',
-      color: '#ffffff',
+      color: '#333333',
       marginBottom: 0, // No margin needed without subtitle
-      textShadowColor: 'rgba(0,0,0,0.15)',
+      textShadowColor: 'rgba(255,255,255,0.5)',
       textShadowOffset: { width: 0, height: 0.5 },
       textShadowRadius: 2,
     },
@@ -3045,15 +3045,15 @@ const styles = StyleSheet.create({
       width: isTablet ? moderateScale(28) : moderateScale(26), // Further reduced from 36/32
       height: isTablet ? moderateScale(28) : moderateScale(26),
       borderRadius: isTablet ? moderateScale(14) : moderateScale(13),
-      backgroundColor: 'rgba(255,255,255,0.12)', // Further reduced opacity
+      backgroundColor: 'rgba(0,0,0,0.08)',
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 0.3, // Further reduced from 0.5
-      borderColor: 'rgba(255,255,255,0.15)',
+      borderWidth: 0.3,
+      borderColor: 'rgba(0,0,0,0.1)',
     },
     upcomingEventsCloseButtonText: {
       fontSize: isTablet ? moderateScale(15) : moderateScale(14), // Further reduced from 18/16
-      color: '#ffffff',
+      color: '#333333',
       fontWeight: 'bold',
     },
     upcomingEventsModalBody: {

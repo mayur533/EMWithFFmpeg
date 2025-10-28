@@ -518,21 +518,23 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
   return (
     <View style={themeStyles.container}>
       <StatusBar 
-        barStyle={isDarkMode ? "light-content" : "dark-content"} 
+        barStyle="dark-content" 
         backgroundColor="transparent" 
         translucent={true}
       />
       
              {/* Professional Header */}
-       <LinearGradient
-         colors={['#667eea', '#764ba2']}
-         style={[styles.header, { paddingTop: insets.top + responsiveSpacing.xs }]}
+       <View
+         style={[styles.header, { 
+           paddingTop: insets.top + responsiveSpacing.xs,
+           backgroundColor: theme?.colors?.surface || '#ffffff'
+         }]}
        >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={getIconSize(18)} color="#ffffff" />
+          <Icon name="arrow-back" size={getIconSize(18)} color="#333333" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Preview Poster</Text>
@@ -541,7 +543,7 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
           </Text>
         </View>
         <View style={styles.headerSpacer} />
-      </LinearGradient>
+      </View>
 
       {/* Poster Preview */}
       <View style={themeStyles.previewContainer}>
@@ -684,7 +686,7 @@ const styles = StyleSheet.create({
   backButton: {
     padding: moderateScale(4),
     borderRadius: moderateScale(6),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   headerContent: {
     flex: 1,
@@ -694,11 +696,11 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: moderateScale(12),
     fontWeight: '700',
-    color: '#ffffff',
+    color: '#333333',
   },
   headerSubtitle: {
     fontSize: moderateScale(8.5),
-    color: 'rgba(255, 255, 255, 0.8)',
+    color: 'rgba(102, 102, 102, 0.8)',
     marginTop: moderateScale(0.5),
   },
   headerSpacer: {
