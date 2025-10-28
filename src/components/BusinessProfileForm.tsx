@@ -114,6 +114,8 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
   const [showImagePickerModal, setShowImagePickerModal] = useState(false);
   const [showValidationModal, setShowValidationModal] = useState(false);
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
+  const [phoneValidationError, setPhoneValidationError] = useState<string>('');
+  const [alternatePhoneValidationError, setAlternatePhoneValidationError] = useState<string>('');
 
   const categories = [
     'Event Planners',
@@ -148,6 +150,41 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
   }, [profile, visible]);
 
   const handleInputChange = (field: string, value: string) => {
+    // Real-time phone validation with digit count
+    if (field === 'phone') {
+      // Only allow digits
+      const digitsOnly = value.replace(/\D/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [field]: digitsOnly,
+      }));
+      
+      // Validate as user types with digit count
+      const error = validatePhone(digitsOnly);
+      setPhoneValidationError(error);
+      return;
+    }
+    
+    // Real-time alternate phone validation with digit count
+    if (field === 'alternatePhone') {
+      // Only allow digits
+      const digitsOnly = value.replace(/\D/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [field]: digitsOnly,
+      }));
+      
+      // Validate as user types (optional field)
+      if (digitsOnly.trim()) {
+        const error = validatePhone(digitsOnly);
+        setAlternatePhoneValidationError(error);
+      } else {
+        setAlternatePhoneValidationError(''); // Clear error if empty
+      }
+      return;
+    }
+    
+    // Handle all other fields normally
     setFormData(prev => ({
       ...prev,
       [field]: value,
@@ -198,8 +235,19 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
 
   // Validation functions
   const validatePhoneNumber = (phone: string): boolean => {
-    const phoneRegex = /^\d{10}$/;
-    return phoneRegex.test(phone);
+    // Remove all non-digit characters and check if exactly 10 digits remain
+    const phoneDigits = phone.replace(/\D/g, '');
+    return phoneDigits.length === 10;
+  };
+
+  // Validate phone with real-time digit count feedback (exactly 10 digits)
+  const validatePhone = (phone: string): string => {
+    if (!phone || !phone.trim()) return ''; // Empty is OK for optional fields
+    const digits = phone.trim().replace(/\D/g, ''); // Remove non-digits
+    if (digits.length === 0) return '';
+    if (digits.length < 10) return `Phone must be 10 digits (currently ${digits.length})`;
+    if (digits.length > 10) return `Phone must be 10 digits (currently ${digits.length})`;
+    return ''; // Valid
   };
 
   const validateEmail = (email: string): boolean => {
@@ -420,27 +468,85 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Contact Information</Text>
               
-                             <FloatingInput
-                 value={formData.phone}
-                 onChangeText={(value) => handleInputChange('phone', value)}
-                 field="phone"
-                 placeholder="Enter phone number"
-                 keyboardType="phone-pad"
-                 focusedField={focusedField}
-                 setFocusedField={setFocusedField}
-                 theme={theme}
-               />
+              {/* Phone Number with Validation */}
+              <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, { color: '#ffffff' }]}>Phone Number *</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: theme.colors.inputBackground,
+                      color: theme.colors.text,
+                      borderColor: phoneValidationError ? '#ff4444' : theme.colors.border
+                    },
+                    focusedField === 'phone' && [styles.inputFocused, { borderColor: phoneValidationError ? '#ff4444' : theme.colors.primary }]
+                  ]}
+                  value={formData.phone}
+                  onChangeText={(value) => handleInputChange('phone', value)}
+                  onFocus={() => setFocusedField('phone')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Enter 10 digit phone number"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  autoCapitalize="none"
+                  blurOnSubmit={false}
+                  returnKeyType="next"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  textContentType="none"
+                />
+                {phoneValidationError ? (
+                  <Text style={[styles.validationError, { color: '#ff4444' }]}>
+                    {phoneValidationError}
+                  </Text>
+                ) : null}
+                {!phoneValidationError && formData.phone.trim() && formData.phone.replace(/\D/g, '').length === 10 ? (
+                  <Text style={[styles.validationSuccess, { color: '#4CAF50' }]}>
+                    ✓ Valid phone number
+                  </Text>
+                ) : null}
+              </View>
 
-               <FloatingInput
-                 value={formData.alternatePhone || ''}
-                 onChangeText={(value) => handleInputChange('alternatePhone', value)}
-                 field="alternatePhone"
-                 placeholder="Enter alternate phone number"
-                 keyboardType="phone-pad"
-                 focusedField={focusedField}
-                 setFocusedField={setFocusedField}
-                 theme={theme}
-               />
+              {/* Alternate Phone Number with Validation */}
+              <View style={styles.inputContainer}>
+                <Text style={[styles.inputLabel, { color: '#ffffff' }]}>Alternate Phone (Optional)</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      backgroundColor: theme.colors.inputBackground,
+                      color: theme.colors.text,
+                      borderColor: alternatePhoneValidationError ? '#ff4444' : theme.colors.border
+                    },
+                    focusedField === 'alternatePhone' && [styles.inputFocused, { borderColor: alternatePhoneValidationError ? '#ff4444' : theme.colors.primary }]
+                  ]}
+                  value={formData.alternatePhone || ''}
+                  onChangeText={(value) => handleInputChange('alternatePhone', value)}
+                  onFocus={() => setFocusedField('alternatePhone')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Enter 10 digit alternate phone (optional)"
+                  placeholderTextColor={theme.colors.textSecondary}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  autoCapitalize="none"
+                  blurOnSubmit={false}
+                  returnKeyType="next"
+                  autoCorrect={false}
+                  spellCheck={false}
+                  textContentType="none"
+                />
+                {alternatePhoneValidationError ? (
+                  <Text style={[styles.validationError, { color: '#ff4444' }]}>
+                    {alternatePhoneValidationError}
+                  </Text>
+                ) : null}
+                {!alternatePhoneValidationError && formData.alternatePhone && formData.alternatePhone.trim() && formData.alternatePhone.replace(/\D/g, '').length === 10 ? (
+                  <Text style={[styles.validationSuccess, { color: '#4CAF50' }]}>
+                    ✓ Valid phone number
+                  </Text>
+                ) : null}
+              </View>
 
                <FloatingInput
                  value={formData.email}
@@ -1217,6 +1323,23 @@ const styles = StyleSheet.create({
     fontSize: Math.min(screenWidth * 0.042, 17),
     fontWeight: '600',
     color: '#ffffff',
+  },
+  inputLabel: {
+    fontSize: Math.min(screenWidth * 0.038, 15),
+    fontWeight: '600',
+    marginBottom: screenHeight * 0.008,
+  },
+  validationError: {
+    fontSize: Math.min(screenWidth * 0.032, 13),
+    marginTop: screenHeight * 0.005,
+    marginLeft: screenWidth * 0.01,
+    fontWeight: '500',
+  },
+  validationSuccess: {
+    fontSize: Math.min(screenWidth * 0.032, 13),
+    marginTop: screenHeight * 0.005,
+    marginLeft: screenWidth * 0.01,
+    fontWeight: '500',
   },
 });
 

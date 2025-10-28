@@ -3068,6 +3068,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="Enter text..."
+              placeholderTextColor="#999999"
               value={newText}
               onChangeText={setNewText}
               multiline
@@ -3103,6 +3104,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             <TextInput
               style={styles.textInput}
               placeholder="Enter image URL..."
+              placeholderTextColor="#999999"
               value={newImageUrl}
               onChangeText={setNewImageUrl}
             />

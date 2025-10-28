@@ -144,6 +144,10 @@ class LoginAPIsService {
     try {
       console.log('📝 Registering new user:', data.email);
       
+      // Clear all caches before registration to ensure fresh start
+      console.log('🗑️ Clearing all caches before registration...');
+      await this.clearAllCaches();
+      
       const response = await api.post('/api/mobile/auth/register', {
         email: data.email,
         password: data.password,
@@ -218,6 +222,10 @@ class LoginAPIsService {
   async loginUser(data: UserLoginRequest): Promise<AuthResponse> {
     try {
       console.log('🔐 Logging in user:', data.email);
+      
+      // Clear all caches before login to ensure fresh data for new user
+      console.log('🗑️ Clearing all caches before login...');
+      await this.clearAllCaches();
       
       console.log('📡 Making API call to:', '/api/mobile/auth/login');
       console.log('📡 Request data:', { email: data.email, rememberMe: data.rememberMe || false });
@@ -496,6 +504,58 @@ class LoginAPIsService {
       console.error('❌ Token refresh error:', error.response?.data || error.message);
       throw error;
     }
+  }
+
+  // ========================================
+  // HELPER METHODS
+  // ========================================
+
+  /**
+   * Clear all service caches
+   * Used before login/register to ensure fresh data
+   */
+  private async clearAllCaches(): Promise<void> {
+    try {
+      const businessProfileService = require('./businessProfile').default;
+      businessProfileService.clearCache();
+      console.log('✅ Business profile cache cleared');
+    } catch (error) {
+      console.error('Failed to clear business profile cache:', error);
+    }
+    
+    try {
+      const businessCategoryPostersApi = require('./businessCategoryPostersApi').default;
+      businessCategoryPostersApi.clearCache();
+      console.log('✅ Business category posters cache cleared');
+    } catch (error) {
+      console.error('Failed to clear business category posters cache:', error);
+    }
+    
+    try {
+      const homeApi = require('./homeApi').default;
+      homeApi.clearCache();
+      console.log('✅ Home API cache cleared');
+    } catch (error) {
+      console.error('Failed to clear home API cache:', error);
+    }
+    
+    try {
+      const templatesService = require('./templates').default;
+      templatesService.clearCache();
+      console.log('✅ Templates cache cleared');
+    } catch (error) {
+      console.error('Failed to clear templates cache:', error);
+    }
+    
+    try {
+      const businessCategoriesService = require('./businessCategoriesService').default;
+      businessCategoriesService.clearCache();
+      console.log('✅ Business categories cache cleared');
+    } catch (error) {
+      console.error('Failed to clear business categories cache:', error);
+    }
+    
+    console.log('✅ All caches cleared successfully');
   }
 }
 

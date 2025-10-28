@@ -133,6 +133,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   const [modalDimensions, setModalDimensions] = useState(getModalDimensions());
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [phoneValidationError, setPhoneValidationError] = useState<string>('');
+  const [alternatePhoneValidationError, setAlternatePhoneValidationError] = useState<string>('');
 
   const categories = [
     'Event Planners',
@@ -150,20 +152,64 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
     return () => subscription?.remove();
   }, []);
 
+  // Validate phone with real-time digit count feedback (exactly 10 digits)
+  const validatePhone = (phone: string): string => {
+    if (!phone || !phone.trim()) return ''; // Empty is OK for optional fields
+    const digits = phone.trim().replace(/\D/g, ''); // Remove non-digits
+    if (digits.length === 0) return '';
+    if (digits.length < 10) return `Phone must be 10 digits (currently ${digits.length})`;
+    if (digits.length > 10) return `Phone must be 10 digits (currently ${digits.length})`;
+    return ''; // Valid
+  };
+
   const handleInputChange = (field: string, value: string) => {
-    // Phone number validation and length restriction
-    if (field === 'phone' || field === 'alternatePhone') {
-      // Remove any non-numeric characters
-      const numericValue = value.replace(/[^0-9]/g, '');
+    // Real-time phone validation with digit count
+    if (field === 'phone') {
+      // Only allow digits
+      const digitsOnly = value.replace(/\D/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [field]: digitsOnly,
+      }));
       
-      // Limit to 10 digits
-      if (numericValue.length <= 10) {
-        setFormData(prev => ({
+      // Validate as user types with digit count
+      const error = validatePhone(digitsOnly);
+      setPhoneValidationError(error);
+      
+      // Clear form validation error
+      if (validationErrors.phone) {
+        setValidationErrors(prev => ({
           ...prev,
-          [field]: numericValue,
+          phone: '',
         }));
       }
-      // If user tries to enter more than 10 digits, ignore the input
+      return;
+    }
+    
+    // Real-time alternate phone validation with digit count
+    if (field === 'alternatePhone') {
+      // Only allow digits
+      const digitsOnly = value.replace(/\D/g, '');
+      setFormData(prev => ({
+        ...prev,
+        [field]: digitsOnly,
+      }));
+      
+      // Validate as user types (optional field)
+      if (digitsOnly.trim()) {
+        const error = validatePhone(digitsOnly);
+        setAlternatePhoneValidationError(error);
+      } else {
+        setAlternatePhoneValidationError(''); // Clear error if empty
+      }
+      
+      // Clear form validation error
+      if (validationErrors.alternatePhone) {
+        setValidationErrors(prev => ({
+          ...prev,
+          alternatePhone: '',
+        }));
+      }
       return;
     }
 
@@ -529,18 +575,43 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   </ScrollView>
               </View>
               
+              {/* Phone Number with Real-time Validation */}
               <View style={styles.inputWrapper}>
-                <FloatingInput
+                <Text style={[styles.inputLabel, { color: theme.theme.colors.text }]}>Phone Number *</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      color: theme.theme.colors.text,
+                      borderColor: phoneValidationError ? theme.theme.colors.error : (focusedField === 'phone' ? theme.theme.colors.primary : theme.theme.colors.border),
+                      backgroundColor: theme.theme.colors.inputBackground,
+                    }
+                  ]}
                   value={formData.phone}
                   onChangeText={(value) => handleInputChange('phone', value)}
-                  field="phone"
-                  placeholder="Enter 10-digit phone number *"
+                  onFocus={() => setFocusedField('phone')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Enter 10 digit phone number"
+                  placeholderTextColor={theme.theme.colors.textSecondary}
                   keyboardType="phone-pad"
-                  focusedField={focusedField}
-                  setFocusedField={setFocusedField}
-                  theme={theme}
-                  hasError={!!validationErrors.phone}
+                  maxLength={10}
                 />
+                {phoneValidationError ? (
+                  <View style={styles.errorContainer}>
+                    <Icon name="error" size={16} color={theme.theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                      {phoneValidationError}
+                    </Text>
+                  </View>
+                ) : null}
+                {!phoneValidationError && formData.phone.trim() && formData.phone.replace(/\D/g, '').length === 10 ? (
+                  <View style={styles.successContainer}>
+                    <Icon name="check-circle" size={16} color="#4CAF50" />
+                    <Text style={[styles.successText, { color: '#4CAF50' }]}>
+                      ✓ Valid phone number
+                    </Text>
+                  </View>
+                ) : null}
                 {validationErrors.phone && (
                   <View style={styles.errorContainer}>
                     <Icon name="error" size={16} color={theme.theme.colors.error} />
@@ -551,27 +622,52 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                 )}
               </View>
 
-                <View style={styles.inputWrapper}>
-                  <FloatingInput
-                    value={formData.alternatePhone || ''}
-                    onChangeText={(value) => handleInputChange('alternatePhone', value)}
-                    field="alternatePhone"
-                    placeholder="Enter 10-digit alternate phone number (optional)"
-                    keyboardType="phone-pad"
-                    focusedField={focusedField}
-                    setFocusedField={setFocusedField}
-                    theme={theme}
-                    hasError={!!validationErrors.alternatePhone}
-                  />
-                  {validationErrors.alternatePhone && (
-                    <View style={styles.errorContainer}>
-                      <Icon name="error" size={16} color={theme.theme.colors.error} />
-                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
-                        {validationErrors.alternatePhone}
-                      </Text>
-                    </View>
-                  )}
-                </View>
+              {/* Alternate Phone Number with Real-time Validation */}
+              <View style={styles.inputWrapper}>
+                <Text style={[styles.inputLabel, { color: theme.theme.colors.text }]}>Alternate Phone (Optional)</Text>
+                <TextInput
+                  style={[
+                    styles.input,
+                    { 
+                      color: theme.theme.colors.text,
+                      borderColor: alternatePhoneValidationError ? theme.theme.colors.error : (focusedField === 'alternatePhone' ? theme.theme.colors.primary : theme.theme.colors.border),
+                      backgroundColor: theme.theme.colors.inputBackground,
+                    }
+                  ]}
+                  value={formData.alternatePhone || ''}
+                  onChangeText={(value) => handleInputChange('alternatePhone', value)}
+                  onFocus={() => setFocusedField('alternatePhone')}
+                  onBlur={() => setFocusedField(null)}
+                  placeholder="Enter 10 digit alternate phone (optional)"
+                  placeholderTextColor={theme.theme.colors.textSecondary}
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                />
+                {alternatePhoneValidationError ? (
+                  <View style={styles.errorContainer}>
+                    <Icon name="error" size={16} color={theme.theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                      {alternatePhoneValidationError}
+                    </Text>
+                  </View>
+                ) : null}
+                {!alternatePhoneValidationError && formData.alternatePhone && formData.alternatePhone.trim() && formData.alternatePhone.replace(/\D/g, '').length === 10 ? (
+                  <View style={styles.successContainer}>
+                    <Icon name="check-circle" size={16} color="#4CAF50" />
+                    <Text style={[styles.successText, { color: '#4CAF50' }]}>
+                      ✓ Valid phone number
+                    </Text>
+                  </View>
+                ) : null}
+                {validationErrors.alternatePhone && (
+                  <View style={styles.errorContainer}>
+                    <Icon name="error" size={16} color={theme.theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                      {validationErrors.alternatePhone}
+                    </Text>
+                  </View>
+                )}
+              </View>
 
                 <View style={styles.inputWrapper}>
                   <FloatingInput
@@ -1101,6 +1197,24 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     flex: 1,
     lineHeight: isSmallScreen ? 16 : 18,
+  },
+  successContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: screenHeight * 0.006,
+    paddingHorizontal: screenWidth * 0.02,
+  },
+  successText: {
+    fontSize: isSmallScreen ? 12 : 13,
+    marginLeft: 6,
+    flex: 1,
+    lineHeight: isSmallScreen ? 16 : 18,
+    fontWeight: '500',
+  },
+  inputLabel: {
+    fontSize: isSmallScreen ? 14 : 15,
+    fontWeight: '600',
+    marginBottom: screenHeight * 0.008,
   },
   multilineInput: {
     minHeight: isSmallScreen ? 80 : 100,

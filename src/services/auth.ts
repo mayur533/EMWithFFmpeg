@@ -82,6 +82,10 @@ class AuthService {
     try {
       console.log('Registering new user with API...');
       
+      // Clear all service caches before registration to ensure fresh start
+      console.log('🗑️ Clearing all service caches before registration...');
+      await this.clearAllCaches();
+      
       // Prepare registration data with all available fields
       const registerData: RegisterRequest = {
         email: userData.email,
@@ -140,6 +144,10 @@ class AuthService {
     try {
       console.log('Email sign-in with API...');
       
+      // Clear all service caches before login to ensure fresh data for new user
+      console.log('🗑️ Clearing all service caches before login...');
+      await this.clearAllCaches();
+      
       const loginData: LoginRequest = {
         email,
         password,
@@ -191,6 +199,10 @@ class AuthService {
   async signInWithGoogle(): Promise<any> {
     try {
       console.log('Google Sign-In started...');
+      
+      // Clear all service caches before login to ensure fresh data for new user
+      console.log('🗑️ Clearing all service caches before login...');
+      await this.clearAllCaches();
       
       // Check if device supports Google Play Services
       await GoogleSignin.hasPlayServices();
@@ -290,6 +302,48 @@ class AuthService {
         }
       }
       
+      // Clear all service caches to prevent data leaking to next user
+      console.log('🗑️ Clearing all service caches...');
+      try {
+        const businessProfileService = require('./businessProfile').default;
+        businessProfileService.clearCache();
+        console.log('✅ Business profile cache cleared');
+      } catch (error) {
+        console.error('Failed to clear business profile cache:', error);
+      }
+      
+      try {
+        const businessCategoryPostersApi = require('./businessCategoryPostersApi').default;
+        businessCategoryPostersApi.clearCache();
+        console.log('✅ Business category posters cache cleared');
+      } catch (error) {
+        console.error('Failed to clear business category posters cache:', error);
+      }
+      
+      try {
+        const homeApi = require('./homeApi').default;
+        homeApi.clearCache();
+        console.log('✅ Home API cache cleared');
+      } catch (error) {
+        console.error('Failed to clear home API cache:', error);
+      }
+      
+      try {
+        const templatesService = require('./templates').default;
+        templatesService.clearCache();
+        console.log('✅ Templates cache cleared');
+      } catch (error) {
+        console.error('Failed to clear templates cache:', error);
+      }
+      
+      try {
+        const businessCategoriesService = require('./businessCategoriesService').default;
+        businessCategoriesService.clearCache();
+        console.log('✅ Business categories cache cleared');
+      } catch (error) {
+        console.error('Failed to clear business categories cache:', error);
+      }
+      
       // Clear all local data
       console.log('Clearing local data...');
       this.currentUser = null;
@@ -304,9 +358,16 @@ class AuthService {
       await AsyncStorage.removeItem('user_business_profiles');
       await AsyncStorage.removeItem('user_preferences');
       
+      // Clear profile cache keys
+      await AsyncStorage.removeItem('profile_cache_timestamp');
+      await AsyncStorage.removeItem('profile_data');
+      await AsyncStorage.removeItem('poster_stats');
+      await AsyncStorage.removeItem('business_stats');
+      await AsyncStorage.removeItem('download_stats');
+      
       // Notify auth state listeners
       this.notifyAuthStateListeners(null);
-      console.log('✅ Sign out completed successfully');
+      console.log('✅ Sign out completed successfully - all caches and data cleared');
     } catch (error) {
       console.error('❌ Sign out error:', error);
       // Even if there's an error, we should clear local data
@@ -482,6 +543,65 @@ class AuthService {
         console.error('Error in auth state listener:', error);
       }
     });
+  }
+
+  // Helper method to clear all service caches
+  private async clearAllCaches(): Promise<void> {
+    console.log('🗑️ Clearing all service caches...');
+    
+    try {
+      const businessProfileService = require('./businessProfile').default;
+      businessProfileService.clearCache();
+      console.log('✅ Business profile cache cleared');
+    } catch (error) {
+      console.error('Failed to clear business profile cache:', error);
+    }
+    
+    try {
+      const businessCategoryPostersApi = require('./businessCategoryPostersApi').default;
+      businessCategoryPostersApi.clearCache();
+      console.log('✅ Business category posters cache cleared');
+    } catch (error) {
+      console.error('Failed to clear business category posters cache:', error);
+    }
+    
+    try {
+      const homeApi = require('./homeApi').default;
+      homeApi.clearCache();
+      console.log('✅ Home API cache cleared');
+    } catch (error) {
+      console.error('Failed to clear home API cache:', error);
+    }
+    
+    try {
+      const templatesService = require('./templates').default;
+      templatesService.clearCache();
+      console.log('✅ Templates cache cleared');
+    } catch (error) {
+      console.error('Failed to clear templates cache:', error);
+    }
+    
+    try {
+      const businessCategoriesService = require('./businessCategoriesService').default;
+      businessCategoriesService.clearCache();
+      console.log('✅ Business categories cache cleared');
+    } catch (error) {
+      console.error('Failed to clear business categories cache:', error);
+    }
+    
+    // Clear profile-related AsyncStorage
+    try {
+      await AsyncStorage.removeItem('profile_cache_timestamp');
+      await AsyncStorage.removeItem('profile_data');
+      await AsyncStorage.removeItem('poster_stats');
+      await AsyncStorage.removeItem('business_stats');
+      await AsyncStorage.removeItem('download_stats');
+      console.log('✅ AsyncStorage profile caches cleared');
+    } catch (error) {
+      console.error('Failed to clear AsyncStorage caches:', error);
+    }
+    
+    console.log('✅ All caches cleared successfully');
   }
 }
 

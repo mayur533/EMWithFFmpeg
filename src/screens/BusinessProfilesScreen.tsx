@@ -194,6 +194,15 @@ const BusinessProfilesScreen: React.FC = () => {
             
             // Clear cache after sync
             businessProfileService.clearCache();
+            
+            // Clear business category posters cache to refresh My Business screen with new category posters
+            console.log('🔄 Clearing business category posters cache after profile sync');
+            try {
+              const businessCategoryPostersApi = require('../services/businessCategoryPostersApi').default;
+              businessCategoryPostersApi.clearCache();
+            } catch (error) {
+              console.error('Failed to clear business category posters cache:', error);
+            }
           } catch (error) {
             console.error(`❌ Failed to sync user data to main profile:`, error);
           }
@@ -387,6 +396,15 @@ const BusinessProfilesScreen: React.FC = () => {
         setSuccessMessage('Business profile updated successfully');
         setShowSuccessModal(true);
         console.log('✅ Business profile updated:', editingProfile.id);
+        
+        // Clear business category posters cache to refresh My Business screen with new category posters
+        console.log('🔄 Clearing business category posters cache after profile update');
+        try {
+          const businessCategoryPostersApi = require('../services/businessCategoryPostersApi').default;
+          businessCategoryPostersApi.clearCache();
+        } catch (error) {
+          console.error('Failed to clear business category posters cache:', error);
+        }
         
         // Refresh the profiles list to ensure consistency
         setTimeout(() => {

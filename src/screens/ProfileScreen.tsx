@@ -982,6 +982,15 @@ const ProfileScreen: React.FC = () => {
           console.error('Failed to clear business profile cache:', error);
         }
         
+        // Clear business category posters cache to refresh My Business screen with new category posters
+        console.log('🔄 Clearing business category posters cache after profile update');
+        try {
+          const businessCategoryPostersApi = require('../services/businessCategoryPostersApi').default;
+          businessCategoryPostersApi.clearCache();
+        } catch (error) {
+          console.error('Failed to clear business category posters cache:', error);
+        }
+        
         setShowEditProfileModal(false);
         setSuccessMessage('Profile updated successfully!');
         setShowSuccessModal(true);
