@@ -16,19 +16,23 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useTheme } from '../context/ThemeContext';
-import {
-  responsiveSpacing,
-  responsiveFontSize,
-  responsiveText,
-  responsiveSize,
-  responsiveLayout,
-  responsiveShadow,
-  responsiveCard,
-  isTablet,
-  isSmallScreen,
-  screenWidth,
-  screenHeight,
-} from '../utils/responsiveUtils';
+
+// Compact spacing multiplier to reduce all spacing (matching PrivacyPolicyScreen)
+const COMPACT_MULTIPLIER = 0.5;
+
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Responsive helper functions (matching PrivacyPolicyScreen)
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Responsive design helpers
+const isSmallScreen = screenWidth < 375;
+const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
+const isLargeScreen = screenWidth >= 414 && screenWidth < 768;
+const isTablet = screenWidth >= 768;
+const isLandscape = screenWidth > screenHeight;
 
 type RootStackParamList = {
   AboutUs: undefined;
@@ -40,6 +44,38 @@ const AboutUsScreen: React.FC = () => {
   const navigation = useNavigation<AboutUsScreenNavigationProp>();
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+
+  // Dynamic dimensions for responsive layout (matching PrivacyPolicyScreen)
+  const [dimensions, setDimensions] = React.useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  // Update dimensions on screen rotation/resize
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const currentScreenWidth = dimensions.width;
+  const currentScreenHeight = dimensions.height;
+  
+  // Dynamic responsive scaling functions
+  const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
+  const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
+  // Responsive icon sizes (compact - 60% of original)
+  const getIconSize = (baseSize: number) => {
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+  };
+  
+  // Device size detection
+  const isTabletDevice = currentScreenWidth >= 768;
+  const isSmallScreenDevice = currentScreenWidth < 375;
 
   const handleGoBack = () => {
     navigation.goBack();
@@ -60,26 +96,27 @@ const AboutUsScreen: React.FC = () => {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: responsiveLayout.containerPaddingHorizontal,
-      paddingTop: insets.top + responsiveSpacing.sm,
-      paddingBottom: responsiveSpacing.md,
       backgroundColor: theme.colors.surface,
-      borderBottomWidth: 1,
+      borderBottomWidth: 0.5,
       borderBottomColor: theme.colors.border,
-      ...responsiveShadow.medium,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: moderateScale(1) },
+      shadowOpacity: 0.05,
+      shadowRadius: moderateScale(2),
+      elevation: 1,
     },
     backButton: {
-      width: isTablet ? 48 : 40,
-      height: isTablet ? 48 : 40,
-      borderRadius: isTablet ? 24 : 20,
       backgroundColor: theme.colors.inputBackground,
       justifyContent: 'center',
       alignItems: 'center',
-      marginRight: responsiveSpacing.md,
-      ...responsiveShadow.small,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: moderateScale(1) },
+      shadowOpacity: 0.05,
+      shadowRadius: moderateScale(2),
+      elevation: 1,
     },
     headerTitle: {
-      fontSize: responsiveText.subheading,
+      fontSize: moderateScale(isTablet ? 12 : 11), // Fixed compact text size
       fontWeight: '700',
       color: theme.colors.text,
       flex: 1,
@@ -88,39 +125,29 @@ const AboutUsScreen: React.FC = () => {
       flex: 1,
     },
     content: {
-      paddingHorizontal: responsiveLayout.containerPaddingHorizontal,
-      paddingVertical: responsiveLayout.containerPaddingVertical,
       backgroundColor: 'transparent',
-      maxWidth: isTablet ? 900 : screenWidth,
+      maxWidth: isTablet ? 900 : currentScreenWidth,
       alignSelf: 'center',
       width: '100%',
     },
     heroSection: {
       alignItems: 'center',
-      marginBottom: responsiveLayout.sectionMarginBottom,
-      paddingVertical: responsiveSpacing.xl,
-      paddingHorizontal: responsiveSpacing.md,
       backgroundColor: theme.colors.surface,
-      borderRadius: responsiveSize.cardBorderRadius,
-      marginHorizontal: responsiveSpacing.xs,
-      ...responsiveShadow.medium,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: moderateScale(2) },
+      shadowOpacity: 0.1,
+      shadowRadius: moderateScale(4),
+      elevation: 2,
     },
     logoContainer: {
-      width: isTablet ? 120 : isSmallScreen ? 70 : 90,
-      height: isTablet ? 120 : isSmallScreen ? 70 : 90,
-      borderRadius: isTablet ? 60 : isSmallScreen ? 35 : 45,
       backgroundColor: `${theme.colors.primary}15`,
       justifyContent: 'center',
       alignItems: 'center',
-      marginBottom: responsiveSpacing.lg,
       shadowColor: theme.colors.primary,
-      shadowOffset: {
-        width: 0,
-        height: 4,
-      },
-      shadowOpacity: 0.3,
-      shadowRadius: 8,
-      elevation: 6,
+      shadowOffset: { width: 0, height: moderateScale(2) },
+      shadowOpacity: 0.15,
+      shadowRadius: moderateScale(4),
+      elevation: 3,
       overflow: 'hidden',
     },
     logo: {
@@ -128,40 +155,37 @@ const AboutUsScreen: React.FC = () => {
       height: '100%',
     },
     heroTitle: {
-      fontSize: responsiveText.title,
+      fontSize: moderateScale(isTablet ? 16 : 14), // Fixed compact text size
       fontWeight: '900',
       color: theme.colors.text,
       textAlign: 'center',
-      marginBottom: responsiveSpacing.sm,
       textShadowColor: 'rgba(0, 0, 0, 0.1)',
-      textShadowOffset: { width: 0, height: 2 },
-      textShadowRadius: 4,
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
     },
     heroSubtitle: {
-      fontSize: responsiveText.body,
+      fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed compact text size
       color: theme.colors.textSecondary,
       textAlign: 'center',
-      lineHeight: responsiveText.body * responsiveText.lineHeightRelaxed,
+      lineHeight: moderateScale(isTablet ? 12 : 11),
       fontWeight: '500',
-      paddingHorizontal: responsiveSpacing.md,
-      maxWidth: isTablet ? 600 : screenWidth - 80,
+      maxWidth: isTablet ? 600 : currentScreenWidth - 80,
     },
     statsSection: {
       backgroundColor: theme.colors.surface,
-      borderRadius: responsiveSize.cardBorderRadius,
-      padding: responsiveSpacing.xl,
-      marginBottom: responsiveLayout.sectionMarginBottom,
-      marginHorizontal: responsiveSpacing.xs,
       borderWidth: 1,
       borderColor: `${theme.colors.primary}10`,
-      ...responsiveShadow.large,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: moderateScale(2) },
+      shadowOpacity: 0.1,
+      shadowRadius: moderateScale(4),
+      elevation: 2,
     },
     statsTitle: {
-      fontSize: responsiveText.heading,
+      fontSize: moderateScale(isTablet ? 12 : 11), // Fixed compact text size
       fontWeight: '800',
       color: theme.colors.text,
       textAlign: 'center',
-      marginBottom: responsiveSpacing.xl,
       textShadowColor: 'rgba(0, 0, 0, 0.1)',
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 2,
@@ -170,102 +194,88 @@ const AboutUsScreen: React.FC = () => {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
-      gap: isTablet ? responsiveSpacing.md : responsiveSpacing.sm,
     },
     statItem: {
       width: isTablet ? '48%' : '47%',
       alignItems: 'center',
-      paddingVertical: responsiveSpacing.md,
-      paddingHorizontal: responsiveSpacing.sm,
       backgroundColor: `${theme.colors.primary}08`,
-      borderRadius: responsiveSize.cardBorderRadius,
       borderWidth: 1,
       borderColor: `${theme.colors.primary}15`,
-      minHeight: isTablet ? 120 : 100,
       justifyContent: 'center',
     },
     statNumber: {
-      fontSize: isTablet ? 32 : isSmallScreen ? 22 : 28,
+      fontSize: moderateScale(isTablet ? 16 : 14), // Fixed compact text size
       fontWeight: '900',
       color: theme.colors.primary,
-      marginBottom: responsiveSpacing.xs,
       textShadowColor: `${theme.colors.primary}30`,
-      textShadowOffset: { width: 0, height: 2 },
-      textShadowRadius: 4,
+      textShadowOffset: { width: 0, height: 1 },
+      textShadowRadius: 2,
     },
     statLabel: {
-      fontSize: responsiveText.caption,
+      fontSize: moderateScale(isTablet ? 7.5 : 7), // Fixed compact text size
       color: theme.colors.textSecondary,
       textAlign: 'center',
-      lineHeight: responsiveText.caption * responsiveText.lineHeightNormal,
+      lineHeight: moderateScale(isTablet ? 11 : 10),
       fontWeight: '600',
     },
     section: {
-      marginBottom: responsiveLayout.sectionMarginBottom,
       backgroundColor: theme.colors.surface,
-      borderRadius: responsiveSize.cardBorderRadius,
-      padding: responsiveSpacing.xl,
-      marginHorizontal: responsiveSpacing.xs,
       borderWidth: 1,
       borderColor: `${theme.colors.primary}08`,
-      ...responsiveShadow.medium,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: moderateScale(2) },
+      shadowOpacity: 0.1,
+      shadowRadius: moderateScale(4),
+      elevation: 2,
     },
     sectionTitle: {
-      fontSize: responsiveText.heading,
+      fontSize: moderateScale(isTablet ? 11 : 10), // Fixed compact text size
       fontWeight: '800',
       color: theme.colors.text,
-      marginBottom: responsiveSpacing.md,
       textShadowColor: 'rgba(0, 0, 0, 0.1)',
       textShadowOffset: { width: 0, height: 1 },
       textShadowRadius: 2,
     },
     sectionText: {
-      fontSize: responsiveText.body,
+      fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed compact text size
       color: theme.colors.textSecondary,
-      lineHeight: responsiveText.body * responsiveText.lineHeightRelaxed,
-      marginBottom: responsiveSpacing.md,
+      lineHeight: moderateScale(isTablet ? 12 : 11),
       fontWeight: '400',
     },
     featureList: {
-      marginTop: responsiveSpacing.sm,
+      // Inline styles used
     },
     featureItem: {
       flexDirection: 'row',
       alignItems: 'flex-start',
-      marginBottom: responsiveSpacing.md,
-      paddingVertical: responsiveSpacing.sm,
-      paddingHorizontal: responsiveSpacing.md,
       backgroundColor: `${theme.colors.primary}05`,
-      borderRadius: responsiveSize.cardBorderRadius * 0.6,
-      borderLeftWidth: 3,
+      borderLeftWidth: 2,
       borderLeftColor: theme.colors.primary,
     },
     featureIcon: {
-      marginRight: responsiveSpacing.md,
-      marginTop: responsiveSpacing.xs,
+      // Inline styles used
     },
     featureText: {
-      fontSize: responsiveText.body,
+      fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed compact text size
       color: theme.colors.textSecondary,
-      lineHeight: responsiveText.body * responsiveText.lineHeightRelaxed,
+      lineHeight: moderateScale(isTablet ? 12 : 11),
       flex: 1,
       fontWeight: '500',
     },
     trialSection: {
       backgroundColor: theme.colors.surface,
-      borderRadius: responsiveSize.cardBorderRadius,
-      padding: responsiveSpacing.xl,
-      marginBottom: responsiveLayout.sectionMarginBottom,
-      marginHorizontal: responsiveSpacing.xs,
       borderWidth: 2,
       borderColor: `${theme.colors.primary}40`,
-      ...responsiveShadow.large,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: moderateScale(2) },
+      shadowOpacity: 0.1,
+      shadowRadius: moderateScale(4),
+      elevation: 2,
     },
     trialTitle: {
-      fontSize: responsiveText.heading,
+      fontSize: moderateScale(isTablet ? 12 : 11), // Fixed compact text size
       fontWeight: '800',
       color: theme.colors.text,
-      marginBottom: responsiveSpacing.lg,
       textAlign: 'center',
       textShadowColor: 'rgba(0, 0, 0, 0.1)',
       textShadowOffset: { width: 0, height: 1 },
@@ -275,57 +285,47 @@ const AboutUsScreen: React.FC = () => {
       flexDirection: 'row',
       flexWrap: 'wrap',
       justifyContent: 'space-between',
-      gap: responsiveSpacing.sm,
     },
     trialFeature: {
       width: isTablet ? '48%' : '100%',
       flexDirection: 'row',
       alignItems: 'center',
-      paddingVertical: responsiveSpacing.md,
-      paddingHorizontal: responsiveSpacing.md,
       backgroundColor: `${theme.colors.primary}15`,
-      borderRadius: responsiveSize.cardBorderRadius * 0.6,
       borderWidth: 1,
       borderColor: `${theme.colors.primary}30`,
-      minHeight: isTablet ? 50 : 44,
     },
     trialFeatureText: {
-      fontSize: responsiveText.body,
+      fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed compact text size
       color: theme.colors.textSecondary,
-      marginLeft: responsiveSpacing.sm,
       fontWeight: '600',
       flex: 1,
     },
     versionSection: {
       alignItems: 'center',
-      paddingVertical: responsiveSpacing.xl,
-      borderTopWidth: 1,
+      borderTopWidth: 0.5,
       borderTopColor: theme.colors.border,
-      marginTop: responsiveSpacing.lg,
     },
     versionText: {
-      fontSize: responsiveText.caption,
+      fontSize: moderateScale(isTablet ? 7.5 : 7), // Fixed compact text size
       color: theme.colors.textSecondary,
       textAlign: 'center',
-      marginBottom: responsiveSpacing.sm,
     },
     privacyLink: {
       flexDirection: 'row',
       alignItems: 'center',
       justifyContent: 'center',
-      paddingVertical: responsiveSpacing.md,
-      paddingHorizontal: responsiveSpacing.lg,
       backgroundColor: theme.colors.primary,
-      borderRadius: responsiveSize.cardBorderRadius,
       borderWidth: 0,
-      marginTop: responsiveSpacing.md,
-      ...responsiveShadow.medium,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: moderateScale(2) },
+      shadowOpacity: 0.1,
+      shadowRadius: moderateScale(4),
+      elevation: 2,
     },
     privacyLinkText: {
-      fontSize: responsiveText.body,
+      fontSize: moderateScale(isTablet ? 9 : 8), // Fixed compact text size
       color: '#ffffff',
       fontWeight: '700',
-      marginHorizontal: responsiveSpacing.sm,
       letterSpacing: 0.5,
     },
   });
@@ -346,13 +346,22 @@ const AboutUsScreen: React.FC = () => {
       />
       
       {/* Header */}
-      <View style={dynamicStyles.header}>
+      <View style={[dynamicStyles.header, {
+        paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+        paddingTop: insets.top + dynamicModerateScale(4),
+        paddingBottom: dynamicModerateScale(6),
+      }]}>
         <TouchableOpacity
-          style={dynamicStyles.backButton}
+          style={[dynamicStyles.backButton, {
+            width: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+            height: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+            borderRadius: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(14),
+            marginRight: dynamicModerateScale(8),
+          }]}
           onPress={handleGoBack}
           activeOpacity={0.7}
         >
-          <Icon name="arrow-back" size={responsiveSize.iconLarge} color={theme.colors.text} />
+          <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={dynamicStyles.headerTitle}>About Us</Text>
       </View>
@@ -360,105 +369,237 @@ const AboutUsScreen: React.FC = () => {
       {/* Scrollable Content */}
       <ScrollView
         style={dynamicStyles.scrollContainer}
-        contentContainerStyle={dynamicStyles.content}
+        contentContainerStyle={[dynamicStyles.content, {
+          paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+          paddingVertical: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+          paddingBottom: dynamicModerateScale(20),
+        }]}
         showsVerticalScrollIndicator={false}
         bounces={true}
       >
         {/* Hero Section */}
-        <View style={dynamicStyles.heroSection}>
-          <View style={dynamicStyles.logoContainer}>
+        <View style={[dynamicStyles.heroSection, {
+          marginBottom: dynamicModerateScale(12),
+          paddingVertical: dynamicModerateScale(12),
+          paddingHorizontal: dynamicModerateScale(8),
+          borderRadius: dynamicModerateScale(12),
+          marginHorizontal: dynamicModerateScale(2),
+        }]}>
+          <View style={[dynamicStyles.logoContainer, {
+            width: isTabletDevice ? dynamicModerateScale(80) : dynamicModerateScale(60),
+            height: isTabletDevice ? dynamicModerateScale(80) : dynamicModerateScale(60),
+            borderRadius: (isTabletDevice ? dynamicModerateScale(80) : dynamicModerateScale(60)) / 2,
+            marginBottom: dynamicModerateScale(8),
+          }]}>
             <Image
               source={require('../assets/MainLogo/MB.png')}
-              style={dynamicStyles.logo}
-              resizeMode="contain"
+              style={[dynamicStyles.logo, {
+                borderRadius: (isTabletDevice ? dynamicModerateScale(80) : dynamicModerateScale(60)) / 2,
+              }]}
+              resizeMode="cover"
             />
           </View>
-          <Text style={dynamicStyles.heroTitle}>MarketBrand.ai</Text>
-          <Text style={dynamicStyles.heroSubtitle}>
+          <Text style={[dynamicStyles.heroTitle, {
+            marginBottom: dynamicModerateScale(6),
+          }]}>MarketBrand.ai</Text>
+          <Text style={[dynamicStyles.heroSubtitle, {
+            paddingHorizontal: dynamicModerateScale(8),
+          }]}>
             Empowering businesses with professional marketing materials in minutes, not days
           </Text>
         </View>
 
         {/* Stats Section */}
-        <View style={dynamicStyles.statsSection}>
-          <Text style={dynamicStyles.statsTitle}>Our Impact</Text>
-          <View style={dynamicStyles.statsGrid}>
-            <View style={dynamicStyles.statItem}>
-              <Text style={dynamicStyles.statNumber}>50,000+</Text>
+        <View style={[dynamicStyles.statsSection, {
+          borderRadius: dynamicModerateScale(12),
+          padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+          marginBottom: dynamicModerateScale(12),
+          marginHorizontal: dynamicModerateScale(2),
+        }]}>
+          <Text style={[dynamicStyles.statsTitle, {
+            marginBottom: dynamicModerateScale(10),
+          }]}>Our Impact</Text>
+          <View style={[dynamicStyles.statsGrid, {
+            gap: dynamicModerateScale(6),
+          }]}>
+            <View style={[dynamicStyles.statItem, {
+              paddingVertical: dynamicModerateScale(8),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(10),
+              minHeight: isTabletDevice ? dynamicModerateScale(70) : dynamicModerateScale(60),
+            }]}>
+              <Text style={[dynamicStyles.statNumber, {
+                marginBottom: dynamicModerateScale(3),
+              }]}>50,000+</Text>
               <Text style={dynamicStyles.statLabel}>Happy Businesses</Text>
             </View>
-            <View style={dynamicStyles.statItem}>
-              <Text style={dynamicStyles.statNumber}>1,000+</Text>
+            <View style={[dynamicStyles.statItem, {
+              paddingVertical: dynamicModerateScale(8),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(10),
+              minHeight: isTabletDevice ? dynamicModerateScale(70) : dynamicModerateScale(60),
+            }]}>
+              <Text style={[dynamicStyles.statNumber, {
+                marginBottom: dynamicModerateScale(3),
+              }]}>1,000+</Text>
               <Text style={dynamicStyles.statLabel}>Professional Templates</Text>
             </View>
-            <View style={dynamicStyles.statItem}>
-              <Text style={dynamicStyles.statNumber}>6</Text>
+            <View style={[dynamicStyles.statItem, {
+              paddingVertical: dynamicModerateScale(8),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(10),
+              minHeight: isTabletDevice ? dynamicModerateScale(70) : dynamicModerateScale(60),
+            }]}>
+              <Text style={[dynamicStyles.statNumber, {
+                marginBottom: dynamicModerateScale(3),
+              }]}>6</Text>
               <Text style={dynamicStyles.statLabel}>Business Categories</Text>
             </View>
-            <View style={dynamicStyles.statItem}>
-              <Text style={dynamicStyles.statNumber}>1-Min</Text>
+            <View style={[dynamicStyles.statItem, {
+              paddingVertical: dynamicModerateScale(8),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(10),
+              minHeight: isTabletDevice ? dynamicModerateScale(70) : dynamicModerateScale(60),
+            }]}>
+              <Text style={[dynamicStyles.statNumber, {
+                marginBottom: dynamicModerateScale(3),
+              }]}>1-Min</Text>
               <Text style={dynamicStyles.statLabel}>Creation Time</Text>
             </View>
           </View>
         </View>
 
         {/* Mission Section */}
-        <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>Our Mission</Text>
-          <Text style={dynamicStyles.sectionText}>
+        <View style={[dynamicStyles.section, {
+          marginBottom: dynamicModerateScale(12),
+          borderRadius: dynamicModerateScale(12),
+          padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+          marginHorizontal: dynamicModerateScale(2),
+        }]}>
+          <Text style={[dynamicStyles.sectionTitle, {
+            marginBottom: dynamicModerateScale(8),
+          }]}>Our Mission</Text>
+          <Text style={[dynamicStyles.sectionText, {
+            marginBottom: dynamicModerateScale(8),
+          }]}>
             To democratize professional marketing design by making it accessible, affordable, and effortless for every business, regardless of size or design expertise.
           </Text>
-          <Text style={dynamicStyles.sectionText}>
+          <Text style={[dynamicStyles.sectionText, {
+            marginBottom: dynamicModerateScale(4),
+          }]}>
             We believe every business deserves access to professional marketing materials that can compete with the biggest brands. Our platform removes the barriers of cost, time, and design skills.
           </Text>
         </View>
 
         {/* Vision Section */}
-        <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>Our Vision</Text>
-          <Text style={dynamicStyles.sectionText}>
+        <View style={[dynamicStyles.section, {
+          marginBottom: dynamicModerateScale(12),
+          borderRadius: dynamicModerateScale(12),
+          padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+          marginHorizontal: dynamicModerateScale(2),
+        }]}>
+          <Text style={[dynamicStyles.sectionTitle, {
+            marginBottom: dynamicModerateScale(8),
+          }]}>Our Vision</Text>
+          <Text style={[dynamicStyles.sectionText, {
+            marginBottom: dynamicModerateScale(8),
+          }]}>
             To become the world's leading platform for business marketing materials, empowering 1 million businesses to create professional designs effortlessly.
           </Text>
-          <Text style={dynamicStyles.sectionText}>
+          <Text style={[dynamicStyles.sectionText, {
+            marginBottom: dynamicModerateScale(4),
+          }]}>
             We envision a world where every business, from local shops to global enterprises, has access to the same level of professional marketing materials that drive real business growth.
           </Text>
         </View>
 
         {/* Why We Built This Section */}
-        <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>Why We Built This</Text>
-          <Text style={dynamicStyles.sectionText}>
+        <View style={[dynamicStyles.section, {
+          marginBottom: dynamicModerateScale(12),
+          borderRadius: dynamicModerateScale(12),
+          padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+          marginHorizontal: dynamicModerateScale(2),
+        }]}>
+          <Text style={[dynamicStyles.sectionTitle, {
+            marginBottom: dynamicModerateScale(8),
+          }]}>Why We Built This</Text>
+          <Text style={[dynamicStyles.sectionText, {
+            marginBottom: dynamicModerateScale(8),
+          }]}>
             Traditional marketing agencies charge thousands of dollars for designs that take weeks to deliver. We saw an opportunity to provide the same quality results in minutes, at a fraction of the cost.
           </Text>
-          <Text style={dynamicStyles.sectionText}>
+          <Text style={[dynamicStyles.sectionText, {
+            marginBottom: dynamicModerateScale(4),
+          }]}>
             Our founders experienced firsthand the frustration of needing professional marketing materials but lacking the budget or design skills to create them. This personal pain point became our driving force.
           </Text>
         </View>
 
         {/* Key Features Section */}
-        <View style={dynamicStyles.section}>
-          <Text style={dynamicStyles.sectionTitle}>What Makes Us Different</Text>
-          <View style={dynamicStyles.featureList}>
-            <View style={dynamicStyles.featureItem}>
-              <Icon name="check-circle" size={responsiveSize.iconMedium} color={theme.colors.primary} style={dynamicStyles.featureIcon} />
+        <View style={[dynamicStyles.section, {
+          marginBottom: dynamicModerateScale(12),
+          borderRadius: dynamicModerateScale(12),
+          padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+          marginHorizontal: dynamicModerateScale(2),
+        }]}>
+          <Text style={[dynamicStyles.sectionTitle, {
+            marginBottom: dynamicModerateScale(8),
+          }]}>What Makes Us Different</Text>
+          <View style={[dynamicStyles.featureList, {
+            marginTop: dynamicModerateScale(4),
+          }]}>
+            <View style={[dynamicStyles.featureItem, {
+              marginBottom: dynamicModerateScale(6),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(8),
+            }]}>
+              <Icon name="check-circle" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.primary} style={{
+                marginRight: dynamicModerateScale(6),
+                marginTop: dynamicModerateScale(1),
+              }} />
               <Text style={dynamicStyles.featureText}>
                 <Text style={{ fontWeight: '600', color: theme.colors.text }}>No Design Skills Required</Text> - Our intuitive platform makes professional design accessible to everyone
               </Text>
             </View>
-            <View style={dynamicStyles.featureItem}>
-              <Icon name="check-circle" size={responsiveSize.iconMedium} color={theme.colors.primary} style={dynamicStyles.featureIcon} />
+            <View style={[dynamicStyles.featureItem, {
+              marginBottom: dynamicModerateScale(6),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(8),
+            }]}>
+              <Icon name="check-circle" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.primary} style={{
+                marginRight: dynamicModerateScale(6),
+                marginTop: dynamicModerateScale(1),
+              }} />
               <Text style={dynamicStyles.featureText}>
                 <Text style={{ fontWeight: '600', color: theme.colors.text }}>Affordable for Every Business</Text> - Professional results at a fraction of traditional agency costs
               </Text>
             </View>
-            <View style={dynamicStyles.featureItem}>
-              <Icon name="check-circle" size={responsiveSize.iconMedium} color={theme.colors.primary} style={dynamicStyles.featureIcon} />
+            <View style={[dynamicStyles.featureItem, {
+              marginBottom: dynamicModerateScale(6),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(8),
+            }]}>
+              <Icon name="check-circle" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.primary} style={{
+                marginRight: dynamicModerateScale(6),
+                marginTop: dynamicModerateScale(1),
+              }} />
               <Text style={dynamicStyles.featureText}>
                 <Text style={{ fontWeight: '600', color: theme.colors.text }}>Results in Minutes, Not Days</Text> - From concept to finished design in under 60 seconds
               </Text>
             </View>
-            <View style={dynamicStyles.featureItem}>
-              <Icon name="check-circle" size={responsiveSize.iconMedium} color={theme.colors.primary} style={dynamicStyles.featureIcon} />
+            <View style={[dynamicStyles.featureItem, {
+              marginBottom: dynamicModerateScale(6),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(8),
+            }]}>
+              <Icon name="check-circle" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.primary} style={{
+                marginRight: dynamicModerateScale(6),
+                marginTop: dynamicModerateScale(1),
+              }} />
               <Text style={dynamicStyles.featureText}>
                 <Text style={{ fontWeight: '600', color: theme.colors.text }}>Industry-Specific Templates</Text> - Tailored designs for 6 major business categories
               </Text>
@@ -467,43 +608,92 @@ const AboutUsScreen: React.FC = () => {
         </View>
 
         {/* Trial Section */}
-        <View style={dynamicStyles.trialSection}>
-          <Text style={dynamicStyles.trialTitle}>Start Your Journey Today</Text>
-          <View style={dynamicStyles.trialFeatures}>
-            <View style={dynamicStyles.trialFeature}>
-              <Icon name="check-circle" size={responsiveSize.iconSmall} color={theme.colors.primary} />
-              <Text style={dynamicStyles.trialFeatureText}>7-Day Free Trial</Text>
+        <View style={[dynamicStyles.trialSection, {
+          borderRadius: dynamicModerateScale(12),
+          padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+          marginBottom: dynamicModerateScale(12),
+          marginHorizontal: dynamicModerateScale(2),
+        }]}>
+          <Text style={[dynamicStyles.trialTitle, {
+            marginBottom: dynamicModerateScale(10),
+          }]}>Start Your Journey Today</Text>
+          <View style={[dynamicStyles.trialFeatures, {
+            gap: dynamicModerateScale(6),
+          }]}>
+            <View style={[dynamicStyles.trialFeature, {
+              paddingVertical: dynamicModerateScale(6),
+              paddingHorizontal: dynamicModerateScale(8),
+              borderRadius: dynamicModerateScale(8),
+              minHeight: isTabletDevice ? dynamicModerateScale(40) : dynamicModerateScale(35),
+            }]}>
+              <Icon name="check-circle" size={isTabletDevice ? getIconSize(16) : getIconSize(14)} color={theme.colors.primary} />
+              <Text style={[dynamicStyles.trialFeatureText, {
+                marginLeft: dynamicModerateScale(6),
+              }]}>7-Day Free Trial</Text>
             </View>
-            <View style={dynamicStyles.trialFeature}>
-              <Icon name="check-circle" size={responsiveSize.iconSmall} color={theme.colors.primary} />
-              <Text style={dynamicStyles.trialFeatureText}>No Credit Card Required</Text>
+            <View style={[dynamicStyles.trialFeature, {
+              paddingVertical: dynamicModerateScale(6),
+              paddingHorizontal: dynamicModerateScale(8),
+              borderRadius: dynamicModerateScale(8),
+              minHeight: isTabletDevice ? dynamicModerateScale(40) : dynamicModerateScale(35),
+            }]}>
+              <Icon name="check-circle" size={isTabletDevice ? getIconSize(16) : getIconSize(14)} color={theme.colors.primary} />
+              <Text style={[dynamicStyles.trialFeatureText, {
+                marginLeft: dynamicModerateScale(6),
+              }]}>No Credit Card Required</Text>
             </View>
-            <View style={dynamicStyles.trialFeature}>
-              <Icon name="check-circle" size={responsiveSize.iconSmall} color={theme.colors.primary} />
-              <Text style={dynamicStyles.trialFeatureText}>Cancel Anytime</Text>
+            <View style={[dynamicStyles.trialFeature, {
+              paddingVertical: dynamicModerateScale(6),
+              paddingHorizontal: dynamicModerateScale(8),
+              borderRadius: dynamicModerateScale(8),
+              minHeight: isTabletDevice ? dynamicModerateScale(40) : dynamicModerateScale(35),
+            }]}>
+              <Icon name="check-circle" size={isTabletDevice ? getIconSize(16) : getIconSize(14)} color={theme.colors.primary} />
+              <Text style={[dynamicStyles.trialFeatureText, {
+                marginLeft: dynamicModerateScale(6),
+              }]}>Cancel Anytime</Text>
             </View>
-            <View style={dynamicStyles.trialFeature}>
-              <Icon name="check-circle" size={responsiveSize.iconSmall} color={theme.colors.primary} />
-              <Text style={dynamicStyles.trialFeatureText}>Instant Access</Text>
+            <View style={[dynamicStyles.trialFeature, {
+              paddingVertical: dynamicModerateScale(6),
+              paddingHorizontal: dynamicModerateScale(8),
+              borderRadius: dynamicModerateScale(8),
+              minHeight: isTabletDevice ? dynamicModerateScale(40) : dynamicModerateScale(35),
+            }]}>
+              <Icon name="check-circle" size={isTabletDevice ? getIconSize(16) : getIconSize(14)} color={theme.colors.primary} />
+              <Text style={[dynamicStyles.trialFeatureText, {
+                marginLeft: dynamicModerateScale(6),
+              }]}>Instant Access</Text>
             </View>
           </View>
         </View>
 
         {/* Version Info */}
-        <View style={dynamicStyles.versionSection}>
-          <Text style={dynamicStyles.versionText}>
+        <View style={[dynamicStyles.versionSection, {
+          paddingVertical: dynamicModerateScale(12),
+          marginTop: dynamicModerateScale(8),
+        }]}>
+          <Text style={[dynamicStyles.versionText, {
+            marginBottom: dynamicModerateScale(6),
+          }]}>
             Version 1.0.0 • Founded 2024
           </Text>
           
           {/* Privacy Policy Link */}
           <TouchableOpacity
-            style={dynamicStyles.privacyLink}
+            style={[dynamicStyles.privacyLink, {
+              paddingVertical: dynamicModerateScale(8),
+              paddingHorizontal: dynamicModerateScale(12),
+              borderRadius: dynamicModerateScale(10),
+              marginTop: dynamicModerateScale(6),
+            }]}
             onPress={() => navigation.navigate('PrivacyPolicy' as never)}
             activeOpacity={0.7}
           >
-            <Icon name="privacy-tip" size={responsiveSize.iconSmall} color="#ffffff" />
-            <Text style={dynamicStyles.privacyLinkText}>Privacy Policy</Text>
-            <Icon name="chevron-right" size={responsiveSize.iconSmall} color="#ffffff" />
+            <Icon name="privacy-tip" size={isTabletDevice ? getIconSize(14) : getIconSize(12)} color="#ffffff" />
+            <Text style={[dynamicStyles.privacyLinkText, {
+              marginHorizontal: dynamicModerateScale(6),
+            }]}>Privacy Policy</Text>
+            <Icon name="chevron-right" size={isTabletDevice ? getIconSize(14) : getIconSize(12)} color="#ffffff" />
           </TouchableOpacity>
         </View>
       </ScrollView>

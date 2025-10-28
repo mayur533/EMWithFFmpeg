@@ -17,7 +17,15 @@ import { useNavigation } from '@react-navigation/native';
 import { useTheme } from '../context/ThemeContext';
 import ComingSoonModal from '../components/ComingSoonModal';
 
+// Compact spacing multiplier to reduce all spacing (matching HomeScreen)
+const COMPACT_MULTIPLIER = 0.5;
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Responsive helper functions (matching HomeScreen)
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 
 // Responsive design helpers
 const isSmallScreen = screenWidth < 375;
@@ -26,25 +34,25 @@ const isLargeScreen = screenWidth >= 414 && screenWidth < 768;
 const isTablet = screenWidth >= 768;
 const isLandscape = screenWidth > screenHeight;
 
-// Responsive spacing
+// Responsive spacing (Compact - reduced by 50%)
 const responsiveSpacing = {
-  xs: isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : isTablet ? 10 : 12,
-  sm: isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : isTablet ? 14 : 16,
-  md: isSmallScreen ? 12 : isMediumScreen ? 16 : isLargeScreen ? 18 : isTablet ? 20 : 24,
-  lg: isSmallScreen ? 16 : isMediumScreen ? 20 : isLargeScreen ? 24 : isTablet ? 28 : 32,
-  xl: isSmallScreen ? 20 : isMediumScreen ? 24 : isLargeScreen ? 28 : isTablet ? 32 : 40,
-  xxl: isSmallScreen ? 24 : isMediumScreen ? 28 : isLargeScreen ? 32 : isTablet ? 36 : 48,
+  xs: moderateScale(isSmallScreen ? 2 : isMediumScreen ? 3 : isLargeScreen ? 4 : isTablet ? 5 : 6),
+  sm: moderateScale(isSmallScreen ? 4 : isMediumScreen ? 5 : isLargeScreen ? 6 : isTablet ? 7 : 8),
+  md: moderateScale(isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 9 : isTablet ? 10 : 12),
+  lg: moderateScale(isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : isTablet ? 14 : 16),
+  xl: moderateScale(isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : isTablet ? 16 : 20),
+  xxl: moderateScale(isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : isTablet ? 18 : 24),
 };
 
-// Responsive font sizes
+// Responsive font sizes (Compact - reduced by 30-50%)
 const responsiveFontSize = {
-  xs: isSmallScreen ? 10 : isMediumScreen ? 11 : isLargeScreen ? 12 : isTablet ? 13 : 14,
-  sm: isSmallScreen ? 12 : isMediumScreen ? 13 : isLargeScreen ? 14 : isTablet ? 15 : 16,
-  md: isSmallScreen ? 14 : isMediumScreen ? 15 : isLargeScreen ? 16 : isTablet ? 17 : 18,
-  lg: isSmallScreen ? 16 : isMediumScreen ? 17 : isLargeScreen ? 18 : isTablet ? 19 : 20,
-  xl: isSmallScreen ? 18 : isMediumScreen ? 20 : isLargeScreen ? 22 : isTablet ? 24 : 26,
-  xxl: isSmallScreen ? 22 : isMediumScreen ? 24 : isLargeScreen ? 26 : isTablet ? 28 : 32,
-  xxxl: isSmallScreen ? 26 : isMediumScreen ? 28 : isLargeScreen ? 30 : isTablet ? 34 : 38,
+  xs: moderateScale(isSmallScreen ? 7 : isMediumScreen ? 7.5 : isLargeScreen ? 8 : isTablet ? 8.5 : 9),
+  sm: moderateScale(isSmallScreen ? 8 : isMediumScreen ? 8.5 : isLargeScreen ? 9 : isTablet ? 9.5 : 10),
+  md: moderateScale(isSmallScreen ? 9 : isMediumScreen ? 9.5 : isLargeScreen ? 10 : isTablet ? 10.5 : 11),
+  lg: moderateScale(isSmallScreen ? 10 : isMediumScreen ? 10.5 : isLargeScreen ? 11 : isTablet ? 11.5 : 12),
+  xl: moderateScale(isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : isTablet ? 14 : 15),
+  xxl: moderateScale(isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : isTablet ? 16 : 18),
+  xxxl: moderateScale(isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : isTablet ? 18 : 20),
 };
 
 interface FAQItem {
@@ -65,6 +73,38 @@ const HelpSupportScreen: React.FC = () => {
   const { theme } = useTheme();
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  
+  // Dynamic dimensions for responsive layout (matching HomeScreen)
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  // Update dimensions on screen rotation/resize
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const currentScreenWidth = dimensions.width;
+  const currentScreenHeight = dimensions.height;
+  
+  // Dynamic responsive scaling functions
+  const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
+  const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
+  // Responsive icon sizes (compact - 60% of original)
+  const getIconSize = (baseSize: number) => {
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+  };
+  
+  // Device size detection
+  const isTabletDevice = currentScreenWidth >= 768;
+  const isLandscapeMode = currentScreenWidth > currentScreenHeight;
 
   const faqs: FAQItem[] = [
     {
@@ -147,20 +187,38 @@ const HelpSupportScreen: React.FC = () => {
   const renderContactOption = (option: ContactOption) => (
     <TouchableOpacity
       key={option.id}
-      style={[styles.contactCard, { backgroundColor: theme.colors.cardBackground }]}
+      style={[styles.contactCard, { 
+        backgroundColor: theme.colors.cardBackground,
+        padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+        borderRadius: dynamicModerateScale(10),
+        marginBottom: dynamicModerateScale(6),
+      }]}
       onPress={option.action}
       activeOpacity={0.7}
     >
-      <View style={[styles.contactIconContainer, { backgroundColor: theme.colors.primary + '20' }]}>
-        <Icon name={option.icon} size={responsiveFontSize.xl} color={theme.colors.primary} />
+      <View style={[styles.contactIconContainer, { 
+        backgroundColor: theme.colors.primary + '20',
+        width: isTabletDevice ? dynamicModerateScale(44) : dynamicModerateScale(38),
+        height: isTabletDevice ? dynamicModerateScale(44) : dynamicModerateScale(38),
+        borderRadius: isTabletDevice ? dynamicModerateScale(22) : dynamicModerateScale(19),
+        marginRight: dynamicModerateScale(10),
+      }]}>
+        <Icon name={option.icon} size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color={theme.colors.primary} />
       </View>
       <View style={styles.contactInfo}>
-        <Text style={[styles.contactTitle, { color: theme.colors.text }]}>{option.title}</Text>
-        <Text style={[styles.contactDescription, { color: theme.colors.textSecondary }]}>
+        <Text style={[styles.contactTitle, { 
+          color: theme.colors.text,
+          fontSize: isTabletDevice ? dynamicModerateScale(11) : dynamicModerateScale(10),
+          marginBottom: dynamicModerateScale(1),
+        }]}>{option.title}</Text>
+        <Text style={[styles.contactDescription, { 
+          color: theme.colors.textSecondary,
+          fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+        }]}>
           {option.description}
         </Text>
       </View>
-      <Icon name="chevron-right" size={responsiveFontSize.lg} color={theme.colors.textSecondary} />
+      <Icon name="chevron-right" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.textSecondary} />
     </TouchableOpacity>
   );
 
@@ -170,20 +228,35 @@ const HelpSupportScreen: React.FC = () => {
     return (
       <TouchableOpacity
         key={index}
-        style={[styles.faqItem, { backgroundColor: theme.colors.cardBackground }]}
+        style={[styles.faqItem, { 
+          backgroundColor: theme.colors.cardBackground,
+          borderRadius: dynamicModerateScale(10),
+          padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+          marginBottom: dynamicModerateScale(6),
+        }]}
         onPress={() => toggleFAQ(index)}
         activeOpacity={0.7}
       >
         <View style={styles.faqHeader}>
-          <Text style={[styles.faqQuestion, { color: theme.colors.text }]}>{item.question}</Text>
+          <Text style={[styles.faqQuestion, { 
+            color: theme.colors.text,
+            fontSize: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(9),
+            marginRight: dynamicModerateScale(8),
+            lineHeight: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(13),
+          }]}>{item.question}</Text>
           <Icon
             name={isExpanded ? 'keyboard-arrow-up' : 'keyboard-arrow-down'}
-            size={responsiveFontSize.xl}
+            size={isTabletDevice ? getIconSize(20) : getIconSize(18)}
             color={theme.colors.textSecondary}
           />
         </View>
         {isExpanded && (
-          <Text style={[styles.faqAnswer, { color: theme.colors.textSecondary }]}>{item.answer}</Text>
+          <Text style={[styles.faqAnswer, { 
+            color: theme.colors.textSecondary,
+            fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+            marginTop: dynamicModerateScale(8),
+            lineHeight: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(13),
+          }]}>{item.answer}</Text>
         )}
       </TouchableOpacity>
     );
@@ -200,84 +273,167 @@ const HelpSupportScreen: React.FC = () => {
         end={{ x: 1, y: 1 }}
       >
         {/* Header */}
-        <View style={styles.header}>
+        <View style={[styles.header, {
+          paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+          paddingVertical: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
+        }]}>
           <TouchableOpacity
-            style={styles.backButton}
+            style={[styles.backButton, {
+              width: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+              height: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+            }]}
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <Icon name="arrow-back" size={responsiveFontSize.xl} color="#ffffff" />
+            <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#ffffff" />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Help & Support</Text>
-          <View style={styles.backButton} />
+          <Text style={[styles.headerTitle, {
+            fontSize: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12),
+          }]}>Help & Support</Text>
+          <View style={[styles.backButton, {
+            width: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+            height: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+          }]} />
         </View>
 
         <ScrollView
           style={styles.scrollView}
-          contentContainerStyle={styles.scrollContent}
+          contentContainerStyle={[styles.scrollContent, {
+            paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+            paddingBottom: dynamicModerateScale(20),
+          }]}
           showsVerticalScrollIndicator={false}
         >
           {/* Welcome Section */}
-          <View style={[styles.welcomeCard, { backgroundColor: theme.colors.cardBackground }]}>
-            <View style={[styles.welcomeIconContainer, { backgroundColor: theme.colors.primary + '15' }]}>
-              <Icon name="support-agent" size={responsiveFontSize.xxxl} color={theme.colors.primary} />
+          <View style={[styles.welcomeCard, { 
+            backgroundColor: theme.colors.cardBackground,
+            borderRadius: dynamicModerateScale(12),
+            padding: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
+            marginBottom: dynamicModerateScale(12),
+          }]}>
+            <View style={[styles.welcomeIconContainer, { 
+              backgroundColor: theme.colors.primary + '15',
+              width: isTabletDevice ? dynamicModerateScale(60) : dynamicModerateScale(48),
+              height: isTabletDevice ? dynamicModerateScale(60) : dynamicModerateScale(48),
+              borderRadius: isTabletDevice ? dynamicModerateScale(30) : dynamicModerateScale(24),
+              marginBottom: dynamicModerateScale(10),
+            }]}>
+              <Icon name="support-agent" size={isTabletDevice ? getIconSize(28) : getIconSize(24)} color={theme.colors.primary} />
             </View>
-            <Text style={[styles.welcomeTitle, { color: theme.colors.text }]}>
+            <Text style={[styles.welcomeTitle, { 
+              color: theme.colors.text,
+              fontSize: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12),
+              marginBottom: dynamicModerateScale(6),
+            }]}>
               How can we help you?
             </Text>
-            <Text style={[styles.welcomeSubtitle, { color: theme.colors.textSecondary }]}>
+            <Text style={[styles.welcomeSubtitle, { 
+              color: theme.colors.textSecondary,
+              fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+              lineHeight: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12),
+            }]}>
               We're here to assist you with any questions or issues you may have
             </Text>
           </View>
 
           {/* Contact Options */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: '#ffffff' }]}>Contact Us</Text>
-            <View style={styles.contactGrid}>
+          <View style={[styles.section, {
+            marginBottom: dynamicModerateScale(12),
+          }]}>
+            <Text style={[styles.sectionTitle, { 
+              color: '#ffffff',
+              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(8),
+            }]}>Contact Us</Text>
+            <View style={[styles.contactGrid, {
+              gap: dynamicModerateScale(6),
+            }]}>
               {contactOptions.map(renderContactOption)}
             </View>
           </View>
 
           {/* FAQs */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: '#ffffff' }]}>
+          <View style={[styles.section, {
+            marginBottom: dynamicModerateScale(12),
+          }]}>
+            <Text style={[styles.sectionTitle, { 
+              color: '#ffffff',
+              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(8),
+            }]}>
               Frequently Asked Questions
             </Text>
-            <View style={styles.faqContainer}>
+            <View style={[styles.faqContainer, {
+              gap: dynamicModerateScale(6),
+            }]}>
               {faqs.map(renderFAQItem)}
             </View>
           </View>
 
           {/* Quick Links */}
-          <View style={styles.section}>
-            <Text style={[styles.sectionTitle, { color: '#ffffff' }]}>Quick Links</Text>
+          <View style={[styles.section, {
+            marginBottom: dynamicModerateScale(12),
+          }]}>
+            <Text style={[styles.sectionTitle, { 
+              color: '#ffffff',
+              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(8),
+            }]}>Quick Links</Text>
             <TouchableOpacity
-              style={[styles.quickLinkCard, { backgroundColor: theme.colors.cardBackground }]}
+              style={[styles.quickLinkCard, { 
+                backgroundColor: theme.colors.cardBackground,
+                padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+                borderRadius: dynamicModerateScale(10),
+                marginBottom: dynamicModerateScale(6),
+              }]}
               onPress={() => navigation.navigate('PrivacyPolicy' as never)}
               activeOpacity={0.7}
             >
-              <Icon name="privacy-tip" size={responsiveFontSize.lg} color={theme.colors.primary} />
-              <Text style={[styles.quickLinkText, { color: theme.colors.text }]}>Privacy Policy</Text>
-              <Icon name="chevron-right" size={responsiveFontSize.lg} color={theme.colors.textSecondary} />
+              <Icon name="privacy-tip" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.primary} />
+              <Text style={[styles.quickLinkText, { 
+                color: theme.colors.text,
+                fontSize: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(9),
+                marginLeft: dynamicModerateScale(10),
+              }]}>Privacy Policy</Text>
+              <Icon name="chevron-right" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.textSecondary} />
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.quickLinkCard, { backgroundColor: theme.colors.cardBackground }]}
+              style={[styles.quickLinkCard, { 
+                backgroundColor: theme.colors.cardBackground,
+                padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+                borderRadius: dynamicModerateScale(10),
+                marginBottom: dynamicModerateScale(6),
+              }]}
               onPress={() => navigation.navigate('Subscription' as never)}
               activeOpacity={0.7}
             >
-              <Icon name="card-membership" size={responsiveFontSize.lg} color={theme.colors.primary} />
-              <Text style={[styles.quickLinkText, { color: theme.colors.text }]}>Subscription Plans</Text>
-              <Icon name="chevron-right" size={responsiveFontSize.lg} color={theme.colors.textSecondary} />
+              <Icon name="card-membership" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.primary} />
+              <Text style={[styles.quickLinkText, { 
+                color: theme.colors.text,
+                fontSize: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(9),
+                marginLeft: dynamicModerateScale(10),
+              }]}>Subscription Plans</Text>
+              <Icon name="chevron-right" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.textSecondary} />
             </TouchableOpacity>
           </View>
 
           {/* Footer */}
-          <View style={styles.footer}>
-            <Text style={[styles.footerText, { color: 'rgba(255, 255, 255, 0.8)' }]}>
+          <View style={[styles.footer, {
+            paddingVertical: dynamicModerateScale(12),
+            marginTop: dynamicModerateScale(8),
+          }]}>
+            <Text style={[styles.footerText, { 
+              color: 'rgba(255, 255, 255, 0.8)',
+              fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+              marginBottom: dynamicModerateScale(2),
+            }]}>
               Powered by RSL Solution Private Limited
             </Text>
-            <Text style={[styles.footerVersion, { color: 'rgba(255, 255, 255, 0.6)' }]}>
+            <Text style={[styles.footerVersion, { 
+              color: 'rgba(255, 255, 255, 0.6)',
+              fontSize: isTabletDevice ? dynamicModerateScale(7.5) : dynamicModerateScale(7),
+            }]}>
               Version 1.0.0
             </Text>
           </View>
@@ -306,18 +462,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: responsiveSpacing.md,
-    paddingVertical: responsiveSpacing.md,
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 + responsiveSpacing.md : responsiveSpacing.md,
+    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0,
   },
   backButton: {
-    width: responsiveSpacing.xxl,
-    height: responsiveSpacing.xxl,
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: responsiveFontSize.xl,
     fontWeight: 'bold',
     color: '#ffffff',
   },
@@ -325,96 +476,70 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContent: {
-    paddingHorizontal: responsiveSpacing.md,
-    paddingBottom: responsiveSpacing.xxl,
+    // Inline styles used
   },
   welcomeCard: {
-    borderRadius: isTablet ? 20 : 16,
-    padding: responsiveSpacing.xl,
     alignItems: 'center',
-    marginBottom: responsiveSpacing.lg,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 5,
+    shadowOffset: { width: 0, height: moderateScale(2) },
+    shadowOpacity: 0.06,
+    shadowRadius: moderateScale(4),
+    elevation: 2,
   },
   welcomeIconContainer: {
-    width: isTablet ? 80 : 60,
-    height: isTablet ? 80 : 60,
-    borderRadius: isTablet ? 40 : 30,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: responsiveSpacing.md,
   },
   welcomeTitle: {
-    fontSize: responsiveFontSize.xxl,
     fontWeight: 'bold',
-    marginBottom: responsiveSpacing.sm,
     textAlign: 'center',
   },
   welcomeSubtitle: {
-    fontSize: responsiveFontSize.md,
     textAlign: 'center',
-    lineHeight: responsiveFontSize.md * 1.5,
   },
   section: {
-    marginBottom: responsiveSpacing.xl,
+    // Inline styles used
   },
   sectionTitle: {
-    fontSize: responsiveFontSize.xl,
     fontWeight: 'bold',
-    marginBottom: responsiveSpacing.md,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 2,
   },
   contactGrid: {
-    gap: responsiveSpacing.sm,
+    // Inline styles used
   },
   contactCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: responsiveSpacing.md,
-    borderRadius: isTablet ? 16 : 12,
-    marginBottom: responsiveSpacing.sm,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: moderateScale(1) },
+    shadowOpacity: 0.05,
+    shadowRadius: moderateScale(2),
+    elevation: 1,
   },
   contactIconContainer: {
-    width: isTablet ? 56 : 48,
-    height: isTablet ? 56 : 48,
-    borderRadius: isTablet ? 28 : 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: responsiveSpacing.md,
   },
   contactInfo: {
     flex: 1,
   },
   contactTitle: {
-    fontSize: responsiveFontSize.lg,
     fontWeight: '600',
-    marginBottom: responsiveSpacing.xs,
   },
   contactDescription: {
-    fontSize: responsiveFontSize.sm,
+    // Inline styles used
   },
   faqContainer: {
-    gap: responsiveSpacing.sm,
+    // Inline styles used
   },
   faqItem: {
-    borderRadius: isTablet ? 16 : 12,
-    padding: responsiveSpacing.md,
-    marginBottom: responsiveSpacing.sm,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: moderateScale(1) },
+    shadowOpacity: 0.05,
+    shadowRadius: moderateScale(2),
+    elevation: 1,
   },
   faqHeader: {
     flexDirection: 'row',
@@ -423,46 +548,31 @@ const styles = StyleSheet.create({
   },
   faqQuestion: {
     flex: 1,
-    fontSize: responsiveFontSize.md,
     fontWeight: '600',
-    marginRight: responsiveSpacing.sm,
-    lineHeight: responsiveFontSize.md * 1.4,
   },
   faqAnswer: {
-    fontSize: responsiveFontSize.sm,
-    marginTop: responsiveSpacing.md,
-    lineHeight: responsiveFontSize.sm * 1.6,
+    // Inline styles used
   },
   quickLinkCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: responsiveSpacing.md,
-    borderRadius: isTablet ? 16 : 12,
-    marginBottom: responsiveSpacing.sm,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: moderateScale(1) },
+    shadowOpacity: 0.05,
+    shadowRadius: moderateScale(2),
+    elevation: 1,
   },
   quickLinkText: {
     flex: 1,
-    fontSize: responsiveFontSize.md,
     fontWeight: '500',
-    marginLeft: responsiveSpacing.md,
   },
   footer: {
     alignItems: 'center',
-    paddingVertical: responsiveSpacing.xl,
-    marginTop: responsiveSpacing.lg,
   },
   footerText: {
-    fontSize: responsiveFontSize.sm,
     textAlign: 'center',
-    marginBottom: responsiveSpacing.xs,
   },
   footerVersion: {
-    fontSize: responsiveFontSize.xs,
     textAlign: 'center',
   },
 });

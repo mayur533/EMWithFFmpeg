@@ -13,25 +13,123 @@ import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../context/ThemeContext';
-import { 
-  responsiveSpacing, 
-  responsiveFontSize, 
-  responsiveSize,
-  isTablet,
-  isSmallScreen,
-  responsiveLayout
-} from '../utils/responsiveUtils';
+
+// Compact spacing multiplier to reduce all spacing (matching HomeScreen)
+const COMPACT_MULTIPLIER = 0.5;
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
+// Responsive helper functions (matching HomeScreen)
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Responsive design helpers
+const isSmallScreen = screenWidth < 375;
+const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
+const isLargeScreen = screenWidth >= 414 && screenWidth < 768;
+const isTablet = screenWidth >= 768;
+const isLandscape = screenWidth > screenHeight;
+
+// Responsive spacing (Compact - reduced by 50%)
+const responsiveSpacing = {
+  xs: moderateScale(isSmallScreen ? 2 : isMediumScreen ? 3 : isLargeScreen ? 4 : isTablet ? 5 : 6),
+  sm: moderateScale(isSmallScreen ? 4 : isMediumScreen ? 5 : isLargeScreen ? 6 : isTablet ? 7 : 8),
+  md: moderateScale(isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 9 : isTablet ? 10 : 12),
+  lg: moderateScale(isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : isTablet ? 14 : 16),
+  xl: moderateScale(isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : isTablet ? 16 : 20),
+  xxl: moderateScale(isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : isTablet ? 18 : 24),
+  xxxl: moderateScale(isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : isTablet ? 20 : 28),
+};
+
+// Responsive font sizes (Compact - reduced by 30-50%)
+const responsiveFontSize = {
+  xs: moderateScale(isSmallScreen ? 7 : isMediumScreen ? 7.5 : isLargeScreen ? 8 : isTablet ? 8.5 : 9),
+  sm: moderateScale(isSmallScreen ? 8 : isMediumScreen ? 8.5 : isLargeScreen ? 9 : isTablet ? 9.5 : 10),
+  md: moderateScale(isSmallScreen ? 9 : isMediumScreen ? 9.5 : isLargeScreen ? 10 : isTablet ? 10.5 : 11),
+  lg: moderateScale(isSmallScreen ? 10 : isMediumScreen ? 10.5 : isLargeScreen ? 11 : isTablet ? 11.5 : 12),
+  xl: moderateScale(isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : isTablet ? 14 : 15),
+  xxl: moderateScale(isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : isTablet ? 16 : 18),
+  xxxl: moderateScale(isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : isTablet ? 18 : 20),
+};
+
+// Responsive sizes
+const responsiveSize = {
+  sm: moderateScale(isTablet ? 8 : 6),
+  md: moderateScale(isTablet ? 12 : 8),
+  lg: moderateScale(isTablet ? 16 : 12),
+  iconSmall: moderateScale(isTablet ? 16 : 12),
+  iconMedium: moderateScale(isTablet ? 20 : 16),
+  iconLarge: moderateScale(isTablet ? 24 : 18),
+  iconXLarge: moderateScale(isTablet ? 32 : 24),
+};
 
 const PrivacyPolicyScreen = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { theme } = useTheme();
 
+  // Dynamic dimensions for responsive layout (matching HomeScreen)
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  // Update dimensions on screen rotation/resize
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const currentScreenWidth = dimensions.width;
+  const currentScreenHeight = dimensions.height;
+  
+  // Dynamic responsive scaling functions
+  const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
+  const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
+  // Responsive icon sizes (compact - 60% of original)
+  const getIconSize = (baseSize: number) => {
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+  };
+  
+  // Device size detection
+  const isTabletDevice = currentScreenWidth >= 768;
+  const isSmallScreenDevice = currentScreenWidth < 375;
+
   const goBack = () => {
     navigation.goBack();
   };
+
+  // Helper function for consistent dynamic styles
+  const getSectionHeaderStyle = () => ({
+    flexDirection: 'row' as const,
+    alignItems: 'center' as const,
+    marginBottom: dynamicModerateScale(6),
+  });
+
+  const getIconStyle = () => ({
+    marginRight: dynamicModerateScale(6),
+  });
+
+  const getContentStyle = () => ({
+    marginBottom: dynamicModerateScale(6),
+  });
+
+  const getBulletPointStyle = () => ({
+    marginBottom: dynamicModerateScale(4),
+    paddingVertical: dynamicModerateScale(4),
+    paddingHorizontal: dynamicModerateScale(6),
+    borderRadius: dynamicModerateScale(6),
+  });
+
+  const getBulletStyle = () => ({
+    marginRight: dynamicModerateScale(4),
+  });
 
   // Hoverable Card Component with professional smooth animations and gradient border
   const HoverableCard = ({ 
@@ -98,13 +196,20 @@ const PrivacyPolicyScreen = () => {
         ]}
       >
         {/* Gradient Border Container */}
-        <View style={styles.cardWrapper}>
+        <View style={[styles.cardWrapper, {
+          marginBottom: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
+        }]}>
           {/* Animated Gradient Border */}
           <Animated.View
             style={[
               styles.gradientBorderWrapper,
               {
                 opacity: borderOpacityAnim,
+                top: -2,
+                left: -2,
+                right: -2,
+                bottom: -2,
+                borderRadius: dynamicModerateScale(12),
               }
             ]}
           >
@@ -112,7 +217,9 @@ const PrivacyPolicyScreen = () => {
               colors={['#00D4FF', '#FFD700', '#FF6B6B', '#8B5CF6', '#00D4FF']}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 1 }}
-              style={styles.gradientBorder}
+              style={[styles.gradientBorder, {
+                borderRadius: dynamicModerateScale(12),
+              }]}
             />
           </Animated.View>
           
@@ -123,6 +230,10 @@ const PrivacyPolicyScreen = () => {
             activeOpacity={1}
             style={[
               styles.section,
+              {
+                borderRadius: dynamicModerateScale(12),
+                padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+              },
               isHovered && styles.sectionHovered,
               style
             ]}
@@ -144,20 +255,15 @@ const PrivacyPolicyScreen = () => {
     header: {
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: responsiveSpacing.md,
-      paddingTop: insets.top + responsiveSpacing.sm,
-      paddingBottom: responsiveSpacing.md,
       backgroundColor: 'transparent',
       borderBottomWidth: 0,
     },
     backButton: {
-      marginRight: responsiveSpacing.md,
-      padding: isSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm,
-      borderRadius: responsiveSize.md,
+      marginRight: moderateScale(8),
+      borderRadius: moderateScale(8),
       backgroundColor: 'rgba(255, 255, 255, 0.2)',
     },
     headerTitle: {
-      fontSize: isTablet ? responsiveFontSize.xxl : responsiveFontSize.xl,
       fontWeight: '600',
       color: '#ffffff',
       flex: 1,
@@ -167,92 +273,76 @@ const PrivacyPolicyScreen = () => {
     },
     scrollContainer: {
       flex: 1,
-      paddingHorizontal: isTablet ? responsiveSpacing.xxl : responsiveSpacing.md,
-      maxWidth: isTablet ? 900 : '100%',
       alignSelf: 'center',
       width: '100%',
     },
     content: {
-      paddingVertical: isTablet ? responsiveSpacing.xxl : responsiveSpacing.lg,
-      paddingBottom: responsiveSpacing.xxxl,
+      // Inline styles used
     },
     lastUpdated: {
-      fontSize: responsiveFontSize.sm,
       color: 'rgba(255, 255, 255, 0.7)',
       textAlign: 'center',
-      marginBottom: responsiveSpacing.lg,
       fontStyle: 'italic',
     },
     cardWrapper: {
       position: 'relative',
-      marginBottom: responsiveSpacing.lg,
+      // Inline styles used
     },
     gradientBorderWrapper: {
       position: 'absolute',
-      top: -3,
-      left: -3,
-      right: -3,
-      bottom: -3,
-      borderRadius: isTablet ? 19 : 15,
       overflow: 'hidden',
     },
     gradientBorder: {
       flex: 1,
-      borderRadius: isTablet ? 19 : 15,
     },
     section: {
       backgroundColor: '#ffffff',
-      borderRadius: isTablet ? 16 : 12,
-      padding: isTablet ? responsiveSpacing.xxl : (isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.3)',
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 4 },
-      shadowOpacity: 0.2,
-      shadowRadius: isTablet ? 10 : 8,
-      elevation: isTablet ? 6 : 4,
+      shadowOffset: { width: 0, height: moderateScale(2) },
+      shadowOpacity: 0.1,
+      shadowRadius: moderateScale(4),
+      elevation: 2,
     },
     sectionHovered: {
       backgroundColor: '#ffffff',
       borderColor: 'transparent',
       borderWidth: 0,
-      shadowOpacity: 0.3,
-      shadowRadius: 12,
-      elevation: 8,
+      shadowOpacity: 0.15,
+      shadowRadius: moderateScale(6),
+      elevation: 3,
     },
     sectionTitle: {
-      fontSize: isTablet ? responsiveFontSize.xxl : responsiveFontSize.xl,
+      fontSize: moderateScale(isTablet ? 11 : 10), // Fixed text size
       fontWeight: '700',
       color: '#667eea',
       letterSpacing: 0.5,
       flex: 1,
     },
     sectionContent: {
-      fontSize: isTablet ? responsiveFontSize.lg : (isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
-      lineHeight: isTablet ? responsiveFontSize.lg * 1.6 : (isSmallScreen ? responsiveFontSize.sm * 1.5 : responsiveFontSize.md * 1.5),
+      fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed text size
+      lineHeight: moderateScale(isTablet ? 12 : 11),
       color: '#555555',
-      marginBottom: responsiveSpacing.sm,
+      // marginBottom uses dynamic scaling in inline styles
     },
     bulletPoint: {
       flexDirection: 'row',
-      marginBottom: responsiveSpacing.sm,
-      paddingVertical: isSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm,
-      paddingHorizontal: isTablet ? responsiveSpacing.md : responsiveSpacing.sm,
       backgroundColor: 'rgba(102, 126, 234, 0.08)',
-      borderRadius: responsiveSize.sm,
-      borderLeftWidth: isTablet ? 4 : 3,
+      borderLeftWidth: 2,
       borderLeftColor: '#667eea',
+      // Dynamic spacing applied inline
     },
     bullet: {
-      fontSize: isTablet ? responsiveFontSize.xl : responsiveFontSize.lg,
+      fontSize: moderateScale(isTablet ? 9 : 8), // Fixed text size
       color: '#667eea',
-      marginRight: responsiveSpacing.sm,
-      marginTop: 2,
+      marginTop: 1,
       fontWeight: '600',
+      // Dynamic spacing applied inline
     },
     bulletText: {
-      fontSize: isTablet ? responsiveFontSize.lg : (isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
-      lineHeight: isTablet ? responsiveFontSize.lg * 1.6 : (isSmallScreen ? responsiveFontSize.sm * 1.6 : responsiveFontSize.md * 1.6),
+      fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed text size
+      lineHeight: moderateScale(isTablet ? 12 : 11),
       color: '#555555',
       flex: 1,
     },
@@ -262,80 +352,67 @@ const PrivacyPolicyScreen = () => {
     },
     contactSection: {
       backgroundColor: '#ffffff',
-      padding: isTablet ? responsiveSpacing.xxxl : responsiveSpacing.xl,
-      borderRadius: isTablet ? 20 : responsiveSize.lg,
-      marginTop: isTablet ? responsiveSpacing.xl : responsiveSpacing.lg,
-      marginBottom: isTablet ? responsiveSpacing.xxxl : responsiveSpacing.xl,
-      borderWidth: 2,
+      borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.5)',
       shadowColor: '#000',
-      shadowOffset: { width: 0, height: 6 },
-      shadowOpacity: 0.3,
-      shadowRadius: isTablet ? 12 : 10,
-      elevation: isTablet ? 8 : 6,
+      shadowOffset: { width: 0, height: moderateScale(3) },
+      shadowOpacity: 0.15,
+      shadowRadius: moderateScale(6),
+      elevation: 3,
+      // Dynamic spacing applied inline
     },
     contactTitle: {
-      fontSize: isTablet ? responsiveFontSize.xxxl : responsiveFontSize.xxl,
+      fontSize: moderateScale(isTablet ? 14 : 12), // Fixed text size
       fontWeight: '700',
       color: '#667eea',
-      marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
       textAlign: 'center',
       letterSpacing: 0.5,
+      // Dynamic spacing applied inline
     },
     contactText: {
-      fontSize: isTablet ? responsiveFontSize.lg : (isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
+      fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed text size
       color: '#555555',
       textAlign: 'center',
-      lineHeight: isTablet ? responsiveFontSize.lg * 1.6 : (isSmallScreen ? responsiveFontSize.sm * 1.6 : responsiveFontSize.md * 1.6),
-      marginBottom: responsiveSpacing.sm,
+      lineHeight: moderateScale(isTablet ? 12 : 11),
+      // Dynamic spacing applied inline
     },
     emailLink: {
       color: '#667eea',
       textDecorationLine: 'underline',
       fontWeight: '700',
-      fontSize: isTablet ? responsiveFontSize.xl : responsiveFontSize.lg,
+      fontSize: moderateScale(isTablet ? 10 : 9), // Fixed text size
     },
     heroSection: {
       alignItems: 'center',
-      paddingVertical: isTablet ? responsiveSpacing.xxxl : responsiveSpacing.xl,
-      paddingHorizontal: isTablet ? responsiveSpacing.xxl : responsiveSpacing.md,
-      marginBottom: isTablet ? responsiveSpacing.xxl : responsiveSpacing.lg,
+      // Inline styles used
     },
     heroTitle: {
-      fontSize: isTablet ? 42 : (isSmallScreen ? responsiveFontSize.xxl : responsiveFontSize.xxxl),
       fontWeight: '800',
       color: '#ffffff',
       textAlign: 'center',
-      marginBottom: responsiveSpacing.sm,
       textShadowColor: 'rgba(0, 0, 0, 0.4)',
-      textShadowOffset: { width: 0, height: 3 },
-      textShadowRadius: 6,
-      letterSpacing: isTablet ? 1.5 : 1,
+      textShadowOffset: { width: 0, height: 2 },
+      textShadowRadius: 4,
+      letterSpacing: isTablet ? 1 : 0.5,
     },
     heroSubtitle: {
-      fontSize: isTablet ? responsiveFontSize.lg : (isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
       color: 'rgba(255, 255, 255, 0.8)',
       textAlign: 'center',
-      lineHeight: isTablet ? responsiveFontSize.lg * 1.6 : (isSmallScreen ? responsiveFontSize.sm * 1.5 : responsiveFontSize.md * 1.5),
-      paddingHorizontal: isTablet ? responsiveSpacing.xxxl : responsiveSpacing.lg,
       maxWidth: isTablet ? 700 : '100%',
     },
     divider: {
-      height: 2,
       backgroundColor: 'rgba(255, 255, 255, 0.2)',
-      marginVertical: responsiveSpacing.md,
       borderRadius: 1,
     },
     sectionIcon: {
-      marginBottom: responsiveSpacing.sm,
+      // Inline styles used
     },
     sectionHeader: {
       flexDirection: 'row',
       alignItems: 'center',
-      marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
     },
     sectionHeaderIcon: {
-      marginRight: responsiveSpacing.sm,
+      // Inline styles used
     },
   });
 
@@ -348,232 +425,338 @@ const PrivacyPolicyScreen = () => {
     >
       <View style={styles.container}>
         {/* Header */}
-        <View style={styles.header}>
-          <TouchableOpacity onPress={goBack} style={styles.backButton}>
+        <View style={[styles.header, {
+          paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+          paddingTop: insets.top + dynamicModerateScale(4),
+          paddingBottom: dynamicModerateScale(6),
+        }]}>
+          <TouchableOpacity onPress={goBack} style={[styles.backButton, {
+            width: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+            height: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+            justifyContent: 'center',
+            alignItems: 'center',
+          }]}>
             <Icon 
               name="arrow-back" 
-              size={responsiveFontSize.lg} 
+              size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
               color="#ffffff" 
             />
           </TouchableOpacity>
-          <Text style={styles.headerTitle}>Privacy Policy</Text>
+          <Text style={[styles.headerTitle, {
+            fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+          }]}>Privacy Policy</Text>
         </View>
 
         {/* Content */}
         <ScrollView 
-          style={styles.scrollContainer}
+          style={[styles.scrollContainer, {
+            paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+            maxWidth: isTabletDevice ? 900 : '100%',
+          }]}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.content}
+          contentContainerStyle={[styles.content, {
+            paddingVertical: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+            paddingBottom: dynamicModerateScale(20),
+          }]}
         >
           {/* Hero Section */}
-          <View style={styles.heroSection}>
-            <Icon name="security" size={responsiveSize.iconXLarge * 1.5} color="#ffffff" style={styles.sectionIcon} />
-            <Text style={styles.heroTitle}>Your Privacy Matters</Text>
-            <Text style={styles.heroSubtitle}>
+          <View style={[styles.heroSection, {
+            paddingVertical: dynamicModerateScale(12),
+            paddingHorizontal: dynamicModerateScale(8),
+            marginBottom: dynamicModerateScale(8),
+          }]}>
+            <Icon name="security" size={isTabletDevice ? getIconSize(32) : getIconSize(24)} color="#ffffff" style={[styles.sectionIcon, {
+              marginBottom: dynamicModerateScale(6),
+            }]} />
+            <Text style={[styles.heroTitle, {
+              fontSize: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(14),
+              marginBottom: dynamicModerateScale(6),
+            }]}>Your Privacy Matters</Text>
+            <Text style={[styles.heroSubtitle, {
+              fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              paddingHorizontal: dynamicModerateScale(8),
+            }]}>
               We're committed to protecting your personal information and being transparent about our data practices
             </Text>
           </View>
 
-          <View style={styles.divider} />
+          <View style={[styles.divider, {
+            height: 1,
+            marginVertical: dynamicModerateScale(4),
+          }]} />
 
-          <Text style={styles.lastUpdated}>
+          <Text style={[styles.lastUpdated, {
+            fontSize: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(6.5),
+            marginBottom: dynamicModerateScale(8),
+          }]}>
             Last updated: {new Date().toLocaleDateString()}
           </Text>
 
           {/* Introduction */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="info" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
-              <Text style={styles.sectionTitle}>Introduction</Text>
+            <View style={[styles.sectionHeader, {
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: dynamicModerateScale(6),
+            }]}>
+              <Icon name="info" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={{
+                marginRight: dynamicModerateScale(6),
+              }} />
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? dynamicModerateScale(11) : dynamicModerateScale(10),
+              }]}>Introduction</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, {
+              fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(6),
+            }]}>
               Welcome to MarketBrand.ai ("we," "our," or "us"). This Privacy Policy explains how we collect, 
               use, disclose, and safeguard your information when you use our mobile application and related services 
               (collectively, the "Service").
             </Text>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, {
+              fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(6),
+            }]}>
               By using our Service, you agree to the collection and use of information in accordance with this policy.
             </Text>
           </HoverableCard>
 
           {/* Information We Collect */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="folder-open" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
+            <View style={[styles.sectionHeader, {
+              flexDirection: 'row',
+              alignItems: 'center',
+              marginBottom: dynamicModerateScale(6),
+            }]}>
+              <Icon name="folder-open" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={{
+                marginRight: dynamicModerateScale(6),
+              }} />
               <Text style={styles.sectionTitle}>Information We Collect</Text>
             </View>
             
-            <Text style={[styles.sectionContent, styles.highlight]}>Personal Information:</Text>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <Text style={[styles.sectionContent, styles.highlight, {
+              marginBottom: dynamicModerateScale(4),
+            }]}>Personal Information:</Text>
+            <View style={[styles.bulletPoint, {
+              marginBottom: dynamicModerateScale(4),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(6),
+            }]}>
+              <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
               <Text style={styles.bulletText}>Name and email address</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, {
+              marginBottom: dynamicModerateScale(4),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(6),
+            }]}>
+              <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
               <Text style={styles.bulletText}>Profile information and preferences</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, {
+              marginBottom: dynamicModerateScale(4),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(6),
+            }]}>
+              <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
               <Text style={styles.bulletText}>Payment and billing information (processed securely through Razorpay)</Text>
             </View>
 
-            <Text style={[styles.sectionContent, styles.highlight, { marginTop: responsiveSpacing.md }]}>
+            <Text style={[styles.sectionContent, styles.highlight, { 
+              marginTop: dynamicModerateScale(8),
+              marginBottom: dynamicModerateScale(4),
+            }]}>
               Usage Information:
             </Text>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, {
+              marginBottom: dynamicModerateScale(4),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(6),
+            }]}>
+              <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
               <Text style={styles.bulletText}>App usage patterns and features accessed</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, {
+              marginBottom: dynamicModerateScale(4),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(6),
+            }]}>
+              <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
               <Text style={styles.bulletText}>Device information (model, operating system, unique identifiers)</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, {
+              marginBottom: dynamicModerateScale(4),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(6),
+            }]}>
+              <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
               <Text style={styles.bulletText}>Crash reports and performance data</Text>
             </View>
 
-            <Text style={[styles.sectionContent, styles.highlight, { marginTop: responsiveSpacing.md }]}>
+            <Text style={[styles.sectionContent, styles.highlight, { 
+              marginTop: dynamicModerateScale(8),
+              marginBottom: dynamicModerateScale(4),
+            }]}>
               Content Information:
             </Text>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, {
+              marginBottom: dynamicModerateScale(4),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(6),
+            }]}>
+              <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
               <Text style={styles.bulletText}>Business profiles and marketing content you create</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, {
+              marginBottom: dynamicModerateScale(4),
+              paddingVertical: dynamicModerateScale(4),
+              paddingHorizontal: dynamicModerateScale(6),
+              borderRadius: dynamicModerateScale(6),
+            }]}>
+              <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
               <Text style={styles.bulletText}>Images, videos, and other media you upload</Text>
             </View>
           </HoverableCard>
 
           {/* How We Use Information */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="settings" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
+            <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
+              <Icon name="settings" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>How We Use Your Information</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, getContentStyle()]}>
               We use the information we collect to:
             </Text>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Provide, maintain, and improve our Service</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Process payments and manage subscriptions</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Send you important updates and notifications</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Provide customer support and respond to inquiries</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Analyze usage patterns to enhance user experience</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Ensure security and prevent fraud</Text>
             </View>
           </HoverableCard>
 
           {/* Information Sharing */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="share" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
+            <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
+              <Icon name="share" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Information Sharing</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, getContentStyle()]}>
               We do not sell, trade, or otherwise transfer your personal information to third parties, except:
             </Text>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>With payment processors (Razorpay) for transaction processing</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>With cloud service providers for data storage and processing</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>When required by law or to protect our rights and safety</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>With your explicit consent</Text>
             </View>
           </HoverableCard>
 
           {/* Data Security */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="verified-user" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
+            <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
+              <Icon name="verified-user" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Data Security</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, getContentStyle()]}>
               We implement appropriate security measures to protect your personal information against unauthorized 
               access, alteration, disclosure, or destruction. This includes:
             </Text>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Encryption of sensitive data in transit and at rest</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Secure authentication and authorization systems</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Regular security audits and updates</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Access controls and monitoring</Text>
             </View>
           </HoverableCard>
 
           {/* Your Rights */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="account-circle" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
+            <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
+              <Icon name="account-circle" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Your Rights and Choices</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, getContentStyle()]}>
               You have the right to:
             </Text>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Access and update your personal information</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Delete your account and associated data</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Opt-out of marketing communications</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Request a copy of your data</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Withdraw consent for data processing</Text>
             </View>
           </HoverableCard>
 
           {/* Cookies and Tracking */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="cookie" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
+            <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
+              <Icon name="cookie" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Cookies and Tracking</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, getContentStyle()]}>
               We may use cookies and similar tracking technologies to enhance your experience, 
               analyze usage patterns, and provide personalized content. You can control these 
               through your device settings.
@@ -582,37 +765,37 @@ const PrivacyPolicyScreen = () => {
 
           {/* Third-Party Services */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="extension" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
+            <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
+              <Icon name="extension" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Third-Party Services</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, getContentStyle()]}>
               Our Service integrates with third-party services including:
             </Text>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Razorpay for payment processing</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Google Fonts for typography</Text>
             </View>
-            <View style={styles.bulletPoint}>
-              <Text style={styles.bullet}>•</Text>
+            <View style={[styles.bulletPoint, getBulletPointStyle()]}>
+              <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
               <Text style={styles.bulletText}>Cloud storage providers</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, getContentStyle()]}>
               These services have their own privacy policies, which we encourage you to review.
             </Text>
           </HoverableCard>
 
           {/* Children's Privacy */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="child-care" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
+            <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
+              <Icon name="child-care" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Children's Privacy</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, getContentStyle()]}>
               Our Service is not intended for children under 13 years of age. We do not knowingly 
               collect personal information from children under 13. If we become aware that we have 
               collected personal information from a child under 13, we will take steps to delete such information.
@@ -621,11 +804,11 @@ const PrivacyPolicyScreen = () => {
 
           {/* Changes to Privacy Policy */}
           <HoverableCard>
-            <View style={styles.sectionHeader}>
-              <Icon name="update" size={responsiveSize.iconLarge} color="#667eea" style={styles.sectionHeaderIcon} />
+            <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
+              <Icon name="update" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Changes to This Privacy Policy</Text>
             </View>
-            <Text style={styles.sectionContent}>
+            <Text style={[styles.sectionContent, getContentStyle()]}>
               We may update this Privacy Policy from time to time. We will notify you of any changes 
               by posting the new Privacy Policy in the app and updating the "Last updated" date. 
               You are advised to review this Privacy Policy periodically for any changes.
@@ -633,17 +816,33 @@ const PrivacyPolicyScreen = () => {
           </HoverableCard>
 
           {/* Contact Information */}
-          <View style={styles.contactSection}>
-            <Icon name="contact-support" size={responsiveSize.iconXLarge} color="#667eea" style={{ alignSelf: 'center', marginBottom: responsiveSpacing.sm }} />
-            <Text style={styles.contactTitle}>Contact Us</Text>
-            <Text style={styles.contactText}>
+          <View style={[styles.contactSection, {
+            padding: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
+            borderRadius: dynamicModerateScale(12),
+            marginTop: dynamicModerateScale(12),
+            marginBottom: dynamicModerateScale(16),
+          }]}>
+            <Icon name="contact-support" size={isTabletDevice ? getIconSize(28) : getIconSize(24)} color="#667eea" style={{ 
+              alignSelf: 'center', 
+              marginBottom: dynamicModerateScale(6)
+            }} />
+            <Text style={[styles.contactTitle, {
+              marginBottom: dynamicModerateScale(6),
+            }]}>Contact Us</Text>
+            <Text style={[styles.contactText, {
+              marginBottom: dynamicModerateScale(4),
+            }]}>
               If you have any questions about this Privacy Policy or our data practices, 
               please contact us at:
             </Text>
-            <Text style={[styles.contactText, styles.emailLink]}>
+            <Text style={[styles.contactText, styles.emailLink, {
+              marginBottom: dynamicModerateScale(4),
+            }]}>
               support@marketbrand.ai
             </Text>
-            <Text style={styles.contactText}>
+            <Text style={[styles.contactText, {
+              marginBottom: dynamicModerateScale(4),
+            }]}>
               We will respond to your inquiry within 48 hours.
             </Text>
           </View>

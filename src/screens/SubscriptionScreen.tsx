@@ -91,6 +91,20 @@ const SubscriptionScreen: React.FC = () => {
     return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
   };
   
+  // Device size detection (matching TransactionHistoryScreen)
+  const isUltraSmallScreen = currentScreenWidth < 350;
+  const isSmallScreenDevice = currentScreenWidth < 400;
+  const isMediumScreenDevice = currentScreenWidth >= 400 && currentScreenWidth < 768;
+  const isTabletDevice = currentScreenWidth >= 768;
+  const isLandscapeMode = currentScreenWidth > currentScreenHeight;
+  
+  // Responsive layout configurations
+  const getComparisonCardLayout = () => {
+    if (isTabletDevice) return 'row'; // Side by side on tablets
+    if (isLandscapeMode && isMediumScreenDevice) return 'row'; // Side by side in landscape on medium devices
+    return 'column'; // Stack vertically on phones
+  };
+  
   const [isProcessing, setIsProcessing] = useState(false);
   const [isErrorModalVisible, setIsErrorModalVisible] = useState(false);
   const [errorModalData, setErrorModalData] = useState({
@@ -445,19 +459,19 @@ const SubscriptionScreen: React.FC = () => {
        <LinearGradient
          colors={['#667eea', '#764ba2']}
          style={[styles.header, { 
-           paddingTop: insets.top + dynamicModerateScale(2),
-           paddingHorizontal: dynamicModerateScale(8),
-           paddingBottom: dynamicModerateScale(6),
+           paddingTop: insets.top + (isTabletDevice ? dynamicModerateScale(4) : dynamicModerateScale(2)),
+           paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+           paddingBottom: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
          }]}
        >
         <TouchableOpacity
           style={[styles.backButton, {
-            padding: dynamicModerateScale(6),
+            padding: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
             borderRadius: dynamicModerateScale(10),
           }]}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={getIconSize(18)} color="#ffffff" />
+          <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#ffffff" />
         </TouchableOpacity>
                  <View style={styles.headerContent}>
            <Text style={[styles.headerTitle, {
@@ -472,29 +486,29 @@ const SubscriptionScreen: React.FC = () => {
            <View style={[styles.statusContainer, {
              marginTop: dynamicModerateScale(4),
            }]}>
-             {apiLoading ? (
-               <View style={[styles.loadingBadge, {
-                 paddingHorizontal: dynamicModerateScale(8),
-                 paddingVertical: dynamicModerateScale(2),
-                 borderRadius: dynamicModerateScale(8),
-               }]}>
-                 <ActivityIndicator size="small" color="#ffffff" />
-                 <Text style={[styles.loadingBadgeText, {
-                   fontSize: dynamicModerateScale(7),
-                   marginLeft: dynamicModerateScale(3),
-                 }]}>Loading...</Text>
-               </View>
-             ) : apiError ? (
-               <View style={[styles.errorBadge, {
-                 paddingHorizontal: dynamicModerateScale(8),
-                 paddingVertical: dynamicModerateScale(2),
-                 borderRadius: dynamicModerateScale(8),
-               }]}>
-                 <Text style={[styles.errorBadgeText, {
-                   fontSize: dynamicModerateScale(7),
-                 }]}>OFFLINE MODE</Text>
-               </View>
-             ):null}
+            {apiLoading ? (
+              <View style={[styles.loadingBadge, {
+                paddingHorizontal: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+                paddingVertical: isTabletDevice ? dynamicModerateScale(3) : dynamicModerateScale(2),
+                borderRadius: dynamicModerateScale(8),
+              }]}>
+                <ActivityIndicator size="small" color="#ffffff" />
+                <Text style={[styles.loadingBadgeText, {
+                  fontSize: dynamicModerateScale(7),
+                  marginLeft: dynamicModerateScale(3),
+                }]}>Loading...</Text>
+              </View>
+            ) : apiError ? (
+              <View style={[styles.errorBadge, {
+                paddingHorizontal: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+                paddingVertical: isTabletDevice ? dynamicModerateScale(3) : dynamicModerateScale(2),
+                borderRadius: dynamicModerateScale(8),
+              }]}>
+                <Text style={[styles.errorBadgeText, {
+                  fontSize: dynamicModerateScale(7),
+                }]}>OFFLINE MODE</Text>
+              </View>
+            ):null}
            </View>
          </View>
         <View style={[styles.headerSpacer, { width: dynamicModerateScale(36) }]} />
@@ -504,7 +518,7 @@ const SubscriptionScreen: React.FC = () => {
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={[styles.scrollContent, {
-          padding: dynamicModerateScale(8),
+          padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
         }]}
       >
 
@@ -513,14 +527,14 @@ const SubscriptionScreen: React.FC = () => {
           <View style={[styles.currentSubscriptionCard, { 
             backgroundColor: theme.colors.cardBackground,
             marginBottom: dynamicModerateScale(12),
-            padding: dynamicModerateScale(12),
+            padding: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
             borderRadius: dynamicModerateScale(12),
             borderWidth: 1.5,
           }]}>
             <View style={[styles.currentSubscriptionHeader, {
-              marginBottom: dynamicModerateScale(6),
+              marginBottom: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
             }]}>
-              <Icon name="check-circle" size={getIconSize(24)} color="#28a745" />
+              <Icon name="check-circle" size={isTabletDevice ? getIconSize(28) : getIconSize(24)} color="#28a745" />
               <View style={[styles.currentSubscriptionInfo, {
                 marginLeft: dynamicModerateScale(10),
               }]}>
@@ -573,19 +587,19 @@ const SubscriptionScreen: React.FC = () => {
 
         {/* Comparison Cards */}
         <View style={[styles.comparisonContainer, {
-          flexDirection: currentScreenWidth < 600 ? 'column' : 'row',
-          gap: dynamicModerateScale(8),
+          flexDirection: getComparisonCardLayout() as 'row' | 'column',
+          gap: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
           marginBottom: dynamicModerateScale(16),
         }]}>
           {/* Free Plan Card */}
           <View style={[styles.planCard, { 
             backgroundColor: theme.colors.cardBackground,
             borderRadius: dynamicModerateScale(12),
-            padding: dynamicModerateScale(12),
-            minHeight: dynamicModerateScale(220),
+            padding: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
+            minHeight: isTabletDevice ? dynamicModerateScale(280) : dynamicModerateScale(220),
           }]}>
             <View style={[styles.planHeader, {
-              marginBottom: dynamicModerateScale(10),
+              marginBottom: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
             }]}>
               <Text style={[styles.planName, { 
                 color: theme.colors.text,
@@ -620,14 +634,14 @@ const SubscriptionScreen: React.FC = () => {
           <View style={[styles.proCard, { 
             backgroundColor: theme.colors.cardBackground,
             borderRadius: dynamicModerateScale(12),
-            padding: dynamicModerateScale(12),
+            padding: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
             borderWidth: 1.5,
-            minHeight: dynamicModerateScale(220),
+            minHeight: isTabletDevice ? dynamicModerateScale(280) : dynamicModerateScale(220),
           }]}>
             <View style={[styles.proBadge, {
-              top: dynamicModerateScale(-8),
-              paddingHorizontal: dynamicModerateScale(10),
-              paddingVertical: dynamicModerateScale(4),
+              top: isTabletDevice ? dynamicModerateScale(-10) : dynamicModerateScale(-8),
+              paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+              paddingVertical: isTabletDevice ? dynamicModerateScale(5) : dynamicModerateScale(4),
               borderRadius: dynamicModerateScale(10),
             }]}>
               <Text style={[styles.proBadgeText, {
@@ -636,7 +650,7 @@ const SubscriptionScreen: React.FC = () => {
             </View>
             
             <View style={[styles.planHeader, {
-              marginBottom: dynamicModerateScale(10),
+              marginBottom: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
             }]}>
               <Text style={[styles.planName, { 
                 color: theme.colors.text,
@@ -685,96 +699,124 @@ const SubscriptionScreen: React.FC = () => {
         <View style={[styles.benefitsSection, { 
           backgroundColor: theme.colors.cardBackground,
           borderRadius: dynamicModerateScale(12),
-          padding: dynamicModerateScale(12),
+          padding: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
         }]}>
           <Text style={[styles.benefitsTitle, { 
             color: theme.colors.text,
             fontSize: dynamicModerateScale(12),
-            marginBottom: dynamicModerateScale(10),
+            marginBottom: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
           }]}>Why Upgrade to Pro?</Text>
           <View style={[styles.benefitsGrid, {
             gap: dynamicModerateScale(8),
           }]}>
-                         <View style={[styles.benefitItem, { 
-               backgroundColor: theme.colors.inputBackground,
-               width: currentScreenWidth < 600 ? currentScreenWidth - dynamicModerateScale(32) : (currentScreenWidth - dynamicModerateScale(56)) / 2,
-               padding: dynamicModerateScale(10),
-               borderRadius: dynamicModerateScale(10),
-               minHeight: dynamicModerateScale(70),
-             }]}>
-               <Icon name="infinity" size={getIconSize(20)} color="#667eea" />
-               <Text style={[styles.benefitTitle, { 
-                 color: theme.colors.text,
-                 fontSize: dynamicModerateScale(10),
-                 marginTop: dynamicModerateScale(4),
-                 marginBottom: dynamicModerateScale(2),
-               }]}>Unlimited</Text>
-               <Text style={[styles.benefitText, { 
-                 color: theme.colors.textSecondary,
-                 fontSize: dynamicModerateScale(8),
-                 lineHeight: dynamicModerateScale(12),
-               }]}>Create unlimited posters</Text>
-             </View>
-             <View style={[styles.benefitItem, { 
-               backgroundColor: theme.colors.inputBackground,
-               width: currentScreenWidth < 600 ? currentScreenWidth - dynamicModerateScale(32) : (currentScreenWidth - dynamicModerateScale(56)) / 2,
-               padding: dynamicModerateScale(10),
-               borderRadius: dynamicModerateScale(10),
-               minHeight: dynamicModerateScale(70),
-             }]}>
-               <Icon name="star" size={getIconSize(20)} color="#667eea" />
-               <Text style={[styles.benefitTitle, { 
-                 color: theme.colors.text,
-                 fontSize: dynamicModerateScale(10),
-                 marginTop: dynamicModerateScale(4),
-                 marginBottom: dynamicModerateScale(2),
-               }]}>Premium</Text>
-               <Text style={[styles.benefitText, { 
-                 color: theme.colors.textSecondary,
-                 fontSize: dynamicModerateScale(8),
-                 lineHeight: dynamicModerateScale(12),
-               }]}>Access premium templates</Text>
-             </View>
-             <View style={[styles.benefitItem, { 
-               backgroundColor: theme.colors.inputBackground,
-               width: currentScreenWidth < 600 ? currentScreenWidth - dynamicModerateScale(32) : (currentScreenWidth - dynamicModerateScale(56)) / 2,
-               padding: dynamicModerateScale(10),
-               borderRadius: dynamicModerateScale(10),
-               minHeight: dynamicModerateScale(70),
-             }]}>
-               <Icon name="hd" size={getIconSize(20)} color="#667eea" />
-               <Text style={[styles.benefitTitle, { 
-                 color: theme.colors.text,
-                 fontSize: dynamicModerateScale(10),
-                 marginTop: dynamicModerateScale(4),
-                 marginBottom: dynamicModerateScale(2),
-               }]}>HD Quality</Text>
-               <Text style={[styles.benefitText, { 
-                 color: theme.colors.textSecondary,
-                 fontSize: dynamicModerateScale(8),
-                 lineHeight: dynamicModerateScale(12),
-               }]}>High-resolution exports</Text>
-             </View>
-             <View style={[styles.benefitItem, { 
-               backgroundColor: theme.colors.inputBackground,
-               width: currentScreenWidth < 600 ? currentScreenWidth - dynamicModerateScale(32) : (currentScreenWidth - dynamicModerateScale(56)) / 2,
-               padding: dynamicModerateScale(10),
-               borderRadius: dynamicModerateScale(10),
-               minHeight: dynamicModerateScale(70),
-             }]}>
-               <Icon name="support-agent" size={getIconSize(20)} color="#667eea" />
-               <Text style={[styles.benefitTitle, { 
-                 color: theme.colors.text,
-                 fontSize: dynamicModerateScale(10),
-                 marginTop: dynamicModerateScale(4),
-                 marginBottom: dynamicModerateScale(2),
-               }]}>Priority</Text>
-               <Text style={[styles.benefitText, { 
-                 color: theme.colors.textSecondary,
-                 fontSize: dynamicModerateScale(8),
-                 lineHeight: dynamicModerateScale(12),
-               }]}>Priority customer support</Text>
-             </View>
+            <View style={[styles.benefitItem, { 
+              backgroundColor: theme.colors.inputBackground,
+              flex: 1,
+              minWidth: currentScreenWidth < 400 ? '45%' : isTabletDevice ? '22%' : '45%',
+              maxWidth: isTabletDevice ? '22%' : '48%',
+              padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+              borderRadius: dynamicModerateScale(10),
+              minHeight: isTabletDevice ? dynamicModerateScale(90) : dynamicModerateScale(70),
+            }]}>
+              <Icon name="infinity" size={getIconSize(20)} color="#667eea" />
+              <Text style={[styles.benefitTitle, { 
+                color: theme.colors.text,
+                fontSize: dynamicModerateScale(10),
+                marginTop: dynamicModerateScale(4),
+                marginBottom: dynamicModerateScale(2),
+              }]}>Unlimited</Text>
+              <Text 
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                ellipsizeMode="tail"
+                style={[styles.benefitText, { 
+                  color: theme.colors.textSecondary,
+                  fontSize: dynamicModerateScale(7.5),
+                  lineHeight: dynamicModerateScale(12),
+                }]}
+              >Priority support</Text>
+            </View>
+            <View style={[styles.benefitItem, { 
+              backgroundColor: theme.colors.inputBackground,
+              flex: 1,
+              minWidth: currentScreenWidth < 400 ? '45%' : isTabletDevice ? '22%' : '45%',
+              maxWidth: isTabletDevice ? '22%' : '48%',
+              padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+              borderRadius: dynamicModerateScale(10),
+              minHeight: isTabletDevice ? dynamicModerateScale(90) : dynamicModerateScale(70),
+            }]}>
+              <Icon name="star" size={getIconSize(20)} color="#667eea" />
+              <Text style={[styles.benefitTitle, { 
+                color: theme.colors.text,
+                fontSize: dynamicModerateScale(10),
+                marginTop: dynamicModerateScale(4),
+                marginBottom: dynamicModerateScale(2),
+              }]}>Premium</Text>
+              <Text 
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                ellipsizeMode="tail"
+                style={[styles.benefitText, { 
+                  color: theme.colors.textSecondary,
+                  fontSize: dynamicModerateScale(7.5),
+                  lineHeight: dynamicModerateScale(12),
+                }]}
+              >Priority support</Text>
+            </View>
+            <View style={[styles.benefitItem, { 
+              backgroundColor: theme.colors.inputBackground,
+              flex: 1,
+              minWidth: currentScreenWidth < 400 ? '45%' : isTabletDevice ? '22%' : '45%',
+              maxWidth: isTabletDevice ? '22%' : '48%',
+              padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+              borderRadius: dynamicModerateScale(10),
+              minHeight: isTabletDevice ? dynamicModerateScale(90) : dynamicModerateScale(70),
+            }]}>
+              <Icon name="hd" size={getIconSize(20)} color="#667eea" />
+              <Text style={[styles.benefitTitle, { 
+                color: theme.colors.text,
+                fontSize: dynamicModerateScale(10),
+                marginTop: dynamicModerateScale(4),
+                marginBottom: dynamicModerateScale(2),
+              }]}>HD Quality</Text>
+              <Text 
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                ellipsizeMode="tail"
+                style={[styles.benefitText, { 
+                  color: theme.colors.textSecondary,
+                  fontSize: dynamicModerateScale(7.5),
+                  lineHeight: dynamicModerateScale(12),
+                }]}
+              >Priority support</Text>
+            </View>
+            <View style={[styles.benefitItem, { 
+              backgroundColor: theme.colors.inputBackground,
+              flex: 1,
+              minWidth: currentScreenWidth < 400 ? '45%' : isTabletDevice ? '22%' : '45%',
+              maxWidth: isTabletDevice ? '22%' : '48%',
+              padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+              borderRadius: dynamicModerateScale(10),
+              minHeight: isTabletDevice ? dynamicModerateScale(90) : dynamicModerateScale(70),
+            }]}>
+              <Icon name="support-agent" size={getIconSize(20)} color="#667eea" />
+              <Text style={[styles.benefitTitle, { 
+                color: theme.colors.text,
+                fontSize: dynamicModerateScale(10),
+                marginTop: dynamicModerateScale(4),
+                marginBottom: dynamicModerateScale(2),
+              }]}>Priority</Text>
+              <Text 
+                numberOfLines={1}
+                adjustsFontSizeToFit
+                ellipsizeMode="tail"
+                style={[styles.benefitText, { 
+                  color: theme.colors.textSecondary,
+                  fontSize: dynamicModerateScale(7.5),
+                  lineHeight: dynamicModerateScale(12),
+                }]}
+              >Priority support</Text>
+            </View>
           </View>
         </View>
 
@@ -788,16 +830,16 @@ const SubscriptionScreen: React.FC = () => {
          { 
            backgroundColor: theme.colors.cardBackground,
            borderTopColor: theme.colors.border,
-           paddingHorizontal: dynamicModerateScale(8),
-           paddingTop: dynamicModerateScale(8),
-           paddingBottom: Math.max(insets.bottom + dynamicModerateScale(8), dynamicModerateScale(12)),
+           paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+           paddingTop: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+           paddingBottom: Math.max(insets.bottom + dynamicModerateScale(8), isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12)),
            borderTopWidth: 0.5,
          }
        ]}>
         <TouchableOpacity
           style={[styles.upgradeButton, {
             borderRadius: dynamicModerateScale(10),
-            marginBottom: dynamicModerateScale(6),
+            marginBottom: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
           }]}
           onPress={handlePayment}
           disabled={isProcessing || isSubscribed}
@@ -810,13 +852,13 @@ const SubscriptionScreen: React.FC = () => {
                 : ['#667eea', '#764ba2']
             }
             style={[styles.upgradeButtonGradient, {
-              paddingVertical: dynamicModerateScale(10),
-              paddingHorizontal: dynamicModerateScale(12),
+              paddingVertical: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+              paddingHorizontal: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
             }]}
           >
             <Icon 
               name={isSubscribed ? 'check-circle' : 'upgrade'} 
-              size={getIconSize(18)} 
+              size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
               color="#ffffff" 
             />
                          <Text style={[styles.upgradeButtonText, {
@@ -847,14 +889,14 @@ const SubscriptionScreen: React.FC = () => {
         <TouchableOpacity
           style={[styles.transactionHistoryButton, { 
             backgroundColor: theme.colors.inputBackground,
-            paddingHorizontal: dynamicModerateScale(10),
-            paddingVertical: dynamicModerateScale(8),
+            paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+            paddingVertical: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
             borderRadius: dynamicModerateScale(10),
-            marginTop: dynamicModerateScale(6),
+            marginTop: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
           }]}
           onPress={() => navigation.navigate('TransactionHistory' as never)}
         >
-          <Icon name="receipt-long" size={getIconSize(16)} color={theme.colors.text} />
+          <Icon name="receipt-long" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.text} />
           <Text style={[styles.transactionHistoryButtonText, { 
             color: theme.colors.text,
             fontSize: dynamicModerateScale(9),
@@ -862,7 +904,7 @@ const SubscriptionScreen: React.FC = () => {
           }]}>
             View Transaction History ({transactionStats.total})
           </Text>
-          <Icon name="chevron-right" size={getIconSize(16)} color={theme.colors.textSecondary} />
+          <Icon name="chevron-right" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -1038,7 +1080,7 @@ const styles = StyleSheet.create({
   benefitsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
   },
   benefitItem: {
     alignItems: 'center',

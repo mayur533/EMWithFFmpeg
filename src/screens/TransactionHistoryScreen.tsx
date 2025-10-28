@@ -19,6 +19,9 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import { useTheme } from '../context/ThemeContext';
 import { Transaction } from '../services/transactionHistory';
 
+// Compact spacing multiplier to reduce all spacing (matching HomeScreen)
+const COMPACT_MULTIPLIER = 0.5;
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Responsive design helpers
@@ -26,23 +29,28 @@ const isSmallScreen = screenWidth < 375;
 const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
 const isLargeScreen = screenWidth >= 414;
 
-// Responsive spacing and sizing
+// Responsive helper functions (matching HomeScreen)
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Responsive spacing and sizing (Compact - reduced by 50%)
 const responsiveSpacing = {
-  xs: isSmallScreen ? 8 : isMediumScreen ? 12 : 16,
-  sm: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
-  md: isSmallScreen ? 16 : isMediumScreen ? 20 : 24,
-  lg: isSmallScreen ? 20 : isMediumScreen ? 24 : 32,
-  xl: isSmallScreen ? 24 : isMediumScreen ? 32 : 40,
+  xs: moderateScale(isSmallScreen ? 4 : isMediumScreen ? 6 : 8),
+  sm: moderateScale(isSmallScreen ? 6 : isMediumScreen ? 8 : 10),
+  md: moderateScale(isSmallScreen ? 8 : isMediumScreen ? 10 : 12),
+  lg: moderateScale(isSmallScreen ? 10 : isMediumScreen ? 12 : 16),
+  xl: moderateScale(isSmallScreen ? 12 : isMediumScreen ? 16 : 20),
 };
 
 const responsiveFontSize = {
-  xs: isSmallScreen ? 10 : isMediumScreen ? 12 : 14,
-  sm: isSmallScreen ? 12 : isMediumScreen ? 14 : 16,
-  md: isSmallScreen ? 14 : isMediumScreen ? 16 : 18,
-  lg: isSmallScreen ? 16 : isMediumScreen ? 18 : 20,
-  xl: isSmallScreen ? 18 : isMediumScreen ? 20 : 22,
-  xxl: isSmallScreen ? 20 : isMediumScreen ? 22 : 24,
-  xxxl: isSmallScreen ? 24 : isMediumScreen ? 28 : 32,
+  xs: moderateScale(isSmallScreen ? 7 : isMediumScreen ? 8 : 9),
+  sm: moderateScale(isSmallScreen ? 8 : isMediumScreen ? 9 : 10),
+  md: moderateScale(isSmallScreen ? 9 : isMediumScreen ? 10 : 11),
+  lg: moderateScale(isSmallScreen ? 10 : isMediumScreen ? 11 : 12),
+  xl: moderateScale(isSmallScreen ? 11 : isMediumScreen ? 12 : 13),
+  xxl: moderateScale(isSmallScreen ? 12 : isMediumScreen ? 13 : 14),
+  xxxl: moderateScale(isSmallScreen ? 14 : isMediumScreen ? 16 : 18),
 };
 
 type FilterType = 'all' | 'success' | 'failed' | 'pending';
@@ -52,6 +60,61 @@ const TransactionHistoryScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { transactions, transactionStats, refreshTransactions } = useSubscription();
   const { theme } = useTheme();
+  
+  // Dynamic dimensions for responsive layout (matching HomeScreen)
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  // Update dimensions on screen rotation/resize
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const currentScreenWidth = dimensions.width;
+  const currentScreenHeight = dimensions.height;
+  
+  // Dynamic responsive scaling functions
+  const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
+  const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
+  // Responsive icon sizes (compact - 60% of original)
+  const getIconSize = (baseSize: number) => {
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+  };
+  
+  // Device size detection (matching HomeScreen)
+  const isUltraSmallScreen = currentScreenWidth < 350;
+  const isSmallScreenDevice = currentScreenWidth < 400;
+  const isMediumScreenDevice = currentScreenWidth >= 400 && currentScreenWidth < 768;
+  const isTabletDevice = currentScreenWidth >= 768;
+  const isLandscapeMode = currentScreenWidth > currentScreenHeight;
+  
+  // Adaptive grid columns for stats
+  const getStatsColumns = () => {
+    if (isTabletDevice) return 6; // All 6 stats in one row on tablets
+    if (isMediumScreenDevice) return 3; // 3 columns on medium screens
+    if (isSmallScreenDevice) return 2; // 2 columns on small screens
+    return 2; // 2 columns on ultra-small screens
+  };
+  
+  const statsColumns = getStatsColumns();
+  
+  // Calculate stat item width based on columns
+  const getStatItemWidth = () => {
+    const horizontalPadding = isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8);
+    const containerPadding = isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12);
+    const containerWidth = currentScreenWidth - (horizontalPadding * 2) - (containerPadding * 2);
+    const gap = dynamicModerateScale(6);
+    const totalGaps = (statsColumns - 1) * gap;
+    return (containerWidth - totalGaps) / statsColumns;
+  };
   
   const [refreshing, setRefreshing] = useState(false);
   const [filter, setFilter] = useState<FilterType>('all');
@@ -139,44 +202,100 @@ const TransactionHistoryScreen: React.FC = () => {
 
   // Render transaction item
   const renderTransactionItem = ({ item }: { item: Transaction }) => (
-    <View style={[styles.transactionCard, { backgroundColor: theme.colors.cardBackground }]}>
-      <View style={styles.transactionHeader}>
+    <View style={[styles.transactionCard, { 
+      backgroundColor: theme.colors.cardBackground,
+      borderRadius: dynamicModerateScale(12),
+      padding: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
+      marginBottom: dynamicModerateScale(8),
+    }]}>
+      <View style={[styles.transactionHeader, {
+        marginBottom: dynamicModerateScale(8),
+      }]}>
         <View style={styles.transactionInfo}>
-          <Text style={[styles.transactionPlan, { color: theme.colors.text }]}>
+          <Text style={[styles.transactionPlan, { 
+            color: theme.colors.text,
+            fontSize: isTabletDevice ? dynamicModerateScale(11) : dynamicModerateScale(10),
+            marginBottom: dynamicModerateScale(2),
+          }]}>
             {item.planName}
           </Text>
-          <Text style={[styles.transactionDate, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.transactionDate, { 
+            color: theme.colors.textSecondary,
+            fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+          }]}>
             {formatDate(item.timestamp)}
           </Text>
         </View>
         <View style={styles.transactionAmount}>
-          <Text style={[styles.amountText, { color: theme.colors.text }]}>
+          <Text style={[styles.amountText, { 
+            color: theme.colors.text,
+            fontSize: isTabletDevice ? dynamicModerateScale(13) : dynamicModerateScale(12),
+            marginBottom: dynamicModerateScale(4),
+          }]}>
             ₹{item.amount}
           </Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusColor(item.status) }]}>
-            <Icon name={getStatusIcon(item.status)} size={16} color="#ffffff" />
-            <Text style={styles.statusText}>{item.status.toUpperCase()}</Text>
+          <View style={[styles.statusBadge, { 
+            backgroundColor: getStatusColor(item.status),
+            paddingHorizontal: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
+            paddingVertical: isTabletDevice ? dynamicModerateScale(3) : dynamicModerateScale(2),
+            borderRadius: dynamicModerateScale(8),
+            gap: dynamicModerateScale(2),
+          }]}>
+            <Icon name={getStatusIcon(item.status)} size={isTabletDevice ? getIconSize(14) : getIconSize(12)} color="#ffffff" />
+            <Text style={[styles.statusText, {
+              fontSize: isTabletDevice ? dynamicModerateScale(6.5) : dynamicModerateScale(6),
+            }]}>{item.status.toUpperCase()}</Text>
           </View>
         </View>
       </View>
       
-      <View style={styles.transactionDetails}>
+      <View style={[styles.transactionDetails, {
+        gap: isTabletDevice ? dynamicModerateScale(5) : dynamicModerateScale(4),
+      }]}>
         <View style={styles.detailRow}>
-          <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Payment ID:</Text>
-          <Text style={[styles.detailValue, { color: theme.colors.text }]}>{item.paymentId}</Text>
+          <Text style={[styles.detailLabel, { 
+            color: theme.colors.textSecondary,
+            fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+          }]}>Payment ID:</Text>
+          <Text style={[styles.detailValue, { 
+            color: theme.colors.text,
+            fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+            marginLeft: dynamicModerateScale(6),
+          }]}>{item.paymentId}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Order ID:</Text>
-          <Text style={[styles.detailValue, { color: theme.colors.text }]}>{item.orderId}</Text>
+          <Text style={[styles.detailLabel, { 
+            color: theme.colors.textSecondary,
+            fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+          }]}>Order ID:</Text>
+          <Text style={[styles.detailValue, { 
+            color: theme.colors.text,
+            fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+            marginLeft: dynamicModerateScale(6),
+          }]}>{item.orderId}</Text>
         </View>
         <View style={styles.detailRow}>
-          <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Method:</Text>
-          <Text style={[styles.detailValue, { color: theme.colors.text }]}>{item.method}</Text>
+          <Text style={[styles.detailLabel, { 
+            color: theme.colors.textSecondary,
+            fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+          }]}>Method:</Text>
+          <Text style={[styles.detailValue, { 
+            color: theme.colors.text,
+            fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+            marginLeft: dynamicModerateScale(6),
+          }]}>{item.method}</Text>
         </View>
         {item.metadata?.email && (
           <View style={styles.detailRow}>
-            <Text style={[styles.detailLabel, { color: theme.colors.textSecondary }]}>Email:</Text>
-            <Text style={[styles.detailValue, { color: theme.colors.text }]}>{item.metadata.email}</Text>
+            <Text style={[styles.detailLabel, { 
+              color: theme.colors.textSecondary,
+              fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+            }]}>Email:</Text>
+            <Text style={[styles.detailValue, { 
+              color: theme.colors.text,
+              fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+              marginLeft: dynamicModerateScale(6),
+            }]}>{item.metadata.email}</Text>
           </View>
         )}
       </View>
@@ -185,7 +304,10 @@ const TransactionHistoryScreen: React.FC = () => {
 
   // Render filter chips
   const renderFilterChips = () => (
-    <View style={styles.filterContainer}>
+    <View style={[styles.filterContainer, {
+      paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+      marginBottom: dynamicModerateScale(8),
+    }]}>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
         {(['all', 'success', 'failed', 'pending'] as FilterType[]).map((filterType) => (
           <TouchableOpacity
@@ -193,13 +315,22 @@ const TransactionHistoryScreen: React.FC = () => {
             style={[
               styles.filterChip,
               filter === filterType && styles.filterChipActive,
-              { backgroundColor: filter === filterType ? '#667eea' : theme.colors.inputBackground }
+              { 
+                backgroundColor: filter === filterType ? '#667eea' : theme.colors.inputBackground,
+                paddingHorizontal: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(10),
+                paddingVertical: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(5),
+                borderRadius: dynamicModerateScale(10),
+                marginRight: dynamicModerateScale(6),
+              }
             ]}
             onPress={() => setFilter(filterType)}
           >
             <Text style={[
               styles.filterChipText,
-              { color: filter === filterType ? '#ffffff' : theme.colors.text }
+              { 
+                color: filter === filterType ? '#ffffff' : theme.colors.text,
+                fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+              }
             ]}>
               {filterType.charAt(0).toUpperCase() + filterType.slice(1)}
             </Text>
@@ -211,45 +342,143 @@ const TransactionHistoryScreen: React.FC = () => {
 
   // Render statistics
   const renderStats = () => (
-    <View style={[styles.statsContainer, { backgroundColor: theme.colors.cardBackground }]}>
-      <View style={styles.statsHeader}>
-        <Text style={[styles.statsTitle, { color: theme.colors.text }]}>Transaction Statistics</Text>
+    <View style={[styles.statsContainer, { 
+      backgroundColor: theme.colors.cardBackground,
+      marginHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+      marginVertical: dynamicModerateScale(8),
+      borderRadius: dynamicModerateScale(12),
+      padding: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
+    }]}>
+      <View style={[styles.statsHeader, {
+        marginBottom: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+      }]}>
+        <Text style={[styles.statsTitle, { 
+          color: theme.colors.text,
+          fontSize: isTabletDevice ? dynamicModerateScale(11) : dynamicModerateScale(10),
+        }]}>Transaction Statistics</Text>
         <TouchableOpacity onPress={() => setShowStats(!showStats)}>
           <Icon 
             name={showStats ? 'expand-less' : 'expand-more'} 
-            size={24} 
+            size={isTabletDevice ? getIconSize(24) : getIconSize(20)} 
             color={theme.colors.text} 
           />
         </TouchableOpacity>
       </View>
       
       {showStats && (
-        <View style={styles.statsGrid}>
-          <View style={[styles.statItem, { backgroundColor: theme.colors.inputBackground }]}>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>{transactionStats.total}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Total</Text>
+        <View style={[styles.statsGrid, {
+          gap: dynamicModerateScale(6),
+          justifyContent: 'flex-start',
+        }]}>
+          <View style={[styles.statItem, { 
+            width: getStatItemWidth(),
+            backgroundColor: theme.colors.inputBackground,
+            padding: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+            borderRadius: dynamicModerateScale(8),
+            minHeight: isTabletDevice ? dynamicModerateScale(60) : dynamicModerateScale(55),
+            justifyContent: 'center',
+          }]}>
+            <Text style={[styles.statValue, { 
+              color: theme.colors.text,
+              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(2),
+            }]}>{transactionStats.total}</Text>
+            <Text style={[styles.statLabel, { 
+              color: theme.colors.textSecondary,
+              fontSize: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(6.5),
+            }]}>Total</Text>
           </View>
-          <View style={[styles.statItem, { backgroundColor: theme.colors.inputBackground }]}>
-            <Text style={[styles.statValue, { color: '#28a745' }]}>{transactionStats.successful}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Successful</Text>
+          <View style={[styles.statItem, { 
+            width: getStatItemWidth(),
+            backgroundColor: theme.colors.inputBackground,
+            padding: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+            borderRadius: dynamicModerateScale(8),
+            minHeight: isTabletDevice ? dynamicModerateScale(60) : dynamicModerateScale(55),
+            justifyContent: 'center',
+          }]}>
+            <Text style={[styles.statValue, { 
+              color: '#28a745',
+              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(2),
+            }]}>{transactionStats.successful}</Text>
+            <Text style={[styles.statLabel, { 
+              color: theme.colors.textSecondary,
+              fontSize: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(6.5),
+            }]}>Successful</Text>
           </View>
-          <View style={[styles.statItem, { backgroundColor: theme.colors.inputBackground }]}>
-            <Text style={[styles.statValue, { color: '#dc3545' }]}>{transactionStats.failed}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Failed</Text>
+          <View style={[styles.statItem, { 
+            width: getStatItemWidth(),
+            backgroundColor: theme.colors.inputBackground,
+            padding: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+            borderRadius: dynamicModerateScale(8),
+            minHeight: isTabletDevice ? dynamicModerateScale(60) : dynamicModerateScale(55),
+            justifyContent: 'center',
+          }]}>
+            <Text style={[styles.statValue, { 
+              color: '#dc3545',
+              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(2),
+            }]}>{transactionStats.failed}</Text>
+            <Text style={[styles.statLabel, { 
+              color: theme.colors.textSecondary,
+              fontSize: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(6.5),
+            }]}>Failed</Text>
           </View>
-          <View style={[styles.statItem, { backgroundColor: theme.colors.inputBackground }]}>
-            <Text style={[styles.statValue, { color: '#ffc107' }]}>{transactionStats.pending}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Pending</Text>
+          <View style={[styles.statItem, { 
+            width: getStatItemWidth(),
+            backgroundColor: theme.colors.inputBackground,
+            padding: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+            borderRadius: dynamicModerateScale(8),
+            minHeight: isTabletDevice ? dynamicModerateScale(60) : dynamicModerateScale(55),
+            justifyContent: 'center',
+          }]}>
+            <Text style={[styles.statValue, { 
+              color: '#ffc107',
+              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(2),
+            }]}>{transactionStats.pending}</Text>
+            <Text style={[styles.statLabel, { 
+              color: theme.colors.textSecondary,
+              fontSize: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(6.5),
+            }]}>Pending</Text>
           </View>
-          <View style={[styles.statItem, { backgroundColor: theme.colors.inputBackground }]}>
-            <Text style={[styles.statValue, { color: '#667eea' }]}>₹{transactionStats.totalAmount}</Text>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Total Amount</Text>
+          <View style={[styles.statItem, { 
+            width: getStatItemWidth(),
+            backgroundColor: theme.colors.inputBackground,
+            padding: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+            borderRadius: dynamicModerateScale(8),
+            minHeight: isTabletDevice ? dynamicModerateScale(60) : dynamicModerateScale(55),
+            justifyContent: 'center',
+          }]}>
+            <Text style={[styles.statValue, { 
+              color: '#667eea',
+              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(2),
+            }]}>₹{transactionStats.totalAmount}</Text>
+            <Text style={[styles.statLabel, { 
+              color: theme.colors.textSecondary,
+              fontSize: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(6.5),
+            }]}>Total Amount</Text>
           </View>
-          <View style={[styles.statItem, { backgroundColor: theme.colors.inputBackground }]}>
-            <Text style={[styles.statValue, { color: theme.colors.text }]}>
+          <View style={[styles.statItem, { 
+            width: getStatItemWidth(),
+            backgroundColor: theme.colors.inputBackground,
+            padding: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(8),
+            borderRadius: dynamicModerateScale(8),
+            minHeight: isTabletDevice ? dynamicModerateScale(60) : dynamicModerateScale(55),
+            justifyContent: 'center',
+          }]}>
+            <Text style={[styles.statValue, { 
+              color: theme.colors.text,
+              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              marginBottom: dynamicModerateScale(2),
+            }]}>
               {(transactionStats.quarterlySubscriptions || 0) + (transactionStats.yearlySubscriptions || 0)}
             </Text>
-            <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Active Subscriptions</Text>
+            <Text style={[styles.statLabel, { 
+              color: theme.colors.textSecondary,
+              fontSize: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(6.5),
+            }]}>Active Subscriptions</Text>
           </View>
         </View>
       )}
@@ -267,25 +496,40 @@ const TransactionHistoryScreen: React.FC = () => {
       {/* Header */}
       <LinearGradient
         colors={['#667eea', '#764ba2']}
-        style={[styles.header, { paddingTop: insets.top + responsiveSpacing.sm }]}
+        style={[styles.header, { 
+          paddingTop: insets.top + (isTabletDevice ? dynamicModerateScale(4) : dynamicModerateScale(2)),
+          paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+          paddingBottom: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
+        }]}
       >
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, {
+            padding: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
+            borderRadius: dynamicModerateScale(10),
+          }]}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={24} color="#ffffff" />
+          <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#ffffff" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Transaction History</Text>
-          <Text style={styles.headerSubtitle}>
-            {filteredTransactions.length} transactions found
+          <Text style={[styles.headerTitle, {
+            fontSize: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12),
+          }]}>Transaction History</Text>
+          <Text style={[styles.headerSubtitle, {
+            fontSize: isTabletDevice ? dynamicModerateScale(8.5) : dynamicModerateScale(7.5),
+            marginTop: dynamicModerateScale(1),
+          }]}>
+            {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} found
           </Text>
         </View>
         <TouchableOpacity
-          style={styles.refreshButton}
+          style={[styles.refreshButton, {
+            padding: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
+            borderRadius: dynamicModerateScale(10),
+          }]}
           onPress={onRefresh}
         >
-          <Icon name="refresh" size={24} color="#ffffff" />
+          <Icon name="refresh" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#ffffff" />
         </TouchableOpacity>
       </LinearGradient>
 
@@ -303,14 +547,32 @@ const TransactionHistoryScreen: React.FC = () => {
         {renderFilterChips()}
 
         {/* Transactions List */}
-        <View style={styles.transactionsContainer}>
+        <View style={[styles.transactionsContainer, {
+          paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
+        }]}>
           {filteredTransactions.length === 0 ? (
-            <View style={styles.emptyState}>
-              <Icon name="receipt-long" size={64} color={theme.colors.textSecondary} />
-              <Text style={[styles.emptyStateTitle, { color: theme.colors.text }]}>
+            <View style={[styles.emptyState, {
+              paddingVertical: isTabletDevice ? dynamicModerateScale(80) : dynamicModerateScale(50),
+            }]}>
+              <Icon 
+                name="receipt-long" 
+                size={isTabletDevice ? getIconSize(64) : getIconSize(48)} 
+                color={theme.colors.textSecondary} 
+              />
+              <Text style={[styles.emptyStateTitle, { 
+                color: theme.colors.text,
+                fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+                marginTop: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(10),
+                marginBottom: dynamicModerateScale(4),
+              }]}>
                 No transactions found
               </Text>
-              <Text style={[styles.emptyStateSubtitle, { color: theme.colors.textSecondary }]}>
+              <Text style={[styles.emptyStateSubtitle, { 
+                color: theme.colors.textSecondary,
+                fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+                marginBottom: dynamicModerateScale(12),
+                paddingHorizontal: dynamicModerateScale(20),
+              }]}>
                 {filter === 'all' 
                   ? 'You haven\'t made any transactions yet.' 
                   : `No ${filter} transactions found.`
@@ -324,7 +586,9 @@ const TransactionHistoryScreen: React.FC = () => {
               keyExtractor={(item) => item.id}
               scrollEnabled={false}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={styles.transactionsList}
+              contentContainerStyle={[styles.transactionsList, {
+                gap: 0, // Already handled in renderTransactionItem
+              }]}
             />
           )}
         </View>
@@ -343,20 +607,14 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: responsiveSpacing.md,
-    paddingBottom: responsiveSpacing.sm,
     borderBottomWidth: 0,
     zIndex: 1000,
     elevation: 10,
   },
   backButton: {
-    padding: 10,
-    borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   refreshButton: {
-    padding: 10,
-    borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   headerContent: {
@@ -364,131 +622,100 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: responsiveFontSize.xxl,
     fontWeight: '700',
     color: '#ffffff',
   },
   headerSubtitle: {
-    fontSize: responsiveFontSize.sm,
     color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: 2,
   },
   scrollView: {
     flex: 1,
   },
   statsContainer: {
-    margin: responsiveSpacing.md,
-    borderRadius: responsiveSpacing.lg,
-    padding: responsiveSpacing.lg,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: moderateScale(2) },
+    shadowOpacity: 0.06,
+    shadowRadius: moderateScale(4),
+    elevation: 2,
   },
   statsHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: responsiveSpacing.md,
   },
   statsTitle: {
-    fontSize: responsiveFontSize.lg,
     fontWeight: '700',
   },
   statsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: responsiveSpacing.sm,
   },
   statItem: {
-    flex: 1,
-    minWidth: (screenWidth - (responsiveSpacing.md * 4) - (responsiveSpacing.sm * 2)) / 3,
     alignItems: 'center',
-    padding: responsiveSpacing.md,
-    borderRadius: responsiveSpacing.md,
+    // Width calculated dynamically based on columns
   },
   statValue: {
-    fontSize: responsiveFontSize.xl,
     fontWeight: '700',
-    marginBottom: 4,
   },
   statLabel: {
-    fontSize: responsiveFontSize.xs,
     textAlign: 'center',
+    lineHeight: moderateScale(10),
   },
   filterContainer: {
-    paddingHorizontal: responsiveSpacing.md,
-    marginBottom: responsiveSpacing.md,
+    // Inline styles used
   },
   filterChip: {
-    paddingHorizontal: responsiveSpacing.md,
-    paddingVertical: responsiveSpacing.sm,
-    borderRadius: responsiveSpacing.md,
-    marginRight: responsiveSpacing.sm,
+    // Inline styles used
   },
   filterChipActive: {
     backgroundColor: '#667eea',
   },
   filterChipText: {
-    fontSize: responsiveFontSize.sm,
     fontWeight: '600',
   },
   transactionsContainer: {
-    paddingHorizontal: responsiveSpacing.md,
+    // Inline styles used
   },
   transactionsList: {
-    gap: responsiveSpacing.md,
+    // Inline styles used
   },
   transactionCard: {
-    borderRadius: responsiveSpacing.lg,
-    padding: responsiveSpacing.lg,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: moderateScale(2) },
+    shadowOpacity: 0.06,
+    shadowRadius: moderateScale(4),
+    elevation: 2,
   },
   transactionHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: responsiveSpacing.md,
   },
   transactionInfo: {
     flex: 1,
   },
   transactionPlan: {
-    fontSize: responsiveFontSize.lg,
     fontWeight: '700',
-    marginBottom: 4,
   },
   transactionDate: {
-    fontSize: responsiveFontSize.sm,
+    // Inline styles used
   },
   transactionAmount: {
     alignItems: 'flex-end',
   },
   amountText: {
-    fontSize: responsiveFontSize.xl,
     fontWeight: '700',
-    marginBottom: responsiveSpacing.xs,
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: responsiveSpacing.sm,
-    paddingVertical: 4,
-    borderRadius: responsiveSpacing.sm,
-    gap: 4,
   },
   statusText: {
-    fontSize: responsiveFontSize.xs,
     fontWeight: '700',
     color: '#ffffff',
   },
   transactionDetails: {
-    gap: responsiveSpacing.xs,
+    // Inline styles used
   },
   detailRow: {
     flexDirection: 'row',
@@ -496,29 +723,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   detailLabel: {
-    fontSize: responsiveFontSize.sm,
     fontWeight: '500',
   },
   detailValue: {
-    fontSize: responsiveFontSize.sm,
     flex: 1,
     textAlign: 'right',
-    marginLeft: responsiveSpacing.sm,
   },
   emptyState: {
     alignItems: 'center',
-    paddingVertical: responsiveSpacing.xl * 2,
   },
   emptyStateTitle: {
-    fontSize: responsiveFontSize.lg,
     fontWeight: '700',
-    marginTop: responsiveSpacing.md,
-    marginBottom: responsiveSpacing.xs,
   },
   emptyStateSubtitle: {
-    fontSize: responsiveFontSize.sm,
     textAlign: 'center',
-    marginBottom: responsiveSpacing.lg,
   },
 });
 
