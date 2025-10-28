@@ -53,6 +53,14 @@ import { useTheme } from '../context/ThemeContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Compact spacing multiplier to reduce all spacing (50% reduction)
+const COMPACT_MULTIPLIER = 0.5;
+
+// Responsive scaling functions for static styles
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
 // Enhanced responsive design helpers with more granular breakpoints
 const isUltraSmallScreen = screenWidth < 360;
 const isSmallScreen = screenWidth >= 360 && screenWidth < 375;
@@ -68,27 +76,27 @@ const isLandscape = screenWidth > screenHeight;
 const isTablet = Math.min(screenWidth, screenHeight) >= 768;
 const isPhone = !isTablet;
 
-// Enhanced responsive spacing and sizing system
+// Enhanced responsive spacing and sizing system (with COMPACT_MULTIPLIER applied)
 const responsiveSpacing = {
-  xs: isUltraSmallScreen ? 2 : isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : 10,
-  sm: isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12,
-  md: isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14,
-  lg: isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16,
-  xl: isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : 18,
-  xxl: isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : 20,
-  xxxl: isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 24,
+  xs: Math.max(1, (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : 10) * COMPACT_MULTIPLIER),
+  sm: Math.max(2, (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12) * COMPACT_MULTIPLIER),
+  md: Math.max(3, (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14) * COMPACT_MULTIPLIER),
+  lg: Math.max(4, (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16) * COMPACT_MULTIPLIER),
+  xl: Math.max(5, (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : 18) * COMPACT_MULTIPLIER),
+  xxl: Math.max(6, (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : 20) * COMPACT_MULTIPLIER),
+  xxxl: Math.max(7, (isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 24) * COMPACT_MULTIPLIER),
 };
 
 const responsiveFontSize = {
-  xs: isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12,
-  sm: isUltraSmallScreen ? 9 : isSmallScreen ? 10 : isMediumScreen ? 11 : isLargeScreen ? 12 : 13,
-  md: isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14,
-  lg: isUltraSmallScreen ? 11 : isSmallScreen ? 12 : isMediumScreen ? 13 : isLargeScreen ? 14 : 15,
-  xl: isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16,
-  xxl: isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : isLargeScreen ? 16 : 17,
-  xxxl: isUltraSmallScreen ? 14 : isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : 18,
-  xxxxl: isUltraSmallScreen ? 15 : isSmallScreen ? 16 : isMediumScreen ? 17 : isLargeScreen ? 18 : 20,
-  xxxxxl: isUltraSmallScreen ? 16 : isSmallScreen ? 17 : isMediumScreen ? 18 : isLargeScreen ? 19 : 22,
+  xs: Math.max(7, (isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12) * 0.85),
+  sm: Math.max(8, (isUltraSmallScreen ? 9 : isSmallScreen ? 10 : isMediumScreen ? 11 : isLargeScreen ? 12 : 13) * 0.85),
+  md: Math.max(9, (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14) * 0.85),
+  lg: Math.max(10, (isUltraSmallScreen ? 11 : isSmallScreen ? 12 : isMediumScreen ? 13 : isLargeScreen ? 14 : 15) * 0.85),
+  xl: Math.max(11, (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16) * 0.85),
+  xxl: Math.max(12, (isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : isLargeScreen ? 16 : 17) * 0.85),
+  xxxl: Math.max(13, (isUltraSmallScreen ? 14 : isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : 18) * 0.85),
+  xxxxl: Math.max(14, (isUltraSmallScreen ? 15 : isSmallScreen ? 16 : isMediumScreen ? 17 : isLargeScreen ? 18 : 20) * 0.85),
+  xxxxxl: Math.max(15, (isUltraSmallScreen ? 16 : isSmallScreen ? 17 : isMediumScreen ? 18 : isLargeScreen ? 19 : 22) * 0.85),
 };
 
 // Enhanced responsive dimensions calculation with orientation support
@@ -140,99 +148,99 @@ const getResponsiveDimensions = (insets: any) => {
   };
 };
 
-// Enhanced responsive helpers with orientation and device type support
+// Enhanced responsive helpers with orientation and device type support (compact versions)
 const getResponsiveSectionHeight = () => {
   if (isLandscape) {
-    return isTablet ? 100 : 80;
+    return (isTablet ? 100 : 80) * COMPACT_MULTIPLIER;
   }
-  return isUltraSmallScreen ? 50 : isSmallScreen ? 65 : isMediumScreen ? 80 : isLargeScreen ? 100 : 120;
+  return (isUltraSmallScreen ? 50 : isSmallScreen ? 65 : isMediumScreen ? 80 : isLargeScreen ? 100 : 120) * COMPACT_MULTIPLIER;
 };
 
 const getResponsiveButtonSize = () => {
   if (isLandscape) {
-    return isTablet ? 60 : 45;
+    return (isTablet ? 60 : 45) * 0.7;
   }
-  return isUltraSmallScreen ? 40 : isSmallScreen ? 50 : isMediumScreen ? 60 : isLargeScreen ? 70 : 80;
+  return (isUltraSmallScreen ? 40 : isSmallScreen ? 50 : isMediumScreen ? 60 : isLargeScreen ? 70 : 80) * 0.7;
 };
 
 const getResponsiveIconSize = () => {
   if (isLandscape) {
-    return isTablet ? 20 : 16;
+    return Math.max(12, (isTablet ? 20 : 16) * 0.8);
   }
-  return isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 22;
+  return Math.max(11, (isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 22) * 0.8);
 };
 
 const getResponsiveSectionPadding = () => {
   if (isLandscape) {
-    return isTablet ? 16 : 8;
+    return Math.max(4, (isTablet ? 16 : 8) * COMPACT_MULTIPLIER);
   }
-  return isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12;
+  return Math.max(2, (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12) * COMPACT_MULTIPLIER);
 };
 
 const getResponsiveSectionMargin = () => {
   if (isLandscape) {
-    return isTablet ? 20 : 10;
+    return Math.max(5, (isTablet ? 20 : 10) * COMPACT_MULTIPLIER);
   }
-  return isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 12 : 15;
+  return Math.max(2, (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 12 : 15) * COMPACT_MULTIPLIER);
 };
 
-// Enhanced compact mode helpers
+// Enhanced compact mode helpers (with compact multiplier)
 const getUltraCompactSpacing = () => {
   if (isLandscape) {
-    return isTablet ? 12 : 6;
+    return Math.max(3, (isTablet ? 12 : 6) * COMPACT_MULTIPLIER);
   }
-  return isUltraSmallScreen ? 2 : isSmallScreen ? 4 : getResponsiveSectionPadding();
+  return Math.max(1, (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : getResponsiveSectionPadding()) * COMPACT_MULTIPLIER);
 };
 
 const getUltraCompactMargin = () => {
   if (isLandscape) {
-    return isTablet ? 16 : 8;
+    return Math.max(4, (isTablet ? 16 : 8) * COMPACT_MULTIPLIER);
   }
-  return isUltraSmallScreen ? 2 : isSmallScreen ? 4 : getResponsiveSectionMargin();
+  return Math.max(1, (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : getResponsiveSectionMargin()) * COMPACT_MULTIPLIER);
 };
 
-// Enhanced header-specific responsive helpers
+// Enhanced header-specific responsive helpers (compact versions)
 const getHeaderButtonSize = () => {
   if (isLandscape) {
-    return isTablet ? 44 : 32;
+    return Math.max(24, (isTablet ? 44 : 32) * 0.7);
   }
-  return isUltraSmallScreen ? 28 : isSmallScreen ? 32 : isMediumScreen ? 36 : isLargeScreen ? 40 : 44;
+  return Math.max(20, (isUltraSmallScreen ? 28 : isSmallScreen ? 32 : isMediumScreen ? 36 : isLargeScreen ? 40 : 44) * 0.7);
 };
 
 const getHeaderPadding = () => {
   if (isLandscape) {
-    return isTablet ? 12 : 6;
+    return Math.max(3, (isTablet ? 12 : 6) * 0.6);
   }
-  return isUltraSmallScreen ? 2 : isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : 10;
+  return Math.max(1, (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : 10) * 0.6);
 };
 
 const getHeaderTitleSize = () => {
   if (isLandscape) {
-    return isTablet ? 20 : 16;
+    return Math.max(14, (isTablet ? 20 : 16) * 0.85);
   }
-  return isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 22;
+  return Math.max(12, (isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 22) * 0.85);
 };
 
 const getHeaderSubtitleSize = () => {
   if (isLandscape) {
-    return isTablet ? 14 : 12;
+    return Math.max(10, (isTablet ? 14 : 12) * 0.85);
   }
-  return isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14;
+  return Math.max(9, (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14) * 0.85);
 };
 
-// Enhanced toolbar-specific responsive helpers (for bottom toolbar)
+// Enhanced toolbar-specific responsive helpers (for bottom toolbar - compact versions)
 const getToolbarButtonSize = () => {
   if (isLandscape) {
-    return isTablet ? 80 : 70;
+    return Math.max(49, (isTablet ? 80 : 70) * 0.7);
   }
-  return isUltraSmallScreen ? 60 : isSmallScreen ? 65 : isMediumScreen ? 70 : isLargeScreen ? 75 : 80;
+  return Math.max(42, (isUltraSmallScreen ? 60 : isSmallScreen ? 65 : isMediumScreen ? 70 : isLargeScreen ? 75 : 80) * 0.7);
 };
 
 const getToolbarButtonTextSize = () => {
   if (isLandscape) {
-    return isTablet ? 12 : 10;
+    return Math.max(8, (isTablet ? 12 : 10) * 0.85);
   }
-  return isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12;
+  return Math.max(7, (isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12) * 0.85);
 };
 
 interface Layer {
@@ -274,22 +282,33 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const { isSubscribed, checkPremiumAccess, refreshSubscription } = useSubscription();
   const { isDarkMode, theme } = useTheme();
   
-  // State for orientation changes
-  const [screenData, setScreenData] = useState(Dimensions.get('window'));
+  // State for dynamic dimensions to handle orientation changes
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
   
-  // Listen for orientation changes
+  // Listen for orientation changes and update dimensions
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
-      setScreenData(window);
+      setDimensions({ width: window.width, height: window.height });
     });
     
     return () => subscription?.remove();
   }, []);
   
+  const currentScreenWidth = dimensions.width;
+  const currentScreenHeight = dimensions.height;
+  
+  // Dynamic responsive scaling functions (for theme styles that need to update on orientation change)
+  const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
+  const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
   // Get responsive dimensions
   const { canvasWidth, canvasHeight, availableWidth, availableHeight } = getResponsiveDimensions(insets);
 
-  // Create theme-aware styles
+  // Create theme-aware styles (with dynamic responsive scaling)
   const getThemeStyles = () => ({
     container: {
       flex: 1,
@@ -303,400 +322,412 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     },
     modalContent: {
       backgroundColor: theme?.colors?.surface || '#ffffff',
-      borderRadius: 20,
-      padding: 20,
-      width: screenWidth * 0.9,
-      maxHeight: screenHeight * 0.7,
+      borderRadius: dynamicModerateScale(14),
+      padding: dynamicModerateScale(12),
+      width: currentScreenWidth * 0.92,
+      maxHeight: currentScreenHeight * 0.7,
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 8,
+        height: dynamicModerateScale(4),
       },
-      shadowOpacity: isDarkMode ? 0.4 : 0.25,
-      shadowRadius: 16,
-      elevation: 12,
+      shadowOpacity: isDarkMode ? 0.3 : 0.2,
+      shadowRadius: dynamicModerateScale(10),
+      elevation: dynamicModerateScale(8),
     },
     fontModalContent: {
       backgroundColor: theme?.colors?.surface || '#ffffff',
-      borderRadius: 20,
-      padding: 20,
-      width: screenWidth * 0.9,
-      height: screenHeight * 0.50,
+      borderRadius: dynamicModerateScale(14),
+      padding: dynamicModerateScale(12),
+      width: currentScreenWidth * 0.92,
+      height: currentScreenHeight * 0.50,
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 8,
+        height: dynamicModerateScale(4),
       },
-      shadowOpacity: isDarkMode ? 0.4 : 0.25,
-      shadowRadius: 16,
-      elevation: 12,
+      shadowOpacity: isDarkMode ? 0.3 : 0.2,
+      shadowRadius: dynamicModerateScale(10),
+      elevation: dynamicModerateScale(8),
     },
     modalTitle: {
-      fontSize: 22,
+      fontSize: dynamicModerateScale(12),
       fontWeight: '700' as const,
       color: theme?.colors?.text || '#333333',
-      marginBottom: 10,
+      marginBottom: dynamicModerateScale(8),
     },
     modalSubtitle: {
-      fontSize: 15,
+      fontSize: dynamicModerateScale(12),
       color: theme?.colors?.textSecondary || '#666666',
-      marginBottom: 20,
+      marginBottom: dynamicModerateScale(12),
       fontWeight: '500' as const,
     },
     textInput: {
-      borderWidth: 2,
+      borderWidth: 1.5,
       borderColor: theme?.colors?.border || '#e9ecef',
-      borderRadius: 12,
-      padding: 16,
-      fontSize: 16,
-      marginBottom: 20,
+      borderRadius: dynamicModerateScale(8),
+      padding: dynamicModerateScale(10),
+      fontSize: dynamicModerateScale(13),
+      marginBottom: dynamicModerateScale(12),
       backgroundColor: theme?.colors?.surface || '#f8f9fa',
       color: theme?.colors?.text || '#333333',
     },
     cancelButton: {
       backgroundColor: theme?.colors?.surface || '#f8f9fa',
-      borderWidth: 2,
+      borderWidth: 1.5,
       borderColor: theme?.colors?.border || '#e9ecef',
     },
     cancelButtonText: {
       color: theme?.colors?.textSecondary || '#666666',
-      fontSize: 16,
+      fontSize: dynamicModerateScale(12),
       fontWeight: '600' as const,
     },
     profileItem: {
       flexDirection: 'row' as const,
       alignItems: 'center' as const,
-      paddingVertical: 16,
-      paddingHorizontal: 20,
+      paddingVertical: dynamicModerateScale(8),
+      paddingHorizontal: dynamicModerateScale(10),
       backgroundColor: theme?.colors?.surface || '#f8f9fa',
-      borderRadius: 12,
-      marginBottom: 12,
+      borderRadius: dynamicModerateScale(8),
+      marginBottom: dynamicModerateScale(6),
+    },
+    profileLogo: {
+      width: dynamicModerateScale(35),
+      height: dynamicModerateScale(35),
+      borderRadius: dynamicModerateScale(17.5),
+      marginRight: dynamicModerateScale(8),
     },
     profileLogoPlaceholder: {
-      width: 56,
-      height: 56,
-      borderRadius: 28,
+      width: dynamicModerateScale(35),
+      height: dynamicModerateScale(35),
+      borderRadius: dynamicModerateScale(17.5),
       backgroundColor: theme?.colors?.border || '#e9ecef',
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
-      marginRight: 16,
+      marginRight: dynamicModerateScale(8),
     },
     profileName: {
-      fontSize: 16,
+      fontSize: dynamicModerateScale(10),
       fontWeight: '700' as const,
       color: theme?.colors?.text || '#333333',
-      marginBottom: 4,
+      marginBottom: dynamicModerateScale(1.5),
     },
     profileDescription: {
-      fontSize: 13,
+      fontSize: dynamicModerateScale(8.5),
       color: theme?.colors?.textSecondary || '#666666',
-      lineHeight: 18,
+      lineHeight: dynamicModerateScale(11),
+    },
+    profileCategory: {
+      fontSize: dynamicModerateScale(8.5),
+      color: '#667eea',
+      marginBottom: dynamicModerateScale(1.5),
+      fontWeight: '600' as const,
     },
     styleOption: {
-      width: 48,
-      height: 48,
+      width: dynamicModerateScale(36),
+      height: dynamicModerateScale(36),
       backgroundColor: theme?.colors?.surface || '#f8f9fa',
-      borderRadius: 12,
+      borderRadius: dynamicModerateScale(8),
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
-      margin: 4,
-      borderWidth: 2,
+      margin: dynamicModerateScale(2),
+      borderWidth: 1.5,
       borderColor: theme?.colors?.border || '#e9ecef',
     },
     styleOptionText: {
-      fontSize: 14,
+      fontSize: dynamicModerateScale(11),
       color: theme?.colors?.text || '#333333',
       fontWeight: '600' as const,
     },
     styleSectionTitle: {
-      fontSize: 16,
+      fontSize: dynamicModerateScale(13),
       fontWeight: '700' as const,
       color: theme?.colors?.text || '#333333',
-      marginBottom: 12,
+      marginBottom: dynamicModerateScale(8),
     },
     fieldToggleSection: {
       width: '100%',
       backgroundColor: theme?.colors?.surface || 'rgba(255, 255, 255, 0.95)',
-      borderRadius: 16,
-      padding: 12,
+      borderRadius: dynamicModerateScale(10),
+      padding: dynamicModerateScale(6),
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 4,
+        height: dynamicModerateScale(2),
       },
-      shadowOpacity: isDarkMode ? 0.2 : 0.1,
-      shadowRadius: 12,
-      elevation: 8,
-      borderWidth: 1,
+      shadowOpacity: isDarkMode ? 0.15 : 0.08,
+      shadowRadius: dynamicModerateScale(6),
+      elevation: dynamicModerateScale(4),
+      borderWidth: 0.5,
       borderColor: theme?.colors?.border || '#e9ecef',
-      marginBottom: 15,
-      marginHorizontal: 12,
+      marginBottom: dynamicModerateScale(8),
+      marginHorizontal: dynamicModerateScale(6),
     },
     fieldToggleTitle: {
-      fontSize: 14,
+      fontSize: dynamicModerateScale(11),
       fontWeight: '700' as const,
       color: theme?.colors?.text || '#333333',
     },
     fieldToggleSubtitle: {
-      fontSize: 10,
+      fontSize: dynamicModerateScale(8),
       color: theme?.colors?.textSecondary || '#666666',
-      marginTop: 1,
+      marginTop: dynamicModerateScale(0.5),
     },
     fieldToggleButton: {
       alignItems: 'center' as const,
-      paddingVertical: 10,
-      paddingHorizontal: 14,
-      borderRadius: 16,
+      paddingVertical: dynamicModerateScale(6),
+      paddingHorizontal: dynamicModerateScale(8),
+      borderRadius: dynamicModerateScale(10),
       backgroundColor: theme?.colors?.border || '#e9ecef',
-      marginHorizontal: 4,
+      marginHorizontal: dynamicModerateScale(2),
       flexDirection: 'row' as const,
-      minWidth: 85,
+      minWidth: dynamicModerateScale(60),
       justifyContent: 'center' as const,
     },
     fieldToggleButtonText: {
-      fontSize: 12,
+      fontSize: dynamicModerateScale(9),
       color: theme?.colors?.textSecondary || '#666666',
-      marginLeft: 6,
+      marginLeft: dynamicModerateScale(3),
       fontWeight: '500' as const,
     },
     footerStylesSection: {
       width: '100%',
       backgroundColor: theme?.colors?.surface || 'rgba(255, 255, 255, 0.95)',
-      borderRadius: 16,
-      padding: 12,
+      borderRadius: dynamicModerateScale(10),
+      padding: dynamicModerateScale(6),
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 4,
+        height: dynamicModerateScale(2),
       },
-      shadowOpacity: isDarkMode ? 0.2 : 0.1,
-      shadowRadius: 12,
-      elevation: 8,
-      borderWidth: 1,
+      shadowOpacity: isDarkMode ? 0.15 : 0.08,
+      shadowRadius: dynamicModerateScale(6),
+      elevation: dynamicModerateScale(4),
+      borderWidth: 0.5,
       borderColor: theme?.colors?.border || '#e9ecef',
-      marginBottom: 15,
-      marginHorizontal: 12,
+      marginBottom: dynamicModerateScale(8),
+      marginHorizontal: dynamicModerateScale(6),
     },
     footerStylesTitle: {
-      fontSize: 14,
+      fontSize: dynamicModerateScale(11),
       fontWeight: '700' as const,
       color: theme?.colors?.text || '#333333',
     },
     footerStylesSubtitle: {
-      fontSize: 10,
+      fontSize: dynamicModerateScale(8),
       color: theme?.colors?.textSecondary || '#666666',
-      marginTop: 1,
+      marginTop: dynamicModerateScale(0.5),
     },
     footerStyleModalButton: {
-      width: (screenWidth * 0.85 - 64) / 3 - 12,
+      width: (currentScreenWidth * 0.85 - dynamicModerateScale(64)) / 3 - dynamicModerateScale(12),
       backgroundColor: theme?.colors?.surface || '#ffffff',
-      borderRadius: 12,
-      padding: 16,
-      marginBottom: 20,
-      marginHorizontal: 6,
+      borderRadius: dynamicModerateScale(8),
+      padding: dynamicModerateScale(10),
+      marginBottom: dynamicModerateScale(12),
+      marginHorizontal: dynamicModerateScale(4),
       alignItems: 'center' as const,
-      borderWidth: 1,
+      borderWidth: 0.5,
       borderColor: theme?.colors?.border || '#e9ecef',
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 2,
+        height: dynamicModerateScale(1),
       },
-      shadowOpacity: isDarkMode ? 0.15 : 0.1,
-      shadowRadius: 4,
-      elevation: 2,
+      shadowOpacity: isDarkMode ? 0.1 : 0.08,
+      shadowRadius: dynamicModerateScale(2),
+      elevation: dynamicModerateScale(1),
     },
     footerStyleModalPreview: {
-      width: 60,
-      height: 60,
-      borderRadius: 8,
+      width: dynamicModerateScale(45),
+      height: dynamicModerateScale(45),
+      borderRadius: dynamicModerateScale(6),
       backgroundColor: theme?.colors?.surface || '#f8f9fa',
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
-      marginBottom: 8,
-      borderWidth: 2,
+      marginBottom: dynamicModerateScale(5),
+      borderWidth: 1.5,
       borderColor: theme?.colors?.border || '#e9ecef',
       overflow: 'hidden',
     },
     footerStyleModalText: {
-      fontSize: 20,
+      fontSize: dynamicModerateScale(14),
       fontWeight: '700' as const,
       color: theme?.colors?.text || '#333333',
       textAlign: 'center' as const,
-      marginBottom: 8,
+      marginBottom: dynamicModerateScale(5),
     },
     footerStyleModalDescription: {
-      fontSize: 12,
+      fontSize: dynamicModerateScale(9),
       fontWeight: '600' as const,
       color: theme?.colors?.textSecondary || '#666666',
       textAlign: 'center' as const,
-      lineHeight: 14,
-      marginTop: 4,
+      lineHeight: dynamicModerateScale(11),
+      marginTop: dynamicModerateScale(2),
     },
     footerStylePreview: {
-      width: 70,
-      height: 70,
-      borderRadius: 8,
+      width: dynamicModerateScale(50),
+      height: dynamicModerateScale(50),
+      borderRadius: dynamicModerateScale(6),
       backgroundColor: theme?.colors?.surface || '#f8f9fa',
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
-      marginBottom: 8,
-      borderWidth: 2,
+      marginBottom: dynamicModerateScale(5),
+      borderWidth: 1.5,
       borderColor: theme?.colors?.border || '#e9ecef',
       overflow: 'hidden',
     },
     footerStyleText: {
-      fontSize: 10,
+      fontSize: dynamicModerateScale(8),
       color: theme?.colors?.textSecondary || '#666666',
       fontWeight: '600' as const,
       textAlign: 'center' as const,
-      lineHeight: 12,
+      lineHeight: dynamicModerateScale(10),
     },
     fontStyleModalTitle: {
-      fontSize: 12,
+      fontSize: dynamicModerateScale(10),
       fontWeight: '600' as const,
       color: theme?.colors?.text || '#333333',
       textAlign: 'center' as const,
-      marginTop: 4,
+      marginTop: dynamicModerateScale(2),
     },
     fontStyleSectionTitle: {
-      fontSize: 18,
+      fontSize: dynamicModerateScale(14),
       fontWeight: '700' as const,
       color: theme?.colors?.text || '#333333',
-      marginLeft: 12,
+      marginLeft: dynamicModerateScale(8),
     },
     fontStyleSectionSubtitle: {
-      fontSize: 14,
+      fontSize: dynamicModerateScale(11),
       color: theme?.colors?.textSecondary || '#666666',
-      marginBottom: 16,
-      marginLeft: 32,
-      lineHeight: 20,
+      marginBottom: dynamicModerateScale(10),
+      marginLeft: dynamicModerateScale(20),
+      lineHeight: dynamicModerateScale(16),
     },
     logoModalContent: {
       backgroundColor: theme?.colors?.surface || '#ffffff',
-      borderRadius: 20,
-      padding: 20,
-      width: screenWidth * 0.9,
-      maxHeight: screenHeight * 0.7,
+      borderRadius: dynamicModerateScale(14),
+      padding: dynamicModerateScale(12),
+      width: currentScreenWidth * 0.92,
+      maxHeight: currentScreenHeight * 0.7,
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 8,
+        height: dynamicModerateScale(4),
       },
-      shadowOpacity: isDarkMode ? 0.4 : 0.25,
-      shadowRadius: 16,
-      elevation: 12,
+      shadowOpacity: isDarkMode ? 0.3 : 0.2,
+      shadowRadius: dynamicModerateScale(10),
+      elevation: dynamicModerateScale(8),
     },
     logoModalTitle: {
-      fontSize: 22,
+      fontSize: dynamicModerateScale(16),
       fontWeight: '700' as const,
       color: theme?.colors?.text || '#333333',
-      marginBottom: 8,
+      marginBottom: dynamicModerateScale(5),
     },
     logoModalSubtitle: {
-      fontSize: 15,
+      fontSize: dynamicModerateScale(12),
       color: theme?.colors?.textSecondary || '#666666',
-      marginBottom: 20,
+      marginBottom: dynamicModerateScale(12),
       fontWeight: '500' as const,
     },
     logoModalCloseText: {
       color: theme?.colors?.textSecondary || '#666666',
-      fontSize: 16,
+      fontSize: dynamicModerateScale(13),
       fontWeight: '600' as const,
     },
     instructionsContainer: {
       position: 'absolute',
       top: '50%',
       left: '50%',
-      transform: [{ translateX: -100 }, { translateY: -20 }],
+      transform: [{ translateX: -dynamicModerateScale(80) }, { translateY: -dynamicModerateScale(15) }],
       alignItems: 'center' as const,
       backgroundColor: theme?.colors?.surface || 'rgba(255, 255, 255, 0.95)',
-      padding: 20,
-      borderRadius: 16,
+      padding: dynamicModerateScale(12),
+      borderRadius: dynamicModerateScale(10),
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 4,
+        height: dynamicModerateScale(2),
       },
-      shadowOpacity: isDarkMode ? 0.2 : 0.1,
-      shadowRadius: 8,
-      elevation: 8,
+      shadowOpacity: isDarkMode ? 0.15 : 0.08,
+      shadowRadius: dynamicModerateScale(5),
+      elevation: dynamicModerateScale(4),
     },
     instructionsText: {
-      fontSize: 14,
+      fontSize: dynamicModerateScale(11),
       color: theme?.colors?.textSecondary || '#666666',
       textAlign: 'center' as const,
-      marginTop: 8,
-      maxWidth: 200,
-      lineHeight: 20,
+      marginTop: dynamicModerateScale(5),
+      maxWidth: dynamicModerateScale(160),
+      lineHeight: dynamicModerateScale(16),
     },
     loadingContainer: {
       position: 'absolute',
       top: '50%',
       left: '50%',
-      transform: [{ translateX: -50 }, { translateY: -20 }],
+      transform: [{ translateX: -dynamicModerateScale(40) }, { translateY: -dynamicModerateScale(15) }],
       alignItems: 'center' as const,
       backgroundColor: theme?.colors?.surface || 'rgba(255, 255, 255, 0.95)',
-      padding: 20,
-      borderRadius: 16,
+      padding: dynamicModerateScale(12),
+      borderRadius: dynamicModerateScale(10),
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 4,
+        height: dynamicModerateScale(2),
       },
-      shadowOpacity: isDarkMode ? 0.2 : 0.1,
-      shadowRadius: 8,
-      elevation: 8,
+      shadowOpacity: isDarkMode ? 0.15 : 0.08,
+      shadowRadius: dynamicModerateScale(5),
+      elevation: dynamicModerateScale(4),
     },
     loadingText: {
-      fontSize: 14,
+      fontSize: dynamicModerateScale(11),
       color: theme?.colors?.textSecondary || '#666666',
       textAlign: 'center' as const,
-      marginTop: 8,
+      marginTop: dynamicModerateScale(5),
     },
     toolbar: {
       position: 'absolute',
-      right: 20,
+      right: dynamicModerateScale(12),
       top: '50%',
-      transform: [{ translateY: -100 }],
+      transform: [{ translateY: -dynamicModerateScale(70) }],
       backgroundColor: theme?.colors?.surface || 'rgba(255, 255, 255, 0.95)',
-      borderRadius: 16,
-      padding: 12,
+      borderRadius: dynamicModerateScale(10),
+      padding: dynamicModerateScale(6),
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 4,
+        height: dynamicModerateScale(2),
       },
-      shadowOpacity: isDarkMode ? 0.2 : 0.15,
-      shadowRadius: 12,
-      elevation: 8,
+      shadowOpacity: isDarkMode ? 0.15 : 0.1,
+      shadowRadius: dynamicModerateScale(6),
+      elevation: dynamicModerateScale(4),
       zIndex: 100,
     },
     // Delete Modal Styles - Fully responsive
     deleteModalContainer: {
-      borderRadius: isTablet ? 24 : isLandscape ? 20 : isUltraSmallScreen ? 16 : 20,
+      borderRadius: dynamicModerateScale(14),
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
-        height: isTablet ? 8 : isLandscape ? 6 : isUltraSmallScreen ? 4 : 6,
+        height: dynamicModerateScale(4),
       },
-      shadowOpacity: isDarkMode ? 0.4 : 0.3,
-      shadowRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 8 : 12,
-      elevation: isTablet ? 12 : isLandscape ? 10 : isUltraSmallScreen ? 8 : 10,
+      shadowOpacity: isDarkMode ? 0.3 : 0.2,
+      shadowRadius: dynamicModerateScale(10),
+      elevation: dynamicModerateScale(8),
     },
     deleteModalHeader: {
       alignItems: 'center' as const,
       position: 'relative' as const,
     },
     deleteIconContainer: {
-      width: isTablet ? 72 : isLandscape ? 64 : isUltraSmallScreen ? 48 : 64,
-      height: isTablet ? 72 : isLandscape ? 64 : isUltraSmallScreen ? 48 : 64,
-      borderRadius: isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 24 : 32,
+      width: dynamicModerateScale(50),
+      height: dynamicModerateScale(50),
+      borderRadius: dynamicModerateScale(25),
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
     },
     deleteModalTitle: {
-      fontSize: isTablet ? 24 : isLandscape ? 22 : isUltraSmallScreen ? 18 : 22,
+      fontSize: dynamicModerateScale(16),
       fontWeight: '700' as const,
       textAlign: 'center' as const,
     },
@@ -704,9 +735,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       position: 'absolute' as const,
       top: 0,
       right: 0,
-      width: isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 28 : 32,
-      height: isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 28 : 32,
-      borderRadius: isTablet ? 18 : isLandscape ? 16 : isUltraSmallScreen ? 14 : 16,
+      width: dynamicModerateScale(26),
+      height: dynamicModerateScale(26),
+      borderRadius: dynamicModerateScale(13),
       justifyContent: 'center' as const,
       alignItems: 'center' as const,
     },
@@ -719,7 +750,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     },
     deleteModalButtons: {
       flexDirection: 'row' as const,
-      // Dynamic gap handled inline
+      gap: dynamicModerateScale(8),
     },
     deleteModalCancelButton: {
       flex: 1,
@@ -727,16 +758,17 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
-        height: isTablet ? 3 : 2,
+        height: dynamicModerateScale(1.5),
       },
-      shadowOpacity: isDarkMode ? 0.2 : 0.1,
-      shadowRadius: isTablet ? 6 : 4,
-      elevation: isTablet ? 4 : 3,
-      // Dynamic paddingVertical and borderRadius handled inline
+      shadowOpacity: isDarkMode ? 0.15 : 0.08,
+      shadowRadius: dynamicModerateScale(3),
+      elevation: dynamicModerateScale(2),
+      paddingVertical: dynamicModerateScale(10),
+      borderRadius: dynamicModerateScale(8),
     },
     deleteModalCancelText: {
       fontWeight: '600' as const,
-      // Dynamic fontSize handled inline
+      fontSize: dynamicModerateScale(13),
     },
     deleteModalDeleteButton: {
       flex: 1,
@@ -744,17 +776,18 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
-        height: isTablet ? 3 : 2,
+        height: dynamicModerateScale(1.5),
       },
-      shadowOpacity: 0.2,
-      shadowRadius: isTablet ? 6 : 4,
-      elevation: isTablet ? 4 : 3,
-      // Dynamic paddingVertical and borderRadius handled inline
+      shadowOpacity: 0.15,
+      shadowRadius: dynamicModerateScale(3),
+      elevation: dynamicModerateScale(2),
+      paddingVertical: dynamicModerateScale(10),
+      borderRadius: dynamicModerateScale(8),
     },
     deleteModalDeleteText: {
       fontWeight: '600' as const,
       color: '#ffffff',
-      // Dynamic fontSize handled inline
+      fontSize: dynamicModerateScale(13),
     },
   });
 
@@ -2073,30 +2106,30 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   // Render business profile selection item
   const renderProfileItem = ({ item }: { item: BusinessProfile }) => (
     <TouchableOpacity
-      style={styles.profileItem}
+      style={themeStyles.profileItem}
       onPress={() => handleProfileSelection(item)}
     >
       <View style={styles.profileItemContent}>
         {item.companyLogo || item.logo ? (
           <Image
             source={{ uri: item.companyLogo || item.logo }}
-            style={styles.profileLogo}
+            style={themeStyles.profileLogo}
             resizeMode="cover"
           />
         ) : (
-          <View style={styles.profileLogoPlaceholder}>
-            <Icon name="business" size={24} color="#667eea" />
+          <View style={themeStyles.profileLogoPlaceholder}>
+            <Icon name="business" size={dynamicModerateScale(16)} color="#667eea" />
           </View>
         )}
         <View style={styles.profileInfo}>
-          <Text style={styles.profileName}>{item.name}</Text>
-          <Text style={styles.profileCategory}>{item.category}</Text>
-          <Text style={styles.profileDescription} numberOfLines={2}>
+          <Text style={themeStyles.profileName}>{item.name}</Text>
+          <Text style={themeStyles.profileCategory}>{item.category}</Text>
+          <Text style={themeStyles.profileDescription} numberOfLines={2}>
             {item.description}
           </Text>
         </View>
       </View>
-      <Icon name="chevron-right" size={24} color="#666666" />
+      <Icon name="chevron-right" size={dynamicModerateScale(16)} color="#666666" />
     </TouchableOpacity>
   );
 
@@ -3030,9 +3063,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         <View style={themeStyles.modalOverlay}>
           <View style={themeStyles.modalContent}>
             <Text style={themeStyles.modalTitle}>Select Business Profile</Text>
-            <Text style={themeStyles.modalSubtitle}>
-              Choose which business profile to use for your poster. You must select one to continue.
-            </Text>
             <FlatList
               data={businessProfiles}
               renderItem={renderProfileItem}
@@ -3843,51 +3873,51 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -100 }, { translateY: -20 }],
+    transform: [{ translateX: -moderateScale(80) }, { translateY: -moderateScale(15) }],
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    padding: 20,
-    borderRadius: 16,
+    padding: moderateScale(12),
+    borderRadius: moderateScale(10),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: moderateScale(2),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(5),
+    elevation: moderateScale(4),
   },
   instructionsText: {
-    fontSize: 14,
+    fontSize: moderateScale(11),
     color: '#666666',
     textAlign: 'center',
-    marginTop: 8,
-    maxWidth: 200,
-    lineHeight: 20,
+    marginTop: moderateScale(5),
+    maxWidth: moderateScale(160),
+    lineHeight: moderateScale(16),
   },
   loadingContainer: {
     position: 'absolute',
     top: '50%',
     left: '50%',
-    transform: [{ translateX: -50 }, { translateY: -20 }],
+    transform: [{ translateX: -moderateScale(40) }, { translateY: -moderateScale(15) }],
     alignItems: 'center',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    padding: 20,
-    borderRadius: 16,
+    padding: moderateScale(12),
+    borderRadius: moderateScale(10),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: moderateScale(2),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(5),
+    elevation: moderateScale(4),
   },
   loadingText: {
-    fontSize: 14,
+    fontSize: moderateScale(11),
     color: '#666666',
     textAlign: 'center',
-    marginTop: 8,
+    marginTop: moderateScale(5),
   },
   backgroundImageContainer: {
     position: 'absolute',
@@ -4014,29 +4044,29 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   modalTitle: {
-    fontSize: 22,
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: '#333333',
-    marginBottom: 10,
+    marginBottom: moderateScale(8),
   },
   modalSubtitle: {
-    fontSize: 15,
+    fontSize: moderateScale(10),
     color: '#666666',
-    marginBottom: 20,
+    marginBottom: moderateScale(8),
     fontWeight: '500',
   },
   profileList: {
-    maxHeight: 400,
-    marginBottom: 16,
+    maxHeight: verticalScale(320),
+    marginBottom: moderateScale(10),
   },
   profileItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: moderateScale(10),
     backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    marginBottom: 12,
+    borderRadius: moderateScale(8),
+    marginBottom: moderateScale(6),
   },
   profileItemContent: {
     flexDirection: 'row',
@@ -4044,64 +4074,65 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   profileLogo: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    marginRight: 16,
+    width: moderateScale(35),
+    height: moderateScale(35),
+    borderRadius: moderateScale(17.5),
+    marginRight: moderateScale(8),
   },
   profileLogoPlaceholder: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+    width: moderateScale(35),
+    height: moderateScale(35),
+    borderRadius: moderateScale(17.5),
     backgroundColor: '#e9ecef',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: 16,
+    marginRight: moderateScale(8),
   },
   profileInfo: {
     flex: 1,
   },
   profileName: {
-    fontSize: 16,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     color: '#333333',
-    marginBottom: 4,
+    marginBottom: moderateScale(1.5),
   },
   profileCategory: {
-    fontSize: 14,
+    fontSize: moderateScale(8.5),
     color: '#667eea',
-    marginBottom: 4,
+    marginBottom: moderateScale(1.5),
     fontWeight: '600',
   },
   profileDescription: {
-    fontSize: 13,
+    fontSize: moderateScale(8.5),
     color: '#666666',
-    lineHeight: 18,
+    lineHeight: moderateScale(11),
   },
   textInput: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#e9ecef',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 20,
+    borderRadius: moderateScale(8),
+    padding: moderateScale(10),
+    fontSize: moderateScale(13),
+    marginBottom: moderateScale(12),
     backgroundColor: '#f8f9fa',
     color: '#333333', // Dark text color for visibility on white background
   },
   modalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: moderateScale(8),
   },
   modalButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(8),
     alignItems: 'center',
-    marginHorizontal: 8,
+    marginHorizontal: moderateScale(4),
   },
   cancelButton: {
     backgroundColor: '#f8f9fa',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#e9ecef',
   },
   addButton: {
@@ -4109,67 +4140,67 @@ const styles = StyleSheet.create({
   },
   cancelButtonText: {
     color: '#666666',
-    fontSize: 16,
+    fontSize: moderateScale(13),
     fontWeight: '600',
   },
   addButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: moderateScale(13),
     fontWeight: '600',
   },
   styleOptions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    marginBottom: 20,
+    marginBottom: moderateScale(12),
   },
   styleOption: {
-    width: 48,
-    height: 48,
+    width: moderateScale(36),
+    height: moderateScale(36),
     backgroundColor: '#f8f9fa',
-    borderRadius: 12,
+    borderRadius: moderateScale(8),
     justifyContent: 'center',
     alignItems: 'center',
-    margin: 4,
-    borderWidth: 2,
+    margin: moderateScale(2),
+    borderWidth: 1.5,
     borderColor: '#e9ecef',
   },
   styleOptionText: {
-    fontSize: 14,
+    fontSize: moderateScale(11),
     color: '#333333',
     fontWeight: '600',
   },
   colorOption: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    margin: 4,
-    borderWidth: 3,
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(18),
+    margin: moderateScale(2),
+    borderWidth: 2,
     borderColor: '#ffffff',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(2),
+    elevation: moderateScale(2),
     justifyContent: 'center',
     alignItems: 'center',
   },
   colorOptionText: {
-    fontSize: 10,
+    fontSize: moderateScale(8),
     color: '#333333',
     fontWeight: '600',
     textAlign: 'center',
   },
   styleSection: {
-    marginBottom: 20,
+    marginBottom: moderateScale(12),
   },
   styleSectionTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: '#333333',
-    marginBottom: 12,
+    marginBottom: moderateScale(8),
   },
   layerTouchable: {
     width: '100%',
@@ -4252,17 +4283,17 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Enhanced Font Style Modal Styles
+  // Enhanced Font Style Modal Styles (compact & responsive)
   fontStyleModalContent: {
     flex: 1,
-    paddingHorizontal: 16,
-    paddingVertical: 16,
-    minHeight: 350,
-    maxHeight: screenHeight * 0.5,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(10),
+    minHeight: verticalScale(250),
+    maxHeight: verticalScale(350),
   },
   fontStyleModalHeader: {
-    paddingVertical: 24,
-    paddingHorizontal: 24,
+    paddingVertical: moderateScale(14),
+    paddingHorizontal: moderateScale(14),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
@@ -4271,315 +4302,316 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   fontStyleModalTitle: {
-    fontSize: 12,
+    fontSize: moderateScale(10),
     fontWeight: '600',
     color: '#333333',
     textAlign: 'center',
-    marginTop: 4,
+    marginTop: moderateScale(2),
   },
   fontStyleModalSubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(11),
     color: 'rgba(255, 255, 255, 0.9)',
     fontWeight: '500',
   },
   fontStyleCloseButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: moderateScale(30),
+    height: moderateScale(30),
+    borderRadius: moderateScale(15),
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
     alignItems: 'center',
   },
   fontStyleModalBody: {
     flex: 1,
-    marginBottom: 20,
-    maxHeight: 400,
+    marginBottom: moderateScale(12),
+    maxHeight: verticalScale(300),
   },
   fontStyleSection: {
-    marginBottom: 24,
+    marginBottom: moderateScale(14),
   },
   fontStyleSectionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    marginBottom: moderateScale(5),
   },
   fontStyleSectionTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: '#333333',
-    marginLeft: 12,
+    marginLeft: moderateScale(8),
   },
   fontStyleSectionSubtitle: {
-    fontSize: 14,
+    fontSize: moderateScale(11),
     color: '#666666',
-    marginBottom: 16,
-    marginLeft: 32,
-    lineHeight: 20,
+    marginBottom: moderateScale(10),
+    marginLeft: moderateScale(20),
+    lineHeight: moderateScale(16),
   },
   fontStyleOptions: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: moderateScale(5),
   },
   fontStyleOption: {
-    width: (screenWidth * 0.9 - 80) / 2 - 6,
-    marginBottom: 12,
+    width: (screenWidth * 0.9 - moderateScale(80)) / 2 - moderateScale(6),
+    marginBottom: moderateScale(8),
   },
   fontStyleOptionGradient: {
-    paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 8,
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: moderateScale(8),
+    borderRadius: moderateScale(6),
     alignItems: 'center',
     justifyContent: 'center',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#e9ecef',
     backgroundColor: '#f8f9fa',
   },
   fontStyleOptionText: {
-    fontSize: 14,
+    fontSize: moderateScale(11),
     color: '#333333',
     fontWeight: '600',
     textAlign: 'center',
   },
   fontStyleOptionIcon: {
-    width: 16,
-    height: 16,
+    width: moderateScale(12),
+    height: moderateScale(12),
   },
   fontStyleModalFooter: {
     flexDirection: 'row',
-    paddingHorizontal: 24,
-    paddingVertical: 20,
-    borderTopWidth: 1,
+    paddingHorizontal: moderateScale(14),
+    paddingVertical: moderateScale(12),
+    borderTopWidth: 0.5,
     borderTopColor: '#e9ecef',
     backgroundColor: '#f8f9fa',
   },
   fontStyleCancelButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(8),
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: moderateScale(8),
     backgroundColor: '#f8f9fa',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#e9ecef',
   },
   fontStyleCancelButtonText: {
     color: '#666666',
-    fontSize: 16,
+    fontSize: moderateScale(13),
     fontWeight: '600',
   },
   fontStyleApplyButton: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: moderateScale(8),
     overflow: 'hidden',
   },
   fontStyleApplyButtonGradient: {
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    paddingVertical: moderateScale(10),
+    paddingHorizontal: moderateScale(12),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   fontStyleApplyButtonText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: moderateScale(13),
     fontWeight: '600',
-    marginLeft: 8,
+    marginLeft: moderateScale(5),
   },
-  // Logo Selection Modal Styles
+  // Logo Selection Modal Styles (compact & responsive)
   logoSelectionOptions: {
     flexDirection: 'row',
     justifyContent: 'space-around',
-    marginBottom: 20,
+    marginBottom: moderateScale(12),
   },
   logoSelectionOption: {
     alignItems: 'center',
-    paddingVertical: 20,
-    paddingHorizontal: 16,
+    paddingVertical: moderateScale(12),
+    paddingHorizontal: moderateScale(10),
     backgroundColor: '#f8f9fa',
-    borderRadius: 16,
-    borderWidth: 2,
+    borderRadius: moderateScale(10),
+    borderWidth: 1.5,
     borderColor: '#e9ecef',
-    minWidth: 120,
+    minWidth: moderateScale(85),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(2),
   },
-  // Professional Logo Modal Styles
+  // Professional Logo Modal Styles (compact & responsive)
   logoModalContent: {
     backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 24,
-    width: screenWidth * 0.9,
-    maxHeight: screenHeight * 0.8,
+    borderRadius: moderateScale(16),
+    padding: moderateScale(14),
+    width: screenWidth * 0.92,
+    maxHeight: screenHeight * 0.75,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 12,
+      height: moderateScale(6),
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 16,
+    shadowOpacity: 0.25,
+    shadowRadius: moderateScale(14),
+    elevation: moderateScale(10),
   },
   logoModalHeader: {
     alignItems: 'center',
-    marginBottom: 32,
+    marginBottom: moderateScale(18),
   },
   logoModalTitle: {
-    fontSize: 28,
+    fontSize: moderateScale(20),
     fontWeight: '700',
     color: '#333333',
-    marginBottom: 8,
+    marginBottom: moderateScale(5),
     textAlign: 'center',
   },
   logoModalSubtitle: {
-    fontSize: 16,
+    fontSize: moderateScale(12),
     color: '#666666',
     textAlign: 'center',
-    lineHeight: 22,
-    paddingHorizontal: 20,
+    lineHeight: moderateScale(16),
+    paddingHorizontal: moderateScale(12),
   },
   logoOptionsContainer: {
-    marginBottom: 32,
+    marginBottom: moderateScale(18),
   },
   logoOption: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#f8f9fa',
-    borderRadius: 16,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
+    borderRadius: moderateScale(10),
+    padding: moderateScale(12),
+    marginBottom: moderateScale(10),
+    borderWidth: 0.5,
     borderColor: '#e9ecef',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(2),
+    elevation: moderateScale(1),
   },
   logoOptionGradient: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: moderateScale(45),
+    height: moderateScale(45),
+    borderRadius: moderateScale(22.5),
     alignItems: 'center',
     justifyContent: 'center',
-    marginRight: 16,
+    marginRight: moderateScale(10),
   },
   logoOptionTitle: {
-    fontSize: 18,
+    fontSize: moderateScale(14),
     fontWeight: '600',
     color: '#333333',
-    marginBottom: 4,
+    marginBottom: moderateScale(2),
   },
   logoOptionDescription: {
-    fontSize: 14,
+    fontSize: moderateScale(11),
     color: '#666666',
-    lineHeight: 18,
+    lineHeight: moderateScale(14),
   },
   logoModalCloseButton: {
     backgroundColor: '#f8f9fa',
-    borderRadius: 12,
-    paddingVertical: 16,
+    borderRadius: moderateScale(8),
+    paddingVertical: moderateScale(10),
     alignItems: 'center',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: '#e9ecef',
   },
   logoModalCloseText: {
-    fontSize: 16,
+    fontSize: moderateScale(13),
     fontWeight: '600',
     color: '#666666',
   },
-  // Logo URL Modal Styles
+  // Logo URL Modal Styles (compact & responsive)
   logoUrlModalContent: {
     backgroundColor: '#ffffff',
-    borderRadius: 24,
-    padding: 24,
-    width: screenWidth * 0.9,
+    borderRadius: moderateScale(16),
+    padding: moderateScale(14),
+    width: screenWidth * 0.92,
     maxHeight: screenHeight * 0.7,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 12,
+      height: moderateScale(6),
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-    elevation: 16,
+    shadowOpacity: 0.25,
+    shadowRadius: moderateScale(14),
+    elevation: moderateScale(10),
   },
   logoUrlInput: {
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#e9ecef',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    marginBottom: 24,
+    borderRadius: moderateScale(8),
+    padding: moderateScale(10),
+    fontSize: moderateScale(13),
+    marginBottom: moderateScale(14),
     backgroundColor: '#f8f9fa',
     color: '#333333',
   },
   logoUrlModalButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: moderateScale(8),
   },
   logoUrlCancelButton: {
     flex: 1,
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(8),
     alignItems: 'center',
-    marginRight: 12,
+    marginRight: moderateScale(4),
     backgroundColor: '#f8f9fa',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#e9ecef',
   },
   logoUrlCancelText: {
     color: '#666666',
-    fontSize: 16,
+    fontSize: moderateScale(13),
     fontWeight: '600',
   },
   logoUrlAddButton: {
     flex: 1,
-    borderRadius: 12,
+    borderRadius: moderateScale(8),
     overflow: 'hidden',
   },
   logoUrlAddText: {
     color: '#ffffff',
-    fontSize: 16,
+    fontSize: moderateScale(13),
     fontWeight: '600',
   },
   logoSelectionOptionIcon: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
+    width: moderateScale(45),
+    height: moderateScale(45),
+    borderRadius: moderateScale(22.5),
     backgroundColor: '#ffffff',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: moderateScale(8),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(2),
+    elevation: moderateScale(1),
   },
   logoSelectionOptionTitle: {
-    fontSize: 16,
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: '#333333',
-    marginBottom: 4,
+    marginBottom: moderateScale(2),
     textAlign: 'center',
   },
   logoSelectionOptionSubtitle: {
-    fontSize: 12,
+    fontSize: moderateScale(10),
     color: '#666666',
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: moderateScale(13),
   },
   // Animation Layers Section Styles
   animationLayersSection: {
@@ -5859,20 +5891,20 @@ const styles = StyleSheet.create({
   },
   frameApplicationIndicator: {
     backgroundColor: 'rgba(255, 255, 255, 0.9)',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 8,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(6),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
+    shadowOpacity: 0.2,
+    shadowRadius: moderateScale(2),
+    elevation: moderateScale(3),
   },
   frameApplicationText: {
-    fontSize: 14,
+    fontSize: moderateScale(11),
     fontWeight: '600',
     color: '#333333',
   },

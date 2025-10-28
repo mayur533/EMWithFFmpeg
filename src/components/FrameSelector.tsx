@@ -13,6 +13,9 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Compact spacing multiplier for reduced spacing (50% reduction)
+const COMPACT_MULTIPLIER = 0.5;
+
 // Responsive breakpoints
 const isUltraSmallScreen = screenWidth < 360;
 const isSmallScreen = screenWidth >= 360 && screenWidth < 375;
@@ -59,7 +62,7 @@ const FrameItem: React.FC<FrameItemProps> = ({ item, isSelected, onSelect }) => 
           />
         ) : (
           <View style={styles.framePreviewFallback}>
-            <Icon name="image" size={32} color="#999999" />
+            <Icon name="image" size={Math.max(20, 32 * 0.7)} color="#999999" />
             <Text style={styles.framePreviewFallbackText}>{item.name}</Text>
           </View>
         )}
@@ -117,7 +120,7 @@ const FrameSelector: React.FC<FrameSelectorProps> = ({
           </View>
           {onClose && (
             <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Icon name="close" size={24} color="#666666" />
+              <Icon name="close" size={Math.max(16, 24 * 0.75)} color="#666666" />
             </TouchableOpacity>
           )}
         </View>
@@ -140,23 +143,23 @@ const FrameSelector: React.FC<FrameSelectorProps> = ({
 const styles = StyleSheet.create({
   container: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
-    padding: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
-    marginHorizontal: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : 12),
-    marginBottom: isLandscape ? (isTablet ? 15 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
+    borderRadius: Math.max(6, (isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14)) * 0.7),
+    padding: Math.max(4, (isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14)) * COMPACT_MULTIPLIER),
+    marginHorizontal: Math.max(4, (isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : 12)) * COMPACT_MULTIPLIER),
+    marginBottom: Math.max(5, (isLandscape ? (isTablet ? 15 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14)) * COMPACT_MULTIPLIER),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: Math.max(2, 4 * COMPACT_MULTIPLIER),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    borderWidth: 1,
+    shadowOpacity: 0.08,
+    shadowRadius: Math.max(6, 12 * COMPACT_MULTIPLIER),
+    elevation: Math.max(4, 8 * COMPACT_MULTIPLIER),
+    borderWidth: 0.5,
     borderColor: '#e9ecef',
   },
   header: {
-    marginBottom: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
+    marginBottom: Math.max(5, (isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14)) * COMPACT_MULTIPLIER),
   },
   headerContent: {
     flexDirection: 'row',
@@ -168,39 +171,39 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   closeButton: {
-    padding: isLandscape ? (isTablet ? 8 : 6) : (isUltraSmallScreen ? 4 : 6),
-    marginLeft: isLandscape ? (isTablet ? 12 : 8) : (isUltraSmallScreen ? 6 : 8),
+    padding: Math.max(2, (isLandscape ? (isTablet ? 8 : 6) : (isUltraSmallScreen ? 4 : 6)) * COMPACT_MULTIPLIER),
+    marginLeft: Math.max(3, (isLandscape ? (isTablet ? 12 : 8) : (isUltraSmallScreen ? 6 : 8)) * COMPACT_MULTIPLIER),
   },
   title: {
-    fontSize: isLandscape ? (isTablet ? 18 : 16) : (isUltraSmallScreen ? 14 : isSmallScreen ? 15 : 16),
+    fontSize: Math.max(12, (isLandscape ? (isTablet ? 18 : 16) : (isUltraSmallScreen ? 14 : isSmallScreen ? 15 : 16)) * 0.85),
     fontWeight: '700',
     color: '#333333',
-    marginBottom: isLandscape ? (isTablet ? 6 : 4) : (isUltraSmallScreen ? 3 : 4),
+    marginBottom: Math.max(2, (isLandscape ? (isTablet ? 6 : 4) : (isUltraSmallScreen ? 3 : 4)) * COMPACT_MULTIPLIER),
   },
   subtitle: {
-    fontSize: isLandscape ? (isTablet ? 13 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : 12),
+    fontSize: Math.max(9, (isLandscape ? (isTablet ? 13 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : 12)) * 0.8),
     color: '#666666',
   },
   listContent: {
-    paddingHorizontal: isLandscape ? (isTablet ? 6 : 4) : (isUltraSmallScreen ? 2 : 4),
+    paddingHorizontal: Math.max(1, (isLandscape ? (isTablet ? 6 : 4) : (isUltraSmallScreen ? 2 : 4)) * COMPACT_MULTIPLIER),
   },
   frameItem: {
     alignItems: 'center',
-    minWidth: isLandscape ? (isTablet ? 130 : 110) : (isUltraSmallScreen ? 90 : isSmallScreen ? 100 : 110),
-    padding: isLandscape ? (isTablet ? 10 : 8) : (isUltraSmallScreen ? 6 : 8),
-    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : 10),
+    minWidth: Math.max(60, (isLandscape ? (isTablet ? 130 : 110) : (isUltraSmallScreen ? 90 : isSmallScreen ? 100 : 110)) * 0.7),
+    padding: Math.max(3, (isLandscape ? (isTablet ? 10 : 8) : (isUltraSmallScreen ? 6 : 8)) * COMPACT_MULTIPLIER),
+    borderRadius: Math.max(5, (isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : 10)) * 0.7),
   },
   frameItemSelected: {
     backgroundColor: 'rgba(102, 126, 234, 0.1)',
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: '#667eea',
   },
   framePreview: {
-    width: isLandscape ? (isTablet ? 110 : 95) : (isUltraSmallScreen ? 75 : isSmallScreen ? 85 : 95),
-    height: isLandscape ? (isTablet ? 150 : 130) : (isUltraSmallScreen ? 105 : isSmallScreen ? 120 : 130),
-    borderRadius: isLandscape ? (isTablet ? 10 : 8) : (isUltraSmallScreen ? 6 : 8),
+    width: Math.max(50, (isLandscape ? (isTablet ? 110 : 95) : (isUltraSmallScreen ? 75 : isSmallScreen ? 85 : 95)) * 0.7),
+    height: Math.max(70, (isLandscape ? (isTablet ? 150 : 130) : (isUltraSmallScreen ? 105 : isSmallScreen ? 120 : 130)) * 0.7),
+    borderRadius: Math.max(4, (isLandscape ? (isTablet ? 10 : 8) : (isUltraSmallScreen ? 6 : 8)) * 0.7),
     overflow: 'hidden',
-    marginBottom: isLandscape ? (isTablet ? 10 : 8) : (isUltraSmallScreen ? 6 : 8),
+    marginBottom: Math.max(3, (isLandscape ? (isTablet ? 10 : 8) : (isUltraSmallScreen ? 6 : 8)) * COMPACT_MULTIPLIER),
     position: 'relative',
     backgroundColor: '#f8f9fa',
   },
@@ -230,9 +233,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#f0f0f0',
   },
   framePreviewFallbackText: {
-    fontSize: 10,
+    fontSize: Math.max(8, 10 * 0.85),
     color: '#999999',
-    marginTop: 4,
+    marginTop: Math.max(2, 4 * COMPACT_MULTIPLIER),
     textAlign: 'center',
   },
   frameOverlay: {
@@ -245,29 +248,29 @@ const styles = StyleSheet.create({
   placeholderIndicator: {
     position: 'absolute',
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
-    borderWidth: 1,
+    borderWidth: 0.5,
     borderColor: 'rgba(255, 255, 255, 0.6)',
-    borderRadius: 2,
+    borderRadius: 1,
   },
   frameName: {
-    fontSize: isLandscape ? (isTablet ? 13 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : 12),
+    fontSize: Math.max(8, (isLandscape ? (isTablet ? 13 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : 12)) * 0.85),
     fontWeight: '600',
     color: '#333333',
     textAlign: 'center',
-    marginBottom: 2,
+    marginBottom: 1,
   },
   frameNameSelected: {
     color: '#667eea',
     fontWeight: '700',
   },
   frameCategory: {
-    fontSize: isLandscape ? (isTablet ? 11 : 10) : (isUltraSmallScreen ? 9 : 10),
+    fontSize: Math.max(7, (isLandscape ? (isTablet ? 11 : 10) : (isUltraSmallScreen ? 9 : 10)) * 0.8),
     color: '#666666',
     textAlign: 'center',
     textTransform: 'capitalize',
   },
   separator: {
-    width: isLandscape ? (isTablet ? 14 : 12) : (isUltraSmallScreen ? 8 : 10),
+    width: Math.max(4, (isLandscape ? (isTablet ? 14 : 12) : (isUltraSmallScreen ? 8 : 10)) * COMPACT_MULTIPLIER),
   },
 });
 
