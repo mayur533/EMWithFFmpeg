@@ -9,7 +9,17 @@ import authService from '../services/auth';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { navigationRef } from './NavigationService';
-import { Image, View, Text, TouchableOpacity } from 'react-native';
+import { Image, View, Text, TouchableOpacity, Dimensions } from 'react-native';
+
+// Responsive scaling functions
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Device size helpers
+const isSmallDevice = SCREEN_WIDTH < 375;
+const isTablet = SCREEN_WIDTH >= 768;
 
 // Define navigation types
 export type RootStackParamList = {
@@ -232,36 +242,66 @@ const TabNavigator = () => {
   );
 };
 
-// Custom Tab Bar Component with Overlapping Logo
+// Custom Tab Bar Component with Overlapping Logo - Compact & Responsive
 const CustomTabBar = (props: any) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   
+  // Dynamic dimensions for screen rotation/resize support
+  const [dimensions, setDimensions] = React.useState(() => {
+    const { width } = Dimensions.get('window');
+    return { width };
+  });
+
+  React.useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width });
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  // Dynamic scaling based on current dimensions
+  const currentScale = (size: number) => (dimensions.width / 375) * size;
+  const currentModerateScale = (size: number, factor = 0.5) => size + (currentScale(size) - size) * factor;
+  const isCurrentlySmall = dimensions.width < 375;
+  
+  // Ultra-compact responsive sizes - maximally reduced
+  const logoSize = currentModerateScale(isCurrentlySmall ? 30 : 35); // Further reduced from 38/45
+  const logoContainerSize = logoSize + currentModerateScale(4); // Further reduced from 6
+  const logoTopOffset = -(logoContainerSize / 2);
+  const tabBarHeight = currentModerateScale(isCurrentlySmall ? 24 : 28); // Further reduced from 32/35
+  const tabBarPaddingTop = currentModerateScale(1); // Further reduced from 2
+  const tabBarPaddingBottom = Math.max(currentModerateScale(2), insets.bottom + currentModerateScale(0.5)); // Further reduced from 3/1
+  const iconSize = currentModerateScale(isCurrentlySmall ? 14 : 16); // Further reduced from 16/18
+  const fontSize = currentModerateScale(isCurrentlySmall ? 6 : 6.5); // Further reduced from 7/7.5
+  const borderWidth = currentModerateScale(0.8); // Further reduced from 1
+  
   return (
     <View style={{
       backgroundColor: theme.colors.surface,
-      borderTopWidth: 1,
+      borderTopWidth: currentModerateScale(0.3), // Further reduced from 0.5
       borderTopColor: theme.colors.border,
-      paddingTop: 8,
-      paddingBottom: Math.max(12, insets.bottom + 4),
+      paddingTop: tabBarPaddingTop,
+      paddingBottom: tabBarPaddingBottom,
       shadowColor: theme.colors.shadow,
-      shadowOffset: { width: 0, height: -2 },
-      shadowOpacity: 0.1,
-      shadowRadius: 4,
-      elevation: 8,
+      shadowOffset: { width: 0, height: currentModerateScale(-0.5) }, // Further reduced from -1
+      shadowOpacity: 0.05, // Further reduced from 0.08
+      shadowRadius: currentModerateScale(2), // Further reduced from 3
+      elevation: 4, // Further reduced from 6
       position: 'relative',
     }}>
       {/* Background overlay to hide any squares behind the circle */}
       <View style={{
         position: 'absolute',
-        top: -35,
+        top: logoTopOffset,
         left: '50%',
-        marginLeft: -35,
+        marginLeft: -(logoContainerSize / 2),
         zIndex: 999,
         backgroundColor: theme.colors.surface,
-        width: 70,
-        height: 70,
-        borderRadius: 35,
+        width: logoContainerSize,
+        height: logoContainerSize,
+        borderRadius: logoContainerSize / 2,
       }} />
       
       {/* Logo positioned to overlap with screen content - Clickable to navigate to My Business */}
@@ -273,32 +313,31 @@ const CustomTabBar = (props: any) => {
         activeOpacity={0.7}
         style={{
           position: 'absolute',
-          top: -35, // Half logo above the tab bar
+          top: logoTopOffset,
           left: '50%',
-          marginLeft: -35, // Center the circular container (70px width / 2)
+          marginLeft: -(logoContainerSize / 2),
           zIndex: 1000,
           backgroundColor: theme.colors.surface,
-          width: 70,
-          height: 70,
-          borderRadius: 35, // Perfect circle
+          width: logoContainerSize,
+          height: logoContainerSize,
+          borderRadius: logoContainerSize / 2,
           justifyContent: 'center',
           alignItems: 'center',
           shadowColor: theme.colors.shadow,
-          shadowOffset: { width: 0, height: 2 },
-          shadowOpacity: 0.15,
-          shadowRadius: 8,
-          elevation: 8,
-          borderWidth: 2,
+          shadowOffset: { width: 0, height: currentModerateScale(0.5) }, // Further reduced from 1
+          shadowOpacity: 0.08, // Further reduced from 0.12
+          shadowRadius: currentModerateScale(4), // Further reduced from 6
+          elevation: 4, // Further reduced from 6
+          borderWidth: borderWidth,
           borderColor: theme.colors.border,
-          // Ensure the circle completely covers any background elements
           overflow: 'hidden',
         }}
       >
         <Image
           source={require('../assets/MainLogo/MB.png')}
           style={{
-            width: 50,
-            height: 50,
+            width: logoSize,
+            height: logoSize,
             resizeMode: 'contain',
           }}
         />
@@ -309,8 +348,8 @@ const CustomTabBar = (props: any) => {
         flexDirection: 'row',
         justifyContent: 'space-around',
         alignItems: 'center',
-        height: 50,
-        marginTop: 20, // Add space for the circular overlapping logo
+        height: tabBarHeight,
+        marginTop: currentModerateScale(6), // Further reduced from 10 - Add space for the circular overlapping logo
       }}>
         {props.state.routes.map((route: any, index: number) => {
           const { options } = props.descriptors[route.key];
@@ -354,23 +393,23 @@ const CustomTabBar = (props: any) => {
                 flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: 4,
+                paddingVertical: currentModerateScale(0.5), // Further reduced from 1
               }}
             >
               {options.tabBarIcon ? (
                 options.tabBarIcon({
                   focused: isFocused,
                   color: isFocused ? theme.colors.primary : theme.colors.textSecondary,
-                  size: 24,
+                  size: iconSize,
                 })
               ) : (
                 // Add invisible spacer for tabs without icon to maintain text alignment
-                <View style={{ height: 24 }} />
+                <View style={{ height: iconSize }} />
               )}
               <Text style={{
-                fontSize: 10,
+                fontSize: fontSize,
                 fontWeight: '600',
-                marginTop: 2,
+                marginTop: currentModerateScale(0.3), // Further reduced from 0.5
                 color: isFocused ? theme.colors.primary : theme.colors.textSecondary,
               }}>
                 {label}

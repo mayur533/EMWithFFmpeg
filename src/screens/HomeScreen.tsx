@@ -52,14 +52,59 @@ import responsiveUtils, {
   isLandscape 
 } from '../utils/responsiveUtils';
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-// Responsive design helpers - using imported utilities
+// Compact spacing multiplier to reduce all spacing
+const COMPACT_MULTIPLIER = 0.5;
 
 const HomeScreen: React.FC = React.memo(() => {
   const { isDarkMode, theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
+  
+  // Dynamic dimensions for responsive layout
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  // Update dimensions on screen rotation/resize
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const screenWidth = dimensions.width;
+  const screenHeight = dimensions.height;
+  
+  // Responsive icon sizes
+  const getIconSize = useCallback((baseSize: number) => {
+    const scale = screenWidth / 375; // Base on iPhone 8 width
+    return Math.round(baseSize * scale);
+  }, [screenWidth]);
+  
+  // Responsive card calculations
+  const getCardWidth = useCallback(() => {
+    if (isTablet) {
+      return screenWidth * 0.15; // 6-7 cards visible on tablet
+    } else if (screenWidth >= 768) {
+      return screenWidth * 0.18; // 5 cards on large phones
+    } else if (screenWidth >= 600) {
+      return screenWidth * 0.22; // 4 cards on medium phones
+    } else if (screenWidth >= 400) {
+      return screenWidth * 0.28; // 3 cards on regular phones
+    } else {
+      return screenWidth * 0.32; // 3 cards on small phones with more spacing
+    }
+  }, [screenWidth]);
+
+  const cardWidth = getCardWidth();
+  
+  // Responsive icon sizes for different UI elements
+  const searchIconSize = getIconSize(14);
+  const statusIconSize = getIconSize(8);
+  const playIconSize = getIconSize(16);
 
 
   const [activeTab, setActiveTab] = useState('trending');
@@ -987,13 +1032,13 @@ const HomeScreen: React.FC = React.memo(() => {
           <View style={styles.templateImageContainer}>
             <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
             <View style={styles.videoPlayOverlay}>
-              <Icon name="play-arrow" size={32} color="#ffffff" />
+              <Icon name="play-arrow" size={playIconSize} color="#ffffff" />
             </View>
           </View>
         </Animated.View>
       </TouchableOpacity>
     );
-  }, [handleTemplatePress, theme]);
+  }, [handleTemplatePress, theme, playIconSize]);
 
   // Memoized key extractors
   const keyExtractor = useCallback((item: any) => item.id, []);
@@ -1040,7 +1085,12 @@ const HomeScreen: React.FC = React.memo(() => {
 
   if (loading) {
     return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
+      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#667eea' }]}>
+        <StatusBar 
+          barStyle="light-content"
+          backgroundColor="transparent" 
+          translucent={true}
+        />
         <LinearGradient
           colors={theme.colors.gradient}
           style={styles.loadingContainer}
@@ -1054,7 +1104,7 @@ const HomeScreen: React.FC = React.memo(() => {
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#667eea' }]}
       edges={['top', 'left', 'right']}
     >
       <StatusBar 
@@ -1070,14 +1120,14 @@ const HomeScreen: React.FC = React.memo(() => {
         end={{ x: 1, y: 1 }}
       >
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + responsiveSpacing.sm }]}>
+        <View style={[styles.header, { paddingTop: insets.top + responsiveSpacing.xs * COMPACT_MULTIPLIER }]}>
           <View style={styles.headerTop}>
             <View style={styles.greeting}>
               <Text style={styles.greetingText}>Dashboard</Text>
               <Text style={styles.userName}>Event Management</Text>
               {apiError && (
                 <View style={styles.apiStatusIndicator}>
-                  <Icon name="wifi-off" size={12} color="#ff9800" />
+                  <Icon name="wifi-off" size={statusIconSize} color="#ff9800" />
                   <Text style={styles.apiStatusText}>Offline Mode</Text>
                 </View>
               )}
@@ -1093,7 +1143,7 @@ const HomeScreen: React.FC = React.memo(() => {
 
         <ScrollView 
           style={styles.content}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
@@ -1106,7 +1156,7 @@ const HomeScreen: React.FC = React.memo(() => {
           {/* Search Bar */}
           <View style={styles.searchContainer}>
             <View style={[styles.searchBar, { backgroundColor: theme.colors.cardBackground }]}>
-              <Icon name="search" size={screenWidth < 480 ? 18 : screenWidth < 768 ? 20 : 22} color={theme.colors.primary} style={styles.searchIcon} />
+              <Icon name="search" size={searchIconSize} color={theme.colors.primary} style={styles.searchIcon} />
               <TextInput
                 style={[styles.searchInput, { color: theme.colors.text }]}
                 placeholder="Search templates and services..."
@@ -1118,7 +1168,7 @@ const HomeScreen: React.FC = React.memo(() => {
               />
               {searchQuery.length > 0 && (
                 <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Icon name="close" size={screenWidth < 480 ? 18 : screenWidth < 768 ? 20 : 22} color={theme.colors.textSecondary} style={styles.clearIcon} />
+                  <Icon name="close" size={searchIconSize} color={theme.colors.textSecondary} style={styles.clearIcon} />
                 </TouchableOpacity>
               )}
             </View>
@@ -1264,15 +1314,13 @@ const HomeScreen: React.FC = React.memo(() => {
               data={templates}
               renderItem={renderTemplate}
               keyExtractor={keyExtractor}
-              numColumns={3}
-              columnWrapperStyle={styles.templateRow}
-              showsVerticalScrollIndicator={false}
-              scrollEnabled={false}
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
               nestedScrollEnabled={true}
               removeClippedSubviews={true}
-              maxToRenderPerBatch={6}
+              maxToRenderPerBatch={12}
               windowSize={10}
-              contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+              contentContainerStyle={styles.horizontalList}
             />
           </View>
 
@@ -1290,15 +1338,13 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={videoContent}
                 renderItem={renderVideoTemplate}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={6}
+                maxToRenderPerBatch={12}
                 windowSize={10}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1316,11 +1362,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={motivationTemplates}
                 renderItem={createGreetingCardRenderer(motivationTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1338,11 +1383,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={goodMorningTemplates}
                 renderItem={createGreetingCardRenderer(goodMorningTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1360,11 +1404,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={businessEthicsTemplates}
                 renderItem={createGreetingCardRenderer(businessEthicsTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1382,11 +1425,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={devotionalTemplates}
                 renderItem={createGreetingCardRenderer(devotionalTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1404,11 +1446,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={leaderQuotesTemplates}
                 renderItem={createGreetingCardRenderer(leaderQuotesTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1426,11 +1467,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={atmanirbharBharatTemplates}
                 renderItem={createGreetingCardRenderer(atmanirbharBharatTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1448,11 +1488,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={goodThoughtsTemplates}
                 renderItem={createGreetingCardRenderer(goodThoughtsTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1470,11 +1509,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={trendingTemplates}
                 renderItem={createGreetingCardRenderer(trendingTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1492,11 +1530,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={bhagvatGitaTemplates}
                 renderItem={createGreetingCardRenderer(bhagvatGitaTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1514,11 +1551,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={booksTemplates}
                 renderItem={createGreetingCardRenderer(booksTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1536,11 +1572,10 @@ const HomeScreen: React.FC = React.memo(() => {
                 data={celebratesMomentsTemplates}
                 renderItem={createGreetingCardRenderer(celebratesMomentsTemplates)}
                 keyExtractor={keyExtractor}
-                numColumns={3}
-                columnWrapperStyle={styles.templateRow}
-                showsVerticalScrollIndicator={false}
-                scrollEnabled={false}
-                contentContainerStyle={{ paddingBottom: responsiveSpacing.xl }}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
@@ -1615,7 +1650,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Upcoming Festivals</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse upcoming festivals and events</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -1630,7 +1664,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`upcoming-events-modal-${upcomingEvents.length}`}
                   data={upcomingEvents}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -1672,12 +1706,12 @@ const HomeScreen: React.FC = React.memo(() => {
                             end={{ x: 1, y: 0 }}
                             style={styles.upcomingEventModalBadge}
                           >
-                            <Icon name="star" size={12} color="#ffffff" />
+                            <Icon name="star" size={moderateScale(9)} color="#ffffff" />
                             <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
                           </LinearGradient>
                         ) : (
                           <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
-                            <Icon name="star" size={12} color="#FFD700" />
+                            <Icon name="star" size={moderateScale(9)} color="#FFD700" />
                             <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
                           </View>
                         )}
@@ -1706,7 +1740,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Business Events</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all available business events</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -1721,7 +1754,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`templates-modal-${professionalTemplates.length}`}
                   data={professionalTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -1753,7 +1786,7 @@ const HomeScreen: React.FC = React.memo(() => {
                         />
                         {template.isPremium ? (
                           <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
-                            <Icon name="star" size={12} color="#FFD700" />
+                            <Icon name="star" size={moderateScale(9)} color="#FFD700" />
                             <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
                           </View>
                         ) : (
@@ -1763,7 +1796,7 @@ const HomeScreen: React.FC = React.memo(() => {
                             end={{ x: 1, y: 0 }}
                             style={styles.upcomingEventModalBadge}
                           >
-                            <Icon name="star" size={12} color="#ffffff" />
+                            <Icon name="star" size={moderateScale(9)} color="#ffffff" />
                             <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
                           </LinearGradient>
                         )}
@@ -1792,7 +1825,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Video Content</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all available videos</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -1807,7 +1839,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`videos-modal-${videoContent.length}`}
                   data={videoContent}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -1839,7 +1871,7 @@ const HomeScreen: React.FC = React.memo(() => {
                         />
                         {video.isPremium ? (
                           <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
-                            <Icon name="star" size={12} color="#FFD700" />
+                            <Icon name="star" size={moderateScale(9)} color="#FFD700" />
                             <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
                           </View>
                         ) : (
@@ -1849,7 +1881,7 @@ const HomeScreen: React.FC = React.memo(() => {
                             end={{ x: 1, y: 0 }}
                             style={styles.upcomingEventModalBadge}
                           >
-                            <Icon name="star" size={12} color="#ffffff" />
+                            <Icon name="star" size={moderateScale(9)} color="#ffffff" />
                             <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
                           </LinearGradient>
                         )}
@@ -1878,7 +1910,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Motivation</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all motivational templates</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -1893,7 +1924,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`motivation-modal-${motivationTemplates.length}`}
                   data={motivationTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -1949,7 +1980,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Good Morning</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all good morning templates</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -1964,7 +1994,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`goodmorning-modal-${goodMorningTemplates.length}`}
                   data={goodMorningTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2020,7 +2050,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Business Ethics</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all business ethics templates</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -2035,7 +2064,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`businessethics-modal-${businessEthicsTemplates.length}`}
                   data={businessEthicsTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2091,7 +2120,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Devotional</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all devotional templates</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -2106,7 +2134,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`devotional-modal-${devotionalTemplates.length}`}
                   data={devotionalTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2162,7 +2190,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Leader Quotes</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all leader quotes templates</Text>
                   </View>
                   <TouchableOpacity 
                     style={styles.upcomingEventsCloseButton}
@@ -2177,7 +2204,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`leaderquotes-modal-${leaderQuotesTemplates.length}`}
                   data={leaderQuotesTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2225,7 +2252,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Atmanirbhar Bharat</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all Atmanirbhar Bharat templates</Text>
                   </View>
                   <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeAtmanirbharBharatModal}>
                     <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
@@ -2237,7 +2263,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`atmanirbhar-modal-${atmanirbharBharatTemplates.length}`}
                   data={atmanirbharBharatTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2270,7 +2296,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Good Thoughts</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all good thoughts templates</Text>
                   </View>
                   <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeGoodThoughtsModal}>
                     <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
@@ -2282,7 +2307,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`goodthoughts-modal-${goodThoughtsTemplates.length}`}
                   data={goodThoughtsTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2315,7 +2340,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Trending</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all trending templates</Text>
                   </View>
                   <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeTrendingModal}>
                     <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
@@ -2327,7 +2351,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`trending-modal-${trendingTemplates.length}`}
                   data={trendingTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2360,7 +2384,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Bhagvat Gita</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all Bhagvat Gita templates</Text>
                   </View>
                   <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeBhagvatGitaModal}>
                     <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
@@ -2372,7 +2395,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`bhagvatgita-modal-${bhagvatGitaTemplates.length}`}
                   data={bhagvatGitaTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2405,7 +2428,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Books</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all books templates</Text>
                   </View>
                   <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeBooksModal}>
                     <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
@@ -2417,7 +2439,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`books-modal-${booksTemplates.length}`}
                   data={booksTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2450,7 +2472,6 @@ const HomeScreen: React.FC = React.memo(() => {
                 <View style={styles.upcomingEventsModalHeader}>
                   <View style={styles.upcomingEventsModalTitleContainer}>
                     <Text style={styles.upcomingEventsModalTitle}>Celebrates the Moments</Text>
-                    <Text style={styles.upcomingEventsModalSubtitle}>Browse all celebrates the moments templates</Text>
                   </View>
                   <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeCelebratesMomentsModal}>
                     <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
@@ -2462,7 +2483,7 @@ const HomeScreen: React.FC = React.memo(() => {
                   key={`celebrates-modal-${celebratesMomentsTemplates.length}`}
                   data={celebratesMomentsTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={3}
+                  numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -2501,6 +2522,21 @@ const HomeScreen: React.FC = React.memo(() => {
 
 HomeScreen.displayName = 'HomeScreen';
 
+// Get dynamic screen dimensions
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Responsive helper functions
+const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
+const verticalScale = (size: number) => (SCREEN_HEIGHT / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Responsive values
+const getResponsiveValue = (small: number, medium: number, large: number) => {
+  if (SCREEN_WIDTH < 400) return small;
+  if (SCREEN_WIDTH < 768) return medium;
+  return large;
+};
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -2521,8 +2557,8 @@ const styles = StyleSheet.create({
   },
   header: {
     paddingTop: 0,
-    paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : responsiveSpacing.md,
-    paddingBottom: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : responsiveSpacing.sm,
+    paddingHorizontal: moderateScale(4),
+    paddingBottom: moderateScale(3),
   },
   headerTop: {
     flexDirection: 'row',
@@ -2531,12 +2567,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   greetingText: {
-    fontSize: screenWidth < 480 ? 10 : screenWidth < 768 ? 12 : responsiveFontSize.sm,
+    fontSize: moderateScale(8),
     color: 'rgba(255,255,255,0.8)',
-    marginBottom: screenWidth < 480 ? 2 : screenWidth < 768 ? 4 : responsiveSpacing.xs,
+    marginBottom: moderateScale(1.5),
   },
   userName: {
-    fontSize: screenWidth < 480 ? 16 : screenWidth < 768 ? 18 : responsiveFontSize.xl,
+    fontSize: moderateScale(12),
     fontWeight: 'bold',
     color: '#ffffff',
   },
@@ -2544,14 +2580,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(255, 152, 0, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 10,
-    marginTop: 4,
-    gap: 4,
+    paddingHorizontal: moderateScale(4),
+    paddingVertical: moderateScale(1),
+    borderRadius: moderateScale(6),
+    marginTop: moderateScale(2),
+    gap: moderateScale(2),
   },
   apiStatusText: {
-    fontSize: 10,
+    fontSize: moderateScale(7),
     color: '#ff9800',
     fontWeight: '500',
   },
@@ -2559,13 +2595,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: 'rgba(76, 175, 80, 0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
-    gap: 6,
+    paddingHorizontal: moderateScale(4),
+    paddingVertical: moderateScale(2),
+    borderRadius: moderateScale(8),
+    gap: moderateScale(3),
   },
   apiLoadingText: {
-    fontSize: 10,
+    fontSize: moderateScale(7),
     color: '#4CAF50',
     fontWeight: '500',
   },
@@ -2576,85 +2612,85 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Fixed padding for tab bar
   },
   searchContainer: {
-    paddingHorizontal: 16,
-    marginBottom: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : responsiveSpacing.sm,
+    paddingHorizontal: moderateScale(8),
+    marginBottom: moderateScale(3),
   },
   calendarSection: {
-    marginHorizontal: 16,
-    marginBottom: screenWidth < 480 ? 12 : screenWidth < 768 ? 16 : responsiveSpacing.md,
+    marginHorizontal: moderateScale(8),
+    marginBottom: moderateScale(6),
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: screenWidth < 480 ? 16 : screenWidth < 768 ? 20 : 25,
-    paddingHorizontal: screenWidth < 480 ? 10 : screenWidth < 768 ? 12 : screenWidth * 0.05,
-    paddingVertical: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : screenHeight * 0.015,
+    borderRadius: moderateScale(14),
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(5),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
-    shadowOpacity: 0.08,
-    shadowRadius: 4,
-    elevation: 4,
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   searchIcon: {
-    marginLeft: screenWidth < 480 ? 4 : screenWidth < 768 ? 6 : 8,
-    marginRight: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : 10,
+    marginLeft: moderateScale(2),
+    marginRight: moderateScale(4),
   },
   searchInput: {
     flex: 1,
-    fontSize: screenWidth < 480 ? 12 : screenWidth < 768 ? 14 : Math.min(screenWidth * 0.04, 16),
+    fontSize: moderateScale(11),
     fontWeight: '500',
   },
   clearIcon: {
-    marginLeft: screenWidth < 480 ? 4 : screenWidth < 768 ? 6 : 8,
-    marginRight: screenWidth < 480 ? 4 : screenWidth < 768 ? 6 : 8,
-    padding: screenWidth < 480 ? 2 : screenWidth < 768 ? 3 : 5,
+    marginLeft: moderateScale(4),
+    marginRight: moderateScale(4),
+    padding: moderateScale(2),
   },
   tabsContainer: {
     flexDirection: 'row',
-    paddingHorizontal: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.02,
+    paddingHorizontal: moderateScale(18),
+    marginBottom: verticalScale(12),
   },
   tab: {
     flex: 1,
-    paddingVertical: screenHeight * 0.012,
-    paddingHorizontal: screenWidth * 0.01,
-    marginHorizontal: screenWidth * 0.005,
-    borderRadius: 20,
+    paddingVertical: verticalScale(8),
+    paddingHorizontal: moderateScale(4),
+    marginHorizontal: moderateScale(2),
+    borderRadius: moderateScale(20),
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: screenHeight * 0.045,
+    minHeight: verticalScale(30),
   },
   tabText: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
+    fontSize: moderateScale(12),
     fontWeight: '600',
     textAlign: 'center',
-    lineHeight: Math.min(screenWidth * 0.035, 14),
+    lineHeight: moderateScale(14),
   },
   bannerSection: {
-    marginBottom: screenHeight * 0.03,
-    paddingHorizontal: 16,
+    marginBottom: verticalScale(10),
+    paddingHorizontal: moderateScale(8),
   },
   sectionTitle: {
-    fontSize: screenWidth < 480 ? 14 : screenWidth < 768 ? 16 : Math.min(screenWidth * 0.045, 18),
+    fontSize: moderateScale(12),
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : screenHeight * 0.015,
-    paddingHorizontal: screenWidth < 480 ? 16 : screenWidth < 768 ? 20 : 24,
+    marginBottom: verticalScale(4),
+    paddingHorizontal: moderateScale(10),
   },
   bannerList: {
-    paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : screenWidth * 0.05,
+    paddingHorizontal: moderateScale(3),
   },
   bannerContainerWrapper: {
-    width: screenWidth < 480 ? screenWidth * 0.80 : screenWidth < 768 ? screenWidth * 0.75 : screenWidth * 0.70,
-    marginRight: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : screenWidth * 0.03,
+    width: getResponsiveValue(SCREEN_WIDTH * 0.70, SCREEN_WIDTH * 0.65, SCREEN_WIDTH * 0.55),
+    marginRight: moderateScale(4),
   },
   bannerContainer: {
     width: '100%',
-    height: screenWidth < 480 ? screenHeight * 0.14 : screenWidth < 768 ? screenHeight * 0.16 : screenHeight * 0.18,
-    borderRadius: screenWidth < 480 ? 14 : screenWidth < 768 ? 16 : 20,
+    height: verticalScale(80),
+    borderRadius: moderateScale(12),
     overflow: 'hidden',
     position: 'relative',
   },
@@ -2671,65 +2707,61 @@ const styles = StyleSheet.create({
   },
   bannerContent: {
     position: 'absolute',
-    bottom: screenWidth < 480 ? 8 : screenWidth < 768 ? 10 : 15,
-    left: screenWidth < 480 ? 8 : screenWidth < 768 ? 10 : 15,
-    right: screenWidth < 480 ? 8 : screenWidth < 768 ? 10 : 15,
+    bottom: moderateScale(5),
+    left: moderateScale(5),
+    right: moderateScale(5),
   },
   bannerTitle: {
-    fontSize: screenWidth < 480 ? 12 : screenWidth < 768 ? 14 : Math.min(screenWidth * 0.04, 16),
+    fontSize: moderateScale(10),
     fontWeight: 'bold',
     color: '#ffffff',
-    marginBottom: screenWidth < 480 ? 4 : screenWidth < 768 ? 6 : 8,
+    marginBottom: moderateScale(3),
   },
   bannerButton: {
-    paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 10 : screenWidth * 0.04,
-    paddingVertical: screenWidth < 480 ? 3 : screenWidth < 768 ? 4 : screenHeight * 0.006,
-    borderRadius: screenWidth < 480 ? 10 : screenWidth < 768 ? 12 : 15,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: moderateScale(2),
+    borderRadius: moderateScale(8),
     alignSelf: 'flex-start',
   },
   bannerButtonText: {
-    fontSize: screenWidth < 480 ? 9 : screenWidth < 768 ? 10 : Math.min(screenWidth * 0.03, 12),
+    fontSize: moderateScale(8),
     fontWeight: '600',
   },
      upcomingEventsSection: {
-     marginBottom: screenHeight * 0.03,
-     paddingHorizontal: 16,
+     marginBottom: verticalScale(10),
+     paddingHorizontal: moderateScale(8),
    },
    sectionHeader: {
      flexDirection: 'row',
      justifyContent: 'space-between',
      alignItems: 'center',
-     paddingHorizontal: screenWidth < 480 ? 16 : screenWidth < 768 ? 20 : 24,
-     marginBottom: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : screenHeight * 0.015,
+     paddingHorizontal: moderateScale(10),
+     marginBottom: verticalScale(4),
    },
    viewAllButton: {
-     paddingHorizontal: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : screenWidth * 0.04,
-     paddingVertical: screenWidth < 480 ? 3 : screenWidth < 768 ? 4 : screenHeight * 0.006,
+     paddingHorizontal: moderateScale(5),
+     paddingVertical: moderateScale(2),
      backgroundColor: 'rgba(255,255,255,0.2)',
-     borderRadius: screenWidth < 480 ? 10 : screenWidth < 768 ? 12 : 15,
+     borderRadius: moderateScale(8),
    },
    viewAllButtonText: {
-     fontSize: screenWidth < 480 ? 9 : screenWidth < 768 ? 10 : Math.min(screenWidth * 0.03, 12),
+     fontSize: moderateScale(8),
      color: '#ffffff',
      fontWeight: '600',
    },
        upcomingEventsList: {
-      paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : screenWidth * 0.05,
+      paddingHorizontal: moderateScale(3),
     },
                    upcomingEventCard: {
-        width: (screenWidth - responsiveSpacing.lg * 2 - responsiveSpacing.sm * 2) / 3, // Always 3 columns
-        marginRight: responsiveSpacing.sm,
+        width: getResponsiveValue(SCREEN_WIDTH * 0.32, SCREEN_WIDTH * 0.28, SCREEN_WIDTH * 0.18),
+        marginRight: moderateScale(3),
         backgroundColor: 'rgba(255,255,255,0.1)',
-        borderRadius: responsiveSize.cardBorderRadius,
+        borderRadius: moderateScale(10),
         overflow: 'hidden',
-        ...responsiveShadow.medium,
+        ...responsiveShadow.small,
       },
    upcomingEventImageContainer: {
-     height: isTablet 
-       ? screenHeight * 0.15  // Taller on tablet for better proportions
-       : isLandscape 
-         ? screenHeight * 0.18  // Taller in landscape
-         : screenHeight * 0.12, // Default height on phone
+     height: verticalScale(60),
      position: 'relative',
    },
    upcomingEventImage: {
@@ -2745,47 +2777,46 @@ const styles = StyleSheet.create({
    },
    upcomingEventBadge: {
      position: 'absolute',
-     top: 8,
-     left: 8,
+     top: moderateScale(4),
+     left: moderateScale(4),
      backgroundColor: 'rgba(0,0,0,0.7)',
-     paddingHorizontal: 8,
-     paddingVertical: 4,
-     borderRadius: 12,
+     paddingHorizontal: moderateScale(4),
+     paddingVertical: moderateScale(2),
+     borderRadius: moderateScale(6),
    },
    upcomingEventBadgeText: {
-     fontSize: Math.min(screenWidth * 0.025, 10),
+     fontSize: moderateScale(7),
      color: '#ffffff',
      fontWeight: '600',
    },
   templatesSection: {
-    paddingBottom: screenWidth < 480 ? screenHeight * 0.02 : screenWidth < 768 ? screenHeight * 0.03 : screenHeight * 0.05,
-    paddingHorizontal: 16,
+    paddingBottom: verticalScale(15),
+    paddingHorizontal: moderateScale(8),
   },
   videoSection: {
-    paddingBottom: screenWidth < 480 ? screenHeight * 0.02 : screenWidth < 768 ? screenHeight * 0.03 : screenHeight * 0.05,
-    paddingHorizontal: 16,
+    paddingBottom: verticalScale(15),
+    paddingHorizontal: moderateScale(8),
   },
   templateRow: {
     justifyContent: 'flex-start',
-    paddingHorizontal: screenWidth < 480 ? 8 : screenWidth < 768 ? 12 : responsiveSpacing.md,
-    gap: screenWidth < 480 ? 6 : screenWidth < 768 ? 8 : responsiveSpacing.sm,
+    paddingHorizontal: moderateScale(4),
+    gap: moderateScale(2),
+  },
+  horizontalList: {
+    paddingHorizontal: moderateScale(3),
   },
   templateCardWrapper: {
-    width: (screenWidth - responsiveSpacing.lg * 2 - responsiveSpacing.sm * 2) / 3, // Always 3 columns
-    marginBottom: responsiveSpacing.md,
+    width: getResponsiveValue(SCREEN_WIDTH * 0.32, SCREEN_WIDTH * 0.28, SCREEN_WIDTH * 0.18),
+    marginRight: moderateScale(3),
   },
   templateCard: {
     width: '100%',
-    borderRadius: responsiveSize.cardBorderRadius,
+    borderRadius: moderateScale(10),
     overflow: 'hidden',
-    ...responsiveShadow.medium,
+    ...responsiveShadow.small,
   },
   templateImageContainer: {
-    height: isTablet 
-      ? screenHeight * 0.18  // Taller on tablet for better proportions
-      : isLandscape 
-        ? screenHeight * 0.20  // Taller in landscape
-        : screenHeight * 0.15, // Default height on phone
+    height: verticalScale(60),
     position: 'relative',
   },
   templateImage: {
@@ -2829,7 +2860,7 @@ const styles = StyleSheet.create({
     height: 40,
   },
   templateInfo: {
-    padding: screenWidth * 0.03,
+    padding: moderateScale(12),
   },
   templateName: {
     fontSize: responsiveFontSize.sm,
@@ -2885,32 +2916,32 @@ const styles = StyleSheet.create({
      alignItems: 'center',
    },
    modalContent: {
-     width: screenWidth * 0.9,
-     height: screenHeight * 0.8,
+     width: SCREEN_WIDTH * 0.92, // Slightly wider
+     height: SCREEN_HEIGHT * 0.75, // Reduced from 0.8
      backgroundColor: '#ffffff',
-     borderRadius: 20,
+     borderRadius: moderateScale(16), // Reduced from 20
      overflow: 'hidden',
      position: 'relative',
    },
    closeButton: {
      position: 'absolute',
-     top: 15,
-     right: 15,
-     width: 30,
-     height: 30,
-     borderRadius: 15,
-     backgroundColor: 'rgba(0, 0, 0, 0.5)',
+     top: moderateScale(10), // Reduced from 15
+     right: moderateScale(10),
+     width: moderateScale(26), // Reduced from 30
+     height: moderateScale(26),
+     borderRadius: moderateScale(13),
+     backgroundColor: 'rgba(0, 0, 0, 0.4)', // Lighter
      justifyContent: 'center',
      alignItems: 'center',
      zIndex: 10,
    },
    closeButtonText: {
      color: '#ffffff',
-     fontSize: 16,
+     fontSize: moderateScale(14), // Reduced from 16
      fontWeight: 'bold',
    },
    modalImageContainer: {
-     height: screenHeight * 0.4,
+     height: SCREEN_HEIGHT * 0.35, // Reduced from 0.4
      position: 'relative',
    },
    modalImage: {
@@ -2922,106 +2953,107 @@ const styles = StyleSheet.create({
      bottom: 0,
      left: 0,
      right: 0,
-     height: 60,
+     height: moderateScale(40), // Reduced from 60
    },
    modalInfoContainer: {
      flex: 1,
-     padding: screenWidth * 0.05,
+     padding: moderateScale(12), // Reduced from 18
    },
    modalHeader: {
-     marginBottom: screenHeight * 0.02,
+     marginBottom: verticalScale(8), // Reduced from 12
    },
    modalTitle: {
-     fontSize: Math.min(screenWidth * 0.05, 20),
+     fontSize: moderateScale(15), // Reduced from 18
      fontWeight: 'bold',
      color: '#333333',
-     marginBottom: 4,
+     marginBottom: moderateScale(3), // Reduced from 4
    },
    modalCategory: {
-     fontSize: Math.min(screenWidth * 0.035, 14),
+     fontSize: moderateScale(11), // Reduced from 14
      color: '#666666',
      fontWeight: '500',
    },
    modalStats: {
      flexDirection: 'row',
      justifyContent: 'space-around',
-     marginBottom: screenHeight * 0.03,
-     paddingVertical: screenHeight * 0.015,
+     marginBottom: verticalScale(12), // Reduced from 20
+     paddingVertical: verticalScale(6), // Reduced from 10
      backgroundColor: '#f8f9fa',
-     borderRadius: 15,
+     borderRadius: moderateScale(10), // Reduced from 15
    },
    modalStat: {
      alignItems: 'center',
    },
    modalStatLabel: {
-     fontSize: Math.min(screenWidth * 0.03, 12),
+     fontSize: moderateScale(9), // Reduced from 12
      color: '#666666',
      fontWeight: '500',
-     marginBottom: 4,
+     marginBottom: moderateScale(2), // Reduced from 4
    },
    modalStatValue: {
-     fontSize: Math.min(screenWidth * 0.04, 16),
+     fontSize: moderateScale(13), // Reduced from 16
      fontWeight: 'bold',
      color: '#333333',
    },
-   // Upcoming Festivals Modal Styles - Responsive across all screen sizes
+   // Upcoming Festivals Modal Styles - Compact & Responsive
    upcomingEventsModalContent: {
-      width: isTablet ? screenWidth * 0.85 : screenWidth * 0.95,
-      maxWidth: isTablet ? 900 : screenWidth * 0.95,
-      height: screenHeight * 0.9,
+      width: isTablet ? SCREEN_WIDTH * 0.90 : SCREEN_WIDTH * 0.96,
+      maxWidth: isTablet ? 900 : SCREEN_WIDTH * 0.96,
+      height: SCREEN_HEIGHT * 0.85, // Reduced from 0.9
       backgroundColor: '#ffffff',
-      borderRadius: isTablet ? 30 : 25,
+      borderRadius: isTablet ? moderateScale(20) : moderateScale(16), // Reduced from 30/25
       overflow: 'hidden',
       position: 'relative',
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
-        height: 20,
+        height: moderateScale(8), // Reduced from 20
       },
-      shadowOpacity: 0.3,
-      shadowRadius: 25,
-      elevation: 15,
+      shadowOpacity: 0.2, // Reduced from 0.3
+      shadowRadius: moderateScale(12), // Reduced from 25
+      elevation: 10, // Reduced from 15
     },
     upcomingEventsModalGradient: {
-      paddingTop: screenHeight * 0.05,
-      paddingBottom: screenHeight * 0.02,
+      paddingTop: verticalScale(8), // Further reduced from 15
+      paddingBottom: verticalScale(4), // Further reduced from 6
     },
     upcomingEventsModalHeader: {
       flexDirection: 'row',
       justifyContent: 'space-between',
-      alignItems: 'flex-start',
-      paddingHorizontal: responsiveSpacing.lg,
+      alignItems: 'center', // Changed from flex-start to center
+      paddingHorizontal: moderateScale(12),
     },
     upcomingEventsModalTitleContainer: {
       flex: 1,
-      marginRight: responsiveSpacing.md,
+      marginRight: moderateScale(6), // Reduced from 8
     },
     upcomingEventsModalTitle: {
-      fontSize: isTablet ? 28 : Math.min(screenWidth * 0.055, 22),
+      fontSize: isTablet ? moderateScale(15) : moderateScale(13), // Further reduced from 18/16
       fontWeight: 'bold',
       color: '#ffffff',
-      marginBottom: screenHeight * 0.005,
-      textShadowColor: 'rgba(0,0,0,0.3)',
-      textShadowOffset: { width: 0, height: 1 },
-      textShadowRadius: 3,
+      marginBottom: 0, // No margin needed without subtitle
+      textShadowColor: 'rgba(0,0,0,0.15)',
+      textShadowOffset: { width: 0, height: 0.5 },
+      textShadowRadius: 2,
     },
     upcomingEventsModalSubtitle: {
-      fontSize: isTablet ? 16 : Math.min(screenWidth * 0.035, 14),
-      color: 'rgba(255,255,255,0.9)',
+      fontSize: 0, // Hidden
+      color: 'rgba(255,255,255,0)',
       fontWeight: '500',
+      display: 'none',
     },
     upcomingEventsCloseButton: {
-      width: isTablet ? 48 : 40,
-      height: isTablet ? 48 : 40,
-      borderRadius: isTablet ? 24 : 20,
-      backgroundColor: 'rgba(255,255,255,0.2)',
+      width: isTablet ? moderateScale(28) : moderateScale(26), // Further reduced from 36/32
+      height: isTablet ? moderateScale(28) : moderateScale(26),
+      borderRadius: isTablet ? moderateScale(14) : moderateScale(13),
+      backgroundColor: 'rgba(255,255,255,0.12)', // Further reduced opacity
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: 1,
-      borderColor: 'rgba(255,255,255,0.3)',
+      borderWidth: 0.3, // Further reduced from 0.5
+      borderColor: 'rgba(255,255,255,0.15)',
     },
     upcomingEventsCloseButtonText: {
-      fontSize: isTablet ? 22 : 18,
+      fontSize: isTablet ? moderateScale(15) : moderateScale(14), // Further reduced from 18/16
       color: '#ffffff',
       fontWeight: 'bold',
     },
@@ -3030,42 +3062,29 @@ const styles = StyleSheet.create({
       backgroundColor: '#f8f9fa',
     },
     upcomingEventsModalScroll: {
-      paddingHorizontal: responsiveSpacing.lg,
-      paddingTop: responsiveSpacing.xl,
-      paddingBottom: responsiveSpacing.xl,
+      paddingHorizontal: moderateScale(8), // Further reduced for symmetry
+      paddingTop: moderateScale(12),
+      paddingBottom: moderateScale(12),
     },
     upcomingEventModalRow: {
-      justifyContent: 'flex-start', // Start from left for incomplete rows
-      gap: (() => {
-        // Calculate gap to distribute space evenly
-        const modalWidth = isTablet ? Math.min(screenWidth * 0.85, 900) : screenWidth * 0.95;
-        const contentPadding = responsiveSpacing.lg * 2;
-        const availableWidth = modalWidth - contentPadding;
-        const cardWidth = availableWidth * 0.3; // 30% for each card
-        const totalCardWidth = cardWidth * 3;
-        const remainingSpace = availableWidth - totalCardWidth;
-        return remainingSpace / 2; // Divide remaining space equally between 2 gaps
-      })(),
-      marginBottom: responsiveSpacing.md,
+      justifyContent: 'space-between', // Changed from flex-start for equal spacing
+      marginBottom: moderateScale(6),
+      paddingHorizontal: 0,
     },
     upcomingEventModalCard: {
-      // Calculate card width properly with equal spacing on both sides
-      width: (() => {
-        const modalWidth = isTablet ? Math.min(screenWidth * 0.85, 900) : screenWidth * 0.95;
-        const contentPadding = responsiveSpacing.lg * 2; // left + right padding
-        const availableWidth = modalWidth - contentPadding;
-        return availableWidth * 0.3; // 30% of available width for each card (leaves 10% for gaps)
-      })(),
+      width: isTablet 
+        ? (SCREEN_WIDTH * 0.90 - moderateScale(16)) / 4 - moderateScale(3)
+        : (SCREEN_WIDTH * 0.96 - moderateScale(16)) / 4 - moderateScale(3), // Equal spacing calculation
       backgroundColor: '#ffffff',
-      borderRadius: responsiveSize.cardBorderRadius,
-      ...responsiveShadow.medium,
+      borderRadius: moderateScale(8),
+      ...responsiveShadow.small,
       overflow: 'hidden',
-      borderWidth: 1,
-      borderColor: 'rgba(0,0,0,0.05)',
+      borderWidth: 0.5,
+      borderColor: 'rgba(0,0,0,0.03)',
     },
     upcomingEventModalImageContainer: {
       width: '100%',
-      aspectRatio: isTablet ? 1 : 0.85, // Responsive aspect ratio for images
+      aspectRatio: isTablet ? 1 : 0.9, // More square for compact layout
       position: 'relative',
     },
     upcomingEventModalImage: {
@@ -3077,33 +3096,32 @@ const styles = StyleSheet.create({
       bottom: 0,
       left: 0,
       right: 0,
-      height: isTablet ? 80 : 60,
+      height: isTablet ? moderateScale(50) : moderateScale(40), // Reduced from 80/60
     },
     upcomingEventModalBadge: {
       position: 'absolute',
-      top: 12,
-      left: 12,
+      top: moderateScale(6), // Reduced from 12
+      left: moderateScale(6),
       flexDirection: 'row',
       alignItems: 'center',
-      paddingHorizontal: 10,
-      paddingVertical: 6,
-      borderRadius: 16,
-      gap: 4,
-      // Premium shadow effect matching TemplateCard exactly
+      paddingHorizontal: moderateScale(6), // Reduced from 10
+      paddingVertical: moderateScale(3), // Reduced from 6
+      borderRadius: moderateScale(10), // Reduced from 16
+      gap: moderateScale(2), // Reduced from 4
       shadowColor: '#000',
       shadowOffset: {
         width: 0,
-        height: 2,
+        height: moderateScale(1), // Reduced from 2
       },
-      shadowOpacity: 0.2,
-      shadowRadius: 4,
-      elevation: 3,
+      shadowOpacity: 0.15, // Reduced from 0.2
+      shadowRadius: moderateScale(3), // Reduced from 4
+      elevation: 2, // Reduced from 3
     },
     upcomingEventModalBadgeText: {
-      fontSize: 10,
+      fontSize: moderateScale(7), // Reduced from 10
       color: '#ffffff',
       fontWeight: '700',
-      letterSpacing: 0.5,
+      letterSpacing: 0.3, // Reduced from 0.5
     },
     premiumEventBadge: {
       backgroundColor: 'rgba(0,0,0,0.8)',
@@ -3112,23 +3130,23 @@ const styles = StyleSheet.create({
       color: '#FFD700',
     },
     upcomingEventModalContent: {
-      padding: responsiveSpacing.sm,
+      padding: moderateScale(6), // Reduced from responsiveSpacing.sm
     },
     upcomingEventModalTitle: {
-      fontSize: isTablet ? 16 : Math.min(screenWidth * 0.04, 14),
+      fontSize: isTablet ? moderateScale(13) : moderateScale(12), // Reduced from 16/14
       fontWeight: 'bold',
       color: '#333333',
-      marginBottom: responsiveSpacing.xs,
+      marginBottom: moderateScale(2), // Reduced from responsiveSpacing.xs
     },
     upcomingEventModalDetails: {
-      gap: responsiveSpacing.xs,
+      gap: moderateScale(2), // Reduced from responsiveSpacing.xs
     },
     upcomingEventModalDetail: {
       flexDirection: 'row',
       alignItems: 'center',
     },
     upcomingEventModalDetailLabel: {
-      fontSize: isTablet ? 14 : Math.min(screenWidth * 0.035, 13),
+      fontSize: isTablet ? moderateScale(11) : moderateScale(10), // Reduced from 14/13
       color: '#666666',
       fontWeight: '500',
     },
