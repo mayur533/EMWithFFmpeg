@@ -26,6 +26,14 @@ import { useTheme } from '../context/ThemeContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Compact spacing multiplier to reduce all spacing (50% reduction)
+const COMPACT_MULTIPLIER = 0.5;
+
+// Responsive scaling functions
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
 // Enhanced responsive design helpers with more granular breakpoints
 const isUltraSmallScreen = screenWidth < 360;
 const isSmallScreen = screenWidth >= 360 && screenWidth < 375;
@@ -41,27 +49,27 @@ const isLandscape = screenWidth > screenHeight;
 const isTablet = Math.min(screenWidth, screenHeight) >= 768;
 const isPhone = !isTablet;
 
-// Enhanced responsive spacing and sizing system
+// Enhanced responsive spacing and sizing system (with COMPACT_MULTIPLIER applied)
 const responsiveSpacing = {
-  xs: isUltraSmallScreen ? 2 : isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : 10,
-  sm: isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12,
-  md: isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14,
-  lg: isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16,
-  xl: isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : 18,
-  xxl: isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : 20,
-  xxxl: isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 24,
+  xs: Math.max(1, (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : 10) * COMPACT_MULTIPLIER),
+  sm: Math.max(2, (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12) * COMPACT_MULTIPLIER),
+  md: Math.max(3, (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14) * COMPACT_MULTIPLIER),
+  lg: Math.max(4, (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16) * COMPACT_MULTIPLIER),
+  xl: Math.max(5, (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : 18) * COMPACT_MULTIPLIER),
+  xxl: Math.max(6, (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : 20) * COMPACT_MULTIPLIER),
+  xxxl: Math.max(7, (isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 24) * COMPACT_MULTIPLIER),
 };
 
 const responsiveFontSize = {
-  xs: isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12,
-  sm: isUltraSmallScreen ? 9 : isSmallScreen ? 10 : isMediumScreen ? 11 : isLargeScreen ? 12 : 13,
-  md: isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14,
-  lg: isUltraSmallScreen ? 11 : isSmallScreen ? 12 : isMediumScreen ? 13 : isLargeScreen ? 14 : 15,
-  xl: isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16,
-  xxl: isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : isLargeScreen ? 16 : 17,
-  xxxl: isUltraSmallScreen ? 14 : isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : 18,
-  xxxxl: isUltraSmallScreen ? 15 : isSmallScreen ? 16 : isMediumScreen ? 17 : isLargeScreen ? 18 : 20,
-  xxxxxl: isUltraSmallScreen ? 16 : isSmallScreen ? 17 : isMediumScreen ? 18 : isLargeScreen ? 19 : 22,
+  xs: Math.max(7, (isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12) * 0.85),
+  sm: Math.max(8, (isUltraSmallScreen ? 9 : isSmallScreen ? 10 : isMediumScreen ? 11 : isLargeScreen ? 12 : 13) * 0.85),
+  md: Math.max(9, (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14) * 0.85),
+  lg: Math.max(10, (isUltraSmallScreen ? 11 : isSmallScreen ? 12 : isMediumScreen ? 13 : isLargeScreen ? 14 : 15) * 0.85),
+  xl: Math.max(11, (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16) * 0.85),
+  xxl: Math.max(12, (isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : isLargeScreen ? 16 : 17) * 0.85),
+  xxxl: Math.max(13, (isUltraSmallScreen ? 14 : isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : 18) * 0.85),
+  xxxxl: Math.max(14, (isUltraSmallScreen ? 15 : isSmallScreen ? 16 : isMediumScreen ? 17 : isLargeScreen ? 18 : 20) * 0.85),
+  xxxxxl: Math.max(15, (isUltraSmallScreen ? 16 : isSmallScreen ? 17 : isMediumScreen ? 18 : isLargeScreen ? 19 : 22) * 0.85),
 };
 
 // Enhanced responsive dimensions calculation with orientation support
@@ -140,17 +148,33 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
   const insets = useSafeAreaInsets();
   const { isDarkMode, theme } = useTheme();
   
-  // State for orientation changes
-  const [screenData, setScreenData] = useState(Dimensions.get('window'));
+  // State for dynamic dimensions to handle orientation changes
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
   
-  // Listen for orientation changes
+  // Listen for orientation changes and update dimensions
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
-      setScreenData(window);
+      setDimensions({ width: window.width, height: window.height });
     });
     
     return () => subscription?.remove();
   }, []);
+  
+  const currentScreenWidth = dimensions.width;
+  const currentScreenHeight = dimensions.height;
+  
+  // Dynamic responsive scaling functions
+  const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
+  const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
+  // Responsive icon sizes (compact - 60% of original)
+  const getIconSize = (baseSize: number) => {
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+  };
   
   // Get responsive dimensions
   const { imageWidth, imageHeight, availableWidth, availableHeight } = getResponsiveDimensions(insets);
@@ -409,7 +433,7 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
      }
    };
 
-  // Create theme-aware styles
+  // Create theme-aware styles (with dynamic responsive scaling)
   const getThemeStyles = () => ({
     container: {
       flex: 1,
@@ -417,75 +441,75 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
     },
     previewContainer: {
       flex: 1,
-      padding: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+      padding: dynamicModerateScale(4),
       backgroundColor: theme?.colors?.background || '#f8f9fa',
     },
     previewTitle: {
-      fontSize: isLandscape ? (isTablet ? responsiveFontSize.xxxxl : responsiveFontSize.xxxl) : (isUltraSmallScreen ? responsiveFontSize.lg : isSmallScreen ? responsiveFontSize.xl : isMediumScreen ? responsiveFontSize.xxl : isLargeScreen ? responsiveFontSize.xxxl : responsiveFontSize.xxxxl),
+      fontSize: dynamicModerateScale(11),
       fontWeight: '700',
       color: theme?.colors?.text || '#333333',
-      marginBottom: isLandscape ? (isTablet ? responsiveSpacing.xs : 2) : (isUltraSmallScreen ? 2 : isSmallScreen ? 3 : isMediumScreen ? 4 : isLargeScreen ? 5 : 6),
+      marginBottom: dynamicModerateScale(1.5),
     },
     previewSubtitle: {
-      fontSize: isLandscape ? (isTablet ? responsiveFontSize.md : responsiveFontSize.sm) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : isMediumScreen ? responsiveFontSize.md : isLargeScreen ? responsiveFontSize.lg : responsiveFontSize.xl),
+      fontSize: dynamicModerateScale(8.5),
       color: theme?.colors?.textSecondary || '#666666',
       textAlign: 'center',
     },
     imageContainer: {
       backgroundColor: theme?.colors?.surface || '#ffffff',
-      borderRadius: isLandscape ? (isTablet ? 20 : 16) : (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : 20),
+      borderRadius: dynamicModerateScale(10),
       shadowColor: theme?.colors?.shadow || '#000',
       shadowOffset: {
         width: 0,
-        height: 8,
+        height: dynamicModerateScale(2),
       },
-      shadowOpacity: isDarkMode ? 0.3 : 0.15,
-      shadowRadius: 16,
-      elevation: 12,
-      padding: isLandscape ? (isTablet ? responsiveSpacing.xl : responsiveSpacing.lg) : (isUltraSmallScreen ? responsiveSpacing.md : isSmallScreen ? responsiveSpacing.lg : responsiveSpacing.xl),
+      shadowOpacity: isDarkMode ? 0.2 : 0.08,
+      shadowRadius: dynamicModerateScale(6),
+      elevation: dynamicModerateScale(4),
+      padding: dynamicModerateScale(4),
       justifyContent: 'center',
       alignItems: 'center',
-      borderWidth: isDarkMode ? 1 : 0,
+      borderWidth: isDarkMode ? 0.5 : 0,
       borderColor: theme?.colors?.border || 'transparent',
     },
     actionContainer: {
-      paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-      paddingTop: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+      paddingHorizontal: dynamicModerateScale(4),
+      paddingTop: dynamicModerateScale(4),
       backgroundColor: theme?.colors?.surface || '#ffffff',
-      borderTopWidth: 1,
+      borderTopWidth: 0.5,
       borderTopColor: theme?.colors?.border || '#e9ecef',
     },
     editButton: {
-      paddingVertical: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-      paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-      borderRadius: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+      paddingVertical: dynamicModerateScale(5),
+      paddingHorizontal: dynamicModerateScale(8),
+      borderRadius: dynamicModerateScale(6),
       backgroundColor: theme?.colors?.surface || '#f8f9fa',
-      borderWidth: 2,
+      borderWidth: 1,
       borderColor: theme?.colors?.border || '#e9ecef',
       alignItems: 'center',
-      minHeight: isLandscape ? (isTablet ? 56 : 48) : (isUltraSmallScreen ? 40 : isSmallScreen ? 44 : isMediumScreen ? 48 : isLargeScreen ? 52 : 56),
+      minHeight: dynamicModerateScale(28),
     },
     editButtonText: {
       color: theme?.colors?.textSecondary || '#666666',
-      fontSize: isLandscape ? (isTablet ? responsiveFontSize.sm : responsiveFontSize.xs) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : isMediumScreen ? responsiveFontSize.md : isLargeScreen ? responsiveFontSize.lg : responsiveFontSize.xl),
+      fontSize: dynamicModerateScale(8.5),
       fontWeight: '600',
     },
     loadingText: {
-      fontSize: isLandscape ? (isTablet ? responsiveFontSize.lg : responsiveFontSize.md) : (isUltraSmallScreen ? responsiveFontSize.sm : isSmallScreen ? responsiveFontSize.md : isMediumScreen ? responsiveFontSize.lg : isLargeScreen ? responsiveFontSize.xl : responsiveFontSize.xxl),
+      fontSize: dynamicModerateScale(9),
       color: theme?.colors?.textSecondary || '#666666',
       fontWeight: '500',
     },
     errorText: {
-      fontSize: isLandscape ? (isTablet ? responsiveFontSize.lg : responsiveFontSize.md) : (isUltraSmallScreen ? responsiveFontSize.sm : isSmallScreen ? responsiveFontSize.md : isMediumScreen ? responsiveFontSize.lg : isLargeScreen ? responsiveFontSize.xl : responsiveFontSize.xxl),
+      fontSize: dynamicModerateScale(10),
       fontWeight: '600',
       color: '#ff6b6b',
-      marginTop: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-      marginBottom: isLandscape ? (isTablet ? responsiveSpacing.xs : 2) : (isUltraSmallScreen ? 2 : isSmallScreen ? 3 : isMediumScreen ? 4 : isLargeScreen ? 5 : 6),
+      marginTop: dynamicModerateScale(6),
+      marginBottom: dynamicModerateScale(2),
     },
     errorSubtext: {
-      fontSize: isLandscape ? (isTablet ? responsiveFontSize.sm : responsiveFontSize.xs) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : isMediumScreen ? responsiveFontSize.md : isLargeScreen ? responsiveFontSize.lg : responsiveFontSize.xl),
+      fontSize: dynamicModerateScale(8.5),
       color: theme?.colors?.textSecondary || '#666666',
-      marginBottom: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.md : isSmallScreen ? responsiveSpacing.lg : responsiveSpacing.xl),
+      marginBottom: dynamicModerateScale(8),
     },
   });
 
@@ -502,13 +526,13 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
              {/* Professional Header */}
        <LinearGradient
          colors={['#667eea', '#764ba2']}
-         style={[styles.header, { paddingTop: insets.top + (isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg)) }]}
+         style={[styles.header, { paddingTop: insets.top + responsiveSpacing.xs }]}
        >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={24} color="#ffffff" />
+          <Icon name="arrow-back" size={getIconSize(18)} color="#ffffff" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Preview Poster</Text>
@@ -535,12 +559,12 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
             width: imageWidth, 
             height: imageHeight,
             alignSelf: 'center',
-            marginTop: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+            marginTop: responsiveSpacing.sm,
           }
         ]}>
            {!capturedImageUri ? (
              <View style={styles.errorContainer}>
-               <Icon name="error" size={48} color="#ff6b6b" />
+               <Icon name="error" size={getIconSize(32)} color="#ff6b6b" />
                <Text style={themeStyles.errorText}>No poster image captured</Text>
                <Text style={themeStyles.errorSubtext}>Using original image</Text>
                <Image
@@ -551,7 +575,7 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
              </View>
            ) : imageLoadError ? (
              <View style={styles.errorContainer}>
-               <Icon name="error" size={48} color="#ff6b6b" />
+               <Icon name="error" size={getIconSize(32)} color="#ff6b6b" />
                <Text style={themeStyles.errorText}>Failed to load poster image</Text>
                <Text style={themeStyles.errorSubtext}>Using fallback image</Text>
                <Image
@@ -593,7 +617,7 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
        <View style={[
          themeStyles.actionContainer, 
          { 
-           paddingBottom: Math.max(insets.bottom + (isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg)), (isLandscape ? (isTablet ? responsiveSpacing.xl : responsiveSpacing.lg) : (isUltraSmallScreen ? responsiveSpacing.md : isSmallScreen ? responsiveSpacing.lg : responsiveSpacing.xl)))
+           paddingBottom: Math.max(insets.bottom + responsiveSpacing.xs, responsiveSpacing.md)
          }
        ]}>
         <View style={styles.actionButtons}>
@@ -606,7 +630,7 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
               colors={isProcessing ? ['#cccccc', '#999999'] : ['#667eea', '#764ba2']}
               style={styles.shareButtonGradient}
             >
-              <Icon name="share" size={24} color="#ffffff" />
+              <Icon name="share" size={getIconSize(16)} color="#ffffff" />
               <Text style={styles.shareButtonText}>
                 {isProcessing ? 'Sharing...' : 'Share'}
               </Text>
@@ -622,7 +646,7 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
               colors={isProcessing ? ['#cccccc', '#999999'] : ['#28a745', '#20c997']}
               style={styles.saveButtonGradient}
             >
-              <Icon name="download" size={24} color="#ffffff" />
+              <Icon name="download" size={getIconSize(16)} color="#ffffff" />
               <Text style={styles.saveButtonText}>
                 {isProcessing ? 'Saving...' : 'Download'}
               </Text>
@@ -631,7 +655,7 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
         </View>
         
         <TouchableOpacity
-          style={[themeStyles.editButton, { marginBottom: 8 }]}
+          style={[themeStyles.editButton, { marginBottom: moderateScale(3) }]}
           onPress={() => navigation.goBack()}
         >
           <Text style={themeStyles.editButtonText}>Back to Editor</Text>
@@ -651,67 +675,67 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-    paddingVertical: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+    paddingHorizontal: moderateScale(4),
+    paddingVertical: moderateScale(3),
     borderBottomWidth: 0,
     zIndex: 1000,
-    elevation: 10,
+    elevation: moderateScale(4),
   },
   backButton: {
-    padding: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-    borderRadius: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16),
+    padding: moderateScale(4),
+    borderRadius: moderateScale(6),
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   headerContent: {
     flex: 1,
     alignItems: 'center',
-    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+    paddingHorizontal: moderateScale(4),
   },
   headerTitle: {
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.xxxxl : responsiveFontSize.xxxl) : (isUltraSmallScreen ? responsiveFontSize.lg : isSmallScreen ? responsiveFontSize.xl : isMediumScreen ? responsiveFontSize.xxl : isLargeScreen ? responsiveFontSize.xxxl : responsiveFontSize.xxxxl),
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: '#ffffff',
   },
   headerSubtitle: {
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.md : responsiveFontSize.sm) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : isMediumScreen ? responsiveFontSize.md : isLargeScreen ? responsiveFontSize.lg : responsiveFontSize.xl),
+    fontSize: moderateScale(8.5),
     color: 'rgba(255, 255, 255, 0.8)',
-    marginTop: isLandscape ? (isTablet ? responsiveSpacing.xs : 1) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : responsiveSpacing.xs),
+    marginTop: moderateScale(0.5),
   },
   headerSpacer: {
-    width: isLandscape ? (isTablet ? 60 : 50) : (isUltraSmallScreen ? 40 : isSmallScreen ? 44 : isMediumScreen ? 48 : isLargeScreen ? 52 : 56),
+    width: moderateScale(26),
   },
   previewContainer: {
     flex: 1,
-    padding: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+    padding: moderateScale(4),
   },
   previewHeader: {
     alignItems: 'center',
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+    marginBottom: moderateScale(3),
   },
   previewTitle: {
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.xxxxl : responsiveFontSize.xxxl) : (isUltraSmallScreen ? responsiveFontSize.lg : isSmallScreen ? responsiveFontSize.xl : isMediumScreen ? responsiveFontSize.xxl : isLargeScreen ? responsiveFontSize.xxxl : responsiveFontSize.xxxxl),
+    fontSize: moderateScale(11),
     fontWeight: '700',
     color: '#333333',
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.xs : 2) : (isUltraSmallScreen ? 2 : isSmallScreen ? 3 : isMediumScreen ? 4 : isLargeScreen ? 5 : 6),
+    marginBottom: moderateScale(1.5),
   },
   previewSubtitle: {
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.md : responsiveFontSize.sm) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : isMediumScreen ? responsiveFontSize.md : isLargeScreen ? responsiveFontSize.lg : responsiveFontSize.xl),
+    fontSize: moderateScale(8.5),
     color: '#666666',
     textAlign: 'center',
   },
   imageContainer: {
     // These will be set dynamically based on responsive dimensions
     backgroundColor: '#ffffff',
-    borderRadius: isLandscape ? (isTablet ? 20 : 16) : (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : 20),
+    borderRadius: moderateScale(10),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: moderateScale(2),
     },
-    shadowOpacity: 0.15,
-    shadowRadius: 16,
-    elevation: 12,
-    padding: isLandscape ? (isTablet ? responsiveSpacing.xl : responsiveSpacing.lg) : (isUltraSmallScreen ? responsiveSpacing.md : isSmallScreen ? responsiveSpacing.lg : responsiveSpacing.xl),
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(6),
+    elevation: moderateScale(4),
+    padding: moderateScale(4),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -725,7 +749,7 @@ const styles = StyleSheet.create({
   posterImage: {
     width: '100%',
     height: '100%',
-    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16),
+    borderRadius: moderateScale(10),
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
@@ -742,31 +766,31 @@ const styles = StyleSheet.create({
     zIndex: 1,
   },
   loadingText: {
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.lg : responsiveFontSize.md) : (isUltraSmallScreen ? responsiveFontSize.sm : isSmallScreen ? responsiveFontSize.md : isMediumScreen ? responsiveFontSize.lg : isLargeScreen ? responsiveFontSize.xl : responsiveFontSize.xxl),
+    fontSize: moderateScale(9),
     color: '#666666',
     fontWeight: '500',
   },
   errorContainer: {
     alignItems: 'center',
     justifyContent: 'center',
-    padding: 20,
+    padding: moderateScale(8),
   },
   errorText: {
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.lg : responsiveFontSize.md) : (isUltraSmallScreen ? responsiveFontSize.sm : isSmallScreen ? responsiveFontSize.md : isMediumScreen ? responsiveFontSize.lg : isLargeScreen ? responsiveFontSize.xl : responsiveFontSize.xxl),
+    fontSize: moderateScale(10),
     fontWeight: '600',
     color: '#ff6b6b',
-    marginTop: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.xs : 2) : (isUltraSmallScreen ? 2 : isSmallScreen ? 3 : isMediumScreen ? 4 : isLargeScreen ? 5 : 6),
+    marginTop: moderateScale(6),
+    marginBottom: moderateScale(2),
   },
   errorSubtext: {
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.sm : responsiveFontSize.xs) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : isMediumScreen ? responsiveFontSize.md : isLargeScreen ? responsiveFontSize.lg : responsiveFontSize.xl),
+    fontSize: moderateScale(8.5),
     color: '#666666',
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.md : isSmallScreen ? responsiveSpacing.lg : responsiveSpacing.xl),
+    marginBottom: moderateScale(8),
   },
   backgroundImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 12,
+    borderRadius: moderateScale(10),
   },
   frameOverlayContainer: {
     position: 'absolute',
@@ -953,64 +977,105 @@ const styles = StyleSheet.create({
     borderColor: '#42a5f5',
     borderRadius: 20,
   },
+  posterImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: moderateScale(10),
+    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.8)',
+    zIndex: 1,
+  },
+  loadingText: {
+    fontSize: moderateScale(11),
+    color: '#666666',
+    fontWeight: '500',
+  },
+  errorContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: moderateScale(12),
+  },
+  errorText: {
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+    color: '#ff6b6b',
+    marginTop: moderateScale(8),
+    marginBottom: moderateScale(3),
+  },
+  errorSubtext: {
+    fontSize: moderateScale(10),
+    color: '#666666',
+    marginBottom: moderateScale(10),
+  },
   actionContainer: {
-    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-    paddingTop: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+    paddingHorizontal: moderateScale(4),
+    paddingTop: moderateScale(4),
     backgroundColor: '#ffffff',
-    borderTopWidth: 1,
+    borderTopWidth: 0.5,
     borderTopColor: '#e9ecef',
     // paddingBottom will be set dynamically with safe area
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+    marginBottom: moderateScale(4),
   },
   actionButton: {
     flex: 1,
-    marginHorizontal: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.xs : isSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md),
-    borderRadius: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16),
+    marginHorizontal: moderateScale(2),
+    borderRadius: moderateScale(6),
     overflow: 'hidden',
   },
   shareButtonGradient: {
-    paddingVertical: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.xl : responsiveSpacing.lg) : (isUltraSmallScreen ? responsiveSpacing.md : isSmallScreen ? responsiveSpacing.lg : responsiveSpacing.xl),
+    paddingVertical: moderateScale(6),
+    paddingHorizontal: moderateScale(8),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   shareButtonText: {
     color: '#ffffff',
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.md : responsiveFontSize.sm) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : isMediumScreen ? responsiveFontSize.md : isLargeScreen ? responsiveFontSize.lg : responsiveFontSize.xl),
+    fontSize: moderateScale(8.5),
     fontWeight: '600',
-    marginLeft: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? responsiveSpacing.xs : isSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md),
+    marginLeft: moderateScale(2.5),
   },
   saveButtonGradient: {
-    paddingVertical: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.xl : responsiveSpacing.lg) : (isUltraSmallScreen ? responsiveSpacing.md : isSmallScreen ? responsiveSpacing.lg : responsiveSpacing.xl),
+    paddingVertical: moderateScale(6),
+    paddingHorizontal: moderateScale(8),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   saveButtonText: {
     color: '#ffffff',
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.md : responsiveFontSize.sm) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : isMediumScreen ? responsiveFontSize.md : isLargeScreen ? responsiveFontSize.lg : responsiveFontSize.xl),
+    fontSize: moderateScale(8.5),
     fontWeight: '600',
-    marginLeft: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? responsiveSpacing.xs : isSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md),
+    marginLeft: moderateScale(2.5),
   },
   editButton: {
-    paddingVertical: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
-    borderRadius: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.sm : isSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg),
+    paddingVertical: moderateScale(5),
+    paddingHorizontal: moderateScale(8),
+    borderRadius: moderateScale(6),
     backgroundColor: '#f8f9fa',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#e9ecef',
     alignItems: 'center',
-    minHeight: isLandscape ? (isTablet ? 56 : 48) : (isUltraSmallScreen ? 40 : isSmallScreen ? 44 : isMediumScreen ? 48 : isLargeScreen ? 52 : 56),
+    minHeight: moderateScale(28),
   },
   editButtonText: {
     color: '#666666',
-    fontSize: isLandscape ? (isTablet ? responsiveFontSize.sm : responsiveFontSize.xs) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : isMediumScreen ? responsiveFontSize.md : isLargeScreen ? responsiveFontSize.lg : responsiveFontSize.xl),
+    fontSize: moderateScale(8.5),
     fontWeight: '600',
   },
 });
