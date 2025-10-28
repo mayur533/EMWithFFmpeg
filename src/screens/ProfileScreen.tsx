@@ -37,12 +37,20 @@ import downloadTrackingService from '../services/downloadTracking';
 import ImagePickerModal from '../components/ImagePickerModal';
 import ComingSoonModal from '../components/ComingSoonModal';
 
+// Compact spacing multiplier to reduce all spacing (matching HomeScreen)
+const COMPACT_MULTIPLIER = 0.5;
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Responsive design helpers
 const isSmallScreen = screenWidth < 375;
 const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
 const isLargeScreen = screenWidth >= 414;
+
+// Responsive helper functions (matching HomeScreen)
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 
 // Responsive spacing and sizing
 const responsiveSpacing = {
@@ -74,6 +82,35 @@ const ProfileScreen: React.FC = () => {
   console.log('🔍 ProfileScreen - name:', currentUser?.name);
   console.log('🖼️ ProfileScreen - User Logo:', currentUser?.logo || '(empty)');
   console.log('🖼️ ProfileScreen - Company Logo:', currentUser?.companyLogo || '(empty)');
+  
+  // Dynamic dimensions for responsive layout (matching HomeScreen)
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  // Update dimensions on screen rotation/resize
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const currentScreenWidth = dimensions.width;
+  const currentScreenHeight = dimensions.height;
+  
+  // Dynamic responsive scaling functions
+  const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
+  const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
+  // Responsive icon sizes (compact - 60% of original)
+  const getIconSize = (baseSize: number) => {
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+  };
+  
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
@@ -1224,17 +1261,37 @@ const ProfileScreen: React.FC = () => {
     animationValue?: Animated.Value
   ) => (
     <TouchableOpacity 
-      style={[styles.menuItem, { backgroundColor: theme.colors.cardBackground }]} 
+      style={[styles.menuItem, { 
+        backgroundColor: theme.colors.cardBackground,
+        marginHorizontal: dynamicModerateScale(8),
+        marginBottom: dynamicModerateScale(6),
+        paddingVertical: dynamicModerateScale(10),
+        paddingHorizontal: dynamicModerateScale(12),
+        borderRadius: dynamicModerateScale(12),
+      }]} 
       onPress={onPress} 
       disabled={showToggle}
     >
       <View style={styles.menuItemLeft}>
-        <View style={[styles.menuItemIcon, { backgroundColor: `${theme.colors.primary}20` }]}>
-          <Icon name={icon} size={20} color={theme.colors.primary} />
+        <View style={[styles.menuItemIcon, { 
+          backgroundColor: `${theme.colors.primary}20`,
+          width: dynamicModerateScale(32),
+          height: dynamicModerateScale(32),
+          borderRadius: dynamicModerateScale(16),
+          marginRight: dynamicModerateScale(10),
+        }]}>
+          <Icon name={icon} size={getIconSize(16)} color={theme.colors.primary} />
         </View>
         <View style={styles.menuItemContent}>
-          <Text style={[styles.menuItemText, { color: theme.colors.text }]}>{title}</Text>
-          {subtitle && <Text style={[styles.menuItemSubtext, { color: theme.colors.textSecondary }]}>{subtitle}</Text>}
+          <Text style={[styles.menuItemText, { 
+            color: theme.colors.text,
+            fontSize: dynamicModerateScale(10),
+          }]}>{title}</Text>
+          {subtitle && <Text style={[styles.menuItemSubtext, { 
+            color: theme.colors.textSecondary,
+            fontSize: dynamicModerateScale(8),
+            marginTop: dynamicModerateScale(0.5),
+          }]}>{subtitle}</Text>}
         </View>
       </View>
              {showToggle ? (
@@ -1243,6 +1300,9 @@ const ProfileScreen: React.FC = () => {
               styles.toggle, 
               { 
                 backgroundColor: toggleValue ? theme.colors.primary : theme.colors.border,
+                width: dynamicModerateScale(40),
+                height: dynamicModerateScale(20),
+                borderRadius: dynamicModerateScale(10),
               }
             ]}
             onPress={onToggle}
@@ -1253,10 +1313,13 @@ const ProfileScreen: React.FC = () => {
                 styles.toggleThumb, 
                 { 
                   backgroundColor: theme.colors.surface,
+                  width: dynamicModerateScale(16),
+                  height: dynamicModerateScale(16),
+                  borderRadius: dynamicModerateScale(8),
                   transform: [{
                     translateX: animationValue ? animationValue.interpolate({
                       inputRange: [0, 1],
-                      outputRange: [0, screenWidth * 0.06] // Move from left to right
+                      outputRange: [0, dynamicModerateScale(20)] // Move from left to right
                     }) : 0
                   }]
                 }
@@ -1264,7 +1327,7 @@ const ProfileScreen: React.FC = () => {
             />
           </TouchableOpacity>
         ) : (
-          <Icon name="chevron-right" size={24} color={theme.colors.textSecondary} />
+          <Icon name="chevron-right" size={getIconSize(20)} color={theme.colors.textSecondary} />
         )}
     </TouchableOpacity>
   );
@@ -1287,14 +1350,20 @@ const ProfileScreen: React.FC = () => {
         end={{ x: 1, y: 1 }}
       >
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + responsiveSpacing.sm }]}>
-          <Text style={styles.headerTitle}>Profile</Text>
+        <View style={[styles.header, { 
+          paddingTop: insets.top + dynamicModerateScale(2),
+          paddingHorizontal: dynamicModerateScale(4),
+          paddingBottom: dynamicModerateScale(3),
+        }]}>
+          <Text style={[styles.headerTitle, {
+            fontSize: dynamicModerateScale(12),
+          }]}>Profile</Text>
         </View>
 
         <ScrollView 
           style={styles.content}
           showsVerticalScrollIndicator={false}
-          contentContainerStyle={[styles.contentContainer, { paddingBottom: 120 + insets.bottom }]}
+          contentContainerStyle={[styles.contentContainer, { paddingBottom: 80 + insets.bottom }]}
           refreshControl={
             <RefreshControl
               refreshing={isRefreshing}
@@ -1307,11 +1376,24 @@ const ProfileScreen: React.FC = () => {
           }
         >
           {/* Profile Card */}
-          <View style={[styles.profileCard, { backgroundColor: theme.colors.cardBackground }]}>
+          <View style={[styles.profileCard, { 
+            backgroundColor: theme.colors.cardBackground,
+            marginHorizontal: dynamicModerateScale(8),
+            marginBottom: dynamicModerateScale(12),
+            borderRadius: dynamicModerateScale(16),
+            padding: dynamicModerateScale(12),
+          }]}>
             <View style={styles.profileHeader}>
-              <View style={styles.avatarContainer}>
+              <View style={[styles.avatarContainer, {
+                marginBottom: dynamicModerateScale(10),
+              }]}>
                 {profileImageUri || currentUser?.logo || currentUser?.companyLogo || currentUser?.photoURL || currentUser?.profileImage ? (
-                  <View style={styles.avatarImageContainer}>
+                  <View style={[styles.avatarImageContainer, {
+                    width: dynamicModerateScale(60),
+                    height: dynamicModerateScale(60),
+                    borderRadius: dynamicModerateScale(30),
+                    borderWidth: 2,
+                  }]}>
                     <Image
                       source={{ uri: profileImageUri || currentUser?.logo || currentUser?.companyLogo || currentUser?.photoURL || currentUser?.profileImage }}
                       style={styles.avatarImage}
@@ -1321,112 +1403,228 @@ const ProfileScreen: React.FC = () => {
                 ) : (
                   <LinearGradient
                     colors={[theme.colors.primary, theme.colors.secondary]}
-                    style={styles.avatarGradient}
+                    style={[styles.avatarGradient, {
+                      width: dynamicModerateScale(60),
+                      height: dynamicModerateScale(60),
+                      borderRadius: dynamicModerateScale(30),
+                    }]}
                   >
-                    <Text style={styles.avatarText}>
+                    <Text style={[styles.avatarText, {
+                      fontSize: dynamicModerateScale(24),
+                    }]}>
                       {(currentUser?._originalCompanyName || currentUser?.companyName)?.charAt(0) || currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
                     </Text>
                   </LinearGradient>
                 )}
                 <TouchableOpacity 
-                  style={[styles.editAvatarButton, { backgroundColor: theme.colors.primary }]}
+                  style={[styles.editAvatarButton, { 
+                    backgroundColor: theme.colors.primary,
+                    width: dynamicModerateScale(24),
+                    height: dynamicModerateScale(24),
+                    borderRadius: dynamicModerateScale(12),
+                    borderWidth: 2,
+                  }]}
                   onPress={handleImagePickerPress}
                 >
-                  <Icon name="camera-alt" size={16} color="#fff" />
+                  <Icon name="camera-alt" size={getIconSize(12)} color="#fff" />
                 </TouchableOpacity>
               </View>
               <View style={styles.profileInfo}>
-                <Text style={[styles.userName, { color: theme.colors.text }]}>
+                <Text style={[styles.userName, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(12),
+                  marginBottom: dynamicModerateScale(2),
+                }]}>
                   {currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
                 </Text>
-                <Text style={[styles.userEmail, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.userEmail, { 
+                  color: theme.colors.textSecondary,
+                  fontSize: dynamicModerateScale(8.5),
+                  marginBottom: dynamicModerateScale(4),
+                }]}>
                   {currentUser?.email || 'eventmarketer@example.com'}
                 </Text>
                 {currentUser?.bio && (
-                  <Text style={[styles.userBio, { color: theme.colors.textSecondary }]}>
+                  <Text style={[styles.userBio, { 
+                    color: theme.colors.textSecondary,
+                    fontSize: dynamicModerateScale(8),
+                    marginBottom: dynamicModerateScale(6),
+                    lineHeight: dynamicModerateScale(12),
+                    paddingHorizontal: dynamicModerateScale(10),
+                  }]}>
                     {currentUser.bio}
                   </Text>
                 )}
                 <View style={styles.profileStats}>
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNumber, { color: theme.colors.primary }]}>{posterStats.total}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Downloads</Text>
+                  <View style={[styles.statItem, {
+                    paddingHorizontal: dynamicModerateScale(8),
+                  }]}>
+                    <Text style={[styles.statNumber, { 
+                      color: theme.colors.primary,
+                      fontSize: dynamicModerateScale(12),
+                    }]}>{posterStats.total}</Text>
+                    <Text style={[styles.statLabel, { 
+                      color: theme.colors.textSecondary,
+                      fontSize: dynamicModerateScale(7),
+                      marginTop: dynamicModerateScale(0.5),
+                    }]}>Downloads</Text>
                   </View>
-                  <View style={[styles.statDivider, { backgroundColor: theme.colors.border }]} />
-                  <View style={styles.statItem}>
-                    <Text style={[styles.statNumber, { color: theme.colors.primary }]}>{businessProfileStats.total}</Text>
-                    <Text style={[styles.statLabel, { color: theme.colors.textSecondary }]}>Business</Text>
+                  <View style={[styles.statDivider, { 
+                    backgroundColor: theme.colors.border,
+                    width: 1,
+                    height: dynamicModerateScale(16),
+                    marginHorizontal: dynamicModerateScale(5),
+                  }]} />
+                  <View style={[styles.statItem, {
+                    paddingHorizontal: dynamicModerateScale(8),
+                  }]}>
+                    <Text style={[styles.statNumber, { 
+                      color: theme.colors.primary,
+                      fontSize: dynamicModerateScale(12),
+                    }]}>{businessProfileStats.total}</Text>
+                    <Text style={[styles.statLabel, { 
+                      color: theme.colors.textSecondary,
+                      fontSize: dynamicModerateScale(7),
+                      marginTop: dynamicModerateScale(0.5),
+                    }]}>Business</Text>
                   </View>
                 </View>
               </View>
             </View>
             <TouchableOpacity 
-              style={[styles.editProfileButton, { backgroundColor: theme.colors.primary }]}
+              style={[styles.editProfileButton, { 
+                backgroundColor: theme.colors.primary,
+                paddingVertical: dynamicModerateScale(8),
+                paddingHorizontal: dynamicModerateScale(12),
+                borderRadius: dynamicModerateScale(10),
+                marginTop: dynamicModerateScale(10),
+                gap: dynamicModerateScale(4),
+              }]}
               onPress={handleEditProfile}
             >
-              <Icon name="edit" size={16} color="#ffffff" />
-              <Text style={styles.editProfileButtonText}>Edit Profile</Text>
+              <Icon name="edit" size={getIconSize(12)} color="#ffffff" />
+              <Text style={[styles.editProfileButtonText, {
+                fontSize: dynamicModerateScale(9),
+              }]}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
 
           {/* Account Settings */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Account Settings</Text>
+          <View style={[styles.section, {
+            marginBottom: dynamicModerateScale(12),
+          }]}>
+            <Text style={[styles.sectionTitle, {
+              fontSize: dynamicModerateScale(10),
+              marginBottom: dynamicModerateScale(5),
+              paddingHorizontal: dynamicModerateScale(8),
+            }]}>Account Settings</Text>
             {renderMenuItem('business', 'Business Profiles', `${businessProfileStats.total} profiles • ${businessProfileStats.recentCount} recent`, handleBusinessProfiles)}
             {/* Notifications temporarily hidden */}
             {/* {renderMenuItem('notifications', 'Notifications', 'Manage notification preferences', undefined, true, notificationsEnabled, handleNotificationToggle, notificationsAnimation)} */}
           </View>
 
           {/* My Posters Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>My Posters</Text>
+          <View style={[styles.section, {
+            marginBottom: dynamicModerateScale(12),
+          }]}>
+            <Text style={[styles.sectionTitle, {
+              fontSize: dynamicModerateScale(10),
+              marginBottom: dynamicModerateScale(5),
+              paddingHorizontal: dynamicModerateScale(8),
+            }]}>My Posters</Text>
             <TouchableOpacity 
-              style={[styles.myPostersCard, { backgroundColor: theme.colors.cardBackground }]}
+              style={[styles.myPostersCard, { 
+                backgroundColor: theme.colors.cardBackground,
+                marginHorizontal: dynamicModerateScale(8),
+                marginBottom: dynamicModerateScale(6),
+                paddingVertical: dynamicModerateScale(10),
+                paddingHorizontal: dynamicModerateScale(12),
+                borderRadius: dynamicModerateScale(12),
+              }]}
               onPress={handleMyPosters}
             >
               <View style={styles.myPostersContent}>
                 <View style={styles.myPostersLeft}>
-                  <View style={[styles.myPostersIcon, { backgroundColor: `${theme.colors.primary}20` }]}>
-                    <Icon name="image" size={24} color={theme.colors.primary} />
+                  <View style={[styles.myPostersIcon, { 
+                    backgroundColor: `${theme.colors.primary}20`,
+                    width: dynamicModerateScale(32),
+                    height: dynamicModerateScale(32),
+                    borderRadius: dynamicModerateScale(16),
+                    marginRight: dynamicModerateScale(10),
+                  }]}>
+                    <Icon name="image" size={getIconSize(16)} color={theme.colors.primary} />
                   </View>
                   <View style={styles.myPostersInfo}>
-                    <Text style={[styles.myPostersTitle, { color: theme.colors.text }]}>
+                    <Text style={[styles.myPostersTitle, { 
+                      color: theme.colors.text,
+                      fontSize: dynamicModerateScale(10),
+                    }]}>
                       Downloaded Posters
                     </Text>
-                    <Text style={[styles.myPostersSubtitle, { color: theme.colors.textSecondary }]}>
+                    <Text style={[styles.myPostersSubtitle, { 
+                      color: theme.colors.textSecondary,
+                      fontSize: dynamicModerateScale(8),
+                      marginTop: dynamicModerateScale(0.5),
+                    }]}>
                       {posterStats.total} posters • {posterStats.recentCount} recent
                     </Text>
                   </View>
                 </View>
-                <Icon name="chevron-right" size={24} color={theme.colors.textSecondary} />
+                <Icon name="chevron-right" size={getIconSize(20)} color={theme.colors.textSecondary} />
               </View>
             </TouchableOpacity>
           </View>
 
 
           {/* Subscription Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Subscription</Text>
+          <View style={[styles.section, {
+            marginBottom: dynamicModerateScale(12),
+          }]}>
+            <Text style={[styles.sectionTitle, {
+              fontSize: dynamicModerateScale(10),
+              marginBottom: dynamicModerateScale(5),
+              paddingHorizontal: dynamicModerateScale(8),
+            }]}>Subscription</Text>
             <TouchableOpacity 
-              style={[styles.subscriptionCard, { backgroundColor: theme.colors.cardBackground }]}
+              style={[styles.subscriptionCard, { 
+                backgroundColor: theme.colors.cardBackground,
+                marginHorizontal: dynamicModerateScale(8),
+                marginBottom: dynamicModerateScale(6),
+                paddingVertical: dynamicModerateScale(10),
+                paddingHorizontal: dynamicModerateScale(12),
+                borderRadius: dynamicModerateScale(12),
+              }]}
               onPress={handleSubscription}
             >
               <View style={styles.subscriptionContent}>
                 <View style={styles.subscriptionLeft}>
-                  <View style={[styles.subscriptionIcon, { backgroundColor: isSubscribed ? '#28a745' : '#667eea' }]}>
+                  <View style={[styles.subscriptionIcon, { 
+                    backgroundColor: isSubscribed ? '#28a745' : '#667eea',
+                    width: dynamicModerateScale(32),
+                    height: dynamicModerateScale(32),
+                    borderRadius: dynamicModerateScale(16),
+                    marginRight: dynamicModerateScale(10),
+                  }]}>
                     <Icon 
                       name={isSubscribed ? 'check-circle' : 'star'} 
-                      size={24} 
+                      size={getIconSize(16)} 
                       color="#ffffff" 
                     />
                   </View>
                   <View style={styles.subscriptionInfo}>
-                    <Text style={[styles.subscriptionTitle, { color: theme.colors.text }]}>
+                    <Text style={[styles.subscriptionTitle, { 
+                      color: theme.colors.text,
+                      fontSize: dynamicModerateScale(10),
+                    }]}>
                       {isSubscribed 
                         ? (subscriptionStatus?.planName || 'Pro Subscription')
                         : 'Upgrade to Pro'}
                     </Text>
-                    <Text style={[styles.subscriptionSubtitle, { color: theme.colors.textSecondary }]}>
+                    <Text style={[styles.subscriptionSubtitle, { 
+                      color: theme.colors.textSecondary,
+                      fontSize: dynamicModerateScale(8),
+                      marginTop: dynamicModerateScale(0.5),
+                    }]}>
                       {isSubscribed 
                         ? (() => {
                             const expiryDate = subscriptionStatus?.expiryDate || subscriptionStatus?.endDate;
@@ -1440,70 +1638,128 @@ const ProfileScreen: React.FC = () => {
                     </Text>
                   </View>
                 </View>
-                <Icon name="chevron-right" size={24} color={theme.colors.textSecondary} />
+                <Icon name="chevron-right" size={getIconSize(20)} color={theme.colors.textSecondary} />
               </View>
             </TouchableOpacity>
             
             {/* Transaction History Button */}
             <TouchableOpacity 
-              style={[styles.transactionHistoryCard, { backgroundColor: theme.colors.cardBackground }]}
+              style={[styles.transactionHistoryCard, { 
+                backgroundColor: theme.colors.cardBackground,
+                marginHorizontal: dynamicModerateScale(8),
+                marginBottom: dynamicModerateScale(6),
+                paddingVertical: dynamicModerateScale(10),
+                paddingHorizontal: dynamicModerateScale(12),
+                borderRadius: dynamicModerateScale(12),
+              }]}
               onPress={handleTransactionHistory}
             >
               <View style={styles.transactionHistoryContent}>
                 <View style={styles.transactionHistoryLeft}>
-                  <View style={[styles.transactionHistoryIcon, { backgroundColor: '#667eea20' }]}>
-                    <Icon name="receipt-long" size={24} color="#667eea" />
+                  <View style={[styles.transactionHistoryIcon, { 
+                    backgroundColor: '#667eea20',
+                    width: dynamicModerateScale(32),
+                    height: dynamicModerateScale(32),
+                    borderRadius: dynamicModerateScale(16),
+                    marginRight: dynamicModerateScale(10),
+                  }]}>
+                    <Icon name="receipt-long" size={getIconSize(16)} color="#667eea" />
                   </View>
                   <View style={styles.transactionHistoryInfo}>
-                    <Text style={[styles.transactionHistoryTitle, { color: theme.colors.text }]}>
+                    <Text style={[styles.transactionHistoryTitle, { 
+                      color: theme.colors.text,
+                      fontSize: dynamicModerateScale(10),
+                    }]}>
                       Transaction History
                     </Text>
-                    <Text style={[styles.transactionHistorySubtitle, { color: theme.colors.textSecondary }]}>
+                    <Text style={[styles.transactionHistorySubtitle, { 
+                      color: theme.colors.textSecondary,
+                      fontSize: dynamicModerateScale(8),
+                      marginTop: dynamicModerateScale(0.5),
+                    }]}>
                       {transactionStats.total} transactions • View payment history
                     </Text>
                   </View>
                 </View>
-                <Icon name="chevron-right" size={24} color={theme.colors.textSecondary} />
+                <Icon name="chevron-right" size={getIconSize(20)} color={theme.colors.textSecondary} />
               </View>
             </TouchableOpacity>
           </View>
 
                      {/* App Settings */}
-           <View style={styles.section}>
-             <Text style={styles.sectionTitle}>App Settings</Text>
+           <View style={[styles.section, {
+             marginBottom: dynamicModerateScale(12),
+           }]}>
+             <Text style={[styles.sectionTitle, {
+               fontSize: dynamicModerateScale(10),
+               marginBottom: dynamicModerateScale(5),
+               paddingHorizontal: dynamicModerateScale(8),
+             }]}>App Settings</Text>
              {renderMenuItem('dark-mode', 'Dark Mode', 'Switch to dark theme', undefined, true, isDarkMode, handleDarkModeToggle, darkModeAnimation)}
            </View>
 
           {/* Support & Legal */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Support & Legal</Text>
+          <View style={[styles.section, {
+            marginBottom: dynamicModerateScale(12),
+          }]}>
+            <Text style={[styles.sectionTitle, {
+              fontSize: dynamicModerateScale(10),
+              marginBottom: dynamicModerateScale(5),
+              paddingHorizontal: dynamicModerateScale(8),
+            }]}>Support & Legal</Text>
             {renderMenuItem('help', 'Help & Support', 'Get help and contact support', () => navigation.navigate('HelpSupport' as never))}
             {renderMenuItem('privacy-tip', 'Privacy Policy', 'Read our privacy policy', () => navigation.navigate('PrivacyPolicy' as never))}
             {renderMenuItem('info', 'About App', 'Version 1.0.0', () => navigation.navigate('AboutUs'))}
           </View>
 
           {/* Share App Section */}
-          <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Share & Support</Text>
+          <View style={[styles.section, {
+            marginBottom: dynamicModerateScale(12),
+          }]}>
+            <Text style={[styles.sectionTitle, {
+              fontSize: dynamicModerateScale(10),
+              marginBottom: dynamicModerateScale(5),
+              paddingHorizontal: dynamicModerateScale(8),
+            }]}>Share & Support</Text>
             <TouchableOpacity 
-              style={[styles.shareAppCard, { backgroundColor: theme.colors.cardBackground }]}
+              style={[styles.shareAppCard, { 
+                backgroundColor: theme.colors.cardBackground,
+                marginHorizontal: dynamicModerateScale(8),
+                marginBottom: dynamicModerateScale(6),
+                paddingVertical: dynamicModerateScale(10),
+                paddingHorizontal: dynamicModerateScale(12),
+                borderRadius: dynamicModerateScale(12),
+              }]}
               onPress={handleShareApp}
             >
               <View style={styles.shareAppContent}>
                 <View style={styles.shareAppLeft}>
-                  <View style={[styles.shareAppIcon, { backgroundColor: `${theme.colors.primary}20` }]}>
-                    <Icon name="share" size={24} color={theme.colors.primary} />
+                  <View style={[styles.shareAppIcon, { 
+                    backgroundColor: `${theme.colors.primary}20`,
+                    width: dynamicModerateScale(32),
+                    height: dynamicModerateScale(32),
+                    borderRadius: dynamicModerateScale(16),
+                    marginRight: dynamicModerateScale(10),
+                  }]}>
+                    <Icon name="share" size={getIconSize(16)} color={theme.colors.primary} />
                   </View>
                   <View style={styles.shareAppInfo}>
-                    <Text style={[styles.shareAppTitle, { color: theme.colors.text }]}>
+                    <Text style={[styles.shareAppTitle, { 
+                      color: theme.colors.text,
+                      fontSize: dynamicModerateScale(10),
+                    }]}>
                       Share MarketBrand
                     </Text>
-                    <Text style={[styles.shareAppSubtitle, { color: theme.colors.textSecondary }]}>
+                    <Text style={[styles.shareAppSubtitle, { 
+                      color: theme.colors.textSecondary,
+                      fontSize: dynamicModerateScale(8),
+                      marginTop: dynamicModerateScale(0.5),
+                    }]}>
                       Help others discover amazing event posters
                     </Text>
                   </View>
                 </View>
-                <Icon name="chevron-right" size={24} color={theme.colors.textSecondary} />
+                <Icon name="chevron-right" size={getIconSize(20)} color={theme.colors.textSecondary} />
               </View>
             </TouchableOpacity>
           </View>
@@ -1512,16 +1768,29 @@ const ProfileScreen: React.FC = () => {
           <TouchableOpacity 
             style={[styles.signOutButton, { 
               backgroundColor: '#ff4444',
-              borderColor: '#ff4444'
+              borderColor: '#ff4444',
+              marginHorizontal: dynamicModerateScale(8),
+              marginTop: dynamicModerateScale(12),
+              paddingVertical: dynamicModerateScale(10),
+              borderRadius: dynamicModerateScale(12),
             }]} 
             onPress={handleSignOut}
           >
-            <Icon name="logout" size={20} color="#ffffff" style={styles.signOutIcon} />
-            <Text style={[styles.signOutText, { color: '#ffffff' }]}>Sign Out</Text>
+            <Icon name="logout" size={getIconSize(14)} color="#ffffff" style={[styles.signOutIcon, {
+              marginRight: dynamicModerateScale(5),
+            }]} />
+            <Text style={[styles.signOutText, { 
+              color: '#ffffff',
+              fontSize: dynamicModerateScale(10),
+            }]}>Sign Out</Text>
           </TouchableOpacity>
 
           {/* App Version */}
-          <Text style={[styles.versionText, { color: 'rgba(255,255,255,0.6)' }]}>Version 1.0.0</Text>
+          <Text style={[styles.versionText, { 
+            color: 'rgba(255,255,255,0.6)',
+            fontSize: dynamicModerateScale(8),
+            marginTop: dynamicModerateScale(14),
+          }]}>Version 1.0.0</Text>
         </ScrollView>
       </LinearGradient>
 
@@ -1533,23 +1802,48 @@ const ProfileScreen: React.FC = () => {
         onRequestClose={handleCancelEdit}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, { backgroundColor: theme.colors.cardBackground }]}>
-            <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Edit Profile</Text>
-              <TouchableOpacity onPress={handleCancelEdit} style={styles.modalCloseButton}>
-                <Icon name="close" size={24} color={theme.colors.textSecondary} />
+          <View style={[styles.modalContent, { 
+            backgroundColor: theme.colors.cardBackground,
+            borderRadius: dynamicModerateScale(16),
+          }]}>
+            <View style={[styles.modalHeader, {
+              paddingHorizontal: dynamicModerateScale(12),
+              paddingVertical: dynamicModerateScale(12),
+              borderBottomWidth: 0.5,
+            }]}>
+              <Text style={[styles.modalTitle, { 
+                color: theme.colors.text,
+                fontSize: dynamicModerateScale(12),
+              }]}>Edit Profile</Text>
+              <TouchableOpacity onPress={handleCancelEdit} style={[styles.modalCloseButton, {
+                padding: dynamicModerateScale(3),
+              }]}>
+                <Icon name="close" size={getIconSize(20)} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView style={styles.modalBody} showsVerticalScrollIndicator={false}>
+            <ScrollView style={[styles.modalBody, {
+              paddingHorizontal: dynamicModerateScale(12),
+              paddingVertical: dynamicModerateScale(12),
+            }]} showsVerticalScrollIndicator={false}>
               {/* Company Name */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Company Name *</Text>
+              <View style={[styles.inputGroup, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.inputLabel, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(9),
+                  marginBottom: dynamicModerateScale(3),
+                }]}>Company Name *</Text>
                 <TextInput
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
-                    color: theme.colors.text
+                    color: theme.colors.text,
+                    paddingHorizontal: dynamicModerateScale(10),
+                    paddingVertical: dynamicModerateScale(7),
+                    fontSize: dynamicModerateScale(10),
+                    borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.name}
                   onChangeText={(text) => setEditFormData({...editFormData, name: text})}
@@ -1559,13 +1853,24 @@ const ProfileScreen: React.FC = () => {
               </View>
 
               {/* Description */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Description</Text>
+              <View style={[styles.inputGroup, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.inputLabel, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(9),
+                  marginBottom: dynamicModerateScale(3),
+                }]}>Description</Text>
                 <TextInput
                   style={[styles.textArea, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
-                    color: theme.colors.text
+                    color: theme.colors.text,
+                    paddingHorizontal: dynamicModerateScale(10),
+                    paddingVertical: dynamicModerateScale(7),
+                    fontSize: dynamicModerateScale(10),
+                    borderRadius: dynamicModerateScale(10),
+                    minHeight: dynamicModerateScale(55),
                   }]}
                   value={editFormData.description}
                   onChangeText={(text) => setEditFormData({...editFormData, description: text})}
@@ -1578,11 +1883,19 @@ const ProfileScreen: React.FC = () => {
               </View>
 
               {/* Business Category */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Business Category *</Text>
+              <View style={[styles.inputGroup, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.inputLabel, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(9),
+                  marginBottom: dynamicModerateScale(3),
+                }]}>Business Category *</Text>
                 
                 {/* Selected Category Display */}
-                <View style={styles.selectedCategoryContainer}>
+                <View style={[styles.selectedCategoryContainer, {
+                  marginBottom: dynamicModerateScale(8),
+                }]}>
                   <TextInput
                     style={[
                       styles.selectedCategoryInput,
@@ -1590,6 +1903,10 @@ const ProfileScreen: React.FC = () => {
                         color: theme.colors.text,
                         borderColor: editFormData.category ? theme.colors.primary : theme.colors.border,
                         backgroundColor: theme.colors.surface,
+                        paddingHorizontal: dynamicModerateScale(10),
+                        paddingVertical: dynamicModerateScale(8),
+                        fontSize: dynamicModerateScale(10),
+                        borderRadius: dynamicModerateScale(10),
                       }
                     ]}
                     value={editFormData.category}
@@ -1604,24 +1921,33 @@ const ProfileScreen: React.FC = () => {
                 <ScrollView 
                   horizontal 
                   showsHorizontalScrollIndicator={false}
-                  contentContainerStyle={styles.categoryScrollContent}
+                  contentContainerStyle={[styles.categoryScrollContent, {
+                    paddingVertical: dynamicModerateScale(6),
+                    gap: dynamicModerateScale(6),
+                  }]}
                 >
                 {categories.map((category) => (
                   <TouchableOpacity
                     key={category}
                     style={[
                       styles.categoryOption,
-                      { borderColor: theme.colors.border },
+                      { 
+                        borderColor: theme.colors.border,
+                        paddingVertical: dynamicModerateScale(8),
+                        paddingHorizontal: dynamicModerateScale(10),
+                        borderRadius: dynamicModerateScale(8),
+                        marginRight: dynamicModerateScale(4),
+                      },
                       editFormData.category === category && [
                         styles.categoryOptionSelected, 
                         { 
                           backgroundColor: theme.colors.primary,
                           borderColor: theme.colors.primary,
                           shadowColor: theme.colors.primary,
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 4,
-                          elevation: 5,
+                          shadowOffset: { width: 0, height: moderateScale(1) },
+                          shadowOpacity: 0.25,
+                          shadowRadius: moderateScale(3),
+                          elevation: moderateScale(3),
                         }
                       ]
                     ]}
@@ -1629,7 +1955,10 @@ const ProfileScreen: React.FC = () => {
                   >
                     <Text style={[
                       styles.categoryOptionText,
-                      { color: theme.colors.text },
+                      { 
+                        color: theme.colors.text,
+                        fontSize: dynamicModerateScale(9),
+                      },
                       editFormData.category === category && [
                         styles.categoryOptionTextSelected, 
                         { color: '#ffffff' }
@@ -1643,13 +1972,23 @@ const ProfileScreen: React.FC = () => {
               </View>
 
               {/* Phone Number */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Phone Number *</Text>
+              <View style={[styles.inputGroup, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.inputLabel, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(9),
+                  marginBottom: dynamicModerateScale(3),
+                }]}>Phone Number *</Text>
                 <TextInput
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: phoneValidationError ? '#ff4444' : theme.colors.border,
-                    color: theme.colors.text
+                    color: theme.colors.text,
+                    paddingHorizontal: dynamicModerateScale(10),
+                    paddingVertical: dynamicModerateScale(7),
+                    fontSize: dynamicModerateScale(10),
+                    borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.phone}
                   onChangeText={(text) => {
@@ -1667,25 +2006,45 @@ const ProfileScreen: React.FC = () => {
                   maxLength={10}
                 />
                 {phoneValidationError ? (
-                  <Text style={[styles.validationError, { color: '#ff4444' }]}>
+                  <Text style={[styles.validationError, { 
+                    color: '#ff4444',
+                    fontSize: dynamicModerateScale(8),
+                    marginTop: dynamicModerateScale(2),
+                    marginLeft: dynamicModerateScale(2),
+                  }]}>
                     {phoneValidationError}
                   </Text>
                 ) : null}
                 {!phoneValidationError && editFormData.phone.trim() && editFormData.phone.replace(/\D/g, '').length === 10 ? (
-                  <Text style={[styles.validationSuccess, { color: '#4CAF50' }]}>
+                  <Text style={[styles.validationSuccess, { 
+                    color: '#4CAF50',
+                    fontSize: dynamicModerateScale(8),
+                    marginTop: dynamicModerateScale(2),
+                    marginLeft: dynamicModerateScale(2),
+                  }]}>
                     ✓ Valid phone number
                   </Text>
                 ) : null}
               </View>
 
               {/* Alternate Phone */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Alternate Phone</Text>
+              <View style={[styles.inputGroup, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.inputLabel, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(9),
+                  marginBottom: dynamicModerateScale(3),
+                }]}>Alternate Phone</Text>
                 <TextInput
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: alternatePhoneValidationError ? '#ff4444' : theme.colors.border,
-                    color: theme.colors.text
+                    color: theme.colors.text,
+                    paddingHorizontal: dynamicModerateScale(10),
+                    paddingVertical: dynamicModerateScale(7),
+                    fontSize: dynamicModerateScale(10),
+                    borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.alternatePhone}
                   onChangeText={(text) => {
@@ -1707,25 +2066,45 @@ const ProfileScreen: React.FC = () => {
                   maxLength={10}
                 />
                 {alternatePhoneValidationError ? (
-                  <Text style={[styles.validationError, { color: '#ff4444' }]}>
+                  <Text style={[styles.validationError, { 
+                    color: '#ff4444',
+                    fontSize: dynamicModerateScale(8),
+                    marginTop: dynamicModerateScale(2),
+                    marginLeft: dynamicModerateScale(2),
+                  }]}>
                     {alternatePhoneValidationError}
                   </Text>
                 ) : null}
                 {!alternatePhoneValidationError && editFormData.alternatePhone.trim() && editFormData.alternatePhone.replace(/\D/g, '').length === 10 ? (
-                  <Text style={[styles.validationSuccess, { color: '#4CAF50' }]}>
+                  <Text style={[styles.validationSuccess, { 
+                    color: '#4CAF50',
+                    fontSize: dynamicModerateScale(8),
+                    marginTop: dynamicModerateScale(2),
+                    marginLeft: dynamicModerateScale(2),
+                  }]}>
                     ✓ Valid phone number
                   </Text>
                 ) : null}
               </View>
 
               {/* Email */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Email *</Text>
+              <View style={[styles.inputGroup, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.inputLabel, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(9),
+                  marginBottom: dynamicModerateScale(3),
+                }]}>Email *</Text>
                 <TextInput
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
-                    color: theme.colors.text
+                    color: theme.colors.text,
+                    paddingHorizontal: dynamicModerateScale(10),
+                    paddingVertical: dynamicModerateScale(7),
+                    fontSize: dynamicModerateScale(10),
+                    borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.email}
                   onChangeText={(text) => setEditFormData({...editFormData, email: text})}
@@ -1737,13 +2116,23 @@ const ProfileScreen: React.FC = () => {
               </View>
 
               {/* Website */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Website</Text>
+              <View style={[styles.inputGroup, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.inputLabel, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(9),
+                  marginBottom: dynamicModerateScale(3),
+                }]}>Website</Text>
                 <TextInput
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
-                    color: theme.colors.text
+                    color: theme.colors.text,
+                    paddingHorizontal: dynamicModerateScale(10),
+                    paddingVertical: dynamicModerateScale(7),
+                    fontSize: dynamicModerateScale(10),
+                    borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.website}
                   onChangeText={(text) => setEditFormData({...editFormData, website: text})}
@@ -1755,13 +2144,24 @@ const ProfileScreen: React.FC = () => {
               </View>
 
               {/* Address */}
-              <View style={styles.inputGroup}>
-                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Address</Text>
+              <View style={[styles.inputGroup, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.inputLabel, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(9),
+                  marginBottom: dynamicModerateScale(3),
+                }]}>Address</Text>
                 <TextInput
                   style={[styles.textArea, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
-                    color: theme.colors.text
+                    color: theme.colors.text,
+                    paddingHorizontal: dynamicModerateScale(10),
+                    paddingVertical: dynamicModerateScale(7),
+                    fontSize: dynamicModerateScale(10),
+                    borderRadius: dynamicModerateScale(10),
+                    minHeight: dynamicModerateScale(55),
                   }]}
                   value={editFormData.address}
                   onChangeText={(text) => setEditFormData({...editFormData, address: text})}
@@ -1774,23 +2174,44 @@ const ProfileScreen: React.FC = () => {
               </View>
             </ScrollView>
 
-            <View style={styles.modalFooter}>
+            <View style={[styles.modalFooter, {
+              paddingHorizontal: dynamicModerateScale(12),
+              paddingVertical: dynamicModerateScale(12),
+              borderTopWidth: 0.5,
+              gap: dynamicModerateScale(8),
+            }]}>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.cancelModalButton, { borderColor: theme.colors.border }]}
+                style={[styles.modalButton, styles.cancelModalButton, { 
+                  borderColor: theme.colors.border,
+                  paddingVertical: dynamicModerateScale(10),
+                  borderRadius: dynamicModerateScale(10),
+                }]}
                 onPress={handleCancelEdit}
                 disabled={isUpdating}
               >
-                <Text style={[styles.modalButtonText, { color: theme.colors.textSecondary }]}>Cancel</Text>
+                <Text style={[styles.modalButtonText, { 
+                  color: theme.colors.textSecondary,
+                  fontSize: dynamicModerateScale(10),
+                }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity 
-                style={[styles.modalButton, styles.saveModalButton, { backgroundColor: theme.colors.primary }]}
+                style={[styles.modalButton, styles.saveModalButton, { 
+                  backgroundColor: theme.colors.primary,
+                  paddingVertical: dynamicModerateScale(10),
+                  borderRadius: dynamicModerateScale(10),
+                }]}
                 onPress={handleSaveProfile}
                 disabled={isUpdating}
               >
                 {isUpdating ? (
-                  <Text style={styles.modalButtonText}>Updating...</Text>
+                  <Text style={[styles.modalButtonText, {
+                    fontSize: dynamicModerateScale(10),
+                  }]}>Updating...</Text>
                 ) : (
-                  <Text style={[styles.modalButtonText, { color: '#ffffff' }]}>Save Changes</Text>
+                  <Text style={[styles.modalButtonText, { 
+                    color: '#ffffff',
+                    fontSize: dynamicModerateScale(10),
+                  }]}>Save Changes</Text>
                 )}
               </TouchableOpacity>
             </View>
@@ -1815,36 +2236,70 @@ const ProfileScreen: React.FC = () => {
             activeOpacity={1}
             onPress={() => {}} // Prevent closing when tapping inside modal
           >
-            <View style={[styles.successModalContainer, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.successModalHeader}>
-                <View style={[styles.successIconContainer, { backgroundColor: `${theme.colors.primary}20` }]}>
-                  <Icon name="check-circle" size={Math.min(screenWidth * 0.08, 32)} color={theme.colors.primary} />
+            <View style={[styles.successModalContainer, { 
+              backgroundColor: theme.colors.surface,
+              borderRadius: dynamicModerateScale(16),
+              padding: dynamicModerateScale(16),
+            }]}>
+              <View style={[styles.successModalHeader, {
+                marginBottom: dynamicModerateScale(10),
+              }]}>
+                <View style={[styles.successIconContainer, { 
+                  backgroundColor: `${theme.colors.primary}20`,
+                  width: dynamicModerateScale(42),
+                  height: dynamicModerateScale(42),
+                  borderRadius: dynamicModerateScale(21),
+                  marginBottom: dynamicModerateScale(6),
+                }]}>
+                  <Icon name="check-circle" size={getIconSize(22)} color={theme.colors.primary} />
                 </View>
                 <Text 
-                  style={[styles.successModalTitle, { color: theme.colors.text }]}
+                  style={[styles.successModalTitle, { 
+                    color: theme.colors.text,
+                    fontSize: dynamicModerateScale(14),
+                  }]}
                 >
                   Success
                 </Text>
                 <TouchableOpacity 
-                  style={[styles.closeModalButton, { backgroundColor: theme.colors.inputBackground }]}
+                  style={[styles.closeModalButton, { 
+                    backgroundColor: theme.colors.inputBackground,
+                    width: dynamicModerateScale(24),
+                    height: dynamicModerateScale(24),
+                    borderRadius: dynamicModerateScale(12),
+                    top: dynamicModerateScale(-5),
+                    right: dynamicModerateScale(-5),
+                  }]}
                   onPress={() => setShowSuccessModal(false)}
                   activeOpacity={0.7}
                 >
-                  <Icon name="close" size={Math.min(screenWidth * 0.06, 24)} color={theme.colors.textSecondary} />
+                  <Icon name="close" size={getIconSize(16)} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               
-              <View style={styles.successModalContent}>
-                <Text style={[styles.successModalMessage, { color: theme.colors.text }]}>
+              <View style={[styles.successModalContent, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.successModalMessage, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(10),
+                  lineHeight: dynamicModerateScale(16),
+                }]}>
                   {successMessage}
                 </Text>
               </View>
               
               <TouchableOpacity 
-                style={[styles.successModalButton, { backgroundColor: theme.colors.primary }]}
+                style={[styles.successModalButton, { 
+                  backgroundColor: theme.colors.primary,
+                  paddingVertical: dynamicModerateScale(9),
+                  borderRadius: dynamicModerateScale(10),
+                }]}
                 onPress={() => setShowSuccessModal(false)}
               >
-                <Text style={styles.successModalButtonText}>OK</Text>
+                <Text style={[styles.successModalButtonText, {
+                  fontSize: dynamicModerateScale(10),
+                }]}>OK</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -1868,44 +2323,87 @@ const ProfileScreen: React.FC = () => {
             activeOpacity={1}
             onPress={() => {}} // Prevent closing when tapping inside modal
           >
-            <View style={[styles.signOutModalContainer, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.signOutModalHeader}>
-                <View style={[styles.signOutIconContainer, { backgroundColor: '#ff444420' }]}>
-                  <Icon name="logout" size={Math.min(screenWidth * 0.08, 32)} color="#ff4444" />
+            <View style={[styles.signOutModalContainer, { 
+              backgroundColor: theme.colors.surface,
+              borderRadius: dynamicModerateScale(16),
+              padding: dynamicModerateScale(16),
+            }]}>
+              <View style={[styles.signOutModalHeader, {
+                marginBottom: dynamicModerateScale(10),
+              }]}>
+                <View style={[styles.signOutIconContainer, { 
+                  backgroundColor: '#ff444420',
+                  width: dynamicModerateScale(42),
+                  height: dynamicModerateScale(42),
+                  borderRadius: dynamicModerateScale(21),
+                  marginBottom: dynamicModerateScale(6),
+                }]}>
+                  <Icon name="logout" size={getIconSize(22)} color="#ff4444" />
                 </View>
                 <Text 
-                  style={[styles.signOutModalTitle, { color: theme.colors.text }]}
+                  style={[styles.signOutModalTitle, { 
+                    color: theme.colors.text,
+                    fontSize: dynamicModerateScale(14),
+                  }]}
                 >
                   Sign Out
                 </Text>
                 <TouchableOpacity 
-                  style={[styles.closeModalButton, { backgroundColor: theme.colors.inputBackground }]}
+                  style={[styles.closeModalButton, { 
+                    backgroundColor: theme.colors.inputBackground,
+                    width: dynamicModerateScale(24),
+                    height: dynamicModerateScale(24),
+                    borderRadius: dynamicModerateScale(12),
+                    top: dynamicModerateScale(-5),
+                    right: dynamicModerateScale(-5),
+                  }]}
                   onPress={() => setShowSignOutModal(false)}
                   activeOpacity={0.7}
                 >
-                  <Icon name="close" size={Math.min(screenWidth * 0.06, 24)} color={theme.colors.textSecondary} />
+                  <Icon name="close" size={getIconSize(16)} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               
-              <View style={styles.signOutModalContent}>
-                <Text style={[styles.signOutModalMessage, { color: theme.colors.text }]}>
+              <View style={[styles.signOutModalContent, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.signOutModalMessage, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(10),
+                  lineHeight: dynamicModerateScale(16),
+                }]}>
                   Are you sure you want to sign out? This will clear all your local data.
                 </Text>
               </View>
               
-              <View style={styles.signOutModalButtons}>
+              <View style={[styles.signOutModalButtons, {
+                gap: dynamicModerateScale(8),
+              }]}>
                 <TouchableOpacity 
-                  style={[styles.signOutCancelButton, { backgroundColor: theme.colors.inputBackground }]}
+                  style={[styles.signOutCancelButton, { 
+                    backgroundColor: theme.colors.inputBackground,
+                    paddingVertical: dynamicModerateScale(9),
+                    borderRadius: dynamicModerateScale(10),
+                  }]}
                   onPress={() => setShowSignOutModal(false)}
                 >
-                  <Text style={[styles.signOutCancelButtonText, { color: theme.colors.text }]}>Cancel</Text>
+                  <Text style={[styles.signOutCancelButtonText, { 
+                    color: theme.colors.text,
+                    fontSize: dynamicModerateScale(10),
+                  }]}>Cancel</Text>
                 </TouchableOpacity>
                 
                 <TouchableOpacity 
-                  style={[styles.signOutConfirmButton, { backgroundColor: '#ff4444' }]}
+                  style={[styles.signOutConfirmButton, { 
+                    backgroundColor: '#ff4444',
+                    paddingVertical: dynamicModerateScale(9),
+                    borderRadius: dynamicModerateScale(10),
+                  }]}
                   onPress={confirmSignOut}
                 >
-                  <Text style={styles.signOutConfirmButtonText}>Sign Out</Text>
+                  <Text style={[styles.signOutConfirmButtonText, {
+                    fontSize: dynamicModerateScale(10),
+                  }]}>Sign Out</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -1930,36 +2428,70 @@ const ProfileScreen: React.FC = () => {
             activeOpacity={1}
             onPress={() => {}} // Prevent closing when tapping inside modal
           >
-            <View style={[styles.errorModalContainer, { backgroundColor: theme.colors.surface }]}>
-              <View style={styles.errorModalHeader}>
-                <View style={[styles.errorIconContainer, { backgroundColor: '#ff444420' }]}>
-                  <Icon name="error-outline" size={Math.min(screenWidth * 0.08, 32)} color="#ff4444" />
+            <View style={[styles.errorModalContainer, { 
+              backgroundColor: theme.colors.surface,
+              borderRadius: dynamicModerateScale(16),
+              padding: dynamicModerateScale(16),
+            }]}>
+              <View style={[styles.errorModalHeader, {
+                marginBottom: dynamicModerateScale(10),
+              }]}>
+                <View style={[styles.errorIconContainer, { 
+                  backgroundColor: '#ff444420',
+                  width: dynamicModerateScale(42),
+                  height: dynamicModerateScale(42),
+                  borderRadius: dynamicModerateScale(21),
+                  marginBottom: dynamicModerateScale(6),
+                }]}>
+                  <Icon name="error-outline" size={getIconSize(22)} color="#ff4444" />
                 </View>
                 <Text 
-                  style={[styles.errorModalTitle, { color: theme.colors.text }]}
+                  style={[styles.errorModalTitle, { 
+                    color: theme.colors.text,
+                    fontSize: dynamicModerateScale(14),
+                  }]}
                 >
                   Error
                 </Text>
                 <TouchableOpacity 
-                  style={[styles.closeModalButton, { backgroundColor: theme.colors.inputBackground }]}
+                  style={[styles.closeModalButton, { 
+                    backgroundColor: theme.colors.inputBackground,
+                    width: dynamicModerateScale(24),
+                    height: dynamicModerateScale(24),
+                    borderRadius: dynamicModerateScale(12),
+                    top: dynamicModerateScale(-5),
+                    right: dynamicModerateScale(-5),
+                  }]}
                   onPress={() => setShowErrorModal(false)}
                   activeOpacity={0.7}
                 >
-                  <Icon name="close" size={Math.min(screenWidth * 0.06, 24)} color={theme.colors.textSecondary} />
+                  <Icon name="close" size={getIconSize(16)} color={theme.colors.textSecondary} />
                 </TouchableOpacity>
               </View>
               
-              <View style={styles.errorModalContent}>
-                <Text style={[styles.errorModalMessage, { color: theme.colors.text }]}>
+              <View style={[styles.errorModalContent, {
+                marginBottom: dynamicModerateScale(12),
+              }]}>
+                <Text style={[styles.errorModalMessage, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(10),
+                  lineHeight: dynamicModerateScale(16),
+                }]}>
                   {errorModalMessage}
                 </Text>
               </View>
               
               <TouchableOpacity 
-                style={[styles.errorModalButton, { backgroundColor: '#ff4444' }]}
+                style={[styles.errorModalButton, { 
+                  backgroundColor: '#ff4444',
+                  paddingVertical: dynamicModerateScale(9),
+                  borderRadius: dynamicModerateScale(10),
+                }]}
                 onPress={() => setShowErrorModal(false)}
               >
-                <Text style={styles.errorModalButtonText}>OK</Text>
+                <Text style={[styles.errorModalButtonText, {
+                  fontSize: dynamicModerateScale(10),
+                }]}>OK</Text>
               </TouchableOpacity>
             </View>
           </TouchableOpacity>
@@ -1992,12 +2524,12 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: screenHeight * 0.02,
-    paddingHorizontal: screenWidth * 0.05,
-    paddingBottom: screenHeight * 0.02,
+    paddingTop: 0,
+    paddingHorizontal: moderateScale(4),
+    paddingBottom: moderateScale(3),
   },
   headerTitle: {
-    fontSize: Math.min(screenWidth * 0.06, 24),
+    fontSize: moderateScale(12),
     fontWeight: 'bold',
     color: '#ffffff',
     textAlign: 'center',
@@ -2006,42 +2538,30 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   contentContainer: {
-    paddingBottom: 100, // Add padding to account for tab bar
+    paddingBottom: 80,
   },
   profileCard: {
-    marginHorizontal: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.03,
-    borderRadius: 20,
-    padding: screenWidth * 0.05,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: moderateScale(2),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(6),
+    elevation: moderateScale(4),
   },
   profileHeader: {
     alignItems: 'center',
   },
   avatarContainer: {
     position: 'relative',
-    marginBottom: screenHeight * 0.02,
   },
   avatarGradient: {
-    width: screenWidth * 0.2,
-    height: screenWidth * 0.2,
-    borderRadius: screenWidth * 0.1,
     justifyContent: 'center',
     alignItems: 'center',
   },
   avatarImageContainer: {
-    width: screenWidth * 0.2,
-    height: screenWidth * 0.2,
-    borderRadius: screenWidth * 0.1,
     overflow: 'hidden',
-    borderWidth: 3,
     borderColor: '#ffffff',
   },
   avatarImage: {
@@ -2049,7 +2569,6 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   avatarText: {
-    fontSize: Math.min(screenWidth * 0.08, 32),
     fontWeight: 'bold',
     color: '#ffffff',
   },
@@ -2057,47 +2576,29 @@ const styles = StyleSheet.create({
     position: 'absolute',
     bottom: 0,
     right: 0,
-    width: screenWidth * 0.06,
-    height: screenWidth * 0.06,
-    borderRadius: screenWidth * 0.03,
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 3,
     borderColor: '#ffffff',
   },
   editProfileButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: screenHeight * 0.012,
-    paddingHorizontal: screenWidth * 0.04,
-    borderRadius: 12,
-    marginTop: screenHeight * 0.02,
-    gap: 8,
   },
   editProfileButtonText: {
     color: '#ffffff',
-    fontSize: Math.min(screenWidth * 0.035, 14),
     fontWeight: '600',
   },
   profileInfo: {
     alignItems: 'center',
   },
   userName: {
-    fontSize: Math.min(screenWidth * 0.05, 20),
     fontWeight: 'bold',
-    marginBottom: screenHeight * 0.005,
   },
   userEmail: {
-    fontSize: Math.min(screenWidth * 0.035, 14),
-    marginBottom: screenHeight * 0.01,
   },
   userBio: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
     textAlign: 'center',
-    marginBottom: screenHeight * 0.015,
-    lineHeight: 16,
-    paddingHorizontal: screenWidth * 0.05,
   },
   profileStats: {
     flexDirection: 'row',
@@ -2105,48 +2606,32 @@ const styles = StyleSheet.create({
   },
   statItem: {
     alignItems: 'center',
-    paddingHorizontal: screenWidth * 0.03,
   },
   statNumber: {
-    fontSize: Math.min(screenWidth * 0.045, 18),
     fontWeight: 'bold',
   },
   statLabel: {
-    fontSize: Math.min(screenWidth * 0.025, 10),
-    marginTop: 2,
   },
   statDivider: {
-    width: 1,
-    height: screenHeight * 0.02,
-    marginHorizontal: screenWidth * 0.02,
   },
   section: {
-    marginBottom: screenHeight * 0.03,
   },
   sectionTitle: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
     fontWeight: '600',
     color: '#ffffff',
-    marginBottom: screenHeight * 0.015,
-    paddingHorizontal: screenWidth * 0.05,
   },
   menuItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginHorizontal: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.01,
-    paddingVertical: screenHeight * 0.015,
-    paddingHorizontal: screenWidth * 0.05,
-    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   menuItemLeft: {
     flexDirection: 'row',
@@ -2154,40 +2639,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   menuItemIcon: {
-    width: screenWidth * 0.08,
-    height: screenWidth * 0.08,
-    borderRadius: screenWidth * 0.04,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: screenWidth * 0.04,
   },
   menuItemContent: {
     flex: 1,
   },
   menuItemText: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
     fontWeight: '500',
   },
   menuItemSubtext: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    marginTop: 2,
   },
      toggle: {
-      width: screenWidth * 0.1,
-      height: screenHeight * 0.025,
-      borderRadius: screenHeight * 0.0125,
       justifyContent: 'flex-start',
       alignItems: 'center',
       flexDirection: 'row',
       paddingHorizontal: 2,
     },
     toggleThumb: {
-      width: screenHeight * 0.02,
-      height: screenHeight * 0.02,
-      borderRadius: screenHeight * 0.01,
       shadowColor: '#000',
       shadowOffset: { width: 0, height: 1 },
-      shadowOpacity: 0.2,
+      shadowOpacity: 0.15,
       shadowRadius: 2,
       elevation: 2,
     },
@@ -2195,33 +2667,22 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginHorizontal: screenWidth * 0.05,
-    marginTop: screenHeight * 0.02,
-    paddingVertical: screenHeight * 0.015,
-    borderRadius: 15,
     borderWidth: 1,
   },
   signOutIcon: {
-    marginRight: screenWidth * 0.02,
   },
   signOutText: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
     fontWeight: '600',
   },
   subscriptionCard: {
-    marginHorizontal: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.01,
-    paddingVertical: screenHeight * 0.015,
-    paddingHorizontal: screenWidth * 0.05,
-    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   subscriptionContent: {
     flexDirection: 'row',
@@ -2234,39 +2695,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   subscriptionIcon: {
-    width: screenWidth * 0.08,
-    height: screenWidth * 0.08,
-    borderRadius: screenWidth * 0.04,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: screenWidth * 0.04,
   },
   subscriptionInfo: {
     flex: 1,
   },
   subscriptionTitle: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
     fontWeight: '600',
   },
   subscriptionSubtitle: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    marginTop: 2,
   },
   // Transaction History Section Styles
   transactionHistoryCard: {
-    marginHorizontal: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.01,
-    paddingVertical: screenHeight * 0.015,
-    paddingHorizontal: screenWidth * 0.05,
-    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   transactionHistoryContent: {
     flexDirection: 'row',
@@ -2279,39 +2728,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   transactionHistoryIcon: {
-    width: screenWidth * 0.08,
-    height: screenWidth * 0.08,
-    borderRadius: screenWidth * 0.04,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: screenWidth * 0.04,
   },
   transactionHistoryInfo: {
     flex: 1,
   },
   transactionHistoryTitle: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
     fontWeight: '600',
   },
   transactionHistorySubtitle: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    marginTop: 2,
   },
   // My Posters Section Styles
   myPostersCard: {
-    marginHorizontal: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.01,
-    paddingVertical: screenHeight * 0.015,
-    paddingHorizontal: screenWidth * 0.05,
-    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   myPostersContent: {
     flexDirection: 'row',
@@ -2324,39 +2761,27 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   myPostersIcon: {
-    width: screenWidth * 0.08,
-    height: screenWidth * 0.08,
-    borderRadius: screenWidth * 0.04,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: screenWidth * 0.04,
   },
   myPostersInfo: {
     flex: 1,
   },
   myPostersTitle: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
     fontWeight: '600',
   },
   myPostersSubtitle: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    marginTop: 2,
   },
   // Share App Section Styles
   shareAppCard: {
-    marginHorizontal: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.01,
-    paddingVertical: screenHeight * 0.015,
-    paddingHorizontal: screenWidth * 0.05,
-    borderRadius: 15,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
     shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   shareAppContent: {
     flexDirection: 'row',
@@ -2369,28 +2794,19 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   shareAppIcon: {
-    width: screenWidth * 0.08,
-    height: screenWidth * 0.08,
-    borderRadius: screenWidth * 0.04,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: screenWidth * 0.04,
   },
   shareAppInfo: {
     flex: 1,
   },
   shareAppTitle: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
     fontWeight: '600',
   },
   shareAppSubtitle: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    marginTop: 2,
   },
   versionText: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
     textAlign: 'center',
-    marginTop: screenHeight * 0.03,
   },
   // Edit Profile Modal Styles
   modalOverlay: {
@@ -2400,87 +2816,87 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   modalContent: {
-    width: screenWidth * 0.9,
+    width: screenWidth * 0.92,
     maxHeight: screenHeight * 0.8,
-    borderRadius: 20,
+    borderRadius: moderateScale(16),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 10,
+      height: moderateScale(6),
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 20,
-    elevation: 15,
+    shadowOpacity: 0.2,
+    shadowRadius: moderateScale(12),
+    elevation: moderateScale(12),
   },
   modalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: screenWidth * 0.05,
-    paddingVertical: screenHeight * 0.02,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.1)',
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(12),
+    borderBottomWidth: 0.5,
+    borderBottomColor: 'rgba(0,0,0,0.08)',
   },
   modalTitle: {
-    fontSize: Math.min(screenWidth * 0.05, 20),
+    fontSize: moderateScale(14),
     fontWeight: 'bold',
   },
   modalCloseButton: {
-    padding: 4,
+    padding: moderateScale(3),
   },
   modalBody: {
     maxHeight: screenHeight * 0.5,
-    paddingHorizontal: screenWidth * 0.05,
-    paddingVertical: screenHeight * 0.02,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(12),
   },
   inputGroup: {
-    marginBottom: screenHeight * 0.02,
+    marginBottom: moderateScale(12),
   },
   inputLabel: {
-    fontSize: Math.min(screenWidth * 0.035, 14),
+    fontSize: moderateScale(10),
     fontWeight: '600',
-    marginBottom: screenHeight * 0.008,
+    marginBottom: moderateScale(4),
   },
   textInput: {
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.012,
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    borderRadius: moderateScale(10),
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(8),
+    fontSize: moderateScale(11),
   },
   validationError: {
-    fontSize: Math.min(screenWidth * 0.032, 13),
-    marginTop: screenHeight * 0.005,
-    marginLeft: screenWidth * 0.01,
+    fontSize: moderateScale(9),
+    marginTop: moderateScale(3),
+    marginLeft: moderateScale(3),
     fontWeight: '500',
   },
   validationSuccess: {
-    fontSize: Math.min(screenWidth * 0.032, 13),
-    marginTop: screenHeight * 0.005,
-    marginLeft: screenWidth * 0.01,
+    fontSize: moderateScale(9),
+    marginTop: moderateScale(3),
+    marginLeft: moderateScale(3),
     fontWeight: '500',
   },
   textArea: {
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.012,
-    fontSize: Math.min(screenWidth * 0.04, 16),
-    minHeight: screenHeight * 0.08,
+    borderRadius: moderateScale(10),
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(8),
+    fontSize: moderateScale(11),
+    minHeight: moderateScale(60),
   },
   modalFooter: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: screenWidth * 0.05,
-    paddingVertical: screenHeight * 0.02,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.1)',
-    gap: screenWidth * 0.03,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(12),
+    borderTopWidth: 0.5,
+    borderTopColor: 'rgba(0,0,0,0.08)',
+    gap: moderateScale(8),
   },
   modalButton: {
     flex: 1,
-    paddingVertical: screenHeight * 0.015,
-    borderRadius: 12,
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(10),
     alignItems: 'center',
     justifyContent: 'center',
   },
@@ -2492,70 +2908,70 @@ const styles = StyleSheet.create({
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   modalButtonText: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    fontSize: moderateScale(11),
     fontWeight: '600',
   },
   // Category Picker Styles
   categoryPicker: {
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.012,
+    borderRadius: moderateScale(10),
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(8),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
   },
   categoryPickerText: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    fontSize: moderateScale(11),
     flex: 1,
   },
   categoryOptions: {
-    marginTop: screenHeight * 0.01,
-    borderRadius: 12,
+    marginTop: moderateScale(6),
+    borderRadius: moderateScale(10),
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   // Horizontal category selection styles
   selectedCategoryContainer: {
-    marginBottom: screenHeight * 0.015,
+    marginBottom: moderateScale(10),
   },
   selectedCategoryInput: {
     borderWidth: 1,
-    borderRadius: screenWidth * 0.03,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.015,
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    borderRadius: moderateScale(10),
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(10),
+    fontSize: moderateScale(11),
   },
   categoryScrollContent: {
-    paddingVertical: screenHeight * 0.01,
-    gap: screenWidth * 0.03,
+    paddingVertical: moderateScale(6),
+    gap: moderateScale(6),
   },
   categoryOption: {
-    paddingVertical: screenHeight * 0.012,
-    paddingHorizontal: screenWidth * 0.04,
-    borderRadius: screenWidth * 0.02,
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: moderateScale(10),
+    borderRadius: moderateScale(8),
     borderWidth: 1,
-    marginRight: screenWidth * 0.02,
+    marginRight: moderateScale(4),
   },
   categoryOptionSelected: {
     // Selected state styling handled inline
   },
   categoryOptionText: {
-    fontSize: Math.min(screenWidth * 0.035, 14),
+    fontSize: moderateScale(10),
     fontWeight: '500',
   },
   categoryOptionTextSelected: {
@@ -2563,213 +2979,213 @@ const styles = StyleSheet.create({
   },
   // Success Modal Styles
   successModalContainer: {
-    width: screenWidth * 0.85,
-    maxWidth: 400,
-    borderRadius: 20,
-    padding: screenWidth * 0.06,
+    width: screenWidth * 0.88,
+    maxWidth: 380,
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: moderateScale(3),
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: moderateScale(6),
+    elevation: moderateScale(6),
   },
   successModalHeader: {
     alignItems: 'center',
-    marginBottom: screenHeight * 0.02,
+    marginBottom: moderateScale(12),
     position: 'relative',
   },
   successIconContainer: {
-    width: Math.min(screenWidth * 0.18, 72),
-    height: Math.min(screenWidth * 0.18, 72),
-    borderRadius: Math.min(screenWidth * 0.09, 36),
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: screenHeight * 0.015,
+    marginBottom: moderateScale(8),
   },
   successModalTitle: {
-    fontSize: Math.min(screenWidth * 0.06, 24),
+    fontSize: moderateScale(16),
     fontWeight: '700',
     textAlign: 'center',
   },
   closeModalButton: {
     position: 'absolute',
-    top: -screenHeight * 0.01,
-    right: -screenWidth * 0.02,
-    width: Math.min(screenWidth * 0.08, 32),
-    height: Math.min(screenWidth * 0.08, 32),
-    borderRadius: Math.min(screenWidth * 0.04, 16),
+    top: moderateScale(-6),
+    right: moderateScale(-6),
+    width: moderateScale(26),
+    height: moderateScale(26),
+    borderRadius: moderateScale(13),
     justifyContent: 'center',
     alignItems: 'center',
   },
   successModalContent: {
-    marginBottom: screenHeight * 0.025,
+    marginBottom: moderateScale(14),
   },
   successModalMessage: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    fontSize: moderateScale(12),
     textAlign: 'center',
-    lineHeight: Math.min(screenWidth * 0.06, 24),
+    lineHeight: moderateScale(18),
   },
   successModalButton: {
-    paddingVertical: screenHeight * 0.018,
-    borderRadius: 12,
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(10),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   successModalButtonText: {
     color: '#FFFFFF',
-    fontSize: Math.min(screenWidth * 0.042, 17),
+    fontSize: moderateScale(12),
     fontWeight: '600',
   },
   
   // Sign Out Modal Styles
   signOutModalContainer: {
-    width: screenWidth * 0.85,
-    maxWidth: 400,
-    borderRadius: 20,
-    padding: screenWidth * 0.06,
+    width: screenWidth * 0.88,
+    maxWidth: 380,
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: moderateScale(3),
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: moderateScale(6),
+    elevation: moderateScale(6),
   },
   signOutModalHeader: {
     alignItems: 'center',
-    marginBottom: screenHeight * 0.02,
+    marginBottom: moderateScale(12),
     position: 'relative',
   },
   signOutIconContainer: {
-    width: Math.min(screenWidth * 0.18, 72),
-    height: Math.min(screenWidth * 0.18, 72),
-    borderRadius: Math.min(screenWidth * 0.09, 36),
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: screenHeight * 0.015,
+    marginBottom: moderateScale(8),
   },
   signOutModalTitle: {
-    fontSize: Math.min(screenWidth * 0.06, 24),
+    fontSize: moderateScale(16),
     fontWeight: '700',
     textAlign: 'center',
   },
   signOutModalContent: {
-    marginBottom: screenHeight * 0.025,
+    marginBottom: moderateScale(14),
   },
   signOutModalMessage: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    fontSize: moderateScale(12),
     textAlign: 'center',
-    lineHeight: Math.min(screenWidth * 0.06, 24),
+    lineHeight: moderateScale(18),
   },
   signOutModalButtons: {
     flexDirection: 'row',
-    gap: screenWidth * 0.03,
+    gap: moderateScale(8),
   },
   signOutCancelButton: {
     flex: 1,
-    paddingVertical: screenHeight * 0.018,
-    borderRadius: 12,
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(10),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   signOutCancelButtonText: {
-    fontSize: Math.min(screenWidth * 0.042, 17),
+    fontSize: moderateScale(12),
     fontWeight: '600',
   },
   signOutConfirmButton: {
     flex: 1,
-    paddingVertical: screenHeight * 0.018,
-    borderRadius: 12,
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(10),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   signOutConfirmButtonText: {
     color: '#FFFFFF',
-    fontSize: Math.min(screenWidth * 0.042, 17),
+    fontSize: moderateScale(12),
     fontWeight: '600',
   },
   // Error Modal Styles
   errorModalContainer: {
-    width: screenWidth * 0.85,
-    maxWidth: 400,
-    borderRadius: 20,
-    padding: screenWidth * 0.06,
+    width: screenWidth * 0.88,
+    maxWidth: 380,
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 4,
+      height: moderateScale(3),
     },
-    shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 8,
+    shadowOpacity: 0.25,
+    shadowRadius: moderateScale(6),
+    elevation: moderateScale(6),
   },
   errorModalHeader: {
     alignItems: 'center',
-    marginBottom: screenHeight * 0.02,
+    marginBottom: moderateScale(12),
     position: 'relative',
   },
   errorIconContainer: {
-    width: Math.min(screenWidth * 0.18, 72),
-    height: Math.min(screenWidth * 0.18, 72),
-    borderRadius: Math.min(screenWidth * 0.09, 36),
+    width: moderateScale(48),
+    height: moderateScale(48),
+    borderRadius: moderateScale(24),
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: screenHeight * 0.015,
+    marginBottom: moderateScale(8),
   },
   errorModalTitle: {
-    fontSize: Math.min(screenWidth * 0.06, 24),
+    fontSize: moderateScale(16),
     fontWeight: '700',
     textAlign: 'center',
   },
   errorModalContent: {
-    marginBottom: screenHeight * 0.025,
+    marginBottom: moderateScale(14),
   },
   errorModalMessage: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    fontSize: moderateScale(12),
     textAlign: 'center',
-    lineHeight: Math.min(screenWidth * 0.06, 24),
+    lineHeight: moderateScale(18),
   },
   errorModalButton: {
-    paddingVertical: screenHeight * 0.018,
-    borderRadius: 12,
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(10),
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(3),
+    elevation: moderateScale(2),
   },
   errorModalButtonText: {
     color: '#FFFFFF',
-    fontSize: Math.min(screenWidth * 0.042, 17),
+    fontSize: moderateScale(12),
     fontWeight: '600',
   },
 });
