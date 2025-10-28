@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import {
   View,
   Text,
@@ -18,62 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { Template } from '../services/dashboard';
 import { useTheme } from '../context/ThemeContext';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-// Enhanced responsive design helpers
-const isUltraSmallScreen = screenWidth < 360;
-const isSmallScreen = screenWidth >= 360 && screenWidth < 375;
-const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
-const isLargeScreen = screenWidth >= 414 && screenWidth < 768;
-const isTablet = screenWidth >= 768;
-const isLandscape = screenWidth > screenHeight;
-
-// Responsive spacing and sizing
-const responsiveSpacing = {
-  xs: isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isTablet ? 16 : 12,
-  sm: isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 12 : isTablet ? 20 : 16,
-  md: isUltraSmallScreen ? 8 : isSmallScreen ? 12 : isMediumScreen ? 16 : isTablet ? 24 : 20,
-  lg: isUltraSmallScreen ? 12 : isSmallScreen ? 16 : isMediumScreen ? 20 : isTablet ? 32 : 24,
-  xl: isUltraSmallScreen ? 16 : isSmallScreen ? 20 : isMediumScreen ? 24 : isTablet ? 40 : 32,
-  xxl: isUltraSmallScreen ? 20 : isSmallScreen ? 24 : isMediumScreen ? 32 : isTablet ? 48 : 40,
-};
-
-const responsiveFontSize = {
-  xs: isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isTablet ? 14 : 12,
-  sm: isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isTablet ? 16 : 14,
-  md: isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isTablet ? 18 : 16,
-  lg: isUltraSmallScreen ? 14 : isSmallScreen ? 15 : isMediumScreen ? 16 : isTablet ? 20 : 18,
-  xl: isUltraSmallScreen ? 16 : isSmallScreen ? 17 : isMediumScreen ? 18 : isTablet ? 24 : 20,
-  xxl: isUltraSmallScreen ? 18 : isSmallScreen ? 19 : isMediumScreen ? 20 : isTablet ? 26 : 22,
-  xxxl: isUltraSmallScreen ? 20 : isSmallScreen ? 21 : isMediumScreen ? 22 : isTablet ? 28 : 24,
-};
-
-// Responsive poster container height
-const getPosterContainerHeight = () => {
-  if (isTablet && isLandscape) return screenHeight * 0.5;
-  if (isTablet) return screenHeight * 0.4;
-  if (isLandscape) return screenHeight * 0.45;
-  if (isUltraSmallScreen) return screenHeight * 0.22;
-  if (isSmallScreen) return screenHeight * 0.25;
-  if (isMediumScreen) return screenHeight * 0.28;
-  return screenHeight * 0.3;
-};
-
-// Get number of columns for related posters grid
-const getGridColumns = () => {
-  if (isTablet) return 3;
-  return 2;
-};
-
-// Get responsive card width
-const getCardWidth = () => {
-  const columns = getGridColumns();
-  const totalHorizontalPadding = responsiveSpacing.md * 2; // Left and right padding
-  const cardMargin = isUltraSmallScreen ? responsiveSpacing.sm : isTablet ? responsiveSpacing.lg : responsiveSpacing.md;
-  const totalMargins = columns * cardMargin; // Right margin for each card
-  return (screenWidth - totalHorizontalPadding - totalMargins) / columns;
-};
+import OptimizedImage from '../components/OptimizedImage';
 
 type PosterPlayerScreenRouteProp = RouteProp<MainStackParamList, 'PosterPlayer'>;
 type PosterPlayerScreenNavigationProp = StackNavigationProp<MainStackParamList, 'PosterPlayer'>;
@@ -84,8 +29,39 @@ const PosterPlayerScreen: React.FC = () => {
   const route = useRoute<PosterPlayerScreenRouteProp>();
   const insets = useSafeAreaInsets();
   
-  const { selectedPoster, relatedPosters } = route.params;
+  // Dynamic dimensions for responsive layout
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  // Update dimensions on screen rotation/resize
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const screenWidth = dimensions.width;
+  const screenHeight = dimensions.height;
+  
+  // Responsive scaling functions
+  const scale = (size: number) => (screenWidth / 375) * size;
+  const verticalScale = (size: number) => (screenHeight / 667) * size;
+  const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+  
+  const { selectedPoster: initialPoster, relatedPosters: initialRelatedPosters } = route.params;
+  const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
+  const [currentRelatedPosters, setCurrentRelatedPosters] = useState<Template[]>(initialRelatedPosters);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
+
+  // Sync state when route params change
+  useEffect(() => {
+    setCurrentPoster(initialPoster);
+    setCurrentRelatedPosters(initialRelatedPosters);
+  }, [initialPoster, initialRelatedPosters]);
 
   // Language options
   const languages = useMemo(() => [
@@ -96,7 +72,7 @@ const PosterPlayerScreen: React.FC = () => {
 
   // Filter posters by selected language
   const filteredPosters = useMemo(() => {
-    return relatedPosters.filter(poster => {
+    return currentRelatedPosters.filter(poster => {
       // If poster doesn't have languages property, show it for all languages
       if (!poster.languages || poster.languages.length === 0) {
         return true;
@@ -104,43 +80,77 @@ const PosterPlayerScreen: React.FC = () => {
       // Otherwise, filter based on poster's supported languages
       return poster.languages.includes(selectedLanguage);
     });
-  }, [relatedPosters, selectedLanguage]);
+  }, [currentRelatedPosters, selectedLanguage]);
 
   const handleBackPress = useCallback(() => {
     navigation.goBack();
   }, [navigation]);
 
   const handlePosterSelect = useCallback((poster: Template) => {
-    navigation.replace('PosterPlayer', {
-      selectedPoster: poster,
-      relatedPosters: relatedPosters.filter(p => p.id !== poster.id),
+    // Update state instead of navigating to prevent full page refresh
+    setCurrentPoster(poster);
+    // Update related posters to exclude the newly selected one and include the previous one
+    setCurrentRelatedPosters(prev => {
+      const withoutNew = prev.filter(p => p.id !== poster.id);
+      return [currentPoster, ...withoutNew];
     });
-  }, [navigation, relatedPosters]);
+  }, [currentPoster]);
 
   const handleLanguageChange = useCallback((languageId: string) => {
     setSelectedLanguage(languageId);
   }, []);
 
+  // Responsive icon sizes
+  const getIconSize = useCallback((baseSize: number) => {
+    const scale = screenWidth / 375;
+    return Math.round(baseSize * scale);
+  }, [screenWidth]);
+  
+  // Responsive card dimensions
+  const cardWidth = useMemo(() => {
+    const numColumns = screenWidth >= 768 ? 4 : 3;
+    const padding = moderateScale(16);
+    const gaps = moderateScale(3) * (numColumns - 1);
+    return (screenWidth - padding - gaps) / numColumns;
+  }, [screenWidth]);
+  
+  const cardHeight = useMemo(() => {
+    return verticalScale(80); // Consistent compact height
+  }, [screenHeight]);
+  
+  // Responsive poster height
+  const posterHeight = useMemo(() => {
+    if (screenWidth >= 768) {
+      return screenHeight * 0.35; // Tablet
+    } else if (screenWidth >= 600) {
+      return screenHeight * 0.30; // Large phone
+    } else if (screenWidth >= 400) {
+      return screenHeight * 0.28; // Medium phone
+    } else {
+      return screenHeight * 0.25; // Small phone
+    }
+  }, [screenWidth, screenHeight]);
+
   const handleNextPress = useCallback(() => {
     navigation.navigate('PosterEditor', {
       selectedImage: {
-        uri: selectedPoster.thumbnail,
-        title: selectedPoster.name,
-        description: selectedPoster.category,
+        uri: currentPoster.thumbnail,
+        title: currentPoster.name,
+        description: currentPoster.category,
       },
       selectedLanguage: selectedLanguage,
-      selectedTemplateId: selectedPoster.id,
+      selectedTemplateId: currentPoster.id,
     });
-  }, [navigation, selectedPoster, selectedLanguage]);
+  }, [navigation, currentPoster, selectedLanguage]);
 
   const renderRelatedPoster = useCallback(({ item }: { item: Template }) => (
     <TouchableOpacity
-      style={styles.relatedPosterCard}
+      style={[styles.relatedPosterCard, { width: cardWidth, height: cardHeight }]}
       onPress={() => handlePosterSelect(item)}
       activeOpacity={0.8}
     >
-      <Image
-        source={{ uri: item.thumbnail }}
+      <OptimizedImage
+        uri={item.thumbnail}
         style={styles.relatedPosterImage}
         resizeMode="cover"
       />
@@ -152,36 +162,40 @@ const PosterPlayerScreen: React.FC = () => {
         </Text>
       </View>
     </TouchableOpacity>
-  ), [handlePosterSelect, selectedLanguage, languages]);
+  ), [handlePosterSelect, selectedLanguage, languages, cardWidth, cardHeight]);
 
-  const renderLanguageButton = useCallback((language: typeof languages[0]) => (
-    <TouchableOpacity
-      key={language.id}
-      style={[
-        styles.languageButton,
-        selectedLanguage === language.id && styles.languageButtonSelected
-      ]}
-      onPress={() => handleLanguageChange(language.id)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.languageButtonContent}>
-        <Text style={[
-          styles.languageButtonText,
-          selectedLanguage === language.id && styles.languageButtonTextSelected
-        ]}>
-          {language.name}
-        </Text>
-        {selectedLanguage === language.id && (
-          <Icon name="check-circle" size={isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isTablet ? 20 : 16} color="#ffffff" />
-        )}
-      </View>
-    </TouchableOpacity>
-  ), [selectedLanguage, handleLanguageChange]);
+  const renderLanguageButton = useCallback((language: typeof languages[0]) => {
+    const iconSize = getIconSize(14);
+    
+    return (
+      <TouchableOpacity
+        key={language.id}
+        style={[
+          styles.languageButton,
+          selectedLanguage === language.id && styles.languageButtonSelected
+        ]}
+        onPress={() => handleLanguageChange(language.id)}
+        activeOpacity={0.7}
+      >
+        <View style={styles.languageButtonContent}>
+          <Text style={[
+            styles.languageButtonText,
+            selectedLanguage === language.id && styles.languageButtonTextSelected
+          ]}>
+            {language.name}
+          </Text>
+          {selectedLanguage === language.id && (
+            <Icon name="check-circle" size={iconSize} color="#ffffff" />
+          )}
+        </View>
+      </TouchableOpacity>
+    );
+  }, [selectedLanguage, handleLanguageChange, getIconSize, screenWidth]);
 
      return (
-     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+     <View style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#667eea' }]}>
        <StatusBar 
-         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+         barStyle="light-content"
          backgroundColor="transparent" 
          translucent={true}
        />
@@ -195,35 +209,28 @@ const PosterPlayerScreen: React.FC = () => {
          {/* Safe Area Top Spacing */}
          <View style={{ height: insets.top }} />
          
-         {/* Enhanced Header */}
+         {/* Compact Header with Back and Next Arrows */}
          <View style={styles.header}>
            <TouchableOpacity
              style={styles.backButton}
              onPress={handleBackPress}
              activeOpacity={0.7}
            >
-             <Icon name="arrow-back" size={isUltraSmallScreen ? 18 : isSmallScreen ? 20 : isTablet ? 28 : 24} color="#ffffff" />
+             <Icon name="arrow-back" size={getIconSize(16)} color="#ffffff" />
            </TouchableOpacity>
-           <View style={styles.headerContent}>
-             <Text style={styles.headerTitle}>{selectedPoster.name}</Text>
-             <Text style={styles.headerSubtitle}>{selectedPoster.category}</Text>
-             <View style={styles.headerMeta}>
-               <View style={styles.headerMetaItem}>
-                 <Icon name="high-quality" size={isUltraSmallScreen ? 11 : isSmallScreen ? 12 : isTablet ? 16 : 14} color="rgba(255,255,255,0.7)" />
-                 <Text style={styles.headerMetaText}>High Resolution</Text>
-               </View>
-               <View style={styles.headerMetaItem}>
-                 <Icon name="format-paint" size={isUltraSmallScreen ? 11 : isSmallScreen ? 12 : isTablet ? 16 : 14} color="rgba(255,255,255,0.7)" />
-                 <Text style={styles.headerMetaText}>Customizable</Text>
-               </View>
-             </View>
-           </View>
+           <TouchableOpacity
+             style={styles.nextArrowButton}
+             onPress={handleNextPress}
+             activeOpacity={0.7}
+           >
+             <Icon name="arrow-forward" size={getIconSize(16)} color="#ffffff" />
+           </TouchableOpacity>
          </View>
 
-         {/* Enhanced Poster Section */}
-         <View style={styles.posterContainer}>
-           <Image
-             source={{ uri: selectedPoster.thumbnail }}
+         {/* Compact Poster Section */}
+         <View style={[styles.posterContainer, { height: posterHeight }]}>
+           <OptimizedImage
+             uri={currentPoster.thumbnail}
              style={styles.posterImage}
              resizeMode="contain"
            />
@@ -236,17 +243,8 @@ const PosterPlayerScreen: React.FC = () => {
              </View>
          </View>
 
-         {/* Enhanced Language Selection Section */}
+         {/* Compact Language Selection Section */}
          <View style={styles.languageSection}>
-           <View style={styles.languageSectionHeader}>
-             <Text style={styles.languageTitle}>
-               Select Language
-             </Text>
-             <Text style={styles.languageSubtitle}>
-               Select language variant for poster content
-             </Text>
-           </View>
-
            <ScrollView 
              horizontal 
              showsHorizontalScrollIndicator={false}
@@ -256,36 +254,12 @@ const PosterPlayerScreen: React.FC = () => {
            </ScrollView>
          </View>
 
-         {/* Next Button Section */}
-         <View style={styles.nextButtonSection}>
-           <TouchableOpacity
-             style={styles.nextButton}
-             onPress={handleNextPress}
-             activeOpacity={0.8}
-           >
-             <View style={styles.nextButtonContent}>
-               <Text style={styles.nextButtonText}>Continue to Editor</Text>
-               <Icon name="arrow-forward" size={isUltraSmallScreen ? 16 : isSmallScreen ? 18 : isTablet ? 24 : 20} color="#ffffff" />
-             </View>
-           </TouchableOpacity>
-         </View>
-
-         {/* Enhanced Related Posters Section - Using FlatList as main scrollable container */}
+         {/* Compact Related Posters Section */}
          <View style={styles.relatedSection}>
            <View style={styles.relatedHeader}>
-             <View style={styles.relatedHeaderLeft}>
-               <Text style={styles.relatedTitle}>
-                 Related Templates
-               </Text>
-               <Text style={styles.relatedSubtitle}>
-                 In {languages.find(lang => lang.id === selectedLanguage)?.name}
-               </Text>
-             </View>
-             <View style={styles.relatedCountBadge}>
-               <Text style={styles.relatedCountText}>
-                 {filteredPosters.length} ITEMS
-               </Text>
-             </View>
+             <Text style={styles.relatedTitle}>
+               Related Templates
+             </Text>
            </View>
            
            {filteredPosters.length > 0 ? (
@@ -293,8 +267,8 @@ const PosterPlayerScreen: React.FC = () => {
                data={filteredPosters}
                renderItem={renderRelatedPoster}
                keyExtractor={(item) => item.id}
-               numColumns={getGridColumns()}
-               key={getGridColumns()} // Force re-render when columns change
+               numColumns={screenWidth >= 768 ? 4 : 3}
+               key={screenWidth >= 768 ? 'tablet-4' : 'phone-3'}
                columnWrapperStyle={styles.relatedGrid}
                showsVerticalScrollIndicator={true}
                contentContainerStyle={styles.relatedList}
@@ -320,6 +294,16 @@ const PosterPlayerScreen: React.FC = () => {
    );
 };
 
+// Get dynamic screen dimensions
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+// Responsive helper functions
+const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
+const verticalScale = (size: number) => (SCREEN_HEIGHT / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+const isTablet = SCREEN_WIDTH >= 768;
+
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -329,77 +313,92 @@ const styles = StyleSheet.create({
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: responsiveSpacing.md,
-    paddingTop: responsiveSpacing.xs,
-    paddingBottom: responsiveSpacing.sm,
+    alignItems: 'center',
+    justifyContent: 'space-between', // Space between back and next arrows
+    paddingHorizontal: moderateScale(8), // Reduced padding
+    paddingTop: moderateScale(4), // Reduced padding
+    paddingBottom: moderateScale(4),
   },
   backButton: {
-    width: isUltraSmallScreen ? 36 : isSmallScreen ? 40 : isTablet ? 52 : 44,
-    height: isUltraSmallScreen ? 36 : isSmallScreen ? 40 : isTablet ? 52 : 44,
-    borderRadius: isUltraSmallScreen ? 18 : isSmallScreen ? 20 : isTablet ? 26 : 22,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    width: moderateScale(32), // Reduced from 36-52
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
+    backgroundColor: 'rgba(255,255,255,0.12)', // Lighter
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: responsiveSpacing.sm,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: moderateScale(1), // Reduced from 2
     },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOpacity: 0.08, // Reduced from 0.1
+    shadowRadius: moderateScale(3), // Reduced from 4
+    elevation: 2, // Reduced from 3
+  },
+  nextArrowButton: {
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: moderateScale(1),
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(3),
+    elevation: 2,
   },
   headerContent: {
     flex: 1,
   },
   headerTitle: {
-    fontSize: responsiveFontSize.xl,
+    fontSize: moderateScale(14),
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 2,
-    letterSpacing: 0.5,
-    lineHeight: responsiveFontSize.xl * 1.2,
+    marginBottom: 0,
+    letterSpacing: 0.3,
   },
   headerSubtitle: {
-    fontSize: responsiveFontSize.md,
+    fontSize: moderateScale(11),
     color: 'rgba(255,255,255,0.8)',
     fontWeight: '500',
-    marginBottom: 2,
+    marginBottom: 0,
   },
   headerMeta: {
     flexDirection: 'row',
-    gap: responsiveSpacing.md,
+    gap: moderateScale(6),
   },
   headerMetaItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: moderateScale(2),
   },
   headerMetaText: {
-    fontSize: responsiveFontSize.xs,
+    fontSize: moderateScale(8),
     color: 'rgba(255,255,255,0.7)',
     fontWeight: '500',
   },
   posterContainer: {
     position: 'relative',
-    height: getPosterContainerHeight(),
+    // Height is set dynamically via inline style based on screen dimensions
     backgroundColor: '#000000',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: responsiveSpacing.md,
-    marginBottom: responsiveSpacing.sm,
-    borderRadius: isUltraSmallScreen ? 12 : isSmallScreen ? 16 : isTablet ? 24 : 20,
+    marginHorizontal: moderateScale(8), // Reduced padding
+    marginBottom: moderateScale(6), // Reduced margin
+    borderRadius: moderateScale(12), // Smaller border radius
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: isTablet ? 12 : 8,
+      height: moderateScale(4), // Reduced from 8-12
     },
-    shadowOpacity: isTablet ? 0.4 : 0.3,
-    shadowRadius: isTablet ? 20 : 16,
-    elevation: isTablet ? 16 : 12,
+    shadowOpacity: 0.2, // Reduced from 0.3-0.4
+    shadowRadius: moderateScale(8), // Reduced from 16-20
+    elevation: 6, // Reduced from 12-16
   },
   posterImage: {
     width: '100%',
@@ -417,107 +416,102 @@ const styles = StyleSheet.create({
   },
   posterControls: {
     position: 'absolute',
-    top: responsiveSpacing.md,
-    left: responsiveSpacing.md,
+    top: moderateScale(12),
+    left: moderateScale(12),
   },
   zoomButton: {
-    width: isSmallScreen ? 40 : 50,
-    height: isSmallScreen ? 40 : 50,
-    borderRadius: isSmallScreen ? 20 : 25,
-    backgroundColor: 'rgba(0,0,0,0.7)',
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: 'rgba(0,0,0,0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
+    borderWidth: moderateScale(1),
+    borderColor: 'rgba(255,255,255,0.2)',
   },
   languageBadge: {
     position: 'absolute',
-    top: responsiveSpacing.md,
-    right: responsiveSpacing.md,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: responsiveSpacing.sm,
-    paddingVertical: isUltraSmallScreen ? 4 : isTablet ? 8 : 6,
-    borderRadius: isUltraSmallScreen ? 16 : isTablet ? 24 : 20,
-    borderWidth: isTablet ? 2 : 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    top: moderateScale(8), // Reduced
+    right: moderateScale(8),
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: moderateScale(6), // Reduced
+    paddingVertical: moderateScale(3), // Reduced
+    borderRadius: moderateScale(8), // Reduced
+    borderWidth: moderateScale(0.5), // Reduced
+    borderColor: 'rgba(255,255,255,0.15)',
   },
   languageBadgeText: {
     color: '#ffffff',
-    fontSize: responsiveFontSize.xs,
+    fontSize: moderateScale(8), // Compact
     fontWeight: '600',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   relatedSection: {
     flex: 1,
-    paddingHorizontal: responsiveSpacing.md,
-    paddingTop: responsiveSpacing.xs,
+    paddingHorizontal: moderateScale(8), // Compact padding
+    paddingTop: moderateScale(4),
     paddingBottom: 0,
   },
   relatedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: isUltraSmallScreen ? responsiveSpacing.xs : isTablet ? responsiveSpacing.sm : responsiveSpacing.sm,
+    marginBottom: moderateScale(6), // Compact margin
   },
   relatedHeaderLeft: {
     flex: 1,
   },
   relatedTitle: {
-    fontSize: responsiveFontSize.lg,
+    fontSize: moderateScale(13), // Compact font
     fontWeight: '700',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
     marginBottom: 0,
   },
   relatedSubtitle: {
-    fontSize: responsiveFontSize.sm,
+    fontSize: moderateScale(10),
     color: 'rgba(255,255,255,0.7)',
     fontWeight: '500',
   },
   relatedCountBadge: {
     backgroundColor: '#667eea',
-    paddingHorizontal: responsiveSpacing.sm,
-    paddingVertical: isUltraSmallScreen ? 4 : isTablet ? 8 : 6,
-    borderRadius: isUltraSmallScreen ? 12 : isTablet ? 20 : 16,
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: moderateScale(3),
+    borderRadius: moderateScale(10),
   },
   relatedCountText: {
     color: '#ffffff',
-    fontSize: responsiveFontSize.xs,
+    fontSize: moderateScale(8),
     fontWeight: '600',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   relatedList: {
-    paddingBottom: isTablet ? responsiveSpacing.xl + 20 : responsiveSpacing.lg + 30,
-    paddingTop: responsiveSpacing.xs,
+    paddingBottom: moderateScale(20), // Compact padding
+    paddingTop: moderateScale(4),
   },
   relatedFlatList: {
     flex: 1,
   },
   relatedGrid: {
-    justifyContent: 'flex-start',
+    justifyContent: 'flex-start', // Align to left for consistent spacing
+    gap: moderateScale(3), // Equal gap between cards
   },
   relatedPosterCard: {
-    width: getCardWidth(),
-    height: isTablet 
-      ? screenHeight * 0.18  // Same as HomeScreen - Taller on tablet
-      : isLandscape 
-        ? screenHeight * 0.20  // Same as HomeScreen - Taller in landscape
-        : screenHeight * 0.15, // Same as HomeScreen - Default height on phone
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isTablet ? 20 : 18,
+    // Width and height are set dynamically via inline style based on screen dimensions
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    borderRadius: moderateScale(8), // Smaller
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: isTablet ? 6 : 4,
+      height: moderateScale(2), // Reduced
     },
-    shadowOpacity: isTablet ? 0.2 : 0.15,
-    shadowRadius: isTablet ? 10 : 8,
-    elevation: isTablet ? 8 : 6,
-    borderWidth: isTablet ? 2 : 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-    marginBottom: isUltraSmallScreen ? responsiveSpacing.sm : isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
-    marginRight: isUltraSmallScreen ? responsiveSpacing.sm : isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
+    shadowOpacity: 0.12, // Reduced
+    shadowRadius: moderateScale(4), // Reduced
+    elevation: 3, // Reduced
+    borderWidth: moderateScale(0.5), // Thinner
+    borderColor: 'rgba(255,255,255,0.15)',
+    marginBottom: moderateScale(6), // Compact margin
   },
   relatedPosterImage: {
     width: '100%',
@@ -534,177 +528,142 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   relatedPosterIcon: {
-    width: isUltraSmallScreen ? 36 : isSmallScreen ? 40 : isTablet ? 56 : 48,
-    height: isUltraSmallScreen ? 36 : isSmallScreen ? 40 : isTablet ? 56 : 48,
-    borderRadius: isUltraSmallScreen ? 18 : isSmallScreen ? 20 : isTablet ? 28 : 24,
-    backgroundColor: 'rgba(255,255,255,0.95)',
+    width: moderateScale(40), // Compact
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    backgroundColor: 'rgba(255,255,255,0.9)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: isTablet ? 3 : 2,
+      height: moderateScale(2),
     },
-    shadowOpacity: isTablet ? 0.25 : 0.2,
-    shadowRadius: isTablet ? 6 : 4,
-    elevation: isTablet ? 4 : 3,
+    shadowOpacity: 0.15,
+    shadowRadius: moderateScale(3),
+    elevation: 2,
   },
   relatedPosterTitleContainer: {
     position: 'absolute',
-    bottom: isUltraSmallScreen ? 6 : isTablet ? 12 : 8,
-    left: isUltraSmallScreen ? 6 : isTablet ? 12 : 8,
-    right: isUltraSmallScreen ? 6 : isTablet ? 12 : 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: isUltraSmallScreen ? 6 : isTablet ? 12 : 8,
-    paddingVertical: isUltraSmallScreen ? 4 : isTablet ? 8 : 6,
-    borderRadius: isUltraSmallScreen ? 8 : isTablet ? 12 : 10,
+    bottom: moderateScale(4), // Compact
+    left: moderateScale(4),
+    right: moderateScale(4),
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: moderateScale(6), // Compact
+    paddingVertical: moderateScale(3), // Compact
+    borderRadius: moderateScale(6), // Compact
   },
   relatedPosterTitle: {
     color: '#ffffff',
-    fontSize: responsiveFontSize.xs,
+    fontSize: moderateScale(9), // Compact
     fontWeight: '600',
     textAlign: 'center',
   },
   relatedPosterLanguageBadge: {
     position: 'absolute',
-    top: isUltraSmallScreen ? 6 : isTablet ? 12 : 8,
-    right: isUltraSmallScreen ? 6 : isTablet ? 12 : 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: isUltraSmallScreen ? 4 : isTablet ? 10 : 6,
-    paddingVertical: isUltraSmallScreen ? 2 : isTablet ? 4 : 2,
-    borderRadius: isUltraSmallScreen ? 6 : isTablet ? 10 : 8,
+    top: moderateScale(4), // Compact
+    right: moderateScale(4),
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: moderateScale(4), // Compact
+    paddingVertical: moderateScale(2),
+    borderRadius: moderateScale(6),
   },
   relatedPosterLanguageText: {
     color: '#ffffff',
-    fontSize: responsiveFontSize.xs - 2,
+    fontSize: moderateScale(6), // Compact
     fontWeight: '600',
   },
   noPostersContainer: {
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
-    minHeight: isUltraSmallScreen ? 100 : isTablet ? 150 : 120,
+    paddingVertical: moderateScale(16), // Compact
+    minHeight: moderateScale(80), // Compact
   },
   noPostersText: {
-    fontSize: responsiveFontSize.md,
+    fontSize: moderateScale(12), // Compact
     color: 'rgba(255,255,255,0.7)',
     fontWeight: '600',
     textAlign: 'center',
-    marginTop: responsiveSpacing.xs,
-    marginBottom: responsiveSpacing.xs,
+    marginTop: moderateScale(4),
+    marginBottom: moderateScale(4),
   },
   noPostersSubtext: {
-    fontSize: responsiveFontSize.sm,
+    fontSize: moderateScale(10), // Compact
     color: 'rgba(255,255,255,0.5)',
     textAlign: 'center',
   },
   languageSection: {
-    paddingHorizontal: responsiveSpacing.md,
-    paddingVertical: isUltraSmallScreen ? responsiveSpacing.xs : isTablet ? responsiveSpacing.md : responsiveSpacing.sm,
+    paddingHorizontal: moderateScale(8), // Compact
+    paddingVertical: moderateScale(6), // Compact
   },
   languageSectionHeader: {
-    marginBottom: responsiveSpacing.xs,
+    marginBottom: moderateScale(4),
   },
   languageTitle: {
-    fontSize: responsiveFontSize.lg,
+    fontSize: moderateScale(12),
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 2,
+    marginBottom: 0,
     textAlign: 'center',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   languageSubtitle: {
-    fontSize: responsiveFontSize.sm,
+    fontSize: moderateScale(9),
     color: 'rgba(255,255,255,0.7)',
     textAlign: 'center',
     fontWeight: '500',
   },
   languageButtonsContainer: {
-    paddingHorizontal: responsiveSpacing.sm,
-    gap: isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isTablet ? 12 : 10,
+    paddingHorizontal: moderateScale(4), // Compact
+    gap: moderateScale(6), // Compact
   },
   languageButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: responsiveSpacing.sm,
+    gap: moderateScale(4),
   },
   languageButton: {
-    paddingVertical: isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isTablet ? 16 : 12,
-    paddingHorizontal: isUltraSmallScreen ? 12 : isSmallScreen ? 16 : isTablet ? 24 : 20,
-    borderRadius: isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isTablet ? 22 : 18,
-    backgroundColor: 'rgba(255,255,255,0.4)',
-    borderWidth: isTablet ? 4 : isUltraSmallScreen ? 2 : 3,
-    borderColor: 'rgba(255,255,255,0.6)',
+    paddingVertical: moderateScale(6), // Compact
+    paddingHorizontal: moderateScale(12), // Compact
+    borderRadius: moderateScale(12), // Compact
+    backgroundColor: 'rgba(255,255,255,0.3)',
+    borderWidth: moderateScale(1.5), // Thinner
+    borderColor: 'rgba(255,255,255,0.5)',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: isTablet ? 6 : 4,
+      height: moderateScale(2), // Reduced
     },
-    shadowOpacity: 0.3,
-    shadowRadius: isTablet ? 10 : 8,
-    elevation: isTablet ? 10 : 8,
-    marginHorizontal: isUltraSmallScreen ? 4 : responsiveSpacing.xs,
-    flex: 1, // Make buttons take equal width
-    maxWidth: isTablet ? 200 : 140,
+    shadowOpacity: 0.15, // Reduced
+    shadowRadius: moderateScale(4), // Reduced
+    elevation: 4, // Reduced
+    marginHorizontal: moderateScale(2),
+    minWidth: moderateScale(80), // Minimum width for readability
   },
   languageButtonSelected: {
     backgroundColor: '#667eea',
     borderColor: '#667eea',
-    shadowOpacity: isTablet ? 0.3 : 0.2,
-    shadowRadius: isTablet ? 8 : 6,
-    elevation: isTablet ? 6 : 4,
-    transform: [{ scale: isTablet ? 1.02 : 1.01 }],
+    shadowOpacity: 0.18,
+    shadowRadius: moderateScale(4),
+    elevation: 3,
+    transform: [{ scale: 1.01 }],
   },
   languageButtonContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: isUltraSmallScreen ? 4 : isTablet ? 10 : 6,
+    gap: moderateScale(4), // Compact
   },
   languageButtonText: {
-    fontSize: responsiveFontSize.md,
+    fontSize: moderateScale(11), // Compact
     fontWeight: '600',
     color: '#ffffff',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   languageButtonTextSelected: {
     fontWeight: '700',
-  },
-  nextButtonSection: {
-    paddingHorizontal: responsiveSpacing.md,
-    paddingVertical: isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm,
-    paddingBottom: isUltraSmallScreen ? responsiveSpacing.md : isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
-  },
-  nextButton: {
-    backgroundColor: '#667eea',
-    borderRadius: isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isTablet ? 24 : 20,
-    paddingVertical: isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isTablet ? 20 : 16,
-    paddingHorizontal: isUltraSmallScreen ? 16 : isSmallScreen ? 20 : isTablet ? 32 : 24,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: isTablet ? 8 : 6,
-    },
-    shadowOpacity: isTablet ? 0.5 : 0.4,
-    shadowRadius: isTablet ? 16 : 12,
-    elevation: isTablet ? 16 : 12,
-    minHeight: isUltraSmallScreen ? 52 : isSmallScreen ? 56 : isTablet ? 72 : 60,
-    borderWidth: isTablet ? 4 : isUltraSmallScreen ? 2 : 3,
-    borderColor: '#5a67d8',
-  },
-  nextButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: isUltraSmallScreen ? 6 : isTablet ? 12 : 8,
-  },
-  nextButtonText: {
-    fontSize: responsiveFontSize.lg,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: 0.5,
   },
 });
 
