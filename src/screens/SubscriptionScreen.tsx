@@ -23,12 +23,20 @@ import { useTheme } from '../context/ThemeContext';
 import subscriptionApi, { SubscriptionPlan, SubscriptionStatus } from '../services/subscriptionApi';
 import authService from '../services/auth';
 
+// Compact spacing multiplier to reduce all spacing (matching HomeScreen)
+const COMPACT_MULTIPLIER = 0.5;
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Responsive design helpers
 const isSmallScreen = screenWidth < 375;
 const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
 const isLargeScreen = screenWidth >= 414;
+
+// Responsive helper functions (matching HomeScreen)
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 
 // Responsive spacing and sizing
 const responsiveSpacing = {
@@ -54,6 +62,34 @@ const SubscriptionScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
   const { isSubscribed, setIsSubscribed, addTransaction, transactionStats, refreshSubscription } = useSubscription();
   const { theme } = useTheme();
+  
+  // Dynamic dimensions for responsive layout (matching HomeScreen)
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  // Update dimensions on screen rotation/resize
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+
+    return () => subscription?.remove();
+  }, []);
+
+  const currentScreenWidth = dimensions.width;
+  const currentScreenHeight = dimensions.height;
+  
+  // Dynamic responsive scaling functions
+  const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
+  const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
+  // Responsive icon sizes (compact - 60% of original)
+  const getIconSize = (baseSize: number) => {
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+  };
   
   const [isProcessing, setIsProcessing] = useState(false);
   const [isErrorModalVisible, setIsErrorModalVisible] = useState(false);
@@ -374,15 +410,20 @@ const SubscriptionScreen: React.FC = () => {
   };
 
   const FeatureItem = ({ text, included = true }: { text: string; included?: boolean }) => (
-    <View style={styles.featureItem}>
+    <View style={[styles.featureItem, {
+      gap: dynamicModerateScale(6),
+    }]}>
       <Icon 
         name={included ? 'check-circle' : 'remove-circle'} 
-        size={20} 
+        size={getIconSize(14)} 
         color={included ? '#28a745' : '#dc3545'} 
       />
       <Text style={[
         styles.featureText, 
-        { color: theme.colors.text },
+        { 
+          color: theme.colors.text,
+          fontSize: dynamicModerateScale(9),
+        },
         !included && { color: theme.colors.textSecondary }
       ]}>
         {text}
@@ -403,51 +444,98 @@ const SubscriptionScreen: React.FC = () => {
              {/* Header */}
        <LinearGradient
          colors={['#667eea', '#764ba2']}
-         style={[styles.header, { paddingTop: insets.top + responsiveSpacing.sm }]}
+         style={[styles.header, { 
+           paddingTop: insets.top + dynamicModerateScale(2),
+           paddingHorizontal: dynamicModerateScale(8),
+           paddingBottom: dynamicModerateScale(6),
+         }]}
        >
         <TouchableOpacity
-          style={styles.backButton}
+          style={[styles.backButton, {
+            padding: dynamicModerateScale(6),
+            borderRadius: dynamicModerateScale(10),
+          }]}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={24} color="#ffffff" />
+          <Icon name="arrow-back" size={getIconSize(18)} color="#ffffff" />
         </TouchableOpacity>
                  <View style={styles.headerContent}>
-           <Text style={styles.headerTitle}>Upgrade to Pro</Text>
-           <Text style={styles.headerSubtitle}>
+           <Text style={[styles.headerTitle, {
+             fontSize: dynamicModerateScale(14),
+           }]}>Upgrade to Pro</Text>
+           <Text style={[styles.headerSubtitle, {
+             fontSize: dynamicModerateScale(9),
+             marginTop: dynamicModerateScale(1),
+           }]}>
              Unlock unlimited possibilities
            </Text>
-           <View style={styles.statusContainer}>
+           <View style={[styles.statusContainer, {
+             marginTop: dynamicModerateScale(4),
+           }]}>
              {apiLoading ? (
-               <View style={styles.loadingBadge}>
+               <View style={[styles.loadingBadge, {
+                 paddingHorizontal: dynamicModerateScale(8),
+                 paddingVertical: dynamicModerateScale(2),
+                 borderRadius: dynamicModerateScale(8),
+               }]}>
                  <ActivityIndicator size="small" color="#ffffff" />
-                 <Text style={styles.loadingBadgeText}>Loading...</Text>
+                 <Text style={[styles.loadingBadgeText, {
+                   fontSize: dynamicModerateScale(7),
+                   marginLeft: dynamicModerateScale(3),
+                 }]}>Loading...</Text>
                </View>
              ) : apiError ? (
-               <View style={styles.errorBadge}>
-                 <Text style={styles.errorBadgeText}>OFFLINE MODE</Text>
+               <View style={[styles.errorBadge, {
+                 paddingHorizontal: dynamicModerateScale(8),
+                 paddingVertical: dynamicModerateScale(2),
+                 borderRadius: dynamicModerateScale(8),
+               }]}>
+                 <Text style={[styles.errorBadgeText, {
+                   fontSize: dynamicModerateScale(7),
+                 }]}>OFFLINE MODE</Text>
                </View>
              ):null}
            </View>
          </View>
-        <View style={styles.headerSpacer} />
+        <View style={[styles.headerSpacer, { width: dynamicModerateScale(36) }]} />
       </LinearGradient>
 
       <ScrollView 
         style={styles.scrollView}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={styles.scrollContent}
+        contentContainerStyle={[styles.scrollContent, {
+          padding: dynamicModerateScale(8),
+        }]}
       >
 
         {/* Current Subscription Status (if subscribed) */}
         {isSubscribed && subscriptionStatus && (
-          <View style={[styles.currentSubscriptionCard, { backgroundColor: theme.colors.cardBackground }]}>
-            <View style={styles.currentSubscriptionHeader}>
-              <Icon name="check-circle" size={32} color="#28a745" />
-              <View style={styles.currentSubscriptionInfo}>
-                <Text style={[styles.currentSubscriptionTitle, { color: theme.colors.text }]}>
+          <View style={[styles.currentSubscriptionCard, { 
+            backgroundColor: theme.colors.cardBackground,
+            marginBottom: dynamicModerateScale(12),
+            padding: dynamicModerateScale(12),
+            borderRadius: dynamicModerateScale(12),
+            borderWidth: 1.5,
+          }]}>
+            <View style={[styles.currentSubscriptionHeader, {
+              marginBottom: dynamicModerateScale(6),
+            }]}>
+              <Icon name="check-circle" size={getIconSize(24)} color="#28a745" />
+              <View style={[styles.currentSubscriptionInfo, {
+                marginLeft: dynamicModerateScale(10),
+              }]}>
+                <Text style={[styles.currentSubscriptionTitle, { 
+                  color: theme.colors.text,
+                  fontSize: dynamicModerateScale(12),
+                  marginBottom: dynamicModerateScale(2),
+                }]}>
                   {subscriptionStatus.planName || 'Pro Subscription'}
                 </Text>
-                <Text style={[styles.currentSubscriptionSubtitle, { color: theme.colors.textSecondary }]}>
+                <Text style={[styles.currentSubscriptionSubtitle, { 
+                  color: theme.colors.textSecondary,
+                  fontSize: dynamicModerateScale(9),
+                  lineHeight: dynamicModerateScale(14),
+                }]}>
                   {(() => {
                     const expiryDate = subscriptionStatus.expiryDate || subscriptionStatus.endDate;
                     if (expiryDate) {
@@ -465,9 +553,17 @@ const SubscriptionScreen: React.FC = () => {
               </View>
             </View>
             {subscriptionStatus.autoRenew && (
-              <View style={styles.autoRenewBadge}>
-                <Icon name="autorenew" size={16} color="#667eea" />
-                <Text style={[styles.autoRenewText, { color: theme.colors.textSecondary }]}>
+              <View style={[styles.autoRenewBadge, {
+                marginTop: dynamicModerateScale(6),
+                paddingTop: dynamicModerateScale(6),
+                borderTopWidth: 0.5,
+              }]}>
+                <Icon name="autorenew" size={getIconSize(12)} color="#667eea" />
+                <Text style={[styles.autoRenewText, { 
+                  color: theme.colors.textSecondary,
+                  fontSize: dynamicModerateScale(8),
+                  marginLeft: dynamicModerateScale(3),
+                }]}>
                   Auto-renew enabled
                 </Text>
               </View>
@@ -476,16 +572,39 @@ const SubscriptionScreen: React.FC = () => {
         )}
 
         {/* Comparison Cards */}
-        <View style={styles.comparisonContainer}>
+        <View style={[styles.comparisonContainer, {
+          flexDirection: currentScreenWidth < 600 ? 'column' : 'row',
+          gap: dynamicModerateScale(8),
+          marginBottom: dynamicModerateScale(16),
+        }]}>
           {/* Free Plan Card */}
-          <View style={[styles.planCard, { backgroundColor: theme.colors.cardBackground }]}>
-            <View style={styles.planHeader}>
-              <Text style={[styles.planName, { color: theme.colors.text }]}>Free</Text>
-              <Text style={styles.planPrice}>₹0</Text>
-              <Text style={[styles.planPeriod, { color: theme.colors.textSecondary }]}>forever</Text>
+          <View style={[styles.planCard, { 
+            backgroundColor: theme.colors.cardBackground,
+            borderRadius: dynamicModerateScale(12),
+            padding: dynamicModerateScale(12),
+            minHeight: dynamicModerateScale(220),
+          }]}>
+            <View style={[styles.planHeader, {
+              marginBottom: dynamicModerateScale(10),
+            }]}>
+              <Text style={[styles.planName, { 
+                color: theme.colors.text,
+                fontSize: dynamicModerateScale(14),
+                marginBottom: dynamicModerateScale(4),
+              }]}>Free</Text>
+              <Text style={[styles.planPrice, {
+                fontSize: dynamicModerateScale(20),
+              }]}>₹0</Text>
+              <Text style={[styles.planPeriod, { 
+                color: theme.colors.textSecondary,
+                fontSize: dynamicModerateScale(9),
+                marginTop: dynamicModerateScale(2),
+              }]}>forever</Text>
             </View>
             
-            <View style={styles.featuresList}>
+            <View style={[styles.featuresList, {
+              gap: dynamicModerateScale(6),
+            }]}>
               <FeatureItem text="5 posters per month" included={true} />
               <FeatureItem text="Basic templates" included={true} />
               <FeatureItem text="Standard resolution" included={true} />
@@ -498,24 +617,63 @@ const SubscriptionScreen: React.FC = () => {
           </View>
 
           {/* Pro Plan Card */}
-          <View style={[styles.proCard, { backgroundColor: theme.colors.cardBackground }]}>
-            <View style={styles.proBadge}>
-              <Text style={styles.proBadgeText}>PRO</Text>
+          <View style={[styles.proCard, { 
+            backgroundColor: theme.colors.cardBackground,
+            borderRadius: dynamicModerateScale(12),
+            padding: dynamicModerateScale(12),
+            borderWidth: 1.5,
+            minHeight: dynamicModerateScale(220),
+          }]}>
+            <View style={[styles.proBadge, {
+              top: dynamicModerateScale(-8),
+              paddingHorizontal: dynamicModerateScale(10),
+              paddingVertical: dynamicModerateScale(4),
+              borderRadius: dynamicModerateScale(10),
+            }]}>
+              <Text style={[styles.proBadgeText, {
+                fontSize: dynamicModerateScale(9),
+              }]}>PRO</Text>
             </View>
             
-            <View style={styles.planHeader}>
-              <Text style={[styles.planName, { color: theme.colors.text }]}>Pro</Text>
+            <View style={[styles.planHeader, {
+              marginBottom: dynamicModerateScale(10),
+            }]}>
+              <Text style={[styles.planName, { 
+                color: theme.colors.text,
+                fontSize: dynamicModerateScale(14),
+                marginBottom: dynamicModerateScale(4),
+              }]}>Pro</Text>
               <View style={styles.priceContainer}>
-                <Text style={styles.planPrice}>{currentPlan.price}</Text>
-                <Text style={[styles.originalPrice, { color: theme.colors.textSecondary }]}>{currentPlan.originalPrice}</Text>
-                <View style={styles.savingsBadge}>
-                  <Text style={styles.savingsText}>{currentPlan.savings}</Text>
+                <Text style={[styles.planPrice, {
+                  fontSize: dynamicModerateScale(20),
+                }]}>{currentPlan.price}</Text>
+                <Text style={[styles.originalPrice, { 
+                  color: theme.colors.textSecondary,
+                  fontSize: dynamicModerateScale(10),
+                  marginTop: dynamicModerateScale(2),
+                }]}>{currentPlan.originalPrice}</Text>
+                <View style={[styles.savingsBadge, {
+                  top: dynamicModerateScale(-8),
+                  right: dynamicModerateScale(-24),
+                  paddingHorizontal: dynamicModerateScale(6),
+                  paddingVertical: dynamicModerateScale(2),
+                  borderRadius: dynamicModerateScale(8),
+                }]}>
+                  <Text style={[styles.savingsText, {
+                    fontSize: dynamicModerateScale(7),
+                  }]}>{currentPlan.savings}</Text>
                 </View>
               </View>
-              <Text style={[styles.planPeriod, { color: theme.colors.textSecondary }]}>per {currentPlan.period}</Text>
+              <Text style={[styles.planPeriod, { 
+                color: theme.colors.textSecondary,
+                fontSize: dynamicModerateScale(9),
+                marginTop: dynamicModerateScale(2),
+              }]}>per {currentPlan.period}</Text>
             </View>
             
-            <View style={styles.featuresList}>
+            <View style={[styles.featuresList, {
+              gap: dynamicModerateScale(6),
+            }]}>
               {currentPlan.features.map((feature: string, index: number) => (
                 <FeatureItem key={index} text={feature} included={true} />
               ))}
@@ -524,34 +682,104 @@ const SubscriptionScreen: React.FC = () => {
         </View>
 
         {/* Benefits Section */}
-        <View style={[styles.benefitsSection, { backgroundColor: theme.colors.cardBackground }]}>
-          <Text style={[styles.benefitsTitle, { color: theme.colors.text }]}>Why Upgrade to Pro?</Text>
-          <View style={styles.benefitsGrid}>
-                         <View style={[styles.benefitItem, { backgroundColor: theme.colors.inputBackground }]}>
-               <Icon name="infinity" size={isSmallScreen ? 28 : isMediumScreen ? 30 : 32} color="#667eea" />
-               <Text style={[styles.benefitTitle, { color: theme.colors.text }]}>Unlimited</Text>
-               <Text style={[styles.benefitText, { color: theme.colors.textSecondary }]}>Create unlimited posters</Text>
+        <View style={[styles.benefitsSection, { 
+          backgroundColor: theme.colors.cardBackground,
+          borderRadius: dynamicModerateScale(12),
+          padding: dynamicModerateScale(12),
+        }]}>
+          <Text style={[styles.benefitsTitle, { 
+            color: theme.colors.text,
+            fontSize: dynamicModerateScale(12),
+            marginBottom: dynamicModerateScale(10),
+          }]}>Why Upgrade to Pro?</Text>
+          <View style={[styles.benefitsGrid, {
+            gap: dynamicModerateScale(8),
+          }]}>
+                         <View style={[styles.benefitItem, { 
+               backgroundColor: theme.colors.inputBackground,
+               width: currentScreenWidth < 600 ? currentScreenWidth - dynamicModerateScale(32) : (currentScreenWidth - dynamicModerateScale(56)) / 2,
+               padding: dynamicModerateScale(10),
+               borderRadius: dynamicModerateScale(10),
+               minHeight: dynamicModerateScale(70),
+             }]}>
+               <Icon name="infinity" size={getIconSize(20)} color="#667eea" />
+               <Text style={[styles.benefitTitle, { 
+                 color: theme.colors.text,
+                 fontSize: dynamicModerateScale(10),
+                 marginTop: dynamicModerateScale(4),
+                 marginBottom: dynamicModerateScale(2),
+               }]}>Unlimited</Text>
+               <Text style={[styles.benefitText, { 
+                 color: theme.colors.textSecondary,
+                 fontSize: dynamicModerateScale(8),
+                 lineHeight: dynamicModerateScale(12),
+               }]}>Create unlimited posters</Text>
              </View>
-             <View style={[styles.benefitItem, { backgroundColor: theme.colors.inputBackground }]}>
-               <Icon name="star" size={isSmallScreen ? 28 : isMediumScreen ? 30 : 32} color="#667eea" />
-               <Text style={[styles.benefitTitle, { color: theme.colors.text }]}>Premium</Text>
-               <Text style={[styles.benefitText, { color: theme.colors.textSecondary }]}>Access premium templates</Text>
+             <View style={[styles.benefitItem, { 
+               backgroundColor: theme.colors.inputBackground,
+               width: currentScreenWidth < 600 ? currentScreenWidth - dynamicModerateScale(32) : (currentScreenWidth - dynamicModerateScale(56)) / 2,
+               padding: dynamicModerateScale(10),
+               borderRadius: dynamicModerateScale(10),
+               minHeight: dynamicModerateScale(70),
+             }]}>
+               <Icon name="star" size={getIconSize(20)} color="#667eea" />
+               <Text style={[styles.benefitTitle, { 
+                 color: theme.colors.text,
+                 fontSize: dynamicModerateScale(10),
+                 marginTop: dynamicModerateScale(4),
+                 marginBottom: dynamicModerateScale(2),
+               }]}>Premium</Text>
+               <Text style={[styles.benefitText, { 
+                 color: theme.colors.textSecondary,
+                 fontSize: dynamicModerateScale(8),
+                 lineHeight: dynamicModerateScale(12),
+               }]}>Access premium templates</Text>
              </View>
-             <View style={[styles.benefitItem, { backgroundColor: theme.colors.inputBackground }]}>
-               <Icon name="hd" size={isSmallScreen ? 28 : isMediumScreen ? 30 : 32} color="#667eea" />
-               <Text style={[styles.benefitTitle, { color: theme.colors.text }]}>HD Quality</Text>
-               <Text style={[styles.benefitText, { color: theme.colors.textSecondary }]}>High-resolution exports</Text>
+             <View style={[styles.benefitItem, { 
+               backgroundColor: theme.colors.inputBackground,
+               width: currentScreenWidth < 600 ? currentScreenWidth - dynamicModerateScale(32) : (currentScreenWidth - dynamicModerateScale(56)) / 2,
+               padding: dynamicModerateScale(10),
+               borderRadius: dynamicModerateScale(10),
+               minHeight: dynamicModerateScale(70),
+             }]}>
+               <Icon name="hd" size={getIconSize(20)} color="#667eea" />
+               <Text style={[styles.benefitTitle, { 
+                 color: theme.colors.text,
+                 fontSize: dynamicModerateScale(10),
+                 marginTop: dynamicModerateScale(4),
+                 marginBottom: dynamicModerateScale(2),
+               }]}>HD Quality</Text>
+               <Text style={[styles.benefitText, { 
+                 color: theme.colors.textSecondary,
+                 fontSize: dynamicModerateScale(8),
+                 lineHeight: dynamicModerateScale(12),
+               }]}>High-resolution exports</Text>
              </View>
-             <View style={[styles.benefitItem, { backgroundColor: theme.colors.inputBackground }]}>
-               <Icon name="support-agent" size={isSmallScreen ? 28 : isMediumScreen ? 30 : 32} color="#667eea" />
-               <Text style={[styles.benefitTitle, { color: theme.colors.text }]}>Priority</Text>
-               <Text style={[styles.benefitText, { color: theme.colors.textSecondary }]}>Priority customer support</Text>
+             <View style={[styles.benefitItem, { 
+               backgroundColor: theme.colors.inputBackground,
+               width: currentScreenWidth < 600 ? currentScreenWidth - dynamicModerateScale(32) : (currentScreenWidth - dynamicModerateScale(56)) / 2,
+               padding: dynamicModerateScale(10),
+               borderRadius: dynamicModerateScale(10),
+               minHeight: dynamicModerateScale(70),
+             }]}>
+               <Icon name="support-agent" size={getIconSize(20)} color="#667eea" />
+               <Text style={[styles.benefitTitle, { 
+                 color: theme.colors.text,
+                 fontSize: dynamicModerateScale(10),
+                 marginTop: dynamicModerateScale(4),
+                 marginBottom: dynamicModerateScale(2),
+               }]}>Priority</Text>
+               <Text style={[styles.benefitText, { 
+                 color: theme.colors.textSecondary,
+                 fontSize: dynamicModerateScale(8),
+                 lineHeight: dynamicModerateScale(12),
+               }]}>Priority customer support</Text>
              </View>
           </View>
         </View>
 
                  {/* Bottom Spacer for Sticky Button */}
-         <View style={{ height: 300 }} />
+         <View style={{ height: dynamicModerateScale(200) }} />
       </ScrollView>
 
              {/* Sticky Upgrade Button */}
@@ -560,11 +788,17 @@ const SubscriptionScreen: React.FC = () => {
          { 
            backgroundColor: theme.colors.cardBackground,
            borderTopColor: theme.colors.border,
-           paddingBottom: Math.max(insets.bottom + responsiveSpacing.md, responsiveSpacing.lg)
+           paddingHorizontal: dynamicModerateScale(8),
+           paddingTop: dynamicModerateScale(8),
+           paddingBottom: Math.max(insets.bottom + dynamicModerateScale(8), dynamicModerateScale(12)),
+           borderTopWidth: 0.5,
          }
        ]}>
         <TouchableOpacity
-          style={styles.upgradeButton}
+          style={[styles.upgradeButton, {
+            borderRadius: dynamicModerateScale(10),
+            marginBottom: dynamicModerateScale(6),
+          }]}
           onPress={handlePayment}
           disabled={isProcessing || isSubscribed}
         >
@@ -575,14 +809,20 @@ const SubscriptionScreen: React.FC = () => {
                 ? ['#cccccc', '#999999'] 
                 : ['#667eea', '#764ba2']
             }
-            style={styles.upgradeButtonGradient}
+            style={[styles.upgradeButtonGradient, {
+              paddingVertical: dynamicModerateScale(10),
+              paddingHorizontal: dynamicModerateScale(12),
+            }]}
           >
             <Icon 
               name={isSubscribed ? 'check-circle' : 'upgrade'} 
-              size={24} 
+              size={getIconSize(18)} 
               color="#ffffff" 
             />
-                         <Text style={styles.upgradeButtonText}>
+                         <Text style={[styles.upgradeButtonText, {
+               fontSize: dynamicModerateScale(11),
+               marginLeft: dynamicModerateScale(6),
+             }]}>
                {isSubscribed 
                  ? 'Already Pro' 
                  : isProcessing 
@@ -594,21 +834,35 @@ const SubscriptionScreen: React.FC = () => {
         </TouchableOpacity>
         
         {!isSubscribed && (
-          <Text style={[styles.termsText, { color: theme.colors.textSecondary }]}>
+          <Text style={[styles.termsText, { 
+            color: theme.colors.textSecondary,
+            fontSize: dynamicModerateScale(7.5),
+            lineHeight: dynamicModerateScale(12),
+          }]}>
             By upgrading, you agree to our Terms of Service and Privacy Policy
           </Text>
         )}
         
         {/* Transaction History Button */}
         <TouchableOpacity
-          style={[styles.transactionHistoryButton, { backgroundColor: theme.colors.inputBackground }]}
+          style={[styles.transactionHistoryButton, { 
+            backgroundColor: theme.colors.inputBackground,
+            paddingHorizontal: dynamicModerateScale(10),
+            paddingVertical: dynamicModerateScale(8),
+            borderRadius: dynamicModerateScale(10),
+            marginTop: dynamicModerateScale(6),
+          }]}
           onPress={() => navigation.navigate('TransactionHistory' as never)}
         >
-          <Icon name="receipt-long" size={20} color={theme.colors.text} />
-          <Text style={[styles.transactionHistoryButtonText, { color: theme.colors.text }]}>
+          <Icon name="receipt-long" size={getIconSize(16)} color={theme.colors.text} />
+          <Text style={[styles.transactionHistoryButtonText, { 
+            color: theme.colors.text,
+            fontSize: dynamicModerateScale(9),
+            marginLeft: dynamicModerateScale(6),
+          }]}>
             View Transaction History ({transactionStats.total})
           </Text>
-          <Icon name="chevron-right" size={20} color={theme.colors.textSecondary} />
+          <Icon name="chevron-right" size={getIconSize(16)} color={theme.colors.textSecondary} />
         </TouchableOpacity>
       </View>
 
@@ -630,15 +884,11 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: responsiveSpacing.md,
-    paddingBottom: responsiveSpacing.sm,
     borderBottomWidth: 0,
     zIndex: 1000,
-    elevation: 10,
+    elevation: moderateScale(6),
   },
   backButton: {
-    padding: 10,
-    borderRadius: 12,
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   headerContent: {
@@ -646,283 +896,190 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTitle: {
-    fontSize: responsiveFontSize.xxl,
     fontWeight: '700',
     color: '#ffffff',
   },
      headerSubtitle: {
-     fontSize: responsiveFontSize.sm,
      color: 'rgba(255, 255, 255, 0.8)',
-     marginTop: 2,
    },
    statusContainer: {
-     marginTop: 8,
    },
    loadingBadge: {
      backgroundColor: 'rgba(255, 255, 255, 0.2)',
-     paddingHorizontal: 12,
-     paddingVertical: 4,
-     borderRadius: 12,
      flexDirection: 'row',
      alignItems: 'center',
      justifyContent: 'center',
    },
    loadingBadgeText: {
-     fontSize: responsiveFontSize.xs,
      fontWeight: '700',
      color: '#ffffff',
-     marginLeft: 4,
    },
    errorBadge: {
      backgroundColor: 'rgba(220, 53, 69, 0.8)',
-     paddingHorizontal: 12,
-     paddingVertical: 4,
-     borderRadius: 12,
    },
    errorBadgeText: {
-     fontSize: responsiveFontSize.xs,
      fontWeight: '700',
      color: '#ffffff',
      textAlign: 'center',
    },
    headerSpacer: {
-     width: 44,
    },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    padding: responsiveSpacing.md,
   },
   currentSubscriptionCard: {
-    marginBottom: responsiveSpacing.lg,
-    padding: responsiveSpacing.lg,
-    borderRadius: responsiveSpacing.lg,
-    borderWidth: 2,
     borderColor: '#28a745',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: moderateScale(2) },
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(6),
+    elevation: moderateScale(3),
   },
   currentSubscriptionHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: responsiveSpacing.sm,
   },
   currentSubscriptionInfo: {
     flex: 1,
-    marginLeft: responsiveSpacing.md,
   },
   currentSubscriptionTitle: {
-    fontSize: responsiveFontSize.lg,
     fontWeight: '700',
-    marginBottom: 4,
   },
   currentSubscriptionSubtitle: {
-    fontSize: responsiveFontSize.sm,
-    lineHeight: responsiveFontSize.sm * 1.4,
   },
   autoRenewBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: responsiveSpacing.sm,
-    paddingTop: responsiveSpacing.sm,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
+    borderTopColor: 'rgba(0, 0, 0, 0.08)',
   },
   autoRenewText: {
-    fontSize: responsiveFontSize.xs,
-    marginLeft: 4,
   },
   comparisonContainer: {
-    flexDirection: screenWidth < 600 ? 'column' : 'row',
-    gap: responsiveSpacing.md,
-    marginBottom: responsiveSpacing.xl,
   },
   planCard: {
     flex: 1,
-    borderRadius: responsiveSpacing.lg,
-    padding: responsiveSpacing.lg,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.1,
-    shadowRadius: 16,
-    elevation: 8,
-    minHeight: isSmallScreen ? 400 : isMediumScreen ? 450 : 500,
+    shadowOffset: { width: 0, height: moderateScale(4) },
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(10),
+    elevation: moderateScale(6),
   },
   proCard: {
     flex: 1,
-    borderRadius: responsiveSpacing.lg,
-    padding: responsiveSpacing.lg,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 8 },
-    shadowOpacity: 0.15,
-    shadowRadius: 20,
-    elevation: 12,
-    borderWidth: 2,
+    shadowOffset: { width: 0, height: moderateScale(4) },
+    shadowOpacity: 0.12,
+    shadowRadius: moderateScale(12),
+    elevation: moderateScale(8),
     borderColor: '#667eea',
     position: 'relative',
-    minHeight: isSmallScreen ? 400 : isMediumScreen ? 450 : 500,
   },
   proBadge: {
     position: 'absolute',
-    top: -12,
     left: '50%',
-    marginLeft: -30,
+    marginLeft: moderateScale(-25),
     backgroundColor: '#667eea',
-    paddingHorizontal: 16,
-    paddingVertical: 6,
-    borderRadius: 16,
   },
   proBadgeText: {
-    fontSize: responsiveFontSize.sm,
     fontWeight: '700',
     color: '#ffffff',
     textAlign: 'center',
   },
   planHeader: {
     alignItems: 'center',
-    marginBottom: responsiveSpacing.lg,
   },
   planName: {
-    fontSize: responsiveFontSize.xxl,
     fontWeight: '700',
-    marginBottom: responsiveSpacing.xs,
   },
   priceContainer: {
     alignItems: 'center',
     position: 'relative',
   },
   planPrice: {
-    fontSize: responsiveFontSize.xxxl,
     fontWeight: '700',
     color: '#667eea',
   },
   originalPrice: {
-    fontSize: responsiveFontSize.md,
     fontWeight: '400',
     textDecorationLine: 'line-through',
-    marginTop: 4,
   },
   savingsBadge: {
     position: 'absolute',
-    top: -12,
-    right: -35,
     backgroundColor: '#28a745',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 12,
   },
   savingsText: {
-    fontSize: responsiveFontSize.xs,
     fontWeight: '700',
     color: '#ffffff',
   },
   planPeriod: {
-    fontSize: responsiveFontSize.sm,
-    marginTop: 4,
   },
   featuresList: {
-    gap: responsiveSpacing.sm,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: responsiveSpacing.sm,
   },
   featureText: {
-    fontSize: responsiveFontSize.sm,
     flex: 1,
   },
   benefitsSection: {
-    borderRadius: responsiveSpacing.lg,
-    padding: responsiveSpacing.lg,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOffset: { width: 0, height: moderateScale(2) },
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(6),
+    elevation: moderateScale(3),
   },
   benefitsTitle: {
-    fontSize: responsiveFontSize.xl,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: responsiveSpacing.lg,
   },
   benefitsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: responsiveSpacing.md,
     justifyContent: 'center',
   },
   benefitItem: {
-    width: screenWidth < 600 ? screenWidth - (responsiveSpacing.md * 4) : (screenWidth - 88) / 2,
     alignItems: 'center',
-    padding: responsiveSpacing.md,
-    borderRadius: responsiveSpacing.md,
-    minHeight: isSmallScreen ? 100 : isMediumScreen ? 110 : 120,
     justifyContent: 'center',
   },
   benefitTitle: {
-    fontSize: responsiveFontSize.md,
     fontWeight: '600',
-    marginTop: responsiveSpacing.xs,
-    marginBottom: 4,
     textAlign: 'center',
   },
   benefitText: {
-    fontSize: responsiveFontSize.xs,
     textAlign: 'center',
-    lineHeight: 16,
   },
   stickyButtonContainer: {
     position: 'absolute',
     bottom: 0,
     left: 0,
     right: 0,
-    paddingHorizontal: responsiveSpacing.md,
-    paddingTop: responsiveSpacing.md,
-    borderTopWidth: 1,
   },
   upgradeButton: {
-    borderRadius: responsiveSpacing.md,
     overflow: 'hidden',
-    marginBottom: responsiveSpacing.sm,
   },
   upgradeButtonGradient: {
-    paddingVertical: responsiveSpacing.sm,
-    paddingHorizontal: responsiveSpacing.lg,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
   },
   upgradeButtonText: {
     color: '#ffffff',
-    fontSize: responsiveFontSize.lg,
     fontWeight: '700',
-    marginLeft: responsiveSpacing.sm,
   },
   termsText: {
-    fontSize: responsiveFontSize.xs,
     textAlign: 'center',
-    lineHeight: 16,
   },
   transactionHistoryButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: responsiveSpacing.md,
-    paddingVertical: responsiveSpacing.sm,
-    borderRadius: responsiveSpacing.md,
-    marginTop: responsiveSpacing.sm,
   },
   transactionHistoryButtonText: {
-    fontSize: responsiveFontSize.sm,
     fontWeight: '600',
     flex: 1,
-    marginLeft: responsiveSpacing.sm,
   },
 });
 
