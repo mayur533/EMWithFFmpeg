@@ -1123,7 +1123,6 @@ const HomeScreen: React.FC = React.memo(() => {
         <View style={[styles.header, { paddingTop: insets.top + responsiveSpacing.xs * COMPACT_MULTIPLIER }]}>
           <View style={styles.headerTop}>
             <View style={styles.greeting}>
-              <Text style={styles.greetingText}>Dashboard</Text>
               <Text style={styles.userName}>Event Management</Text>
               {apiError && (
                 <View style={styles.apiStatusIndicator}>
@@ -1159,7 +1158,7 @@ const HomeScreen: React.FC = React.memo(() => {
               <Icon name="search" size={searchIconSize} color={theme.colors.primary} style={styles.searchIcon} />
               <TextInput
                 style={[styles.searchInput, { color: theme.colors.text }]}
-                placeholder="Search templates and services..."
+                placeholder="Search templates..."
                 placeholderTextColor={theme.colors.textSecondary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -2640,7 +2639,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: moderateScale(11),
+    fontSize: moderateScale(10), // Reduced from 11
     fontWeight: '500',
   },
   clearIcon: {
