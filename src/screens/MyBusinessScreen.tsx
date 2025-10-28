@@ -21,6 +21,9 @@ import businessCategoryPostersApi, { BusinessCategoryPoster } from '../services/
 import ComingSoonModal from '../components/ComingSoonModal';
 import OptimizedImage from '../components/OptimizedImage';
 
+// Compact spacing multiplier to reduce all spacing (matching HomeScreen)
+const COMPACT_MULTIPLIER = 0.5;
+
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 // Enhanced responsive design helpers with more granular breakpoints
@@ -37,6 +40,11 @@ const isLandscape = screenWidth > screenHeight;
 // Device type detection
 const isTablet = Math.min(screenWidth, screenHeight) >= 768;
 const isPhone = !isTablet;
+
+// Responsive helper functions (matching HomeScreen)
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 
 // Enhanced responsive spacing and sizing system
 const responsiveSpacing = {
@@ -67,26 +75,33 @@ const getGridColumns = () => {
 };
 
 // Dynamic poster card dimensions for 3-column layout
-const getPosterCardDimensions = (screenWidth: number) => {
+const getPosterCardDimensions = (currentWidth: number, currentHeight?: number) => {
   const columns = 3; // Fixed 3 columns
-  const horizontalPadding = responsiveSpacing.md * 2;
-  const gap = responsiveSpacing.sm;
+  const dynamicScale = (size: number) => (currentWidth / 375) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
+  const horizontalPadding = dynamicModerateScale(8) * 2;
+  const gap = dynamicModerateScale(3);
   const totalGapWidth = gap * (columns - 1);
-  const cardWidth = (screenWidth - horizontalPadding - totalGapWidth) / columns;
+  const cardWidth = (currentWidth - horizontalPadding - totalGapWidth) / columns;
   
   // Dynamic height based on screen size and orientation for 3-column layout
+  const height = currentHeight || screenHeight;
+  const isCurrentLandscape = currentWidth > height;
+  const isCurrentTablet = Math.min(currentWidth, height) >= 768;
+  
   let heightRatio = 0.15;
-  if (isTablet) {
-    heightRatio = isLandscape ? 0.25 : 0.22;
-  } else if (isLargeScreen) {
-    heightRatio = isLandscape ? 0.22 : 0.18;
-  } else if (isMediumScreen) {
-    heightRatio = isLandscape ? 0.18 : 0.16;
+  if (isCurrentTablet) {
+    heightRatio = isCurrentLandscape ? 0.25 : 0.22;
+  } else if (currentWidth >= 414) {
+    heightRatio = isCurrentLandscape ? 0.22 : 0.18;
+  } else if (currentWidth >= 375) {
+    heightRatio = isCurrentLandscape ? 0.18 : 0.16;
   } else {
-    heightRatio = isLandscape ? 0.16 : 0.15;
+    heightRatio = isCurrentLandscape ? 0.16 : 0.15;
   }
   
-  const cardHeight = screenHeight * heightRatio;
+  const cardHeight = height * heightRatio;
   
   return { cardWidth, cardHeight, columns };
 };
@@ -104,20 +119,36 @@ const MyBusinessScreen: React.FC = () => {
   const [refreshing, setRefreshing] = useState(false);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   
-  // State for orientation changes
-  const [screenData, setScreenData] = useState(Dimensions.get('window'));
-  
-  // Listen for orientation changes
+  // Dynamic dimensions for responsive layout (matching HomeScreen)
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  // Update dimensions on screen rotation/resize
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', ({ window }) => {
-      setScreenData(window);
+      setDimensions({ width: window.width, height: window.height });
     });
-    
+
     return () => subscription?.remove();
   }, []);
+
+  const currentScreenWidth = dimensions.width;
+  const currentScreenHeight = dimensions.height;
+  
+  // Dynamic responsive scaling functions
+  const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
+  const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
+  const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  
+  // Responsive icon sizes (compact - 60% of original)
+  const getIconSize = (baseSize: number) => {
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+  };
   
   // Get dynamic dimensions
-  const { cardWidth, cardHeight, columns } = getPosterCardDimensions(screenData.width);
+  const { cardWidth, cardHeight, columns } = getPosterCardDimensions(currentScreenWidth, currentScreenHeight);
 
   // Optimized load with cache support
   const loadBusinessCategoryPosters = useCallback(async (isRefresh: boolean = false) => {
@@ -180,6 +211,7 @@ const MyBusinessScreen: React.FC = () => {
           {
             width: cardWidth,
             height: cardHeight,
+            borderRadius: dynamicModerateScale(10),
           }
         ]}
         onPress={() => handlePosterPress(item)}
@@ -195,7 +227,7 @@ const MyBusinessScreen: React.FC = () => {
         />
       </TouchableOpacity>
     );
-  }, [theme, navigation, cardWidth, cardHeight]);
+  }, [theme, navigation, cardWidth, cardHeight, dynamicModerateScale]);
 
   const keyExtractor = useCallback((item: BusinessCategoryPoster) => item.id, []);
 
@@ -217,29 +249,36 @@ const MyBusinessScreen: React.FC = () => {
         end={{ x: 1, y: 1 }}
       >
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + 8 }]}>
+        <View style={[styles.header, { paddingTop: insets.top + dynamicModerateScale(2) }]}>
           <View style={styles.headerContent}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={[styles.backButton, {
+                width: dynamicModerateScale(30),
+                height: dynamicModerateScale(30),
+                borderRadius: dynamicModerateScale(15),
+                padding: dynamicModerateScale(4),
+              }]}
               onPress={() => navigation.goBack()}
             >
               <Icon 
                 name="arrow-back" 
-                size={isUltraSmallScreen ? 20 : isSmallScreen ? 22 : isMediumScreen ? 24 : isLargeScreen ? 26 : 28} 
+                size={getIconSize(18)} 
                 color="#ffffff" 
               />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>
+            <Text style={[styles.headerTitle, {
+              fontSize: dynamicModerateScale(12),
+            }]}>
               My Business Posters
             </Text>
-            <View style={styles.headerSpacer} />
+            <View style={[styles.headerSpacer, { width: dynamicModerateScale(30) }]} />
           </View>
         </View>
 
         {/* Posters Section */}
         <ScrollView 
           style={styles.scrollView}
-          contentContainerStyle={[styles.scrollContent, { paddingBottom: 120 + insets.bottom }]}
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}
           refreshControl={
             <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
           }
@@ -249,46 +288,71 @@ const MyBusinessScreen: React.FC = () => {
           scrollEventThrottle={16}
           bounces={true}
         >
-          <View style={styles.postersHeader}>
-            <Text style={styles.sectionTitle}>
+          <View style={[styles.postersHeader, {
+            marginHorizontal: dynamicModerateScale(8),
+            marginTop: dynamicModerateScale(6),
+            marginBottom: dynamicModerateScale(6),
+          }]}>
+            <Text style={[styles.sectionTitle, {
+              fontSize: dynamicModerateScale(12),
+            }]}>
               {userBusinessCategory} Posters
             </Text>
             {postersLoading && (
               <ActivityIndicator 
                 size="small" 
                 color="#ffffff" 
-                style={styles.loadingIndicator}
+                style={[styles.loadingIndicator, { marginLeft: dynamicModerateScale(4) }]}
               />
             )}
           </View>
           
           {businessCategoryPosters.length > 0 ? (
             <FlatList
-              key={`posters-${screenData.width}-${screenData.height}`}
+              key={`posters-${currentScreenWidth}-${currentScreenHeight}`}
               data={businessCategoryPosters}
               renderItem={renderPoster}
               keyExtractor={keyExtractor}
               numColumns={3}
-              columnWrapperStyle={styles.posterRow}
+              columnWrapperStyle={[styles.posterRow, {
+                marginBottom: dynamicModerateScale(4),
+                gap: dynamicModerateScale(3),
+              }]}
               showsVerticalScrollIndicator={false}
               scrollEnabled={false}
-              contentContainerStyle={styles.postersList}
+              contentContainerStyle={[styles.postersList, {
+                paddingHorizontal: dynamicModerateScale(8),
+                paddingBottom: dynamicModerateScale(12),
+              }]}
             />
           ) : (
-            <View style={styles.emptyPostersContainer}>
+            <View style={[styles.emptyPostersContainer, {
+              paddingVertical: dynamicModerateScale(20),
+            }]}>
               <Icon 
                 name="image" 
-                size={isUltraSmallScreen ? 40 : isSmallScreen ? 44 : isMediumScreen ? 48 : isLargeScreen ? 52 : 56} 
+                size={getIconSize(40)} 
                 color="rgba(255,255,255,0.7)" 
               />
-              <Text style={styles.emptyPostersText}>
+              <Text style={[styles.emptyPostersText, {
+                fontSize: dynamicModerateScale(10),
+                marginTop: dynamicModerateScale(8),
+                marginBottom: dynamicModerateScale(12),
+                lineHeight: dynamicModerateScale(16),
+              }]}>
                 No posters available for {userBusinessCategory} category
               </Text>
               <TouchableOpacity
-                style={styles.refreshButton}
+                style={[styles.refreshButton, {
+                  paddingHorizontal: dynamicModerateScale(12),
+                  paddingVertical: dynamicModerateScale(6),
+                  borderRadius: dynamicModerateScale(8),
+                }]}
                 onPress={loadBusinessCategoryPosters}
               >
-                <Text style={styles.refreshButtonText}>Refresh</Text>
+                <Text style={[styles.refreshButtonText, {
+                  fontSize: dynamicModerateScale(10),
+                }]}>Refresh</Text>
               </TouchableOpacity>
             </View>
           )}
@@ -314,8 +378,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingBottom: responsiveSpacing.lg,
-    paddingHorizontal: responsiveSpacing.md,
+    paddingBottom: moderateScale(3),
+    paddingHorizontal: moderateScale(4),
+    paddingTop: 0,
   },
   headerContent: {
     flexDirection: 'row',
@@ -323,72 +388,72 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
   },
   backButton: {
-    padding: responsiveSpacing.sm,
-    width: isUltraSmallScreen ? 36 : isSmallScreen ? 40 : isMediumScreen ? 44 : isLargeScreen ? 48 : 52,
-    height: isUltraSmallScreen ? 36 : isSmallScreen ? 40 : isMediumScreen ? 44 : isLargeScreen ? 48 : 52,
-    borderRadius: isUltraSmallScreen ? 18 : isSmallScreen ? 20 : isMediumScreen ? 22 : isLargeScreen ? 24 : 26,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+    padding: moderateScale(4),
+    width: moderateScale(30),
+    height: moderateScale(30),
+    borderRadius: moderateScale(15),
+    backgroundColor: 'rgba(255,255,255,0.2)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
   },
   headerTitle: {
-    fontSize: responsiveFontSize.xxxxl,
+    fontSize: moderateScale(12),
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   headerSpacer: {
-    width: isUltraSmallScreen ? 36 : isSmallScreen ? 40 : isMediumScreen ? 44 : isLargeScreen ? 48 : 52,
+    width: moderateScale(30),
   },
   scrollView: {
     flex: 1,
   },
   scrollContent: {
-    paddingBottom: 100,
+    paddingBottom: 80,
   },
   postersHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: responsiveSpacing.md,
-    marginTop: responsiveSpacing.lg,
-    marginBottom: responsiveSpacing.lg,
+    marginHorizontal: moderateScale(8),
+    marginTop: moderateScale(6),
+    marginBottom: moderateScale(6),
   },
   sectionTitle: {
-    fontSize: responsiveFontSize.xxxl,
+    fontSize: moderateScale(12),
     fontWeight: 'bold',
     color: '#ffffff',
-    letterSpacing: 0.5,
+    letterSpacing: 0.3,
   },
   loadingIndicator: {
-    marginLeft: responsiveSpacing.sm,
+    marginLeft: moderateScale(4),
   },
   postersList: {
-    paddingHorizontal: responsiveSpacing.md,
-    paddingBottom: responsiveSpacing.xl,
+    paddingHorizontal: moderateScale(8),
+    paddingBottom: moderateScale(12),
   },
   posterRow: {
     justifyContent: 'flex-start',
-    marginBottom: responsiveSpacing.sm,
+    marginBottom: moderateScale(4),
     paddingHorizontal: 0,
-    gap: responsiveSpacing.sm,
+    gap: moderateScale(3),
   },
   posterCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: isUltraSmallScreen ? 6 : isSmallScreen ? 7 : isMediumScreen ? 8 : isLargeScreen ? 9 : 10,
+    borderRadius: moderateScale(10),
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
     position: 'relative',
   },
   posterImage: {
@@ -397,33 +462,33 @@ const styles = StyleSheet.create({
   },
   emptyPostersContainer: {
     alignItems: 'center',
-    paddingVertical: responsiveSpacing.xxxl,
+    paddingVertical: moderateScale(20),
   },
   emptyPostersText: {
-    fontSize: responsiveFontSize.lg,
+    fontSize: moderateScale(10),
     textAlign: 'center',
-    marginTop: responsiveSpacing.lg,
-    marginBottom: responsiveSpacing.xl,
-    lineHeight: responsiveFontSize.lg * 1.4,
+    marginTop: moderateScale(8),
+    marginBottom: moderateScale(12),
+    lineHeight: moderateScale(16),
     color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   refreshButton: {
-    paddingHorizontal: responsiveSpacing.xl,
-    paddingVertical: responsiveSpacing.md,
-    borderRadius: isUltraSmallScreen ? 6 : isSmallScreen ? 7 : isMediumScreen ? 8 : isLargeScreen ? 9 : 10,
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(8),
     backgroundColor: 'rgba(255, 255, 255, 0.2)',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
     elevation: 2,
   },
   refreshButtonText: {
     color: '#FFFFFF',
-    fontSize: responsiveFontSize.md,
+    fontSize: moderateScale(10),
     fontWeight: '600',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
 });
 
