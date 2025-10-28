@@ -41,6 +41,9 @@ import responsiveUtils, {
   isLandscape 
 } from '../utils/responsiveUtils';
 
+// Compact spacing multiplier to reduce all spacing (matching HomeScreen)
+const COMPACT_MULTIPLIER = 0.5;
+
 // Using centralized responsive utilities
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -48,6 +51,11 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isSmallScreen = screenWidth < 375;
 const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
 const isLargeScreen = screenWidth >= 414;
+
+// Responsive helper functions (matching HomeScreen)
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
 
 const GreetingTemplatesScreen: React.FC = () => {
   const { theme } = useTheme();
@@ -197,12 +205,6 @@ const GreetingTemplatesScreen: React.FC = () => {
           {
             backgroundColor: selectedCategory === item.id ? item.color : theme.colors.surface,
             borderColor: theme.colors.border,
-            paddingVertical: responsiveSpacing.sm,
-            paddingHorizontal: responsiveSpacing.md,
-            borderRadius: isTablet ? 28 : 24,
-            gap: responsiveSpacing.xs,
-            minWidth: isTablet ? (isLandscape ? 120 : 100) : 80,
-            minHeight: isTablet ? 52 : 44,
           }
         ]}
         onPress={() => handleCategorySelect(item.id)}
@@ -210,7 +212,7 @@ const GreetingTemplatesScreen: React.FC = () => {
       >
         {item.icon && (
           isEmoji ? (
-            <Text style={{ fontSize: isTablet ? 24 : 20 }}>{item.icon}</Text>
+            <Text style={{ fontSize: moderateScale(14) }}>{item.icon}</Text>
           ) : null
         )}
         <Text
@@ -218,7 +220,7 @@ const GreetingTemplatesScreen: React.FC = () => {
             styles.categoryTabText,
             {
               color: selectedCategory === item.id ? '#FFFFFF' : theme.colors.text,
-              fontSize: responsiveText.caption,
+              fontSize: moderateScale(8),
             }
           ]}
         >
@@ -226,7 +228,7 @@ const GreetingTemplatesScreen: React.FC = () => {
         </Text>
       </TouchableOpacity>
     );
-  }, [selectedCategory, theme.colors.surface, theme.colors.border, theme.colors.text, handleCategorySelect, responsiveSpacing, isTablet, isLandscape, responsiveText.caption]);
+  }, [selectedCategory, theme.colors.surface, theme.colors.border, theme.colors.text, handleCategorySelect]);
 
   // Optimized template card renderer with proper spacing
   const renderTemplateCard = useCallback(({ item, index }: { item: GreetingTemplate; index: number }) => {
@@ -236,7 +238,7 @@ const GreetingTemplatesScreen: React.FC = () => {
     return (
       <View style={{
         width: cardWidth,
-        marginRight: isLastInRow ? 0 : 8, // 8px gap between cards, no margin on last card in row
+        marginRight: isLastInRow ? 0 : moderateScale(3), // Compact gap between cards matching HomeScreen
       }}>
         <GreetingTemplateCard
           template={item}
@@ -247,15 +249,15 @@ const GreetingTemplatesScreen: React.FC = () => {
   }, [handleTemplatePress, gridColumns]);
 
   const renderEmptyState = useCallback(() => (
-    <View style={[styles.emptyContainer, { paddingHorizontal: responsiveSpacing.lg }]}>
-      <Icon name="sentiment-dissatisfied" size={isTablet ? 80 : 64} color={theme.colors.textSecondary} />
+    <View style={[styles.emptyContainer, { paddingHorizontal: moderateScale(16) }]}>
+      <Icon name="sentiment-dissatisfied" size={moderateScale(48)} color={theme.colors.textSecondary} />
       <Text style={[
         styles.emptyTitle, 
         { 
           color: theme.colors.text,
-          fontSize: responsiveText.subheading,
-          marginTop: responsiveSpacing.md,
-          marginBottom: responsiveSpacing.sm,
+          fontSize: moderateScale(12),
+          marginTop: moderateScale(8),
+          marginBottom: moderateScale(4),
         }
       ]}>
         No templates found
@@ -264,14 +266,14 @@ const GreetingTemplatesScreen: React.FC = () => {
         styles.emptySubtitle, 
         { 
           color: theme.colors.textSecondary,
-          fontSize: responsiveText.body,
-          lineHeight: isTablet ? 24 : 20,
+          fontSize: moderateScale(10),
+          lineHeight: moderateScale(16),
         }
       ]}>
         {searchQuery ? 'Try adjusting your search terms' : 'Check back later for new templates'}
       </Text>
     </View>
-  ), [searchQuery, theme.colors.text, theme.colors.textSecondary, responsiveSpacing, isTablet, responsiveText]);
+  ), [searchQuery, theme.colors.text, theme.colors.textSecondary]);
 
   // Memoized key extractors and other optimizations
   const keyExtractor = useCallback((item: GreetingTemplate) => item.id, []);
@@ -279,8 +281,8 @@ const GreetingTemplatesScreen: React.FC = () => {
 
   // Memoized FlatList props for better performance
   const flatListProps = useMemo(() => {
-    const padding = 16;
-    const gap = 8;
+    const padding = moderateScale(8);
+    const gap = moderateScale(4);
     
     return {
       data: filteredTemplates,
@@ -293,7 +295,7 @@ const GreetingTemplatesScreen: React.FC = () => {
         marginBottom: gap,
       } : undefined,
       contentContainerStyle: {
-        paddingBottom: responsiveSpacing.lg,
+        paddingBottom: moderateScale(20),
         ...(gridColumns === 1 && { paddingHorizontal: padding }),
       },
       showsVerticalScrollIndicator: false,
@@ -304,7 +306,7 @@ const GreetingTemplatesScreen: React.FC = () => {
       updateCellsBatchingPeriod: 50,
       getItemLayout: undefined,
     };
-  }, [filteredTemplates, renderTemplateCard, keyExtractor, gridColumns, responsiveSpacing, isTablet]);
+  }, [filteredTemplates, renderTemplateCard, keyExtractor, gridColumns, isTablet]);
 
   // Render upgrade modal
   const renderUpgradeModal = () => {
@@ -326,7 +328,7 @@ const GreetingTemplatesScreen: React.FC = () => {
           <View style={[styles.upgradeModalContent, { backgroundColor: '#ffffff' }]}>
             {/* Premium Badge */}
             <View style={styles.premiumBadge}>
-              <Icon name="star" size={isSmallScreen ? 20 : isTablet ? 28 : 24} color="#DAA520" />
+              <Icon name="star" size={moderateScale(16)} color="#DAA520" />
               <Text style={[styles.premiumBadgeText, { color: '#B8860B' }]}>PREMIUM</Text>
             </View>
 
@@ -358,25 +360,25 @@ const GreetingTemplatesScreen: React.FC = () => {
             {/* Features List */}
             <View style={styles.featuresList}>
               <View style={styles.featureItem}>
-                <Icon name="check-circle" size={isSmallScreen ? 18 : isTablet ? 24 : 20} color="#4CAF50" />
+                <Icon name="check-circle" size={moderateScale(14)} color="#4CAF50" />
                 <Text style={[styles.featureText, { color: '#1a1a1a' }]}>
                   Access to all premium templates
                 </Text>
               </View>
               <View style={styles.featureItem}>
-                <Icon name="check-circle" size={isSmallScreen ? 18 : isTablet ? 24 : 20} color="#4CAF50" />
+                <Icon name="check-circle" size={moderateScale(14)} color="#4CAF50" />
                 <Text style={[styles.featureText, { color: '#1a1a1a' }]}>
                   No watermarks on final designs
                 </Text>
               </View>
               <View style={styles.featureItem}>
-                <Icon name="check-circle" size={isSmallScreen ? 18 : isTablet ? 24 : 20} color="#4CAF50" />
+                <Icon name="check-circle" size={moderateScale(14)} color="#4CAF50" />
                 <Text style={[styles.featureText, { color: '#1a1a1a' }]}>
                   Priority customer support
                 </Text>
               </View>
               <View style={styles.featureItem}>
-                <Icon name="check-circle" size={isSmallScreen ? 18 : isTablet ? 24 : 20} color="#4CAF50" />
+                <Icon name="check-circle" size={moderateScale(14)} color="#4CAF50" />
                 <Text style={[styles.featureText, { color: '#1a1a1a' }]}>
                   Advanced editing features
                 </Text>
@@ -408,7 +410,7 @@ const GreetingTemplatesScreen: React.FC = () => {
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                 >
-                  <Icon name="star" size={isSmallScreen ? 14 : isTablet ? 20 : 16} color="#ffffff" style={styles.upgradeButtonIcon} />
+                  <Icon name="star" size={moderateScale(12)} color="#ffffff" style={styles.upgradeButtonIcon} />
                   <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -441,18 +443,18 @@ const GreetingTemplatesScreen: React.FC = () => {
         <View style={[
           styles.header, 
           { 
-            paddingTop: insets.top + responsiveSpacing.sm,
-            paddingBottom: responsiveSpacing.md,
-            paddingHorizontal: responsiveSpacing.md,
+            paddingTop: insets.top + (responsiveSpacing.xs * COMPACT_MULTIPLIER),
+            paddingBottom: moderateScale(3),
+            paddingHorizontal: moderateScale(4),
           }
         ]}>
           <View style={[
             styles.headerContent, 
-            { paddingHorizontal: responsiveSpacing.sm }
+            { paddingHorizontal: moderateScale(2) }
           ]}>
             <Text style={[
               styles.headerTitle,
-              { fontSize: responsiveText.subheading }
+              { fontSize: moderateScale(12) }
             ]}>Greeting Templates</Text>
           </View>
         </View>
@@ -461,52 +463,45 @@ const GreetingTemplatesScreen: React.FC = () => {
         <View style={[
           styles.searchContainer, 
           { 
-            marginHorizontal: responsiveSpacing.md,
-            marginVertical: responsiveSpacing.sm,
+            marginHorizontal: moderateScale(8),
+            marginVertical: moderateScale(3),
           }
         ]}>
           <View style={[
             styles.searchBar, 
             { 
               backgroundColor: theme.colors.cardBackground,
-              paddingHorizontal: responsiveSpacing.md,
-              paddingVertical: responsiveSpacing.sm,
-              borderRadius: isTablet ? 20 : 16,
-              minHeight: isTablet ? 56 : 48,
             }
           ]}>
-            <Icon name="search" size={isTablet ? 24 : 20} color={theme.colors.textSecondary} />
+            <Icon name="search" size={moderateScale(14)} color={theme.colors.textSecondary} style={{ marginLeft: moderateScale(2), marginRight: moderateScale(4) }} />
             <TextInput
               style={[
                 styles.searchInput, 
                 { 
                   color: theme.colors.text,
-                  marginLeft: responsiveSpacing.sm,
-                  fontSize: responsiveText.body,
-                  minHeight: isTablet ? 48 : 40,
                 }
               ]}
-              placeholder="Search greeting templates..."
+              placeholder="Search templates..."
               placeholderTextColor={theme.colors.textSecondary}
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
             {searchQuery.length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
-                <Icon name="clear" size={isTablet ? 24 : 20} color={theme.colors.textSecondary} />
+                <Icon name="clear" size={moderateScale(14)} color={theme.colors.textSecondary} style={{ marginLeft: moderateScale(4), marginRight: moderateScale(4), padding: moderateScale(2) }} />
               </TouchableOpacity>
             )}
           </View>
         </View>
 
         {/* Category Tabs */}
-        <View style={[styles.categoriesContainer, { marginBottom: responsiveSpacing.sm }]}>
+        <View style={[styles.categoriesContainer, { marginBottom: moderateScale(3) }]}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={[
               styles.categoriesScroll, 
-              { paddingHorizontal: responsiveSpacing.md, gap: responsiveSpacing.sm }
+              { paddingHorizontal: moderateScale(8), gap: moderateScale(3) }
             ]}
           >
             <TouchableOpacity
@@ -515,12 +510,6 @@ const GreetingTemplatesScreen: React.FC = () => {
                 {
                   backgroundColor: selectedCategory === 'all' ? theme.colors.primary : theme.colors.surface,
                   borderColor: theme.colors.border,
-                  paddingVertical: responsiveSpacing.sm,
-                  paddingHorizontal: responsiveSpacing.md,
-                  borderRadius: isTablet ? 28 : 24,
-                  gap: responsiveSpacing.xs,
-                  minWidth: isTablet ? (isLandscape ? 120 : 100) : 80,
-                  minHeight: isTablet ? 52 : 44,
                 }
               ]}
               onPress={() => handleCategorySelect('all')}
@@ -528,7 +517,7 @@ const GreetingTemplatesScreen: React.FC = () => {
             >
               <Icon
                 name="apps"
-                size={isTablet ? 24 : 20}
+                size={moderateScale(14)}
                 color={selectedCategory === 'all' ? '#FFFFFF' : theme.colors.text}
               />
               <Text
@@ -536,7 +525,7 @@ const GreetingTemplatesScreen: React.FC = () => {
                   styles.categoryTabText,
                   {
                     color: selectedCategory === 'all' ? '#FFFFFF' : theme.colors.text,
-                    fontSize: responsiveText.caption,
+                    fontSize: moderateScale(8),
                   }
                 ]}
               >
@@ -553,14 +542,14 @@ const GreetingTemplatesScreen: React.FC = () => {
 
         {/* Templates Grid - Optimized FlatList */}
         {initialLoading && filteredTemplates.length === 0 ? (
-          <View style={[styles.loadingContainer, { paddingTop: responsiveSpacing.xl }]}>
+          <View style={[styles.loadingContainer, { paddingTop: moderateScale(40) }]}>
             <ActivityIndicator size="large" color={theme.colors.primary} />
             <Text style={[
               styles.loadingText, 
               { 
                 color: theme.colors.text,
-                marginTop: responsiveSpacing.md,
-                fontSize: responsiveText.body,
+                marginTop: moderateScale(8),
+                fontSize: moderateScale(10),
               }
             ]}>
               Loading templates...
@@ -604,15 +593,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: 20,
-    paddingBottom: 16,
-    paddingHorizontal: 16,
+    paddingTop: moderateScale(8),
+    paddingBottom: moderateScale(3),
+    paddingHorizontal: moderateScale(4),
   },
   headerContent: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingHorizontal: 12,
+    paddingHorizontal: moderateScale(2),
   },
   headerTitle: {
     fontWeight: '600',
@@ -621,77 +610,82 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   searchContainer: {
-    marginHorizontal: 16,
-    marginVertical: 12,
+    marginHorizontal: moderateScale(8),
+    marginVertical: moderateScale(3),
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    minHeight: 48,
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: verticalScale(5),
+    borderRadius: moderateScale(14),
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 1,
+    },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 2,
   },
   searchInput: {
     flex: 1,
-    marginLeft: 12,
-    fontSize: 16,
-    minHeight: 40,
+    marginLeft: moderateScale(4),
+    fontSize: moderateScale(10),
+    fontWeight: '500',
   },
   categoriesContainer: {
-    marginBottom: 12,
+    marginBottom: moderateScale(3),
   },
   categoriesScroll: {
-    paddingHorizontal: 16,
-    gap: 12,
+    paddingHorizontal: moderateScale(8),
+    gap: moderateScale(3),
   },
   categoryTab: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 24,
+    paddingVertical: moderateScale(6),
+    paddingHorizontal: moderateScale(8),
+    borderRadius: moderateScale(14),
     borderWidth: 1,
-    gap: 8,
-    minWidth: 80,
+    gap: moderateScale(3),
+    minWidth: moderateScale(60),
     justifyContent: 'center',
-    minHeight: 44,
+    minHeight: moderateScale(30),
   },
   categoryTabText: {
     fontWeight: '600',
   },
   templatesContainer: {
-    paddingHorizontal: 12,
-    paddingBottom: 32,
+    paddingHorizontal: moderateScale(6),
+    paddingBottom: moderateScale(20),
   },
   templateRow: {
     justifyContent: 'flex-start',
-    gap: 8,
+    gap: moderateScale(4),
   },
   emptyContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 80,
-    paddingHorizontal: 32,
+    paddingVertical: moderateScale(50),
+    paddingHorizontal: moderateScale(16),
   },
   emptyTitle: {
     fontWeight: '600',
-    marginTop: 16,
-    marginBottom: 8,
+    marginTop: moderateScale(8),
+    marginBottom: moderateScale(4),
     textAlign: 'center',
   },
   emptySubtitle: {
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: moderateScale(16),
   },
   loadingContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 60,
+    paddingVertical: moderateScale(40),
   },
   loadingText: {
     fontWeight: '500',
@@ -704,77 +698,77 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    padding: isSmallScreen ? 16 : isTablet ? 32 : 20,
+    padding: moderateScale(12),
   },
   modalScrollView: {
-    maxHeight: screenHeight * 0.9,
+    maxHeight: screenHeight * 0.85,
     width: '100%',
-    maxWidth: isTablet ? 500 : screenWidth - 32,
+    maxWidth: isTablet ? 450 : screenWidth - 24,
   },
   modalScrollContent: {
     flexGrow: 1,
     justifyContent: 'center',
   },
   upgradeModalContent: {
-    borderRadius: isTablet ? 32 : isSmallScreen ? 20 : 24,
-    padding: isSmallScreen ? 20 : isTablet ? 32 : 24,
+    borderRadius: moderateScale(16),
+    padding: moderateScale(16),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: isTablet ? 12 : 8,
+      height: moderateScale(6),
     },
-    shadowOpacity: isTablet ? 0.3 : 0.25,
-    shadowRadius: isTablet ? 20 : 16,
-    elevation: isTablet ? 25 : 20,
+    shadowOpacity: 0.2,
+    shadowRadius: moderateScale(12),
+    elevation: moderateScale(16),
     width: '100%',
-    minHeight: isSmallScreen ? screenHeight * 0.35 : screenHeight * 0.4,
-    maxHeight: screenHeight * 0.85,
+    minHeight: screenHeight * 0.3,
+    maxHeight: screenHeight * 0.8,
   },
   premiumBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 215, 0, 0.1)',
-    paddingHorizontal: isSmallScreen ? 12 : isTablet ? 20 : 16,
-    paddingVertical: isSmallScreen ? 6 : isTablet ? 10 : 8,
-    borderRadius: isTablet ? 24 : 20,
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(5),
+    borderRadius: moderateScale(16),
     alignSelf: 'center',
-    marginBottom: isSmallScreen ? 16 : isTablet ? 24 : 20,
+    marginBottom: moderateScale(12),
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 0, 0.3)',
   },
   premiumBadgeText: {
-    fontSize: isSmallScreen ? 10 : isTablet ? 14 : 12,
+    fontSize: moderateScale(9),
     fontWeight: '700',
     color: '#B8860B',
-    marginLeft: isTablet ? 8 : 6,
-    letterSpacing: 1,
+    marginLeft: moderateScale(5),
+    letterSpacing: 0.8,
   },
   upgradeModalHeader: {
     alignItems: 'center',
-    marginBottom: isSmallScreen ? 20 : isTablet ? 32 : 24,
+    marginBottom: moderateScale(16),
   },
   upgradeModalTitle: {
-    fontSize: isSmallScreen ? 20 : isTablet ? 28 : 24,
+    fontSize: moderateScale(18),
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: isSmallScreen ? 6 : isTablet ? 12 : 8,
-    paddingHorizontal: isSmallScreen ? 8 : 0,
+    marginBottom: moderateScale(6),
+    paddingHorizontal: moderateScale(4),
     color: '#1a1a1a',
-    lineHeight: isSmallScreen ? 24 : isTablet ? 36 : 30,
+    lineHeight: moderateScale(24),
   },
   upgradeModalSubtitle: {
-    fontSize: isSmallScreen ? 14 : isTablet ? 18 : 16,
+    fontSize: moderateScale(12),
     textAlign: 'center',
-    lineHeight: isSmallScreen ? 20 : isTablet ? 26 : 22,
-    paddingHorizontal: isSmallScreen ? 8 : isTablet ? 16 : 0,
+    lineHeight: moderateScale(18),
+    paddingHorizontal: moderateScale(4),
     color: '#666666',
   },
   templatePreview: {
-    height: isSmallScreen ? 100 : isTablet ? 140 : 120,
-    borderRadius: isTablet ? 20 : 16,
+    height: moderateScale(90),
+    borderRadius: moderateScale(12),
     overflow: 'hidden',
-    marginBottom: isSmallScreen ? 20 : isTablet ? 28 : 24,
+    marginBottom: moderateScale(16),
     position: 'relative',
   },
   templatePreviewImage: {
@@ -787,56 +781,56 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: isSmallScreen ? 12 : isTablet ? 20 : 16,
+    padding: moderateScale(10),
   },
   templatePreviewTitle: {
-    fontSize: isSmallScreen ? 14 : isTablet ? 18 : 16,
+    fontSize: moderateScale(12),
     fontWeight: '600',
     color: '#ffffff',
-    marginBottom: isTablet ? 6 : 4,
+    marginBottom: moderateScale(3),
   },
   templatePreviewDescription: {
-    fontSize: isSmallScreen ? 12 : isTablet ? 16 : 14,
+    fontSize: moderateScale(10),
     color: 'rgba(255, 255, 255, 0.8)',
   },
   featuresList: {
-    marginBottom: isSmallScreen ? 20 : isTablet ? 28 : 24,
+    marginBottom: moderateScale(16),
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: isSmallScreen ? 10 : isTablet ? 16 : 12,
+    marginBottom: moderateScale(8),
   },
   featureText: {
-    fontSize: isSmallScreen ? 14 : isTablet ? 18 : 16,
-    marginLeft: isSmallScreen ? 10 : isTablet ? 16 : 12,
+    fontSize: moderateScale(11),
+    marginLeft: moderateScale(8),
     flex: 1,
-    lineHeight: isSmallScreen ? 20 : isTablet ? 26 : 22,
+    lineHeight: moderateScale(18),
     color: '#1a1a1a',
   },
   upgradeModalFooter: {
     flexDirection: isSmallScreen ? 'column' : 'row',
-    gap: isSmallScreen ? 12 : isTablet ? 20 : 16,
+    gap: moderateScale(10),
     alignItems: 'stretch',
     width: '100%',
-    marginTop: isTablet ? 8 : 0,
+    marginTop: 0,
     justifyContent: 'center',
   },
   cancelButton: {
     flex: 1,
-    paddingVertical: isSmallScreen ? 14 : isTablet ? 18 : 16,
-    paddingHorizontal: isSmallScreen ? 16 : isTablet ? 24 : 20,
-    borderRadius: isTablet ? 16 : 12,
+    paddingVertical: moderateScale(10),
+    paddingHorizontal: moderateScale(12),
+    borderRadius: moderateScale(10),
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: isSmallScreen ? 48 : isTablet ? 56 : 48,
+    minHeight: moderateScale(38),
     maxWidth: '100%',
-    minWidth: isSmallScreen ? 140 : isTablet ? 180 : 160,
+    minWidth: moderateScale(120),
     borderColor: '#cccccc',
   },
   cancelButtonText: {
-    fontSize: isSmallScreen ? 14 : isTablet ? 17 : 16,
+    fontSize: moderateScale(11),
     fontWeight: '600',
     color: '#666666',
     textAlign: 'center',
@@ -844,25 +838,25 @@ const styles = StyleSheet.create({
   },
   upgradeButton: {
     flex: 1,
-    borderRadius: isTablet ? 16 : 12,
+    borderRadius: moderateScale(10),
     overflow: 'hidden',
-    minHeight: isSmallScreen ? 48 : isTablet ? 56 : 48,
+    minHeight: moderateScale(38),
     maxWidth: '100%',
-    minWidth: isSmallScreen ? 140 : isTablet ? 180 : 160,
+    minWidth: moderateScale(120),
   },
   upgradeButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: isSmallScreen ? 14 : isTablet ? 18 : 16,
-    paddingHorizontal: isSmallScreen ? 12 : isTablet ? 20 : 16,
-    minHeight: isSmallScreen ? 48 : isTablet ? 56 : 48,
+    paddingVertical: moderateScale(10),
+    paddingHorizontal: moderateScale(12),
+    minHeight: moderateScale(38),
   },
   upgradeButtonIcon: {
-    marginRight: isSmallScreen ? 4 : isTablet ? 8 : 6,
+    marginRight: moderateScale(4),
   },
   upgradeButtonText: {
-    fontSize: isSmallScreen ? 12 : isTablet ? 16 : 14,
+    fontSize: moderateScale(10),
     fontWeight: '700',
     color: '#ffffff',
     textAlign: 'center',
