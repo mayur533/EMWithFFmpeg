@@ -57,6 +57,17 @@ const PosterPlayerScreen: React.FC = () => {
   const [currentRelatedPosters, setCurrentRelatedPosters] = useState<Template[]>(initialRelatedPosters);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
 
+  // Console log initial data on screen mount
+  useEffect(() => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('📺 [POSTER PLAYER SCREEN] INITIAL DATA LOADED');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🎯 Selected Poster:', JSON.stringify(initialPoster, null, 2));
+    console.log('📚 Related Posters Count:', initialRelatedPosters.length);
+    console.log('📚 Related Posters:', JSON.stringify(initialRelatedPosters, null, 2));
+    console.log('═══════════════════════════════════════════════════════');
+  }, []);
+
   // Sync state when route params change
   useEffect(() => {
     setCurrentPoster(initialPoster);
@@ -72,7 +83,7 @@ const PosterPlayerScreen: React.FC = () => {
 
   // Filter posters by selected language
   const filteredPosters = useMemo(() => {
-    return currentRelatedPosters.filter(poster => {
+    const filtered = currentRelatedPosters.filter(poster => {
       // If poster doesn't have languages property, show it for all languages
       if (!poster.languages || poster.languages.length === 0) {
         return true;
@@ -80,21 +91,47 @@ const PosterPlayerScreen: React.FC = () => {
       // Otherwise, filter based on poster's supported languages
       return poster.languages.includes(selectedLanguage);
     });
+    
+    console.log('🔍 [POSTER PLAYER] FILTERED POSTERS');
+    console.log('🌐 Selected Language:', selectedLanguage);
+    console.log('📊 Total Related Posters:', currentRelatedPosters.length);
+    console.log('📊 Filtered Posters Count:', filtered.length);
+    console.log('📊 Filtered Poster IDs:', filtered.map(p => ({ id: p.id, name: p.name })));
+    
+    return filtered;
   }, [currentRelatedPosters, selectedLanguage]);
 
   const handlePosterSelect = useCallback((poster: Template) => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🖱️ [POSTER PLAYER] POSTER CLICKED');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('📌 Clicked Poster:', JSON.stringify(poster, null, 2));
+    console.log('📌 Poster ID:', poster.id);
+    console.log('📌 Poster Name:', poster.name);
+    console.log('📌 Poster Thumbnail:', poster.thumbnail);
+    console.log('📌 Previous Current Poster:', JSON.stringify(currentPoster, null, 2));
+    
     // Update state instead of navigating to prevent full page refresh
     setCurrentPoster(poster);
     // Update related posters to exclude the newly selected one and include the previous one
     setCurrentRelatedPosters(prev => {
       const withoutNew = prev.filter(p => p.id !== poster.id);
-      return [currentPoster, ...withoutNew];
+      const updatedPosters = [currentPoster, ...withoutNew];
+      console.log('📚 Updated Related Posters Count:', updatedPosters.length);
+      console.log('═══════════════════════════════════════════════════════');
+      return updatedPosters;
     });
   }, [currentPoster]);
 
   const handleLanguageChange = useCallback((languageId: string) => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🌐 [POSTER PLAYER] LANGUAGE CHANGED');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('🌐 Previous Language:', selectedLanguage);
+    console.log('🌐 New Language:', languageId);
+    console.log('═══════════════════════════════════════════════════════');
     setSelectedLanguage(languageId);
-  }, []);
+  }, [selectedLanguage]);
 
   // Responsive icon sizes
   const getIconSize = useCallback((baseSize: number) => {
@@ -128,6 +165,18 @@ const PosterPlayerScreen: React.FC = () => {
   }, [screenWidth, screenHeight]);
 
   const handleNextPress = useCallback(() => {
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('➡️ [POSTER PLAYER] NEXT BUTTON CLICKED');
+    console.log('═══════════════════════════════════════════════════════');
+    console.log('📤 Navigation to PosterEditor with params:');
+    console.log('🖼️ Selected Image URI:', currentPoster.thumbnail);
+    console.log('📝 Title:', currentPoster.name);
+    console.log('📋 Description:', currentPoster.category);
+    console.log('🌐 Selected Language:', selectedLanguage);
+    console.log('🆔 Template ID:', currentPoster.id);
+    console.log('📦 Full Poster Data:', JSON.stringify(currentPoster, null, 2));
+    console.log('═══════════════════════════════════════════════════════');
+    
     navigation.navigate('PosterEditor', {
       selectedImage: {
         uri: currentPoster.thumbnail,

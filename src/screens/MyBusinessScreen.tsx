@@ -267,7 +267,7 @@ const MyBusinessScreen: React.FC = () => {
               />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, {
-              fontSize: dynamicModerateScale(12),
+              fontSize: dynamicModerateScale(10),
               color: theme.colors.text,
             }]}>
               My Business Posters
@@ -295,7 +295,7 @@ const MyBusinessScreen: React.FC = () => {
             marginBottom: dynamicModerateScale(6),
           }]}>
             <Text style={[styles.sectionTitle, {
-              fontSize: dynamicModerateScale(12),
+              fontSize: dynamicModerateScale(10),
               color: theme.colors.text,
             }]}>
               {userBusinessCategory} Posters
@@ -337,10 +337,10 @@ const MyBusinessScreen: React.FC = () => {
                 color={isDarkMode ? 'rgba(255,255,255,0.7)' : 'rgba(51,51,51,0.7)'} 
               />
               <Text style={[styles.emptyPostersText, {
-                fontSize: dynamicModerateScale(10),
-                marginTop: dynamicModerateScale(8),
-                marginBottom: dynamicModerateScale(12),
-                lineHeight: dynamicModerateScale(16),
+                fontSize: dynamicModerateScale(9),
+                marginTop: dynamicModerateScale(6),
+                marginBottom: dynamicModerateScale(10),
+                lineHeight: dynamicModerateScale(14),
                 color: theme.colors.textSecondary,
               }]}>
                 No posters available for {userBusinessCategory} category
@@ -354,7 +354,7 @@ const MyBusinessScreen: React.FC = () => {
                 onPress={loadBusinessCategoryPosters}
               >
                 <Text style={[styles.refreshButtonText, {
-                  fontSize: dynamicModerateScale(10),
+                  fontSize: dynamicModerateScale(9),
                   color: theme.colors.text,
                 }]}>Refresh</Text>
               </TouchableOpacity>
@@ -406,7 +406,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   headerTitle: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10),
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
@@ -430,7 +430,7 @@ const styles = StyleSheet.create({
     marginBottom: moderateScale(6),
   },
   sectionTitle: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(10),
     fontWeight: 'bold',
     letterSpacing: 0.3,
   },
@@ -467,11 +467,11 @@ const styles = StyleSheet.create({
     paddingVertical: moderateScale(20),
   },
   emptyPostersText: {
-    fontSize: moderateScale(10),
+    fontSize: moderateScale(9),
     textAlign: 'center',
-    marginTop: moderateScale(8),
-    marginBottom: moderateScale(12),
-    lineHeight: moderateScale(16),
+    marginTop: moderateScale(6),
+    marginBottom: moderateScale(10),
+    lineHeight: moderateScale(14),
     fontWeight: '500',
   },
   refreshButton: {
@@ -486,7 +486,7 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   refreshButtonText: {
-    fontSize: moderateScale(10),
+    fontSize: moderateScale(9),
     fontWeight: '600',
     letterSpacing: 0.2,
   },

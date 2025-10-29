@@ -56,8 +56,8 @@ class DownloadTrackingService {
       if (filters?.page) params.append('page', filters.page.toString());
       if (filters?.limit) params.append('limit', filters.limit.toString());
 
-      console.log('📡 [GET DOWNLOADS API] Calling: GET /api/mobile/users/' + userId + '/downloads/all?' + params.toString());
-      const response = await api.get(`/api/mobile/users/${userId}/downloads/all?${params.toString()}`);
+      console.log('📡 [GET DOWNLOADS API] Calling: GET /api/mobile/users/' + userId + '/downloads?' + params.toString());
+      const response = await api.get(`/api/mobile/users/${userId}/downloads?${params.toString()}`);
       
       console.log('✅ [GET DOWNLOADS API] Response received');
       console.log('📊 [GET DOWNLOADS API] Full Response:', JSON.stringify(response.data, null, 2));

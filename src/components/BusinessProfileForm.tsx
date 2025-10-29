@@ -327,21 +327,28 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
         >
           {/* Header */}
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
-              <Text style={styles.closeButtonText}>CLOSE</Text>
+            <TouchableOpacity 
+              onPress={onClose} 
+              style={[styles.closeButton, { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.1)' }]}
+            >
+              <Text style={[styles.closeButtonText, { color: isDarkMode ? '#ffffff' : '#1a1a1a' }]}>CLOSE</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>
+            <Text style={[styles.headerTitle, { color: isDarkMode ? '#ffffff' : '#1a1a1a' }]}>
               {profile ? 'Edit Business Profile' : 'Business Registration'}
             </Text>
             <TouchableOpacity 
               onPress={handleSubmit} 
-              style={[styles.saveButton, loading && styles.saveButtonDisabled]}
+              style={[
+                styles.saveButton, 
+                { backgroundColor: isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(102,126,234,0.15)' },
+                loading && styles.saveButtonDisabled
+              ]}
               disabled={loading}
             >
               {loading ? (
-                <ActivityIndicator size="small" color="#ffffff" />
+                <ActivityIndicator size="small" color={isDarkMode ? '#ffffff' : '#667eea'} />
               ) : (
-                <Text style={styles.saveButtonText}>{profile ? 'SAVE' : 'REGISTER'}</Text>
+                <Text style={[styles.saveButtonText, { color: isDarkMode ? '#ffffff' : '#667eea' }]}>{profile ? 'SAVE' : 'REGISTER'}</Text>
               )}
             </TouchableOpacity>
           </View>
@@ -354,7 +361,7 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
           >
             {/* Company Information */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Company Information</Text>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#ffffff' : '#1a1a1a' }]}>Company Information</Text>
               
                              <FloatingInput
                  value={formData.name}
@@ -368,7 +375,7 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
 
               {/* Company Logo Upload */}
               <View style={styles.inputContainer}>
-                <Text style={styles.sectionTitle}>
+                <Text style={[styles.sectionTitle, { color: isDarkMode ? '#ffffff' : '#1a1a1a' }]}>
                   Company Logo
                 </Text>
                 <View style={[
@@ -425,7 +432,7 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
               </View>
 
               <View style={styles.inputContainer}>
-                <Text style={styles.sectionTitle}>
+                <Text style={[styles.sectionTitle, { color: isDarkMode ? '#ffffff' : '#1a1a1a' }]}>
                   Business Category *
                 </Text>
                 <View style={[
@@ -446,15 +453,26 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
                       key={category}
                       style={[
                         styles.categoryOption,
-                        { backgroundColor: 'rgba(255,255,255,0.2)' },
-                        formData.category === category && [styles.categoryOptionSelected, { backgroundColor: theme.colors.primary }]
+                        { 
+                          backgroundColor: formData.category === category 
+                            ? theme.colors.primary 
+                            : (isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(102,126,234,0.1)'),
+                          borderWidth: 1,
+                          borderColor: formData.category === category 
+                            ? theme.colors.primary 
+                            : (isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(102,126,234,0.2)')
+                        }
                       ]}
                       onPress={() => handleInputChange('category', category)}
                     >
                       <Text style={[
                         styles.categoryOptionText,
-                        { color: formData.category === category ? '#ffffff' : '#ffffff' },
-                        formData.category === category && [styles.categoryOptionTextSelected, { color: '#ffffff' }]
+                        { 
+                          color: formData.category === category 
+                            ? '#ffffff' 
+                            : (isDarkMode ? '#ffffff' : theme.colors.primary)
+                        },
+                        formData.category === category && styles.categoryOptionTextSelected
                       ]}>
                         {category}
                       </Text>
@@ -466,11 +484,11 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
 
             {/* Contact Information */}
             <View style={styles.section}>
-              <Text style={styles.sectionTitle}>Contact Information</Text>
+              <Text style={[styles.sectionTitle, { color: isDarkMode ? '#ffffff' : '#1a1a1a' }]}>Contact Information</Text>
               
               {/* Phone Number with Validation */}
               <View style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: '#ffffff' }]}>Phone Number *</Text>
+                <Text style={[styles.inputLabel, { color: isDarkMode ? '#ffffff' : '#1a1a1a' }]}>Phone Number *</Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -510,7 +528,6 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
 
               {/* Alternate Phone Number with Validation */}
               <View style={styles.inputContainer}>
-                <Text style={[styles.inputLabel, { color: '#ffffff' }]}>Alternate Phone (Optional)</Text>
                 <TextInput
                   style={[
                     styles.input,
@@ -759,59 +776,53 @@ const styles = StyleSheet.create({
     paddingBottom: screenHeight * 0.02,
   },
   closeButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.01,
-    borderRadius: 20,
+    paddingHorizontal: Math.max(12, screenWidth * 0.035),
+    paddingVertical: Math.max(6, screenHeight * 0.008),
+    borderRadius: 16,
   },
   closeButtonText: {
-    fontSize: Math.min(screenWidth * 0.03, 12),
-    color: '#ffffff',
+    fontSize: Math.min(screenWidth * 0.028, 11),
     fontWeight: '600',
   },
   headerTitle: {
-    fontSize: Math.min(screenWidth * 0.05, 20),
+    fontSize: Math.min(screenWidth * 0.042, 16),
     fontWeight: 'bold',
-    color: '#ffffff',
     flex: 1,
     textAlign: 'center',
   },
   saveButton: {
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.01,
-    borderRadius: 20,
+    paddingHorizontal: Math.max(12, screenWidth * 0.035),
+    paddingVertical: Math.max(6, screenHeight * 0.008),
+    borderRadius: 16,
   },
   saveButtonDisabled: {
     opacity: 0.6,
   },
   saveButtonText: {
-    color: '#ffffff',
     fontWeight: '600',
-    fontSize: Math.min(screenWidth * 0.03, 12),
+    fontSize: Math.min(screenWidth * 0.028, 11),
   },
   content: {
     flex: 1,
-    paddingHorizontal: screenWidth * 0.05,
+    paddingHorizontal: Math.max(12, screenWidth * 0.04),
   },
   section: {
-    marginBottom: screenHeight * 0.03,
+    marginBottom: Math.max(12, screenHeight * 0.015),
   },
   sectionTitle: {
-    fontSize: Math.min(screenWidth * 0.045, 18),
+    fontSize: Math.min(screenWidth * 0.038, 14),
     fontWeight: 'bold',
-    color: '#ffffff',
-    marginBottom: screenHeight * 0.02,
+    marginBottom: Math.max(10, screenHeight * 0.015),
   },
   inputContainer: {
-    marginBottom: screenHeight * 0.02,
+    marginBottom: Math.max(12, screenHeight * 0.015),
   },
 
   input: {
-    borderRadius: 12,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.015,
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    borderRadius: 10,
+    paddingHorizontal: Math.max(12, screenWidth * 0.035),
+    paddingVertical: Math.max(10, screenHeight * 0.012),
+    fontSize: Math.min(screenWidth * 0.035, 14),
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: {
@@ -826,14 +837,14 @@ const styles = StyleSheet.create({
     borderWidth: 2,
   },
   multilineInput: {
-    minHeight: screenHeight * 0.08,
+    minHeight: Math.max(60, screenHeight * 0.07),
     textAlignVertical: 'top',
   },
   pickerContainer: {
-    borderRadius: 12,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.015,
-    paddingTop: screenHeight * 0.025,
+    borderRadius: 10,
+    paddingHorizontal: Math.max(12, screenWidth * 0.035),
+    paddingVertical: Math.max(10, screenHeight * 0.012),
+    paddingTop: Math.max(14, screenHeight * 0.018),
     borderWidth: 1,
     shadowColor: '#000',
     shadowOffset: {
@@ -845,25 +856,26 @@ const styles = StyleSheet.create({
     elevation: 4,
   },
   pickerText: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    fontSize: Math.min(screenWidth * 0.035, 14),
   },
   categoryOptions: {
-    marginTop: screenHeight * 0.01,
+    marginTop: Math.max(8, screenHeight * 0.008),
+    marginBottom: Math.max(4, screenHeight * 0.002),
     flexDirection: 'row',
     flexWrap: 'wrap',
   },
   categoryOption: {
-    paddingHorizontal: screenWidth * 0.03,
-    paddingVertical: screenHeight * 0.006,
-    borderRadius: 15,
-    marginRight: screenWidth * 0.02,
-    marginBottom: screenHeight * 0.008,
+    paddingHorizontal: Math.max(10, screenWidth * 0.025),
+    paddingVertical: Math.max(4, screenHeight * 0.005),
+    borderRadius: 12,
+    marginRight: Math.max(6, screenWidth * 0.015),
+    marginBottom: Math.max(4, screenHeight * 0.002),
   },
   categoryOptionSelected: {
     // backgroundColor will be set dynamically
   },
   categoryOptionText: {
-    fontSize: Math.min(screenWidth * 0.035, 14),
+    fontSize: Math.min(screenWidth * 0.03, 12),
   },
   categoryOptionTextSelected: {
     fontWeight: '600',
@@ -1028,16 +1040,16 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   logoPlaceholderTitle: {
-    fontSize: Math.min(screenWidth * 0.04, 16),
+    fontSize: Math.min(screenWidth * 0.035, 14),
     fontWeight: '600',
-    marginBottom: screenHeight * 0.005,
+    marginBottom: Math.max(3, screenHeight * 0.004),
     textAlign: 'center',
   },
   logoPlaceholderSubtext: {
-    fontSize: Math.min(screenWidth * 0.032, 13),
+    fontSize: Math.min(screenWidth * 0.028, 11),
     marginBottom: 0,
     textAlign: 'center',
-    lineHeight: 16,
+    lineHeight: 14,
   },
   uploadOptions: {
     flexDirection: 'row',
@@ -1325,20 +1337,20 @@ const styles = StyleSheet.create({
     color: '#ffffff',
   },
   inputLabel: {
-    fontSize: Math.min(screenWidth * 0.038, 15),
+    fontSize: Math.min(screenWidth * 0.033, 13),
     fontWeight: '600',
-    marginBottom: screenHeight * 0.008,
+    marginBottom: Math.max(6, screenHeight * 0.006),
   },
   validationError: {
-    fontSize: Math.min(screenWidth * 0.032, 13),
-    marginTop: screenHeight * 0.005,
-    marginLeft: screenWidth * 0.01,
+    fontSize: Math.min(screenWidth * 0.028, 11),
+    marginTop: Math.max(3, screenHeight * 0.004),
+    marginLeft: Math.max(6, screenWidth * 0.008),
     fontWeight: '500',
   },
   validationSuccess: {
-    fontSize: Math.min(screenWidth * 0.032, 13),
-    marginTop: screenHeight * 0.005,
-    marginLeft: screenWidth * 0.01,
+    fontSize: Math.min(screenWidth * 0.028, 11),
+    marginTop: Math.max(3, screenHeight * 0.004),
+    marginLeft: Math.max(6, screenWidth * 0.008),
     fontWeight: '500',
   },
 });

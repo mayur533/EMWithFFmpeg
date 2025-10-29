@@ -374,17 +374,22 @@ const ProfileScreen: React.FC = () => {
           
           // Load download stats from backend API
           try {
-            const downloadStats = await downloadTrackingService.getDownloadStats(userId);
+            const downloadsResponse = await downloadTrackingService.getUserDownloads(userId);
             const posterStatsData = {
-              total: downloadStats.total || 0,
-              recentCount: downloadStats.recent || 0,
+              total: downloadsResponse.downloads?.length || 0,
+              recentCount: downloadsResponse.downloads?.filter((d: any) => {
+                const downloadDate = new Date(d.createdAt);
+                const weekAgo = new Date();
+                weekAgo.setDate(weekAgo.getDate() - 7);
+                return downloadDate >= weekAgo;
+              }).length || 0,
             };
             setPosterStats(posterStatsData);
             
             // Cache download stats
             await setCachedData(CACHE_KEYS.DOWNLOAD_STATS, posterStatsData);
             
-            console.log('✅ [PROFILE] Download stats loaded:', downloadStats);
+            console.log('✅ [PROFILE] Download stats loaded:', posterStatsData);
             console.log('💾 Download stats cached');
           } catch (error) {
             console.log('⚠️ [PROFILE] Failed to load download stats:', error);
@@ -476,10 +481,15 @@ const ProfileScreen: React.FC = () => {
       
       // Fetch fresh download stats
       try {
-        const downloadStats = await downloadTrackingService.getDownloadStats(userId);
+        const downloadsResponse = await downloadTrackingService.getUserDownloads(userId);
         const posterStatsData = {
-          total: downloadStats.total || 0,
-          recentCount: downloadStats.recent || 0,
+          total: downloadsResponse.downloads?.length || 0,
+          recentCount: downloadsResponse.downloads?.filter((d: any) => {
+            const downloadDate = new Date(d.createdAt);
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            return downloadDate >= weekAgo;
+          }).length || 0,
         };
         setPosterStats(posterStatsData);
         await setCachedData(CACHE_KEYS.DOWNLOAD_STATS, posterStatsData);
@@ -616,9 +626,7 @@ const ProfileScreen: React.FC = () => {
   };
 
   const handleMyPosters = () => {
-    setComingSoonTitle('Downloaded Posters');
-    setComingSoonSubtitle('This feature is coming soon! You\'ll be able to view and manage all your downloaded posters here.');
-    setShowComingSoonModal(true);
+    navigation.navigate('MyPosters' as never);
   };
 
 
