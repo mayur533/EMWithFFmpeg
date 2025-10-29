@@ -207,27 +207,21 @@ const PosterPlayerScreen: React.FC = () => {
 
          {/* Compact Poster Section */}
          <View style={[styles.posterContainer, { height: posterHeight }]}>
-           <OptimizedImage
-             uri={currentPoster.thumbnail}
-             style={styles.posterImage}
-             resizeMode="contain"
-           />
-           <View style={styles.posterOverlay}>
-             <View style={styles.languageBadge}>
-               <Text style={styles.languageBadgeText}>
-                 {selectedLanguage.toUpperCase()}
-               </Text>
-             </View>
-             
-             {/* Edit Button Overlay */}
-             <TouchableOpacity
-               style={styles.editButton}
-               onPress={handleNextPress}
-               activeOpacity={0.8}
-             >
-               <Icon name="edit" size={getIconSize(14)} color="#ffffff" />
-             </TouchableOpacity>
-           </View>
+          <OptimizedImage
+            uri={currentPoster.thumbnail}
+            style={styles.posterImage}
+            resizeMode="contain"
+          />
+          <View style={styles.posterOverlay}>
+            {/* Next Button Overlay - Top Right */}
+            <TouchableOpacity
+              style={styles.nextButton}
+              onPress={handleNextPress}
+              activeOpacity={0.8}
+            >
+              <Icon name="arrow-forward" size={getIconSize(12)} color="#ffffff" />
+            </TouchableOpacity>
+          </View>
          </View>
 
          {/* Compact Language Selection Section */}
@@ -322,24 +316,24 @@ const styles = StyleSheet.create({
     shadowRadius: moderateScale(3), // Reduced from 4
     elevation: 2, // Reduced from 3
   },
-  editButton: {
+  nextButton: {
     position: 'absolute',
-    bottom: moderateScale(8),
+    top: moderateScale(8),
     right: moderateScale(8),
-    width: moderateScale(32),
-    height: moderateScale(32),
-    borderRadius: moderateScale(16),
+    width: moderateScale(28),
+    height: moderateScale(28),
+    borderRadius: moderateScale(14),
     backgroundColor: '#667eea',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: moderateScale(2),
+      height: moderateScale(1),
     },
-    shadowOpacity: 0.25,
-    shadowRadius: moderateScale(4),
-    elevation: 6,
+    shadowOpacity: 0.2,
+    shadowRadius: moderateScale(3),
+    elevation: 4,
   },
   headerContent: {
     flex: 1,
@@ -418,23 +412,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: moderateScale(1),
     borderColor: 'rgba(255,255,255,0.2)',
-  },
-  languageBadge: {
-    position: 'absolute',
-    top: moderateScale(8), // Reduced
-    right: moderateScale(8),
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: moderateScale(6), // Reduced
-    paddingVertical: moderateScale(3), // Reduced
-    borderRadius: moderateScale(8), // Reduced
-    borderWidth: moderateScale(0.5), // Reduced
-    borderColor: 'rgba(255,255,255,0.15)',
-  },
-  languageBadgeText: {
-    color: '#ffffff',
-    fontSize: moderateScale(8), // Compact
-    fontWeight: '600',
-    letterSpacing: 0.3,
   },
   relatedSection: {
     flex: 1,

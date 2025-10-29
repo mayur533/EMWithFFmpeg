@@ -107,7 +107,7 @@ const getPosterCardDimensions = (currentWidth: number, currentHeight?: number) =
 };
 
 const MyBusinessScreen: React.FC = () => {
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
   
@@ -233,11 +233,11 @@ const MyBusinessScreen: React.FC = () => {
 
   return (
     <SafeAreaView 
-      style={[styles.container, { backgroundColor: theme.colors.background }]}
+      style={[styles.container, { backgroundColor: theme.colors.gradient[0] || theme.colors.background }]}
       edges={['top', 'left', 'right']}
     >
       <StatusBar 
-        barStyle="light-content"
+        barStyle={isDarkMode ? "light-content" : "dark-content"}
         backgroundColor="transparent" 
         translucent={true}
       />
@@ -263,11 +263,12 @@ const MyBusinessScreen: React.FC = () => {
               <Icon 
                 name="arrow-back" 
                 size={getIconSize(18)} 
-                color="#ffffff" 
+                color={theme.colors.text} 
               />
             </TouchableOpacity>
             <Text style={[styles.headerTitle, {
               fontSize: dynamicModerateScale(12),
+              color: theme.colors.text,
             }]}>
               My Business Posters
             </Text>
@@ -295,13 +296,14 @@ const MyBusinessScreen: React.FC = () => {
           }]}>
             <Text style={[styles.sectionTitle, {
               fontSize: dynamicModerateScale(12),
+              color: theme.colors.text,
             }]}>
               {userBusinessCategory} Posters
             </Text>
             {postersLoading && (
               <ActivityIndicator 
                 size="small" 
-                color="#ffffff" 
+                color={theme.colors.primary} 
                 style={[styles.loadingIndicator, { marginLeft: dynamicModerateScale(4) }]}
               />
             )}
@@ -332,13 +334,14 @@ const MyBusinessScreen: React.FC = () => {
               <Icon 
                 name="image" 
                 size={getIconSize(40)} 
-                color="rgba(255,255,255,0.7)" 
+                color={isDarkMode ? 'rgba(255,255,255,0.7)' : 'rgba(51,51,51,0.7)'} 
               />
               <Text style={[styles.emptyPostersText, {
                 fontSize: dynamicModerateScale(10),
                 marginTop: dynamicModerateScale(8),
                 marginBottom: dynamicModerateScale(12),
                 lineHeight: dynamicModerateScale(16),
+                color: theme.colors.textSecondary,
               }]}>
                 No posters available for {userBusinessCategory} category
               </Text>
@@ -352,6 +355,7 @@ const MyBusinessScreen: React.FC = () => {
               >
                 <Text style={[styles.refreshButtonText, {
                   fontSize: dynamicModerateScale(10),
+                  color: theme.colors.text,
                 }]}>Refresh</Text>
               </TouchableOpacity>
             </View>
@@ -392,7 +396,7 @@ const styles = StyleSheet.create({
     width: moderateScale(30),
     height: moderateScale(30),
     borderRadius: moderateScale(15),
-    backgroundColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(0,0,0,0.08)',
     justifyContent: 'center',
     alignItems: 'center',
     shadowColor: '#000',
@@ -406,7 +410,6 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     flex: 1,
     textAlign: 'center',
-    color: '#ffffff',
     letterSpacing: 0.3,
   },
   headerSpacer: {
@@ -429,7 +432,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: moderateScale(12),
     fontWeight: 'bold',
-    color: '#ffffff',
     letterSpacing: 0.3,
   },
   loadingIndicator: {
@@ -470,14 +472,13 @@ const styles = StyleSheet.create({
     marginTop: moderateScale(8),
     marginBottom: moderateScale(12),
     lineHeight: moderateScale(16),
-    color: 'rgba(255, 255, 255, 0.7)',
     fontWeight: '500',
   },
   refreshButton: {
     paddingHorizontal: moderateScale(12),
     paddingVertical: moderateScale(6),
     borderRadius: moderateScale(8),
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
@@ -485,7 +486,6 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   refreshButtonText: {
-    color: '#FFFFFF',
     fontSize: moderateScale(10),
     fontWeight: '600',
     letterSpacing: 0.2,

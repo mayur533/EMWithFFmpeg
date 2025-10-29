@@ -346,12 +346,12 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Math.min(screenWidth * 0.08, 32),
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#333333',
     marginBottom: screenHeight * 0.01,
   },
   subtitle: {
     fontSize: Math.min(screenWidth * 0.04, 16),
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(102, 102, 102, 0.9)',
     textAlign: 'center',
   },
   formContainer: {

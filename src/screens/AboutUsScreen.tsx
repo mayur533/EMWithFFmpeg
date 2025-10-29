@@ -143,11 +143,6 @@ const AboutUsScreen: React.FC = () => {
       backgroundColor: `${theme.colors.primary}15`,
       justifyContent: 'center',
       alignItems: 'center',
-      shadowColor: theme.colors.primary,
-      shadowOffset: { width: 0, height: moderateScale(2) },
-      shadowOpacity: 0.15,
-      shadowRadius: moderateScale(4),
-      elevation: 3,
       overflow: 'hidden',
     },
     logo: {
@@ -388,13 +383,13 @@ const AboutUsScreen: React.FC = () => {
           <View style={[dynamicStyles.logoContainer, {
             width: isTabletDevice ? dynamicModerateScale(80) : dynamicModerateScale(60),
             height: isTabletDevice ? dynamicModerateScale(80) : dynamicModerateScale(60),
-            borderRadius: (isTabletDevice ? dynamicModerateScale(80) : dynamicModerateScale(60)) / 2,
+            borderRadius: 1000,
             marginBottom: dynamicModerateScale(8),
           }]}>
             <Image
               source={require('../assets/MainLogo/MB.png')}
               style={[dynamicStyles.logo, {
-                borderRadius: (isTabletDevice ? dynamicModerateScale(80) : dynamicModerateScale(60)) / 2,
+                borderRadius: 1000,
               }]}
               resizeMode="cover"
             />

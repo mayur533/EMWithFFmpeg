@@ -834,7 +834,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [visibleFields, setVisibleFields] = useState<{[key: string]: boolean}>({
     logo: true,
     companyName: true,
-    footerCompanyName: true,
     footerBackground: true,
     phone: true,
     email: true,
@@ -1104,8 +1103,10 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       newLayers.push(companyNameLayer);
     }
 
-    // Create professional footer with contact information
-    const footerHeight = 140;
+    // Create professional footer with contact information (3 lines)
+    const contactLineHeight = 16;
+    const footerPadding = 10; // Top and bottom padding
+    const footerHeight = (contactLineHeight * 3) + (footerPadding * 2); // 3 lines + padding = 68px
     const footerY = canvasHeight - footerHeight;
     
     // Responsive font sizes for footer elements
@@ -1114,18 +1115,15 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       return Math.max(baseSize * scaleFactor, baseSize * 0.8); // Minimum 80% of base size
     };
     
-    const footerTitleSize = getResponsiveFooterFontSize(16);
     const footerTextSize = getResponsiveFooterFontSize(10);
     
     // Footer background overlay for better readability
-    // Footer background covers full width, text has padding
-    const footerInset = 8; // Padding from edges for footer text content
     const footerBackgroundLayer: Layer = {
       id: generateId(),
       type: 'text',
       content: '',
-      position: { x: 0, y: footerY }, // Start from left edge
-      size: { width: canvasWidth, height: footerHeight }, // Full width
+      position: { x: 0, y: footerY },
+      size: { width: canvasWidth, height: footerHeight },
       rotation: 0,
       zIndex: 5,
       fieldType: 'footerBackground',
@@ -1139,46 +1137,27 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     };
     newLayers.push(footerBackgroundLayer);
 
-    // Company name in footer with responsive font size
-    if (profile.name) {
-      const footerCompanyNameLayer: Layer = {
-        id: generateId(),
-        type: 'text',
-        content: profile.name,
-        position: { x: 20, y: footerY + 15 }, // Standard padding from edge
-        size: { width: canvasWidth - 40, height: 25 }, // Full width minus padding
-        rotation: 0,
-        zIndex: 10,
-        fieldType: 'footerCompanyName',
-        style: {
-          fontSize: footerTitleSize, // Responsive font size
-          color: '#ffffff',
-          fontFamily: 'System',
-          fontWeight: '600',
-        },
-      };
-      newLayers.push(footerCompanyNameLayer);
-    }
+    // Contact information in two columns (positions based on user's manual placement)
+    // For 720x487 canvas: scaled positions
+    const scaleX = canvasWidth / 720;
+    const scaleY = canvasHeight / 487.2;
+    
+    const leftColumnX = Math.round(20 * scaleX);
+    const rightColumnX = Math.round(370 * scaleX);
 
-    // Contact information in two columns
-    const leftColumnX = 20; // Standard padding from edge
-    const rightColumnX = canvasWidth / 2 + 10;
-    const contactStartY = footerY + 45;
-    const contactLineHeight = 16;
-
-    // Left column - Phone and Email with responsive font sizes
+    // Left column - Phone and Email
     if (profile.phone) {
       const phoneLayer: Layer = {
         id: generateId(),
         type: 'text',
         content: `📞 ${profile.phone}`,
-        position: { x: leftColumnX, y: contactStartY }, // Keep same position
-        size: { width: (canvasWidth - 40) / 2, height: contactLineHeight * 2 }, // Increased height for text wrapping
+        position: { x: Math.round(219 * scaleX), y: Math.round(425 * scaleY) },
+        size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
         rotation: 0,
         zIndex: 10,
         fieldType: 'phone',
         style: {
-          fontSize: footerTextSize, // Responsive font size
+          fontSize: footerTextSize,
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '400',
@@ -1192,13 +1171,13 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         id: generateId(),
         type: 'text',
         content: `✉️ ${profile.email}`,
-        position: { x: leftColumnX, y: contactStartY + contactLineHeight }, // Keep same position
-        size: { width: (canvasWidth - 40) / 2, height: contactLineHeight * 2 }, // Increased height for text wrapping
+        position: { x: leftColumnX, y: Math.round(443 * scaleY) },
+        size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
         rotation: 0,
         zIndex: 10,
         fieldType: 'email',
         style: {
-          fontSize: footerTextSize, // Responsive font size
+          fontSize: footerTextSize,
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '400',
@@ -1207,19 +1186,19 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       newLayers.push(emailLayer);
     }
 
-    // Right column - Website and Category with responsive font sizes
+    // Right column - Website and Category
     if (profile.website) {
       const websiteLayer: Layer = {
         id: generateId(),
         type: 'text',
         content: `🌐 ${profile.website}`,
-        position: { x: rightColumnX, y: contactStartY }, // Keep same position
-        size: { width: (canvasWidth - 40) / 2, height: contactLineHeight * 2 }, // Increased height for text wrapping
+        position: { x: Math.round(12 * scaleX), y: Math.round(423 * scaleY) },
+        size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
         rotation: 0,
         zIndex: 10,
         fieldType: 'website',
         style: {
-          fontSize: footerTextSize, // Responsive font size
+          fontSize: footerTextSize,
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '400',
@@ -1233,13 +1212,13 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         id: generateId(),
         type: 'text',
         content: `🏢 ${profile.category}`,
-        position: { x: rightColumnX, y: contactStartY + contactLineHeight }, // Keep same position
-        size: { width: (canvasWidth - 40) / 2, height: contactLineHeight * 2 }, // Increased height for text wrapping
+        position: { x: Math.round(225 * scaleX), y: Math.round(446 * scaleY) },
+        size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
         rotation: 0,
         zIndex: 10,
         fieldType: 'category',
         style: {
-          fontSize: footerTextSize, // Responsive font size
+          fontSize: footerTextSize,
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '400',
@@ -1248,19 +1227,19 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       newLayers.push(categoryLayer);
     }
 
-    // Address on a separate line (full width) with responsive font size
+    // Address on line 3
     if (profile.address) {
       const addressLayer: Layer = {
         id: generateId(),
         type: 'text',
         content: `📍 ${profile.address}`,
-        position: { x: 20, y: contactStartY + contactLineHeight * 2 + 8 }, // Standard padding from edge
-        size: { width: canvasWidth - 40, height: contactLineHeight * 2 }, // Full width minus padding
+        position: { x: Math.round(434 * scaleX), y: Math.round(426 * scaleY) },
+        size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
         rotation: 0,
         zIndex: 10,
         fieldType: 'address',
         style: {
-          fontSize: footerTextSize, // Responsive font size
+          fontSize: footerTextSize,
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '400',
@@ -1269,20 +1248,20 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       newLayers.push(addressLayer);
     }
 
-    // Services as a tag line with responsive font size
+    // Services - positioned below the 3-line footer if needed
     if (profile.services && profile.services.length > 0) {
       const servicesText = profile.services.slice(0, 3).join(' • ');
       const servicesLayer: Layer = {
         id: generateId(),
         type: 'text',
         content: `🛠️ ${servicesText}${profile.services.length > 3 ? '...' : ''}`,
-        position: { x: 20, y: contactStartY + contactLineHeight * 3 + 15 }, // Standard padding from edge
-        size: { width: canvasWidth - 40, height: contactLineHeight * 2 }, // Full width minus padding
+        position: { x: leftColumnX, y: Math.round(464 * scaleY) },
+        size: { width: canvasWidth - 40, height: contactLineHeight },
         rotation: 0,
         zIndex: 10,
         fieldType: 'services',
         style: {
-          fontSize: Math.max(8, footerTextSize - 1), // Responsive font size (slightly smaller)
+          fontSize: Math.max(8, footerTextSize - 1),
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '400',
@@ -2293,7 +2272,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             {/* ViewShot wrapper for capturing the visible canvas */}
             <ViewShot
               ref={visibleCanvasRef}
-              style={[styles.viewShotContainer, { width: canvasWidth, height: canvasHeight }]}
+              style={[styles.viewShotContainer, { width: canvasWidth, height: canvasHeight, backgroundColor: 'transparent' }]}
               options={{
                 format: 'png',
                 quality: 1.0,
@@ -2304,7 +2283,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               <TouchableWithoutFeedback onPress={() => setSelectedLayer(null)}>
               <View style={[
                 styles.canvas,
-                { width: canvasWidth, height: canvasHeight },
                 !selectedFrame && selectedTemplate !== 'business' && styles.canvasWithFrame,
                 !selectedFrame && selectedTemplate === 'business' && styles.businessFrame,
                 !selectedFrame && selectedTemplate === 'event' && styles.eventFrame,
@@ -2334,7 +2312,13 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 !selectedFrame && selectedTemplate === 'sport' && styles.sportFrame,
                 !selectedFrame && selectedTemplate === 'warm' && styles.warmFrame,
                 !selectedFrame && selectedTemplate === 'cool' && styles.coolFrame,
-              ]}>
+                { 
+                  width: canvasWidth, 
+                  height: canvasHeight,
+                  backgroundColor: selectedFrame ? 'transparent' : '#ffffff' // MUST BE LAST: Make transparent when frame is applied!
+                },
+              ]}
+>
           {/* Background Image (always show the poster image) */}
           <View style={styles.backgroundImageContainer}>
             <Image
@@ -2343,9 +2327,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             />
           </View>
           
-          {/* Frame Overlay (when frame is selected) */}
+          {/* Frame Overlay (when frame is selected) - rendered FIRST so layers appear on top */}
           {selectedFrame && (
-            <View style={styles.frameOverlayContainer} pointerEvents="none">
+            <View 
+              style={styles.frameOverlayContainer} 
+              pointerEvents="none"
+            >
               <Image
                 source={getFrameBackgroundSource(selectedFrame)}
                 style={styles.frameOverlayImage}
@@ -2363,8 +2350,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             </View>
           )}
           
-          {/* Layers */}
-          {layers.map(layer => (
+          {/* Layers - rendered AFTER frame so they appear on top */}
+          {layers.map((layer) => (
             <PinchGestureHandler
               key={layer.id}
               onGestureEvent={onPinchGestureEvent(layer.id)}
@@ -2478,23 +2465,63 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               </LinearGradient>
             </TouchableOpacity>
             
-              <TouchableOpacity
-                style={styles.toolbarButton}
-              onPress={() => setShowFrameSelector(true)}
-            >
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.toolbarButtonGradient}
-              >
-                <Icon name="crop-square" size={getResponsiveIconSize()} color="#ffffff" />
-                <Text style={styles.toolbarButtonText}>Frame</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            
             {selectedFrame && (
               <TouchableOpacity
                 style={styles.toolbarButton}
-                onPress={() => setShowRemoveFrameModal(true)}
+                onPress={() => {
+                  // Remove frame directly without confirmation modal
+                  console.log('🗑️ [REMOVE FRAME] Starting frame removal...');
+                  
+                  setSelectedFrame(null);
+                  setFrameContent({});
+                  
+                  // Restore original layers and their positions
+                  if (originalLayers.length > 0) {
+                    console.log('🔄 [REMOVE FRAME] Restoring', originalLayers.length, 'layers to original positions');
+                    
+                    // Update animation values for all original layers
+                    originalLayers.forEach(layer => {
+                      // Update position animations
+                      if (layerAnimations[layer.id]) {
+                        layerAnimations[layer.id].x.setValue(layer.position.x);
+                        layerAnimations[layer.id].y.setValue(layer.position.y);
+                      } else {
+                        layerAnimations[layer.id] = {
+                          x: new Animated.Value(layer.position.x),
+                          y: new Animated.Value(layer.position.y)
+                        };
+                      }
+                      
+                      // Reset translation values
+                      if (translationValues[layer.id]) {
+                        translationValues[layer.id].x.setValue(0);
+                        translationValues[layer.id].y.setValue(0);
+                      } else {
+                        translationValues[layer.id] = {
+                          x: new Animated.Value(0),
+                          y: new Animated.Value(0)
+                        };
+                      }
+                      
+                      // Reset scale values
+                      if (scaleValues[layer.id]) {
+                        scaleValues[layer.id].setValue(1);
+                      } else {
+                        scaleValues[layer.id] = new Animated.Value(1);
+                      }
+                    });
+                    
+                    // Restore layers with their original positions
+                    setLayers(originalLayers);
+                    
+                    // Restore original template
+                    setSelectedTemplate(originalTemplate);
+                    
+                    console.log('✅ [REMOVE FRAME] Frame removed and original positions restored');
+                  } else {
+                    console.log('⚠️ [REMOVE FRAME] No original layers found');
+                  }
+                }}
               >
                 <LinearGradient
                   colors={['#dc3545', '#c82333']}
@@ -2553,16 +2580,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               <Icon name="title" size={getResponsiveIconSize()} color={visibleFields.companyName ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.companyName && styles.fieldToggleButtonTextActive]}>
                 Company Name
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.fieldToggleButton, visibleFields.footerCompanyName && styles.fieldToggleButtonActive]}
-              onPress={() => toggleFieldVisibility('footerCompanyName')}
-            >
-              <Icon name="subtitles" size={getResponsiveIconSize()} color={visibleFields.footerCompanyName ? "#ffffff" : "#667eea"} />
-              <Text style={[styles.fieldToggleButtonText, visibleFields.footerCompanyName && styles.fieldToggleButtonTextActive]}>
-                Footer Name
               </Text>
             </TouchableOpacity>
             
@@ -3044,6 +3061,36 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             </TouchableOpacity>
           </ScrollView>
         </View>
+        
+        {/* Frames Section */}
+        <View style={styles.templatesSection}>
+          <View style={styles.templatesHeader}>
+            <Text style={styles.templatesTitle}>Frames</Text>
+          </View>
+          <ScrollView 
+            style={styles.templatesContent} 
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.templatesScrollContent}
+          >
+            {frames.map((frame) => (
+              <TouchableOpacity
+                key={frame.id}
+                style={[styles.templateButton, selectedFrame?.id === frame.id && styles.templateButtonActive]}
+                onPress={() => applyFrame(frame)}
+              >
+                <View style={styles.templatePreview}>
+                  <Image
+                    source={frame.background}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        </View>
         </View>
 
       {/* Business Profile Selection Modal */}
@@ -3352,7 +3399,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         </View>
       </Modal>
 
-      {/* Remove Frame Confirmation Modal */}
+      {/* Remove Frame Confirmation Modal - DISABLED: Direct removal without confirmation */}
+      {/* 
       <Modal
         visible={showRemoveFrameModal}
         transparent
@@ -3360,170 +3408,10 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         onRequestClose={() => setShowRemoveFrameModal(false)}
       >
         <View style={[styles.modalOverlay, { paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md) }]}>
-          <View style={[
-            themeStyles.modalContent,
-            {
-              width: isLandscape 
-                ? (isTablet ? screenWidth * 0.5 : screenWidth * 0.6) 
-                : (isUltraSmallScreen ? screenWidth * 0.95 : isSmallScreen ? screenWidth * 0.92 : isMediumScreen ? screenWidth * 0.9 : isLargeScreen ? screenWidth * 0.88 : screenWidth * 0.85),
-              maxHeight: isLandscape 
-                ? (isTablet ? screenHeight * 0.6 : screenHeight * 0.5) 
-                : (isUltraSmallScreen ? screenHeight * 0.6 : isSmallScreen ? screenHeight * 0.55 : isMediumScreen ? screenHeight * 0.5 : isLargeScreen ? screenHeight * 0.45 : screenHeight * 0.4),
-            }
-          ]}>
-            <View style={{ alignItems: 'center', marginBottom: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md) }}>
-              <View style={{ 
-                width: isLandscape ? (isTablet ? 70 : 60) : (isUltraSmallScreen ? 50 : isSmallScreen ? 55 : 60), 
-                height: isLandscape ? (isTablet ? 70 : 60) : (isUltraSmallScreen ? 50 : isSmallScreen ? 55 : 60), 
-                borderRadius: isLandscape ? (isTablet ? 35 : 30) : (isUltraSmallScreen ? 25 : isSmallScreen ? 27.5 : 30), 
-                backgroundColor: '#fff5f5', 
-                justifyContent: 'center', 
-                alignItems: 'center',
-                marginBottom: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm)
-              }}>
-                <Icon name="delete" size={isLandscape ? (isTablet ? 36 : 32) : (isUltraSmallScreen ? 24 : isSmallScreen ? 28 : 32)} color="#dc3545" />
-              </View>
-              <Text style={[
-                themeStyles.modalTitle, 
-                { 
-                  fontSize: isLandscape ? (isTablet ? 24 : 20) : (isUltraSmallScreen ? 18 : isSmallScreen ? 20 : isMediumScreen ? 22 : isLargeScreen ? 24 : 26),
-                  marginBottom: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm),
-                  textAlign: 'center'
-                }
-              ]}>
-                Remove Frame?
-              </Text>
-              <Text style={[
-                themeStyles.modalSubtitle, 
-                { 
-                  fontSize: isLandscape ? (isTablet ? 15 : 13) : (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16),
-                  textAlign: 'center',
-                  lineHeight: isLandscape ? (isTablet ? 20 : 18) : (isUltraSmallScreen ? 16 : isSmallScreen ? 18 : isMediumScreen ? 20 : isLargeScreen ? 22 : 24),
-                  paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm)
-                }
-              ]}>
-                Are you sure you want to remove the current frame? Your poster will return to its original state.
-              </Text>
-            </View>
-            <View style={[
-              styles.modalButtons,
-              {
-                flexDirection: isLandscape && !isTablet ? 'row' : 'row',
-                gap: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm)
-              }
-            ]}>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton, 
-                  themeStyles.cancelButton,
-                  {
-                    flex: 1,
-                    paddingVertical: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : 16),
-                    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : 12),
-                    marginHorizontal: 0
-                  }
-                ]}
-                onPress={() => setShowRemoveFrameModal(false)}
-              >
-                <Text style={[
-                  themeStyles.cancelButtonText,
-                  {
-                    fontSize: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : 16)
-                  }
-                ]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[
-                  styles.modalButton,
-                  {
-                    flex: 1,
-                    backgroundColor: '#dc3545',
-                    paddingVertical: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : 16),
-                    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : 12),
-                    marginHorizontal: 0
-                  }
-                ]}
-                onPress={() => {
-                  console.log('🗑️ [REMOVE FRAME] Starting frame removal...');
-                  console.log('📊 [REMOVE FRAME] Original layers count:', originalLayers.length);
-                  
-                  setSelectedFrame(null);
-                  setFrameContent({});
-                  
-                  // Restore original layers and template to their original state
-                  if (originalLayers.length > 0) {
-                    console.log('🔄 [REMOVE FRAME] Restoring', originalLayers.length, 'layers to original positions');
-                    
-                    // Update animation values for all original layers
-                    originalLayers.forEach(layer => {
-                      console.log(`📍 [REMOVE FRAME] Layer ${layer.id}: Restoring to position (${layer.position.x}, ${layer.position.y})`);
-                      
-                      // Update position animations
-                      if (layerAnimations[layer.id]) {
-                        layerAnimations[layer.id].x.setValue(layer.position.x);
-                        layerAnimations[layer.id].y.setValue(layer.position.y);
-                      } else {
-                        layerAnimations[layer.id] = {
-                          x: new Animated.Value(layer.position.x),
-                          y: new Animated.Value(layer.position.y)
-                        };
-                      }
-                      
-                      // Reset translation values
-                      if (translationValues[layer.id]) {
-                        translationValues[layer.id].x.setValue(0);
-                        translationValues[layer.id].y.setValue(0);
-                      } else {
-                        translationValues[layer.id] = {
-                          x: new Animated.Value(0),
-                          y: new Animated.Value(0)
-                        };
-                      }
-                      
-                      // Reset scale values
-                      if (scaleValues[layer.id]) {
-                        scaleValues[layer.id].setValue(1);
-                      } else {
-                        scaleValues[layer.id] = new Animated.Value(1);
-                      }
-                    });
-                    
-                    // Restore layers with their original positions
-                    setLayers(originalLayers);
-                    // DON'T clear originalLayers - keep them for future frame applications
-                    // This ensures consistent positions when applying multiple frames
-                    
-                    // Restore original template
-                    setSelectedTemplate(originalTemplate);
-                    
-                    console.log('✅ [REMOVE FRAME] Frame removed and original layout restored');
-                    console.log('📋 [REMOVE FRAME] Template restored:', originalTemplate);
-                    console.log('💾 [REMOVE FRAME] Original layers preserved for future frame applications');
-                  } else {
-                    console.log('⚠️ [REMOVE FRAME] No original layers found, using fallback');
-                    if (selectedBusinessProfile) {
-                      // Fallback to business profile if no original layers stored
-                      applyBusinessProfileToPoster(selectedBusinessProfile);
-                    }
-                  }
-                  setShowRemoveFrameModal(false);
-                }}
-              >
-                <Text style={[
-                  styles.addButtonText,
-                  {
-                    fontSize: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : 16)
-                  }
-                ]}>
-                  Remove
-                </Text>
-              </TouchableOpacity>
-            </View>
-          </View>
+          ... modal content ...
         </View>
       </Modal>
+      */}
 
       {/* Frame Warning Modal - Responsive across all screen sizes */}
       <Modal
@@ -3855,9 +3743,10 @@ const styles = StyleSheet.create({
   },
   canvas: {
     // These will be set dynamically based on responsive dimensions
-    backgroundColor: '#ffffff',
-    borderRadius: 0, // Remove rounded corners
+    // backgroundColor set inline based on selectedFrame state
+    borderRadius: 0,
     shadowColor: '#000',
+    borderWidth:1,
     shadowOffset: {
       width: 0,
       height: 8,
@@ -3866,7 +3755,7 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
     position: 'relative',
-    overflow: 'hidden', // Clip content to prevent footer overflow
+    overflow: 'hidden',
     marginBottom: isSmallScreen ? 6 : 15,
   },
   instructionsContainer: {
@@ -3925,11 +3814,10 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    borderRadius: 0, // Remove rounded corners
-    overflow: 'hidden', // Hidden to ensure poster fits within canvas
-    justifyContent: 'center', // Back to center for proper alignment
+    borderRadius: 0,
+    overflow: 'hidden',
+    justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#ffffff',
   },
   backgroundImage: {
     width: '100%',
@@ -5914,13 +5802,11 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    zIndex: 0, // Keep frame behind layers so they remain interactive
+    backgroundColor: 'transparent',
   },
   frameOverlayImage: {
     width: '100%',
     height: '100%',
-    opacity: 0.9, // Slightly transparent to show poster underneath
-    resizeMode: 'stretch', // Ensure frame stretches to match canvas
   },
 
 });
