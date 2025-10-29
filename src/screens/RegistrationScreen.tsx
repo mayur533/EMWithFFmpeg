@@ -82,9 +82,9 @@ const FloatingInput = React.memo(({
       style={[
         styles.input,
         { 
-          color: theme.theme.colors.text,
-          borderColor: hasError ? theme.theme.colors.error : (focusedField === field ? theme.theme.colors.primary : theme.theme.colors.border),
-          backgroundColor: theme.theme.colors.inputBackground,
+          color: theme.colors.text,
+          borderColor: hasError ? theme.colors.error : (focusedField === field ? theme.colors.primary : theme.colors.border),
+          backgroundColor: theme.colors.inputBackground,
         },
         multiline && styles.multilineInput
       ]}
@@ -93,7 +93,7 @@ const FloatingInput = React.memo(({
         onFocus={() => setFocusedField(field)}
         onBlur={() => setFocusedField(null)}
       placeholder={placeholder}
-      placeholderTextColor={theme.theme.colors.textSecondary}
+      placeholderTextColor={theme.colors.textSecondary}
       multiline={multiline}
       numberOfLines={numberOfLines}
       keyboardType={keyboardType}
@@ -107,7 +107,7 @@ interface RegistrationScreenProps {
 }
 
 const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) => {
-  const theme = useTheme();
+  const { theme, isDarkMode } = useTheme();
   const [formData, setFormData] = useState({
     name: '',
     description: '',
@@ -387,9 +387,9 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   }, [showErrorModal, showValidationSummary]);
 
   return (
-    <SafeAreaView style={[styles.container, { backgroundColor: theme.theme.colors.background }]}>
+    <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <LinearGradient
-        colors={[theme.theme.colors.primary, theme.theme.colors.secondary]}
+        colors={[theme.colors.primary, theme.colors.secondary]}
         style={styles.gradient}
       >
         <KeyboardAvoidingView 
@@ -413,10 +413,10 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               </Text>
             </View>
 
-            <View style={[styles.formContainer, { backgroundColor: theme.theme.colors.surface }]}>
+            <View style={[styles.formContainer, { backgroundColor: theme.colors.surface }]}>
               {/* Company Logo Section */}
               <View style={styles.logoSection}>
-                <Text style={[styles.sectionTitle, { color: theme.theme.colors.text }]}>Company Logo</Text>
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Company Logo</Text>
                 {logoImage || formData.companyLogo ? (
                   <View style={styles.logoContainer}>
                     <Image 
@@ -456,8 +456,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                         <View style={styles.logoIconContainer}>
                           <Icon name="add-a-photo" size={24} color="#667eea" />
                         </View>
-                      <Text style={[styles.logoPlaceholderTitle, { color: theme.theme.colors.text }]}>Upload Company Logo</Text>
-                      <Text style={[styles.logoPlaceholderSubtext, { color: theme.theme.colors.textSecondary }]}>Tap to select from gallery or take a photo</Text>
+                      <Text style={[styles.logoPlaceholderTitle, { color: theme.colors.text }]}>Upload Company Logo</Text>
+                      <Text style={[styles.logoPlaceholderSubtext, { color: theme.colors.textSecondary }]}>Tap to select from gallery or take a photo</Text>
                       </TouchableOpacity>
                     </View>
                   )}
@@ -465,7 +465,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
 
               {/* Company Information */}
               <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: theme.theme.colors.text }]}>Company Information</Text>
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Company Information</Text>
                 
                 <View style={styles.inputWrapper}>
                   <FloatingInput
@@ -480,8 +480,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   />
                   {validationErrors.name && (
                     <View style={styles.errorContainer}>
-                      <Icon name="error" size={16} color={theme.theme.colors.error} />
-                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                      <Icon name="error" size={16} color={theme.colors.error} />
+                      <Text style={[styles.errorText, { color: theme.colors.error }]}>
                         {validationErrors.name}
                       </Text>
                     </View>
@@ -502,7 +502,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
 
                 {/* Business Category */}
                 <View style={styles.categorySection}>
-                  <Text style={[styles.categoryLabel, { color: theme.theme.colors.text }]}>Business Category *</Text>
+                  <Text style={[styles.categoryLabel, { color: theme.colors.text }]}>Business Category *</Text>
                   
                   {/* Selected Category Display */}
                   <View style={styles.selectedCategoryContainer}>
@@ -510,14 +510,14 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                       style={[
                         styles.selectedCategoryInput,
                         { 
-                          color: theme.theme.colors.text,
-                          borderColor: validationErrors.category ? theme.theme.colors.error : (formData.category ? theme.theme.colors.primary : theme.theme.colors.border),
-                          backgroundColor: theme.theme.colors.inputBackground,
+                          color: theme.colors.text,
+                          borderColor: validationErrors.category ? theme.colors.error : (formData.category ? theme.colors.primary : theme.colors.border),
+                          backgroundColor: theme.colors.inputBackground,
                         }
                       ]}
                       value={formData.category}
                       placeholder="Select your business category *"
-                      placeholderTextColor={theme.theme.colors.textSecondary}
+                      placeholderTextColor={theme.colors.textSecondary}
                       editable={false}
                       pointerEvents="none"
                     />
@@ -526,8 +526,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   {/* Category Validation Error */}
                   {validationErrors.category && (
                     <View style={styles.errorContainer}>
-                      <Icon name="error" size={16} color={theme.theme.colors.error} />
-                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                      <Icon name="error" size={16} color={theme.colors.error} />
+                      <Text style={[styles.errorText, { color: theme.colors.error }]}>
                         {validationErrors.category}
                       </Text>
                     </View>
@@ -544,29 +544,31 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                       key={category}
                       style={[
                         styles.categoryOption,
-                        { borderColor: theme.theme.colors.border },
-                        formData.category === category && [
-                          styles.categoryOptionSelected, 
-                          { 
-                            backgroundColor: theme.theme.colors.primary,
-                            borderColor: theme.theme.colors.primary,
-                            shadowColor: theme.theme.colors.primary,
-                            shadowOffset: { width: 0, height: 2 },
-                            shadowOpacity: 0.3,
-                            shadowRadius: 4,
-                            elevation: 5,
-                          }
-                        ]
+                        { 
+                          backgroundColor: formData.category === category 
+                            ? theme.colors.primary 
+                            : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(102,126,234,0.1)'),
+                          borderColor: formData.category === category 
+                            ? theme.colors.primary 
+                            : (isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(102,126,234,0.3)'),
+                        },
+                        formData.category === category && {
+                          shadowColor: theme.colors.primary,
+                          shadowOffset: { width: 0, height: 2 },
+                          shadowOpacity: 0.3,
+                          shadowRadius: 4,
+                          elevation: 5,
+                        }
                       ]}
                       onPress={() => handleInputChange('category', category)}
                     >
                       <Text style={[
                         styles.categoryOptionText,
-                        { color: theme.theme.colors.text },
-                        formData.category === category && [
-                          styles.categoryOptionTextSelected, 
-                          { color: '#ffffff' }
-                        ]
+                        { 
+                          color: formData.category === category 
+                            ? '#ffffff' 
+                            : (isDarkMode ? '#ffffff' : theme.colors.primary)
+                        }
                       ]}>
                         {category}
                       </Text>
@@ -577,14 +579,14 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               
               {/* Phone Number with Real-time Validation */}
               <View style={styles.inputWrapper}>
-                <Text style={[styles.inputLabel, { color: theme.theme.colors.text }]}>Phone Number *</Text>
+                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Phone Number *</Text>
                 <TextInput
                   style={[
                     styles.input,
                     { 
-                      color: theme.theme.colors.text,
-                      borderColor: phoneValidationError ? theme.theme.colors.error : (focusedField === 'phone' ? theme.theme.colors.primary : theme.theme.colors.border),
-                      backgroundColor: theme.theme.colors.inputBackground,
+                      color: theme.colors.text,
+                      borderColor: phoneValidationError ? theme.colors.error : (focusedField === 'phone' ? theme.colors.primary : theme.colors.border),
+                      backgroundColor: theme.colors.inputBackground,
                     }
                   ]}
                   value={formData.phone}
@@ -592,14 +594,14 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   onFocus={() => setFocusedField('phone')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="Enter 10 digit phone number"
-                  placeholderTextColor={theme.theme.colors.textSecondary}
+                  placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="phone-pad"
                   maxLength={10}
                 />
                 {phoneValidationError ? (
                   <View style={styles.errorContainer}>
-                    <Icon name="error" size={16} color={theme.theme.colors.error} />
-                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                    <Icon name="error" size={16} color={theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.colors.error }]}>
                       {phoneValidationError}
                     </Text>
                   </View>
@@ -614,8 +616,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                 ) : null}
                 {validationErrors.phone && (
                   <View style={styles.errorContainer}>
-                    <Icon name="error" size={16} color={theme.theme.colors.error} />
-                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                    <Icon name="error" size={16} color={theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.colors.error }]}>
                       {validationErrors.phone}
                     </Text>
                   </View>
@@ -624,14 +626,14 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
 
               {/* Alternate Phone Number with Real-time Validation */}
               <View style={styles.inputWrapper}>
-                <Text style={[styles.inputLabel, { color: theme.theme.colors.text }]}>Alternate Phone (Optional)</Text>
+                <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Alternate Phone (Optional)</Text>
                 <TextInput
                   style={[
                     styles.input,
                     { 
-                      color: theme.theme.colors.text,
-                      borderColor: alternatePhoneValidationError ? theme.theme.colors.error : (focusedField === 'alternatePhone' ? theme.theme.colors.primary : theme.theme.colors.border),
-                      backgroundColor: theme.theme.colors.inputBackground,
+                      color: theme.colors.text,
+                      borderColor: alternatePhoneValidationError ? theme.colors.error : (focusedField === 'alternatePhone' ? theme.colors.primary : theme.colors.border),
+                      backgroundColor: theme.colors.inputBackground,
                     }
                   ]}
                   value={formData.alternatePhone || ''}
@@ -639,14 +641,14 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   onFocus={() => setFocusedField('alternatePhone')}
                   onBlur={() => setFocusedField(null)}
                   placeholder="Enter 10 digit alternate phone (optional)"
-                  placeholderTextColor={theme.theme.colors.textSecondary}
+                  placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="phone-pad"
                   maxLength={10}
                 />
                 {alternatePhoneValidationError ? (
                   <View style={styles.errorContainer}>
-                    <Icon name="error" size={16} color={theme.theme.colors.error} />
-                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                    <Icon name="error" size={16} color={theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.colors.error }]}>
                       {alternatePhoneValidationError}
                     </Text>
                   </View>
@@ -661,8 +663,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                 ) : null}
                 {validationErrors.alternatePhone && (
                   <View style={styles.errorContainer}>
-                    <Icon name="error" size={16} color={theme.theme.colors.error} />
-                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                    <Icon name="error" size={16} color={theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.colors.error }]}>
                       {validationErrors.alternatePhone}
                     </Text>
                   </View>
@@ -683,8 +685,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   />
                   {validationErrors.email && (
                     <View style={styles.errorContainer}>
-                      <Icon name="error" size={16} color={theme.theme.colors.error} />
-                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                      <Icon name="error" size={16} color={theme.colors.error} />
+                      <Text style={[styles.errorText, { color: theme.colors.error }]}>
                         {validationErrors.email}
                       </Text>
                     </View>
@@ -717,7 +719,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
 
             {/* Account Security */}
             <View style={styles.section}>
-                <Text style={[styles.sectionTitle, { color: theme.theme.colors.text }]}>Account Security</Text>
+                <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Account Security</Text>
               
               <View style={styles.inputWrapper}>
                 <View style={styles.passwordContainer}>
@@ -725,9 +727,9 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                     style={[
                       styles.passwordInput,
                       { 
-                        color: theme.theme.colors.text,
-                        borderColor: validationErrors.password ? theme.theme.colors.error : (focusedField === 'password' ? theme.theme.colors.primary : theme.theme.colors.border),
-                        backgroundColor: theme.theme.colors.inputBackground,
+                        color: theme.colors.text,
+                        borderColor: validationErrors.password ? theme.colors.error : (focusedField === 'password' ? theme.colors.primary : theme.colors.border),
+                        backgroundColor: theme.colors.inputBackground,
                       }
                     ]}
                     value={formData.password}
@@ -735,7 +737,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                     onFocus={() => setFocusedField('password')}
                     onBlur={() => setFocusedField(null)}
                     placeholder="Enter password *"
-                    placeholderTextColor={theme.theme.colors.textSecondary}
+                    placeholderTextColor={theme.colors.textSecondary}
                     secureTextEntry={!showPassword}
                   />
                   <TouchableOpacity 
@@ -745,14 +747,14 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                     <Icon 
                       name={showPassword ? "visibility" : "visibility-off"} 
                       size={22} 
-                      color={theme.theme.colors.textSecondary} 
+                      color={theme.colors.textSecondary} 
                     />
                   </TouchableOpacity>
                 </View>
                 {validationErrors.password && (
                   <View style={styles.errorContainer}>
-                    <Icon name="error" size={16} color={theme.theme.colors.error} />
-                    <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                    <Icon name="error" size={16} color={theme.colors.error} />
+                    <Text style={[styles.errorText, { color: theme.colors.error }]}>
                       {validationErrors.password}
                     </Text>
                   </View>
@@ -765,9 +767,9 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                       style={[
                         styles.passwordInput,
                         { 
-                          color: theme.theme.colors.text,
-                          borderColor: validationErrors.confirmPassword ? theme.theme.colors.error : (focusedField === 'confirmPassword' ? theme.theme.colors.primary : theme.theme.colors.border),
-                          backgroundColor: theme.theme.colors.inputBackground,
+                          color: theme.colors.text,
+                          borderColor: validationErrors.confirmPassword ? theme.colors.error : (focusedField === 'confirmPassword' ? theme.colors.primary : theme.colors.border),
+                          backgroundColor: theme.colors.inputBackground,
                         }
                       ]}
                       value={formData.confirmPassword}
@@ -775,7 +777,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                       onFocus={() => setFocusedField('confirmPassword')}
                       onBlur={() => setFocusedField(null)}
                       placeholder="Confirm password *"
-                      placeholderTextColor={theme.theme.colors.textSecondary}
+                      placeholderTextColor={theme.colors.textSecondary}
                       secureTextEntry={!showConfirmPassword}
                     />
                     <TouchableOpacity 
@@ -785,14 +787,14 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                       <Icon 
                         name={showConfirmPassword ? "visibility" : "visibility-off"} 
                         size={22} 
-                        color={theme.theme.colors.textSecondary} 
+                        color={theme.colors.textSecondary} 
                       />
                     </TouchableOpacity>
                   </View>
                   {validationErrors.confirmPassword && (
                     <View style={styles.errorContainer}>
-                      <Icon name="error" size={16} color={theme.theme.colors.error} />
-                      <Text style={[styles.errorText, { color: theme.theme.colors.error }]}>
+                      <Icon name="error" size={16} color={theme.colors.error} />
+                      <Text style={[styles.errorText, { color: theme.colors.error }]}>
                         {validationErrors.confirmPassword}
                       </Text>
                     </View>
@@ -802,7 +804,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
 
               {/* Register Button */}
         <TouchableOpacity 
-                style={[styles.registerButton, { backgroundColor: theme.theme.colors.primary }]}
+                style={[styles.registerButton, { backgroundColor: theme.colors.primary }]}
                 onPress={handleRegister}
                 disabled={isLoading}
                 activeOpacity={0.8}
@@ -816,21 +818,21 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
 
               {/* Login Link */}
               <View style={styles.loginLinkContainer}>
-                <Text style={[styles.loginLinkText, { color: theme.theme.colors.textSecondary }]}>
+                <Text style={[styles.loginLinkText, { color: theme.colors.textSecondary }]}>
                   Already have an account?{' '}
                 </Text>
                 <TouchableOpacity onPress={() => navigation.navigate('Login')}>
-                  <Text style={[styles.loginLink, { color: theme.theme.colors.primary }]}>Sign In</Text>
+                  <Text style={[styles.loginLink, { color: theme.colors.primary }]}>Sign In</Text>
                   </TouchableOpacity>
                     </View>
                     
               {/* Privacy Policy Link */}
               <View style={styles.privacyFooter}>
-                <Text style={[styles.privacyFooterText, { color: theme.theme.colors.textSecondary }]}>
+                <Text style={[styles.privacyFooterText, { color: theme.colors.textSecondary }]}>
                   By creating an account, you agree to our{' '}
                 </Text>
                 <TouchableOpacity onPress={() => navigation.navigate('PrivacyPolicy')}>
-                  <Text style={[styles.privacyFooterLink, { color: theme.theme.colors.primary }]}>
+                  <Text style={[styles.privacyFooterLink, { color: theme.colors.primary }]}>
                     Privacy Policy
                   </Text>
                 </TouchableOpacity>
@@ -857,7 +859,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
           <Animated.View 
             style={[
               styles.modalContainer,
-              { backgroundColor: theme.theme.colors.surface },
+              { backgroundColor: theme.colors.surface },
               modalDimensions.isLandscape && {
                 maxWidth: modalDimensions.width * 0.7,
                 maxHeight: modalDimensions.height * 0.9,
@@ -874,21 +876,21 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
             ]}
           >
             <View style={styles.modalHeader}>
-              <View style={[styles.modalIconContainer, { backgroundColor: theme.theme.colors.error + '20' }]}>
-                <Icon name="error-outline" size={Math.min(screenWidth * 0.08, 32)} color={theme.theme.colors.error} />
+              <View style={[styles.modalIconContainer, { backgroundColor: theme.colors.error + '20' }]}>
+                <Icon name="error-outline" size={Math.min(screenWidth * 0.08, 32)} color={theme.colors.error} />
               </View>
-              <Text style={[styles.modalTitle, { color: theme.theme.colors.text }]}>Registration Error</Text>
+              <Text style={[styles.modalTitle, { color: theme.colors.text }]}>Registration Error</Text>
             </View>
 
             <View style={styles.modalContent}>
-              <Text style={[styles.modalMessage, { color: theme.theme.colors.textSecondary }]}>
+              <Text style={[styles.modalMessage, { color: theme.colors.textSecondary }]}>
                 {errorMessage}
               </Text>
             </View>
 
             <View style={styles.modalActions}>
               <TouchableOpacity
-                style={[styles.modalButton, { backgroundColor: theme.theme.colors.primary }]}
+                style={[styles.modalButton, { backgroundColor: theme.colors.primary }]}
                 onPress={hideModal}
                 activeOpacity={0.8}
               >
@@ -916,7 +918,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
           <Animated.View 
             style={[
               styles.validationModalContainer,
-              { backgroundColor: theme.theme.colors.surface },
+              { backgroundColor: theme.colors.surface },
               modalDimensions.isTablet && {
                 maxWidth: modalDimensions.width * 0.6,
               },
@@ -962,7 +964,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               </View>
               <Text style={[
                 styles.validationModalTitle, 
-                { color: theme.theme.colors.text },
+                { color: theme.colors.text },
                 modalDimensions.isSmall && {
                   fontSize: 18,
                 },
@@ -974,7 +976,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               </Text>
               <Text style={[
                 styles.validationModalSubtitle,
-                { color: theme.theme.colors.textSecondary },
+                { color: theme.colors.textSecondary },
                 modalDimensions.isSmall && {
                   fontSize: 12,
                 },
@@ -1002,8 +1004,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   style={[
                     styles.validationErrorItem,
                     { 
-                      backgroundColor: theme.theme.colors.error + '10',
-                      borderLeftColor: theme.theme.colors.error,
+                      backgroundColor: theme.colors.error + '10',
+                      borderLeftColor: theme.colors.error,
                     },
                     modalDimensions.isSmall && {
                       paddingHorizontal: modalDimensions.width * 0.03,
@@ -1020,7 +1022,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   <View style={styles.errorItemHeader}>
                     <View style={[
                       styles.errorBullet,
-                      { backgroundColor: theme.theme.colors.error },
+                      { backgroundColor: theme.colors.error },
                       modalDimensions.isSmall && {
                         width: 6,
                         height: 6,
@@ -1032,7 +1034,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                     ]} />
                     <Text style={[
                       styles.errorFieldName,
-                      { color: theme.theme.colors.text },
+                      { color: theme.colors.text },
                       modalDimensions.isSmall && {
                         fontSize: 13,
                       },
@@ -1045,7 +1047,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   </View>
                   <Text style={[
                     styles.errorMessage,
-                    { color: theme.theme.colors.textSecondary },
+                    { color: theme.colors.textSecondary },
                     modalDimensions.isSmall && {
                       fontSize: 12,
                       lineHeight: 16,
@@ -1074,7 +1076,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               <TouchableOpacity
                 style={[
                   styles.validationModalButton,
-                  { backgroundColor: theme.theme.colors.primary },
+                  { backgroundColor: theme.colors.primary },
                   modalDimensions.isSmall && {
                     paddingVertical: modalDimensions.height * 0.013,
                   },
@@ -1129,32 +1131,32 @@ const styles = StyleSheet.create({
   },
   header: {
     alignItems: 'center',
-    paddingTop: screenHeight * 0.02,
-    paddingBottom: screenHeight * 0.03,
-    paddingHorizontal: screenWidth * 0.05,
+    paddingTop: Math.max(8, screenHeight * 0.01),
+    paddingBottom: Math.max(6, screenHeight * 0.008),
+    paddingHorizontal: Math.max(14, screenWidth * 0.04),
   },
   logo: {
     width: screenWidth * 0.2,
     height: screenWidth * 0.2,
-    marginBottom: screenHeight * 0.02,
+    marginBottom: Math.max(4, screenHeight * 0.005),
   },
   title: {
-    fontSize: isSmallScreen ? 24 : isMediumScreen ? 26 : 28,
+    fontSize: isSmallScreen ? 20 : isMediumScreen ? 22 : 24,
     fontWeight: 'bold',
-    marginBottom: 8,
+    marginBottom: 4,
     textAlign: 'center',
   },
   subtitle: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 12 : 14,
     textAlign: 'center',
     opacity: 0.9,
   },
   formContainer: {
     flex: 1,
-    marginHorizontal: screenWidth * 0.05,
-    borderRadius: 20,
-    padding: screenWidth * 0.05,
-    marginBottom: screenHeight * 0.02,
+    marginHorizontal: Math.max(12, screenWidth * 0.04),
+    borderRadius: 16,
+    padding: Math.max(12, screenWidth * 0.04),
+    marginBottom: Math.max(12, screenHeight * 0.015),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1165,93 +1167,93 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   section: {
-    marginBottom: screenHeight * 0.03,
+    marginBottom: Math.max(16, screenHeight * 0.02),
   },
   sectionTitle: {
-    fontSize: isSmallScreen ? 16 : 18,
+    fontSize: isSmallScreen ? 14 : 16,
     fontWeight: '600',
-    marginBottom: screenHeight * 0.015,
+    marginBottom: Math.max(10, screenHeight * 0.012),
   },
   inputContainer: {
-    marginBottom: screenHeight * 0.015,
+    marginBottom: Math.max(10, screenHeight * 0.012),
   },
   inputWrapper: {
-    marginBottom: screenHeight * 0.015,
+    marginBottom: Math.max(10, screenHeight * 0.012),
   },
   input: {
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.015,
-    fontSize: isSmallScreen ? 14 : 16,
-    minHeight: isSmallScreen ? 48 : 52,
+    borderRadius: 10,
+    paddingHorizontal: Math.max(12, screenWidth * 0.035),
+    paddingVertical: Math.max(10, screenHeight * 0.012),
+    fontSize: isSmallScreen ? 12 : 14,
+    minHeight: isSmallScreen ? 44 : 48,
   },
   errorContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: screenHeight * 0.006,
-    paddingHorizontal: screenWidth * 0.02,
+    marginTop: Math.max(4, screenHeight * 0.005),
+    paddingHorizontal: Math.max(6, screenWidth * 0.015),
   },
   errorText: {
-    fontSize: isSmallScreen ? 12 : 13,
-    marginLeft: 6,
+    fontSize: isSmallScreen ? 10 : 11,
+    marginLeft: 4,
     flex: 1,
-    lineHeight: isSmallScreen ? 16 : 18,
+    lineHeight: isSmallScreen ? 14 : 15,
   },
   successContainer: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    marginTop: screenHeight * 0.006,
-    paddingHorizontal: screenWidth * 0.02,
+    marginTop: Math.max(4, screenHeight * 0.005),
+    paddingHorizontal: Math.max(6, screenWidth * 0.015),
   },
   successText: {
-    fontSize: isSmallScreen ? 12 : 13,
-    marginLeft: 6,
+    fontSize: isSmallScreen ? 10 : 11,
+    marginLeft: 4,
     flex: 1,
-    lineHeight: isSmallScreen ? 16 : 18,
+    lineHeight: isSmallScreen ? 14 : 15,
     fontWeight: '500',
   },
   inputLabel: {
-    fontSize: isSmallScreen ? 14 : 15,
+    fontSize: isSmallScreen ? 12 : 13,
     fontWeight: '600',
-    marginBottom: screenHeight * 0.008,
+    marginBottom: Math.max(6, screenHeight * 0.007),
   },
   multilineInput: {
-    minHeight: isSmallScreen ? 80 : 100,
+    minHeight: isSmallScreen ? 70 : 85,
     textAlignVertical: 'top',
   },
   passwordContainer: {
     position: 'relative',
-    marginBottom: screenHeight * 0.015,
+    marginBottom: Math.max(10, screenHeight * 0.012),
   },
   passwordInput: {
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.015,
-    paddingRight: screenWidth * 0.12,
-    fontSize: isSmallScreen ? 14 : 16,
-    minHeight: isSmallScreen ? 48 : 52,
+    borderRadius: 10,
+    paddingHorizontal: Math.max(12, screenWidth * 0.035),
+    paddingVertical: Math.max(10, screenHeight * 0.012),
+    paddingRight: Math.max(40, screenWidth * 0.11),
+    fontSize: isSmallScreen ? 12 : 14,
+    minHeight: isSmallScreen ? 44 : 48,
   },
   eyeButton: {
     position: 'absolute',
-    right: screenWidth * 0.03,
+    right: Math.max(10, screenWidth * 0.025),
     top: '50%',
     transform: [{ translateY: -11 }],
-    padding: 5,
+    padding: 4,
   },
   logoSection: {
-    marginBottom: screenHeight * 0.03,
+    marginBottom: Math.max(16, screenHeight * 0.02),
   },
   logoContainer: {
     alignItems: 'center',
     position: 'relative',
   },
   logoImage: {
-    width: screenWidth * 0.25,
-    height: screenWidth * 0.25,
-    borderRadius: screenWidth * 0.125,
-    borderWidth: 3,
+    width: screenWidth * 0.22,
+    height: screenWidth * 0.22,
+    borderRadius: screenWidth * 0.11,
+    borderWidth: 2,
     borderColor: '#667eea',
   },
   logoOverlay: {
@@ -1261,21 +1263,21 @@ const styles = StyleSheet.create({
     right: 0,
     bottom: 0,
     backgroundColor: 'rgba(0,0,0,0.3)',
-    borderRadius: screenWidth * 0.125,
+    borderRadius: screenWidth * 0.11,
     justifyContent: 'center',
     alignItems: 'center',
   },
   logoActionButtons: {
     flexDirection: 'row',
-    marginTop: screenHeight * 0.01,
-    gap: screenWidth * 0.02,
+    marginTop: Math.max(8, screenHeight * 0.008),
+    gap: Math.max(6, screenWidth * 0.015),
   },
   logoActionButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: screenWidth * 0.03,
-    paddingVertical: screenHeight * 0.008,
-    borderRadius: 8,
+    paddingHorizontal: Math.max(10, screenWidth * 0.025),
+    paddingVertical: Math.max(6, screenHeight * 0.007),
+    borderRadius: 6,
     backgroundColor: '#667eea',
   },
   changeLogoButton: {
@@ -1285,11 +1287,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#ff6b6b',
   },
   buttonIcon: {
-    marginRight: 4,
+    marginRight: 3,
   },
   logoActionButtonText: {
     color: '#ffffff',
-    fontSize: isSmallScreen ? 12 : 14,
+    fontSize: isSmallScreen ? 10 : 12,
     fontWeight: '500',
   },
   logoPlaceholder: {
@@ -1298,93 +1300,88 @@ const styles = StyleSheet.create({
     borderWidth: 2,
     borderColor: '#667eea',
     borderStyle: 'dashed',
-    borderRadius: 12,
-    padding: screenWidth * 0.05,
+    borderRadius: 10,
+    padding: Math.max(12, screenWidth * 0.04),
   },
   uploadAreaButton: {
     alignItems: 'center',
     justifyContent: 'center',
     width: '100%',
-    padding: screenWidth * 0.03,
+    padding: Math.max(10, screenWidth * 0.025),
   },
   logoIconContainer: {
-    width: screenWidth * 0.12,
-    height: screenWidth * 0.12,
-    borderRadius: screenWidth * 0.06,
+    width: screenWidth * 0.1,
+    height: screenWidth * 0.1,
+    borderRadius: screenWidth * 0.05,
     backgroundColor: '#f0f0f0',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: screenHeight * 0.01,
+    marginBottom: Math.max(8, screenHeight * 0.008),
   },
   logoPlaceholderTitle: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 12 : 14,
     fontWeight: '600',
-    marginBottom: 4,
+    marginBottom: 3,
     textAlign: 'center',
   },
   logoPlaceholderSubtext: {
-    fontSize: isSmallScreen ? 12 : 14,
+    fontSize: isSmallScreen ? 10 : 12,
     textAlign: 'center',
   },
   categorySection: {
-    marginBottom: screenHeight * 0.02,
+    marginBottom: Math.max(12, screenHeight * 0.015),
   },
   categoryLabel: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 12 : 14,
     fontWeight: '500',
-    marginBottom: screenHeight * 0.01,
+    marginBottom: Math.max(8, screenHeight * 0.008),
   },
   selectedCategoryContainer: {
     position: 'relative',
-    marginBottom: screenHeight * 0.015,
+    marginBottom: Math.max(10, screenHeight * 0.012),
   },
   selectedCategoryInput: {
     borderWidth: 1,
-    borderRadius: 12,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.015,
-    fontSize: isSmallScreen ? 14 : 16,
-    minHeight: isSmallScreen ? 48 : 52,
+    borderRadius: 10,
+    paddingHorizontal: Math.max(12, screenWidth * 0.035),
+    paddingVertical: Math.max(10, screenHeight * 0.012),
+    fontSize: isSmallScreen ? 12 : 14,
+    minHeight: isSmallScreen ? 44 : 48,
   },
   categoryScrollContent: {
-    paddingRight: screenWidth * 0.05,
+    paddingRight: Math.max(14, screenWidth * 0.04),
   },
   categoryOption: {
-    paddingHorizontal: screenWidth * 0.03,
-    paddingVertical: screenHeight * 0.008,
-    borderRadius: 20,
+    paddingHorizontal: Math.max(10, screenWidth * 0.025),
+    paddingVertical: Math.max(6, screenHeight * 0.007),
+    borderRadius: 16,
     borderWidth: 1,
-    marginRight: screenWidth * 0.02,
-    backgroundColor: 'transparent',
+    marginRight: Math.max(8, screenWidth * 0.018),
   },
   categoryOptionSelected: {
-    backgroundColor: '#667eea',
-    shadowColor: '#667eea',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.3,
     shadowRadius: 4,
     elevation: 5,
   },
   categoryOptionText: {
-    fontSize: isSmallScreen ? 12 : 14,
-    color: '#667eea',
+    fontSize: isSmallScreen ? 10 : 12,
     fontWeight: '500',
   },
   categoryOptionTextSelected: {
-    color: '#ffffff',
     fontWeight: '600',
   },
   registerButton: {
-    paddingVertical: screenHeight * 0.018,
-    borderRadius: 12,
+    paddingVertical: Math.max(12, screenHeight * 0.015),
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: screenHeight * 0.02,
-    marginBottom: screenHeight * 0.02,
+    marginTop: Math.max(14, screenHeight * 0.017),
+    marginBottom: Math.max(14, screenHeight * 0.017),
   },
   registerButtonText: {
     color: '#ffffff',
-    fontSize: isSmallScreen ? 16 : 18,
+    fontSize: isSmallScreen ? 14 : 16,
     fontWeight: '600',
   },
   loginLinkContainer: {
@@ -1393,25 +1390,25 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     },
   loginLinkText: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 12 : 14,
   },
   loginLink: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 12 : 14,
     fontWeight: '600',
   },
   privacyFooter: {
     flexDirection: 'row',
     justifyContent: 'center',
     alignItems: 'center',
-    marginTop: screenHeight * 0.02,
-    paddingHorizontal: screenWidth * 0.05,
+    marginTop: Math.max(14, screenHeight * 0.017),
+    paddingHorizontal: Math.max(14, screenWidth * 0.04),
   },
   privacyFooterText: {
-    fontSize: isSmallScreen ? 12 : 14,
+    fontSize: isSmallScreen ? 10 : 12,
     textAlign: 'center',
   },
   privacyFooterLink: {
-    fontSize: isSmallScreen ? 12 : 14,
+    fontSize: isSmallScreen ? 10 : 12,
     fontWeight: '600',
     textDecorationLine: 'underline',
   },
@@ -1420,60 +1417,60 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: screenWidth * 0.1,
+    paddingHorizontal: Math.max(28, screenWidth * 0.08),
   },
   modalContainer: {
     width: '100%',
-    maxWidth: screenWidth * 0.9,
-    borderRadius: 20,
-    padding: screenWidth * 0.06,
+    maxWidth: screenWidth * 0.88,
+    borderRadius: 16,
+    padding: Math.max(18, screenWidth * 0.05),
     alignItems: 'center',
   },
   modalHeader: {
     alignItems: 'center',
-    marginBottom: screenHeight * 0.02,
+    marginBottom: Math.max(14, screenHeight * 0.017),
   },
   modalIconContainer: {
-    width: screenWidth * 0.15,
-    height: screenWidth * 0.15,
-    borderRadius: screenWidth * 0.075,
+    width: screenWidth * 0.13,
+    height: screenWidth * 0.13,
+    borderRadius: screenWidth * 0.065,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: screenHeight * 0.01,
+    marginBottom: Math.max(8, screenHeight * 0.008),
   },
   modalTitle: {
-    fontSize: isSmallScreen ? 18 : 20,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: '600',
     textAlign: 'center',
   },
   modalContent: {
-    marginBottom: screenHeight * 0.02,
+    marginBottom: Math.max(14, screenHeight * 0.017),
   },
   modalMessage: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 12 : 14,
     textAlign: 'center',
-    lineHeight: 22,
+    lineHeight: 19,
   },
   modalActions: {
     width: '100%',
   },
   modalButton: {
-    paddingVertical: screenHeight * 0.015,
-    borderRadius: 12,
+    paddingVertical: Math.max(11, screenHeight * 0.013),
+    borderRadius: 10,
     alignItems: 'center',
   },
   modalButtonText: {
     color: '#ffffff',
-    fontSize: isSmallScreen ? 16 : 18,
+    fontSize: isSmallScreen ? 14 : 16,
     fontWeight: '600',
   },
   // Validation Modal Styles
   validationModalContainer: {
     width: '100%',
-    maxWidth: screenWidth * 0.9,
-    borderRadius: 20,
-    paddingHorizontal: screenWidth * 0.05,
-    paddingVertical: screenHeight * 0.025,
+    maxWidth: screenWidth * 0.88,
+    borderRadius: 16,
+    paddingHorizontal: Math.max(14, screenWidth * 0.04),
+    paddingVertical: Math.max(18, screenHeight * 0.02),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1485,38 +1482,38 @@ const styles = StyleSheet.create({
   },
   validationModalHeader: {
     alignItems: 'center',
-    marginBottom: screenHeight * 0.02,
+    marginBottom: Math.max(14, screenHeight * 0.017),
   },
   validationIconContainer: {
-    width: screenWidth * 0.15,
-    height: screenWidth * 0.15,
-    borderRadius: screenWidth * 0.075,
+    width: screenWidth * 0.13,
+    height: screenWidth * 0.13,
+    borderRadius: screenWidth * 0.065,
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: screenHeight * 0.015,
+    marginBottom: Math.max(10, screenHeight * 0.012),
   },
   validationModalTitle: {
-    fontSize: isSmallScreen ? 20 : isTablet ? 24 : 22,
+    fontSize: isSmallScreen ? 17 : isTablet ? 21 : 19,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   validationModalSubtitle: {
-    fontSize: isSmallScreen ? 13 : isTablet ? 16 : 14,
+    fontSize: isSmallScreen ? 11 : isTablet ? 14 : 12,
     textAlign: 'center',
     opacity: 0.7,
   },
   validationErrorsList: {
-    maxHeight: screenHeight * 0.45,
+    maxHeight: screenHeight * 0.42,
     width: '100%',
-    marginBottom: screenHeight * 0.02,
+    marginBottom: Math.max(14, screenHeight * 0.017),
   },
   validationErrorItem: {
-    borderLeftWidth: 4,
-    borderRadius: 10,
-    paddingHorizontal: screenWidth * 0.04,
-    paddingVertical: screenHeight * 0.015,
-    marginBottom: screenHeight * 0.012,
+    borderLeftWidth: 3,
+    borderRadius: 8,
+    paddingHorizontal: Math.max(12, screenWidth * 0.035),
+    paddingVertical: Math.max(10, screenHeight * 0.012),
+    marginBottom: Math.max(8, screenHeight * 0.01),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -1529,32 +1526,32 @@ const styles = StyleSheet.create({
   errorItemHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 5,
   },
   errorBullet: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginRight: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    marginRight: 7,
   },
   errorFieldName: {
-    fontSize: isSmallScreen ? 14 : isTablet ? 17 : 15,
+    fontSize: isSmallScreen ? 12 : isTablet ? 15 : 13,
     fontWeight: '600',
     flex: 1,
   },
   errorMessage: {
-    fontSize: isSmallScreen ? 13 : isTablet ? 16 : 14,
-    marginLeft: 16,
-    lineHeight: isSmallScreen ? 18 : isTablet ? 22 : 20,
+    fontSize: isSmallScreen ? 11 : isTablet ? 14 : 12,
+    marginLeft: 14,
+    lineHeight: isSmallScreen ? 16 : isTablet ? 20 : 18,
   },
   validationModalActions: {
     width: '100%',
-    marginTop: screenHeight * 0.02,
+    marginTop: Math.max(14, screenHeight * 0.017),
   },
   validationModalButton: {
     flexDirection: 'row',
-    paddingVertical: screenHeight * 0.016,
-    borderRadius: 12,
+    paddingVertical: Math.max(12, screenHeight * 0.014),
+    borderRadius: 10,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#667eea',
@@ -1568,9 +1565,9 @@ const styles = StyleSheet.create({
   },
   validationModalButtonText: {
     color: '#ffffff',
-    fontSize: isSmallScreen ? 15 : isTablet ? 18 : 16,
+    fontSize: isSmallScreen ? 13 : isTablet ? 16 : 14,
     fontWeight: '600',
-    marginLeft: 8,
+    marginLeft: 7,
   },
 });
 

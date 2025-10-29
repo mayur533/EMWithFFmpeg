@@ -5,6 +5,7 @@ export interface GreetingTemplate {
   name: string;
   thumbnail: string;
   category: string;
+  categoryId?: string; // Optional category ID for better filtering
   content: {
     text?: string;
     background?: string;
@@ -42,7 +43,7 @@ class GreetingTemplatesService {
       return undefined;
     }
     
-    // Already absolute URL
+    // Already absolute URL (including Cloudinary URLs)
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return url;
     }
@@ -55,7 +56,6 @@ class GreetingTemplatesService {
   // Get all greeting categories
   async getCategories(): Promise<GreetingCategory[]> {
     try {
-      console.log('📡 [GREETING CATEGORIES API] Fetching from server...');
       const response = await api.get('/api/mobile/greetings/categories');
       
       if (response.data.success) {
@@ -63,7 +63,6 @@ class GreetingTemplatesService {
         const categoriesArray = response.data.data.categories || response.data.data;
         
         if (!Array.isArray(categoriesArray)) {
-          console.error('❌ [GREETING CATEGORIES API] Invalid format');
           throw new Error('Invalid categories format');
         }
         
@@ -75,37 +74,54 @@ class GreetingTemplatesService {
           color: backendCategory.color || '#4A90E2'
         }));
         
-        console.log(`✅ [GREETING CATEGORIES API] Fetched ${mappedCategories.length} categories`);
         return mappedCategories;
       } else {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
-      console.error('❌ [GREETING CATEGORIES API] Error:', error);
+      console.error('Error fetching greeting categories:', error);
       return []; // Return empty array instead of mock data
     }
   }
 
-  // Get greeting templates by category (optimized logging)
+  // Get greeting templates by category
   async getTemplatesByCategory(category: string): Promise<GreetingTemplate[]> {
     try {
-      console.log(`📡 [GREETING BY CATEGORY API] Fetching category: ${category}`);
       const response = await api.get(`/api/mobile/greetings/templates?category=${category}`);
       
       if (response.data.success) {
-        // Map backend response to frontend format with URL conversion (optimized - no per-item logging)
-        const mappedTemplates = response.data.data.templates.map((backendTemplate: any) => {
-          const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
-          const finalThumbnail = absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
+        // API returns images in businessCategoryImages, not templates
+        const templates = response.data.data?.templates || [];
+        const businessCategoryImages = response.data.data?.businessCategoryImages || [];
+        
+        // Use businessCategoryImages if templates is empty
+        const dataToMap = businessCategoryImages.length > 0 ? businessCategoryImages : templates;
+        
+        if (dataToMap.length === 0) {
+          return [];
+        }
+        
+        // Map backend response to frontend format with URL conversion
+        const mappedTemplates = dataToMap.map((backendTemplate: any) => {
+          // For businessCategoryImages: prefer url, then thumbnailUrl
+          // For templates: use imageUrl or thumbnail
+          let imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
+          let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
+          
+          const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl);
+          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl);
+          const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
+          const finalBackground = absoluteImageUrl || absoluteThumbnailUrl || finalThumbnail;
           
           return {
             id: backendTemplate.id,
             name: backendTemplate.title,
             thumbnail: finalThumbnail,
-            category: backendTemplate.category,
+            category: backendTemplate.business_categories?.name || backendTemplate.category || 'General',
+            categoryId: backendTemplate.business_categories?.id || backendTemplate.businessCategoryId || undefined,
             content: {
-              text: backendTemplate.description,
-              background: absoluteUrl || finalThumbnail,
+              text: backendTemplate.description || '',
+              background: finalBackground,
               layout: 'vertical' as const
             },
             downloads: backendTemplate.downloads || 0,
@@ -114,13 +130,12 @@ class GreetingTemplatesService {
           };
         });
         
-        console.log(`✅ [GREETING BY CATEGORY API] Fetched ${mappedTemplates.length} templates`);
         return mappedTemplates;
       } else {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
-      console.error('❌ [GREETING BY CATEGORY API] Error:', error);
+      console.error('Error fetching greeting templates by category:', error);
       return []; // Return empty array instead of mock data
     }
   }
@@ -134,23 +149,42 @@ class GreetingTemplatesService {
       if (filters?.isPremium !== undefined) params.append('isPremium', filters.isPremium.toString());
       if (filters?.search) params.append('search', filters.search);
 
-      console.log('📡 [GREETING TEMPLATES API] Fetching from server...');
-      const response = await api.get(`/api/mobile/greetings/templates?${params.toString()}`);
+      const endpoint = `/api/mobile/greetings/templates?${params.toString()}`;
+      const response = await api.get(endpoint);
       
       if (response.data.success) {
-        // Map backend response to frontend format with URL conversion (optimized - no per-item logging)
-        const mappedTemplates = response.data.data.templates.map((backendTemplate: any) => {
-          const absoluteUrl = this.convertToAbsoluteUrl(backendTemplate.imageUrl);
-          const finalThumbnail = absoluteUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
+        // API returns images in businessCategoryImages, not templates
+        const templates = response.data.data?.templates || [];
+        const businessCategoryImages = response.data.data?.businessCategoryImages || [];
+        
+        // Use businessCategoryImages if templates is empty
+        const dataToMap = businessCategoryImages.length > 0 ? businessCategoryImages : templates;
+        
+        if (dataToMap.length === 0) {
+          return [];
+        }
+        
+        // Map backend response to frontend format with URL conversion
+        const mappedTemplates = dataToMap.map((backendTemplate: any) => {
+          // For businessCategoryImages: prefer url, then thumbnailUrl
+          // For templates: use imageUrl or thumbnail
+          let imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
+          let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
+          
+          const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl);
+          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl);
+          const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
+          const finalBackground = absoluteImageUrl || absoluteThumbnailUrl || finalThumbnail;
           
           return {
             id: backendTemplate.id,
             name: backendTemplate.title,
             thumbnail: finalThumbnail,
-            category: backendTemplate.category,
+            category: backendTemplate.business_categories?.name || backendTemplate.category || 'General',
+            categoryId: backendTemplate.business_categories?.id || backendTemplate.businessCategoryId || undefined,
             content: {
-              text: backendTemplate.description,
-              background: absoluteUrl || finalThumbnail,
+              text: backendTemplate.description || '',
+              background: finalBackground,
               layout: 'vertical' as const
             },
             downloads: backendTemplate.downloads || 0,
@@ -159,58 +193,32 @@ class GreetingTemplatesService {
           };
         });
         
-        console.log(`✅ [GREETING TEMPLATES API] Fetched ${mappedTemplates.length} templates`);
         return mappedTemplates;
       } else {
         throw new Error('API returned unsuccessful response');
       }
-    } catch (error) {
-      console.error('❌ [GREETING TEMPLATES API] Error:', error);
+    } catch (error: any) {
+      console.error('Error fetching greeting templates:', error);
       return []; // Return empty array instead of mock data
     }
   }
 
-  // Search greeting templates (optimized logging)
+  // Search greeting templates
   async searchTemplates(query: string): Promise<GreetingTemplate[]> {
     try {
-      console.log(`📡 [GREETING SEARCH API] Searching for: "${query}"`);
-      console.log(`📡 [GREETING SEARCH API] Full URL: /api/mobile/greetings/templates?search=${encodeURIComponent(query)}`);
-      
       const response = await api.get(`/api/mobile/greetings/templates?search=${encodeURIComponent(query)}`);
       
-      // ===== PRINT COMPLETE RESPONSE =====
-      console.log('═══════════════════════════════════════════════════════');
-      console.log(`🔍 [GREETING SEARCH] FULL API RESPONSE FOR: "${query}"`);
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('📦 Complete Response Object:', JSON.stringify(response.data, null, 2));
-      console.log('═══════════════════════════════════════════════════════');
-      
       if (response.data.success) {
-        // ⚠️ IMPORTANT: API returns images in businessCategoryImages, not templates
+        // API returns images in businessCategoryImages, not templates
         const templates = response.data.data?.templates || [];
         const businessCategoryImages = response.data.data?.businessCategoryImages || [];
-        
-        console.log(`✅ Success: ${response.data.success}`);
-        console.log(`📊 Templates found: ${templates.length}`);
-        console.log(`📊 Business Category Images found: ${businessCategoryImages.length}`);
-        
-        // Debug: Print first businessCategoryImage to verify structure
-        if (businessCategoryImages.length > 0) {
-          console.log('🔍 [RAW DATA] First businessCategoryImage:');
-          console.log('  - thumbnailUrl:', businessCategoryImages[0].thumbnailUrl);
-          console.log('  - url:', businessCategoryImages[0].url);
-          console.log('  - title:', businessCategoryImages[0].title);
-        }
         
         // Use businessCategoryImages if templates is empty
         const dataToMap = businessCategoryImages.length > 0 ? businessCategoryImages : templates;
         
         if (dataToMap.length === 0) {
-          console.log('⚠️ [GREETING SEARCH API] No data found');
           return [];
         }
-        
-        console.log(`✅ Using ${businessCategoryImages.length > 0 ? 'businessCategoryImages' : 'templates'} for mapping`);
         
         // Map backend response to frontend format
         const mappedTemplates = dataToMap.map((backendTemplate: any) => {
@@ -221,7 +229,6 @@ class GreetingTemplatesService {
           
           // If thumbnail URL is missing extension, use the full URL instead
           if (thumbnailUrl && !thumbnailUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-            console.warn('⚠️ Thumbnail missing extension, using full URL:', thumbnailUrl);
             thumbnailUrl = fullUrl;
           }
           
@@ -244,21 +251,12 @@ class GreetingTemplatesService {
           };
         });
         
-        console.log(`✅ [GREETING SEARCH API] Mapped ${mappedTemplates.length} templates`);
-        if (mappedTemplates.length > 0) {
-          console.log('🔍 [FIRST MAPPED TEMPLATE]:');
-          console.log('  - ID:', mappedTemplates[0]?.id);
-          console.log('  - Name:', mappedTemplates[0]?.name);
-          console.log('  - Thumbnail:', mappedTemplates[0]?.thumbnail);
-          console.log('  - Category:', mappedTemplates[0]?.category);
-          console.log('  - Background:', mappedTemplates[0]?.content?.background);
-        }
         return mappedTemplates;
       } else {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
-      console.error('❌ [GREETING SEARCH API] Error:', error);
+      console.error('Error searching greeting templates:', error);
       return []; // Return empty array instead of mock data
     }
   }
@@ -281,13 +279,11 @@ class GreetingTemplatesService {
 
   // Get available stickers (mock data only - API endpoint removed)
   async getStickers(): Promise<string[]> {
-    console.log('📡 [STICKERS] Using mock data (API endpoint removed)');
     return this.getMockStickers();
   }
 
   // Get available emojis (mock data only - API endpoint removed)
   async getEmojis(): Promise<string[]> {
-    console.log('📡 [EMOJIS] Using mock data (API endpoint removed)');
     return this.getMockEmojis();
   }
 

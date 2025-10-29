@@ -69,15 +69,29 @@ class DownloadTrackingService {
         console.log('📊 [GET DOWNLOADS API] Statistics:', JSON.stringify(response.data.data?.statistics, null, 2));
         console.log('📊 [GET DOWNLOADS API] Pagination:', JSON.stringify(response.data.data?.pagination, null, 2));
         
-        // Map backend response to frontend format
-        const mappedDownloads = response.data.data.downloads.map((download: any) => {
+        // Map backend response to frontend format with resource fetching
+        const mappedDownloads = await Promise.all(response.data.data.downloads.map(async (download: any) => {
           // Use thumbnailUrl from backend, fallback to fileUrl if thumbnailUrl is valid HTTP/HTTPS
           const thumbnailUrl = download.thumbnailUrl;
           const isValidThumbnail = thumbnailUrl?.startsWith('http://') || thumbnailUrl?.startsWith('https://');
           const isValidFileUrl = download.fileUrl?.startsWith('http://') || download.fileUrl?.startsWith('https://');
           
-          // Prefer thumbnailUrl, then fileUrl if valid, otherwise null (will show fallback UI)
-          const imageUrl = isValidThumbnail ? thumbnailUrl : (isValidFileUrl ? download.fileUrl : null);
+          // Prefer thumbnailUrl, then fileUrl if valid, otherwise try to fetch from resource
+          let imageUrl = isValidThumbnail ? thumbnailUrl : (isValidFileUrl ? download.fileUrl : null);
+          let title = download.title || this.getResourceTitle(download.resourceType, download.resourceId);
+          let category = download.category || this.getResourceCategory(download.resourceType, download.resourceId);
+          
+          // If no valid image URL, try to fetch actual resource data
+          if (!imageUrl) {
+            console.log('⚠️ [DOWNLOAD] No valid thumbnail, fetching resource data for:', download.resourceId);
+            const resourceData = await this.fetchResourceData(download.resourceType, download.resourceId);
+            if (resourceData) {
+              imageUrl = resourceData.thumbnail;
+              title = resourceData.title || title;
+              category = resourceData.category || category;
+              console.log('✅ [DOWNLOAD] Fetched resource data:', { imageUrl, title, category });
+            }
+          }
           
           console.log('🖼️ [DOWNLOAD MAPPING]', {
             id: download.id,
@@ -86,7 +100,8 @@ class DownloadTrackingService {
             fileUrl: download.fileUrl,
             isValidThumbnail,
             isValidFileUrl,
-            finalImageUrl: imageUrl
+            finalImageUrl: imageUrl,
+            finalTitle: title
           });
           
           return {
@@ -95,11 +110,11 @@ class DownloadTrackingService {
             resourceId: download.resourceId,
             fileUrl: imageUrl,
             createdAt: download.downloadedAt || download.createdAt,
-            title: download.title || this.getResourceTitle(download.resourceType, download.resourceId),
+            title: title,
             thumbnail: imageUrl,
-            category: download.category || this.getResourceCategory(download.resourceType, download.resourceId)
+            category: category
           };
-        });
+        }));
 
         return {
           downloads: mappedDownloads,
@@ -196,19 +211,101 @@ class DownloadTrackingService {
     }
   }
 
+  // Fetch actual resource data from respective APIs
+  private async fetchResourceData(resourceType: string, resourceId: string): Promise<{ thumbnail: string; title: string; category: string } | null> {
+    try {
+      console.log('🔍 [FETCH RESOURCE] Fetching data for:', resourceType, resourceId);
+      
+      // Fetch from respective API based on resource type
+      switch (resourceType) {
+        case 'POSTER':
+        case 'TEMPLATE': {
+          // Try to fetch all greeting templates and find by ID
+          const response = await api.get('/api/mobile/greetings/templates');
+          if (response.data.success) {
+            const allImages = [
+              ...(response.data.data?.templates || []),
+              ...(response.data.data?.businessCategoryImages || [])
+            ];
+            
+            const resource = allImages.find((img: any) => img.id === resourceId);
+            if (resource) {
+              console.log('✅ [FETCH RESOURCE] Found resource in greeting templates:', resource.id);
+              return {
+                thumbnail: resource.thumbnailUrl || resource.url || resource.imageUrl,
+                title: resource.title || 'Template',
+                category: resource.business_categories?.name || resource.category || 'General'
+              };
+            }
+          }
+          break;
+        }
+        case 'GREETING': {
+          // Fetch all greeting templates and find by ID
+          const response = await api.get('/api/mobile/greetings/templates');
+          if (response.data.success) {
+            const allImages = [
+              ...(response.data.data?.templates || []),
+              ...(response.data.data?.businessCategoryImages || [])
+            ];
+            
+            const resource = allImages.find((img: any) => img.id === resourceId);
+            if (resource) {
+              console.log('✅ [FETCH RESOURCE] Found greeting:', resource.id);
+              return {
+                thumbnail: resource.thumbnailUrl || resource.url || resource.imageUrl,
+                title: resource.title || 'Greeting',
+                category: resource.business_categories?.name || resource.category || 'Greetings'
+              };
+            }
+          }
+          break;
+        }
+        case 'VIDEO': {
+          // Try to fetch video data from home API
+          try {
+            const homeApi = (await import('./homeApi')).default;
+            const videosResponse = await homeApi.getVideoContent({ limit: 100 });
+            if (videosResponse.success) {
+              const video = videosResponse.data.find((v: any) => v.id === resourceId);
+              if (video) {
+                console.log('✅ [FETCH RESOURCE] Found video:', video.id);
+                return {
+                  thumbnail: video.thumbnail || video.thumbnailUrl,
+                  title: video.title || 'Video',
+                  category: video.category || 'Videos'
+                };
+              }
+            }
+          } catch (error) {
+            console.error('❌ [FETCH RESOURCE] Error fetching video:', error);
+          }
+          break;
+        }
+      }
+      
+      console.log('⚠️ [FETCH RESOURCE] No data found for:', resourceType, resourceId);
+      return null;
+    } catch (error) {
+      console.error('❌ [FETCH RESOURCE] Error fetching resource data:', error);
+      return null;
+    }
+  }
+
   // Helper methods for resource information
   private getResourceTitle(resourceType: string, resourceId: string): string {
     // This would typically fetch from the respective resource APIs
     // For now, return a generic title
     switch (resourceType) {
+      case 'POSTER':
       case 'TEMPLATE':
-        return `Template ${resourceId}`;
+        return `Template ${resourceId.substring(0, 8)}`;
       case 'VIDEO':
-        return `Video ${resourceId}`;
+        return `Video ${resourceId.substring(0, 8)}`;
       case 'GREETING':
-        return `Greeting ${resourceId}`;
+        return `Greeting ${resourceId.substring(0, 8)}`;
       case 'CONTENT':
-        return `Content ${resourceId}`;
+        return `Content ${resourceId.substring(0, 8)}`;
       default:
         return `Downloaded ${resourceType}`;
     }
@@ -224,6 +321,7 @@ class DownloadTrackingService {
     // This would typically fetch from the respective resource APIs
     // For now, return a generic category
     switch (resourceType) {
+      case 'POSTER':
       case 'TEMPLATE':
         return 'Templates';
       case 'VIDEO':

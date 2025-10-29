@@ -30,6 +30,38 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const isSmallScreen = screenWidth < 375;
 const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
 const isLargeScreen = screenWidth >= 414;
+const isTablet = screenWidth >= 768;
+
+// Responsive helper functions
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Responsive value getter
+const getResponsiveValue = (small: number, medium: number, large: number) => {
+  if (screenWidth < 400) return small;
+  if (screenWidth < 768) return medium;
+  return large;
+};
+
+// Calculate poster card dimensions for horizontal scrolling
+const getPosterCardDimensions = () => {
+  // Determine visible cards based on screen size
+  // Smaller screens: min 3 cards visible
+  // Larger screens: max 6 cards visible
+  const visibleCards = getResponsiveValue(3, 4, 6); // 3 for small, 4 for medium, 6 for large/tablet
+  
+  // Compact padding and gaps
+  const padding = moderateScale(3);
+  const gap = moderateScale(3);
+  
+  const totalGap = (visibleCards - 1) * gap;
+  const availableWidth = screenWidth - (padding * 2) - totalGap;
+  const cardWidth = Math.floor(availableWidth / visibleCards);
+  const cardHeight = verticalScale(60); // Compact height
+  
+  return { cardWidth, cardHeight, visibleCards, gap };
+};
 
 const MyPostersScreen: React.FC = () => {
   const [posters, setPosters] = useState<DownloadedPoster[]>([]);
@@ -42,6 +74,9 @@ const MyPostersScreen: React.FC = () => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
+  
+  // Get card dimensions for horizontal scrolling
+  const { cardWidth, cardHeight, visibleCards, gap } = getPosterCardDimensions();
 
   // Load posters on component mount
   useEffect(() => {
@@ -201,13 +236,20 @@ const MyPostersScreen: React.FC = () => {
     );
   };
 
-  const renderPosterItem = ({ item }: { item: DownloadedPoster }) => (
-    <TouchableOpacity
-      style={[styles.posterItem, { backgroundColor: theme.colors.cardBackground }]}
-      onPress={() => handleViewPoster(item)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.posterImageContainer}>
+  const renderPosterItem = useCallback(({ item }: { item: DownloadedPoster }) => (
+    <View style={{ marginRight: gap }}>
+      <TouchableOpacity
+        style={[
+          styles.posterItem, 
+          { 
+            backgroundColor: theme.colors.cardBackground,
+            width: cardWidth,
+            height: cardHeight,
+          }
+        ]}
+        onPress={() => handleViewPoster(item)}
+        activeOpacity={0.7}
+      >
         {(item.thumbnailUri || item.imageUri) ? (
           <Image
             source={{ uri: item.thumbnailUri || item.imageUri }}
@@ -222,37 +264,13 @@ const MyPostersScreen: React.FC = () => {
           />
         ) : (
           <View style={[styles.posterImage, { backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' }]}>
-            <Icon name="image" size={48} color="#999" />
-            <Text style={{ color: '#666', fontSize: 10, marginTop: 8 }}>No Image</Text>
+            <Icon name="image" size={moderateScale(24)} color="#999" />
+            <Text style={{ color: '#666', fontSize: moderateScale(8), marginTop: moderateScale(4) }}>No Image</Text>
           </View>
         )}
-        <View style={styles.posterOverlay}>
-          <View style={styles.posterActions}>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: 'rgba(0,0,0,0.7)' }]}
-              onPress={() => handleSharePoster(item)}
-            >
-              <Icon name="share" size={16} color="#ffffff" />
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.actionButton, { backgroundColor: 'rgba(255,0,0,0.7)' }]}
-              onPress={() => handleDeletePoster(item)}
-            >
-              <Icon name="delete" size={16} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
-      <View style={styles.posterInfo}>
-        <Text style={[styles.posterTitle, { color: theme.colors.text }]} numberOfLines={1}>
-          {item.title}
-        </Text>
-        <Text style={[styles.posterDescription, { color: theme.colors.textSecondary, fontSize: 10 }]} numberOfLines={2}>
-          {item.description}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  );
+      </TouchableOpacity>
+    </View>
+  ), [theme, cardWidth, cardHeight, gap]);
 
   const renderCategoryFilter = () => (
     <View style={styles.categoryFilter}>
@@ -333,7 +351,7 @@ const MyPostersScreen: React.FC = () => {
             style={styles.backButton}
             onPress={() => navigation.goBack()}
           >
-            <Icon name="arrow-back" size={24} color="#ffffff" />
+            <Icon name="arrow-back" size={24} color="#333333" />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>My Posters</Text>
           <View style={styles.headerRight} />
@@ -372,13 +390,15 @@ const MyPostersScreen: React.FC = () => {
             data={filteredPosters}
             renderItem={renderPosterItem}
             keyExtractor={(item) => item.id}
-            numColumns={2}
-            columnWrapperStyle={styles.posterRow}
+            horizontal={true}
+            showsHorizontalScrollIndicator={false}
             contentContainerStyle={[
               styles.contentContainer,
-              { paddingBottom: 120 + insets.bottom }
+              { 
+                paddingHorizontal: moderateScale(3),
+                paddingBottom: 120 + insets.bottom 
+              }
             ]}
-            showsVerticalScrollIndicator={false}
             refreshControl={
               <RefreshControl
                 refreshing={refreshing}
@@ -387,6 +407,11 @@ const MyPostersScreen: React.FC = () => {
               />
             }
             ListEmptyComponent={renderEmptyState}
+            nestedScrollEnabled={true}
+            removeClippedSubviews={true}
+            maxToRenderPerBatch={isTablet ? 12 : 8}
+            windowSize={isTablet ? 10 : 8}
+            initialNumToRender={isTablet ? 12 : 8}
           />
         )}
       </LinearGradient>
@@ -414,7 +439,7 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: '#333333',
   },
   headerRight: {
     width: 40,
@@ -463,79 +488,23 @@ const styles = StyleSheet.create({
     fontSize: 13,
   },
   contentContainer: {
-    paddingHorizontal: 12,
-  },
-  posterRow: {
-    justifyContent: 'space-between',
-    marginBottom: 10,
+    paddingTop: moderateScale(4),
   },
   posterItem: {
-    width: (screenWidth - 36) / 2,
-    borderRadius: 10,
+    borderRadius: moderateScale(10),
     overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  posterImageContainer: {
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08,
+    shadowRadius: 2,
+    elevation: 2,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.1)',
     position: 'relative',
-    height: 100,
   },
   posterImage: {
     width: '100%',
     height: '100%',
-  },
-  posterOverlay: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    opacity: 0,
-  },
-  posterActions: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionButton: {
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  posterInfo: {
-    padding: 8,
-  },
-  posterTitle: {
-    fontSize: 12,
-    fontWeight: '600',
-    marginBottom: 3,
-  },
-  posterDescription: {
-    fontSize: 9,
-    lineHeight: 12,
-    marginBottom: 3,
-  },
-  posterDate: {
-    fontSize: 10,
-    marginBottom: 6,
-  },
-  categoryTag: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 6,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  categoryText: {
-    fontSize: 9,
-    fontWeight: '500',
   },
   emptyState: {
     flex: 1,

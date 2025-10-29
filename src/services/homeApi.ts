@@ -284,6 +284,12 @@ class HomeApiService {
    * Convert image URLs in upcoming events
    */
   private convertUpcomingEventsUrls(events: UpcomingEvent[]): UpcomingEvent[] {
+    // Safety check: ensure events is an array
+    if (!events || !Array.isArray(events)) {
+      console.warn('⚠️ [HOME API] convertUpcomingEventsUrls received invalid data:', events);
+      return [];
+    }
+    
     return events.map(event => {
       const convertedUrl = this.convertToAbsoluteUrl(event.imageUrl);
       
@@ -476,17 +482,23 @@ class HomeApiService {
       
       // Convert relative URLs to absolute URLs
       if (response.data.success && response.data.data) {
-        response.data.data = this.convertUpcomingEventsUrls(response.data.data);
-        
-        // Cache the result if default request
-        if (shouldCache) {
-          this.cache.upcomingEvents = {
-            data: response.data.data,
-            timestamp: Date.now(),
-          };
+        // Ensure data is an array before converting
+        if (Array.isArray(response.data.data)) {
+          response.data.data = this.convertUpcomingEventsUrls(response.data.data);
+          
+          // Cache the result if default request
+          if (shouldCache) {
+            this.cache.upcomingEvents = {
+              data: response.data.data,
+              timestamp: Date.now(),
+            };
+          }
+          
+          console.log(`✅ [HOME API] Fetched ${response.data.data.length} events ${shouldCache ? '(cached)' : '(not cached)'}`);
+        } else {
+          console.warn('⚠️ [HOME API] Expected array for upcoming events data, got:', typeof response.data.data);
+          response.data.data = [];
         }
-        
-        console.log(`✅ [HOME API] Fetched ${response.data.data.length} events ${shouldCache ? '(cached)' : '(not cached)'}`);
       }
       
       return response.data;

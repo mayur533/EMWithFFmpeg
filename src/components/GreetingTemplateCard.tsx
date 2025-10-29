@@ -14,27 +14,49 @@ import { GreetingTemplate } from '../services/greetingTemplates';
 import { useTheme } from '../context/ThemeContext';
 import OptimizedImage from './OptimizedImage';
 
-const { width: screenWidth } = Dimensions.get('window');
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-// Responsive design helpers
+// Responsive design helpers (matching HomeScreen)
 const isSmallScreen = screenWidth < 375;
 const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
 const isTablet = screenWidth >= 768;
 
-// Calculate proper card width with even spacing
+// Responsive helper functions (matching HomeScreen)
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+
+// Responsive value getter (matching HomeScreen)
+const getResponsiveValue = (small: number, medium: number, large: number) => {
+  if (screenWidth < 400) return small;
+  if (screenWidth < 768) return medium;
+  return large;
+};
+
+// Calculate proper card width for grid with equal spacing (matching HomeScreen style)
 export const getCardDimensions = () => {
-  const padding = 16; // Total horizontal padding for FlatList
-  const gap = 8; // Gap between cards
+  // Determine visible cards based on screen size
+  // Larger screens: max 6 cards visible
+  // Smaller screens: min 3 cards visible
+  const visibleCards = getResponsiveValue(3, 4, 6); // 3 for small, 4 for medium, 6 for large/tablet
   
-  // Always use 3 columns for consistent layout
-  const columns = 3;
+  // Horizontal padding for the entire row
+  const horizontalPadding = moderateScale(8);
   
-  const totalGap = (columns - 1) * gap;
-  const availableWidth = screenWidth - (padding * 2) - totalGap;
-  const cardWidth = Math.floor(availableWidth / columns);
-  const cardHeight = cardWidth * 1.3;
+  // Gap between cards
+  const cardGap = moderateScale(3);
   
-  return { cardWidth, cardHeight, columns };
+  // Calculate available width (total screen width minus padding and gaps)
+  const totalGaps = (visibleCards - 1) * cardGap;
+  const availableWidth = screenWidth - (horizontalPadding * 2) - totalGaps;
+  
+  // Calculate card width to fit evenly
+  const cardWidth = Math.floor(availableWidth / visibleCards);
+  
+  // More compact height (closer to square, like HomeScreen's verticalScale(60))
+  const cardHeight = verticalScale(60); // Compact height matching HomeScreen
+  
+  return { cardWidth, cardHeight, visibleCards, cardGap };
 };
 
 const { cardWidth, cardHeight } = getCardDimensions();
@@ -132,10 +154,10 @@ const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
             backgroundColor: theme.colors.cardBackground,
             shadowColor: theme.colors.shadow,
             borderColor: theme.colors.border,
-            borderWidth: isDarkMode ? 1.5 : 1,
-            shadowOpacity: isDarkMode ? 0.4 : 0.1,
-            shadowRadius: isDarkMode ? 12 : 8,
-            elevation: isDarkMode ? 8 : 6,
+            borderWidth: 0.5, // Thinner border for compact look
+            shadowOpacity: isDarkMode ? 0.15 : 0.08, // Lighter shadows
+            shadowRadius: isDarkMode ? 4 : 2, // Smaller shadow radius
+            elevation: isDarkMode ? 3 : 2, // Lower elevation
           }
         ]}
         onPress={handlePress}
@@ -146,7 +168,7 @@ const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
       {/* Premium Badge */}
       {template.isPremium && (
                  <View style={styles.premiumBadge}>
-           <Icon name="star" size={10} color="#FFD700" />
+           <Icon name="star" size={moderateScale(8)} color="#FFD700" />
            <Text style={styles.premiumText}>Premium</Text>
          </View>
       )}
@@ -176,49 +198,49 @@ const styles = StyleSheet.create({
   container: {
     width: cardWidth,
     height: cardHeight,
-    marginBottom: isSmallScreen ? 8 : 12,
+    marginBottom: moderateScale(4), // Spacing between rows
     position: 'relative',
   },
   gradientBorderContainer: {
     position: 'absolute',
-    top: -2,
-    left: -2,
-    right: -2,
-    bottom: -2,
-    borderRadius: isSmallScreen ? 10 : 14,
+    top: -1,
+    left: -1,
+    right: -1,
+    bottom: -1,
+    borderRadius: moderateScale(10),
     zIndex: 1,
   },
   gradientBorder: {
     flex: 1,
-    borderRadius: isSmallScreen ? 10 : 14,
-    padding: 2,
+    borderRadius: moderateScale(10),
+    padding: 1,
   },
   card: {
     width: cardWidth,
     height: cardHeight,
-    borderRadius: isSmallScreen ? 8 : 12,
+    borderRadius: moderateScale(10), // Compact border radius
     overflow: 'hidden',
-    borderWidth: 1,
+    borderWidth: 0.5, // Thinner border
     position: 'relative',
     zIndex: 2,
   },
   premiumBadge: {
     position: 'absolute',
-    top: isSmallScreen ? 4 : 6,
-    right: isSmallScreen ? 4 : 6,
+    top: moderateScale(4), // Compact positioning
+    right: moderateScale(4),
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: isSmallScreen ? 4 : 6,
-    paddingVertical: isSmallScreen ? 2 : 3,
-    borderRadius: isSmallScreen ? 8 : 10,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: moderateScale(4), // Compact padding
+    paddingVertical: moderateScale(2),
+    borderRadius: moderateScale(6),
     zIndex: 3,
   },
   premiumText: {
     color: '#FFD700',
-    fontSize: isSmallScreen ? 8 : 9,
+    fontSize: moderateScale(7), // Smaller text
     fontWeight: '600',
-    marginLeft: 2,
+    marginLeft: moderateScale(2),
   },
   imageContainer: {
     flex: 1,
@@ -233,7 +255,7 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: isSmallScreen ? 50 : 60,
+    height: moderateScale(30), // Much smaller overlay
   },
 });
 

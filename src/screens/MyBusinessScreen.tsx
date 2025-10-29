@@ -69,41 +69,39 @@ const responsiveFontSize = {
   xxxxxl: isUltraSmallScreen ? 16 : isSmallScreen ? 17 : isMediumScreen ? 18 : isLargeScreen ? 19 : 22,
 };
 
-// Fixed 3 columns for all screen sizes
-const getGridColumns = () => {
-  return 3;
+// Responsive value getter (matching GreetingTemplatesScreen)
+const getResponsiveValue = (small: number, medium: number, large: number) => {
+  if (screenWidth < 400) return small;
+  if (screenWidth < 768) return medium;
+  return large;
 };
 
-// Dynamic poster card dimensions for 3-column layout
+// Dynamic poster card dimensions for responsive grid layout (matching GreetingTemplatesScreen)
 const getPosterCardDimensions = (currentWidth: number, currentHeight?: number) => {
-  const columns = 3; // Fixed 3 columns
+  // Responsive columns: 3-6 based on screen size
+  const columns = getResponsiveValue(3, 4, 6); // 3 for small, 4 for medium, 6 for large/tablet
+  
   const dynamicScale = (size: number) => (currentWidth / 375) * size;
   const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
+  const dynamicVerticalScale = (size: number) => ((currentHeight || screenHeight) / 667) * size;
   
-  const horizontalPadding = dynamicModerateScale(8) * 2;
+  // Horizontal padding for the entire row
+  const horizontalPadding = dynamicModerateScale(8);
+  
+  // Gap between cards
   const gap = dynamicModerateScale(3);
-  const totalGapWidth = gap * (columns - 1);
-  const cardWidth = (currentWidth - horizontalPadding - totalGapWidth) / columns;
   
-  // Dynamic height based on screen size and orientation for 3-column layout
-  const height = currentHeight || screenHeight;
-  const isCurrentLandscape = currentWidth > height;
-  const isCurrentTablet = Math.min(currentWidth, height) >= 768;
+  // Calculate available width (total screen width minus padding and gaps)
+  const totalGaps = (columns - 1) * gap;
+  const availableWidth = currentWidth - (horizontalPadding * 2) - totalGaps;
   
-  let heightRatio = 0.15;
-  if (isCurrentTablet) {
-    heightRatio = isCurrentLandscape ? 0.25 : 0.22;
-  } else if (currentWidth >= 414) {
-    heightRatio = isCurrentLandscape ? 0.22 : 0.18;
-  } else if (currentWidth >= 375) {
-    heightRatio = isCurrentLandscape ? 0.18 : 0.16;
-  } else {
-    heightRatio = isCurrentLandscape ? 0.16 : 0.15;
-  }
+  // Calculate card width to fit evenly
+  const cardWidth = Math.floor(availableWidth / columns);
   
-  const cardHeight = height * heightRatio;
+  // More compact height (matching GreetingTemplatesScreen)
+  const cardHeight = dynamicVerticalScale(60);
   
-  return { cardWidth, cardHeight, columns };
+  return { cardWidth, cardHeight, columns, gap };
 };
 
 const MyBusinessScreen: React.FC = () => {
@@ -147,8 +145,8 @@ const MyBusinessScreen: React.FC = () => {
     return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
   };
   
-  // Get dynamic dimensions
-  const { cardWidth, cardHeight, columns } = getPosterCardDimensions(currentScreenWidth, currentScreenHeight);
+  // Get dynamic dimensions with responsive columns
+  const { cardWidth, cardHeight, columns, gap } = getPosterCardDimensions(currentScreenWidth, currentScreenHeight);
 
   // Optimized load with cache support
   const loadBusinessCategoryPosters = useCallback(async (isRefresh: boolean = false) => {
@@ -203,31 +201,36 @@ const MyBusinessScreen: React.FC = () => {
     });
   };
 
-  const renderPoster = useCallback(({ item }: { item: BusinessCategoryPoster }) => {
+  const renderPoster = useCallback(({ item, index }: { item: BusinessCategoryPoster; index: number }) => {
+    // Calculate if this card is the last in its row
+    const isLastInRow = (index + 1) % columns === 0;
+    
     return (
-      <TouchableOpacity
-        style={[
-          styles.posterCard,
-          {
-            width: cardWidth,
-            height: cardHeight,
-            borderRadius: dynamicModerateScale(10),
-          }
-        ]}
-        onPress={() => handlePosterPress(item)}
-        activeOpacity={0.8}
-      >
-        <OptimizedImage 
-          uri={item.thumbnail} 
-          style={styles.posterImage}
-          resizeMode="cover"
-          showLoader={true}
-          loaderColor={theme.colors.primary}
-          loaderSize="small"
-        />
-      </TouchableOpacity>
+      <View style={{ marginRight: isLastInRow ? 0 : gap }}>
+        <TouchableOpacity
+          style={[
+            styles.posterCard,
+            {
+              width: cardWidth,
+              height: cardHeight,
+              borderRadius: dynamicModerateScale(10),
+            }
+          ]}
+          onPress={() => handlePosterPress(item)}
+          activeOpacity={0.8}
+        >
+          <OptimizedImage 
+            uri={item.thumbnail} 
+            style={styles.posterImage}
+            resizeMode="cover"
+            showLoader={true}
+            loaderColor={theme.colors.primary}
+            loaderSize="small"
+          />
+        </TouchableOpacity>
+      </View>
     );
-  }, [theme, navigation, cardWidth, cardHeight, dynamicModerateScale]);
+  }, [theme, navigation, cardWidth, cardHeight, columns, gap, dynamicModerateScale]);
 
   const keyExtractor = useCallback((item: BusinessCategoryPoster) => item.id, []);
 
@@ -311,14 +314,13 @@ const MyBusinessScreen: React.FC = () => {
           
           {businessCategoryPosters.length > 0 ? (
             <FlatList
-              key={`posters-${currentScreenWidth}-${currentScreenHeight}`}
+              key={`posters-${columns}-${currentScreenWidth}-${currentScreenHeight}`}
               data={businessCategoryPosters}
               renderItem={renderPoster}
               keyExtractor={keyExtractor}
-              numColumns={3}
+              numColumns={columns}
               columnWrapperStyle={[styles.posterRow, {
                 marginBottom: dynamicModerateScale(4),
-                gap: dynamicModerateScale(3),
               }]}
               showsVerticalScrollIndicator={false}
               scrollEnabled={false}
@@ -445,7 +447,6 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
     marginBottom: moderateScale(4),
     paddingHorizontal: 0,
-    gap: moderateScale(3),
   },
   posterCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.1)',

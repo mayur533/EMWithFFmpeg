@@ -64,7 +64,7 @@ const GreetingTemplatesScreen: React.FC = () => {
   const insets = useSafeAreaInsets();
 
   // Get responsive values - memoized to prevent unnecessary re-renders
-  const { columns: gridColumns } = getCardDimensions();
+  const { visibleCards, cardGap } = getCardDimensions();
 
   // State
   const [categories, setCategories] = useState<GreetingCategory[]>([]);
@@ -112,11 +112,24 @@ const GreetingTemplatesScreen: React.FC = () => {
     if (categoryFilter === 'all') {
       return templates;
     }
-    // Filter by category name for better matching
-    return templates.filter(template => 
-      template.category?.toLowerCase().includes(categoryFilter.toLowerCase())
-    );
-  }, []);
+    
+    // Find the category object to get its name
+    const categoryObj = categories.find(cat => cat.id === categoryFilter);
+    const categoryName = categoryObj?.name || categoryFilter;
+    
+    // Filter by category ID (preferred) or name for better matching
+    const filtered = templates.filter(template => {
+      const categoryIdMatch = template.categoryId === categoryFilter;
+      const categoryNameMatch = 
+        template.category?.toLowerCase() === categoryFilter.toLowerCase() ||
+        template.category?.toLowerCase() === categoryName.toLowerCase() ||
+        template.category?.toLowerCase().includes(categoryName.toLowerCase());
+      
+      return categoryIdMatch || categoryNameMatch;
+    });
+    
+    return filtered;
+  }, [categories]);
 
   // Optimized search functionality with debouncing
   const searchTemplates = useCallback(async (query: string) => {
@@ -168,7 +181,6 @@ const GreetingTemplatesScreen: React.FC = () => {
 
   const handleTemplatePress = useCallback((template: GreetingTemplate) => {
     if (template.isPremium && !checkPremiumAccess('premium_greetings')) {
-      console.log('🔒 Premium greeting access denied, showing upgrade modal');
       setSelectedPremiumTemplate(template);
       setUpgradeModalVisible(true);
       return;
@@ -230,23 +242,20 @@ const GreetingTemplatesScreen: React.FC = () => {
     );
   }, [selectedCategory, theme.colors.surface, theme.colors.border, theme.colors.text, handleCategorySelect]);
 
-  // Optimized template card renderer with proper spacing
+  // Optimized template card renderer for vertical grid
   const renderTemplateCard = useCallback(({ item, index }: { item: GreetingTemplate; index: number }) => {
-    const { cardWidth } = getCardDimensions();
-    const isLastInRow = (index + 1) % gridColumns === 0;
+    // Calculate if this card is the last in its row
+    const isLastInRow = (index + 1) % visibleCards === 0;
     
     return (
-      <View style={{
-        width: cardWidth,
-        marginRight: isLastInRow ? 0 : moderateScale(3), // Compact gap between cards matching HomeScreen
-      }}>
+      <View style={{ marginRight: isLastInRow ? 0 : cardGap }}>
         <GreetingTemplateCard
           template={item}
           onPress={handleTemplatePress}
         />
       </View>
     );
-  }, [handleTemplatePress, gridColumns]);
+  }, [handleTemplatePress, visibleCards, cardGap]);
 
   const renderEmptyState = useCallback(() => (
     <View style={[styles.emptyContainer, { paddingHorizontal: moderateScale(16) }]}>
@@ -279,34 +288,32 @@ const GreetingTemplatesScreen: React.FC = () => {
   const keyExtractor = useCallback((item: GreetingTemplate) => item.id, []);
   const categoryKeyExtractor = useCallback((item: GreetingCategory) => item.id, []);
 
-  // Memoized FlatList props for better performance
+  // Memoized FlatList props for vertical scrolling with responsive columns
   const flatListProps = useMemo(() => {
-    const padding = moderateScale(8);
-    const gap = moderateScale(4);
+    const horizontalPadding = moderateScale(8);
+    const verticalGap = moderateScale(4);
     
     return {
       data: filteredTemplates,
       renderItem: renderTemplateCard,
       keyExtractor,
-      numColumns: gridColumns,
-      columnWrapperStyle: gridColumns > 1 ? {
-        justifyContent: 'flex-start' as const,
-        paddingHorizontal: padding,
-        marginBottom: gap,
-      } : undefined,
+      numColumns: visibleCards, // Responsive columns (3-6 based on screen size)
+      columnWrapperStyle: {
+        paddingHorizontal: horizontalPadding,
+        marginBottom: verticalGap,
+      },
       contentContainerStyle: {
         paddingBottom: moderateScale(20),
-        ...(gridColumns === 1 && { paddingHorizontal: padding }),
+        paddingTop: moderateScale(4),
       },
       showsVerticalScrollIndicator: false,
       removeClippedSubviews: true,
-      maxToRenderPerBatch: isTablet ? 8 : 6,
+      maxToRenderPerBatch: isTablet ? 12 : 8,
       windowSize: isTablet ? 10 : 8,
-      initialNumToRender: isTablet ? 8 : 6,
+      initialNumToRender: isTablet ? 12 : 8,
       updateCellsBatchingPeriod: 50,
-      getItemLayout: undefined,
     };
-  }, [filteredTemplates, renderTemplateCard, keyExtractor, gridColumns, isTablet]);
+  }, [filteredTemplates, renderTemplateCard, keyExtractor, visibleCards, isTablet]);
 
   // Render upgrade modal
   const renderUpgradeModal = () => {
@@ -557,6 +564,7 @@ const GreetingTemplatesScreen: React.FC = () => {
           </View>
         ) : (
           <FlatList
+            key={`grid-${visibleCards}`} // Key to force re-render when columns change
             {...flatListProps}
             refreshControl={
               <RefreshControl
@@ -657,12 +665,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   templatesContainer: {
-    paddingHorizontal: moderateScale(6),
     paddingBottom: moderateScale(20),
-  },
-  templateRow: {
-    justifyContent: 'flex-start',
-    gap: moderateScale(4),
   },
   emptyContainer: {
     flex: 1,
