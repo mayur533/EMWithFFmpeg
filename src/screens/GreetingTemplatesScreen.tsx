@@ -78,8 +78,8 @@ const GreetingTemplatesScreen: React.FC = () => {
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
-  // Optimized data fetching with instant cache loading
-  const fetchData = useCallback(async (isRefresh: boolean = false) => {
+  // Optimized data fetching - removed dependency to prevent re-renders
+  const fetchData = async (isRefresh: boolean = false) => {
     try {
       // Fetch categories and templates in parallel
       // Cache will make this instant on subsequent loads
@@ -88,24 +88,25 @@ const GreetingTemplatesScreen: React.FC = () => {
         greetingTemplatesService.getTemplates(),
       ]);
       
-      setCategories(categoriesData);
-      setAllTemplates(templatesData);
-      setFilteredTemplates(templatesData);
-      
-      // Hide initial loading after first fetch
-      if (initialLoading) {
-        setInitialLoading(false);
+      // Only update if we got data
+      if (categoriesData.length > 0) {
+        setCategories(categoriesData);
       }
+      
+      if (templatesData.length > 0) {
+        setAllTemplates(templatesData);
+        setFilteredTemplates(templatesData);
+      }
+      
+      setInitialLoading(false);
     } catch (error) {
       console.error('Error fetching data:', error);
-      if (initialLoading) {
-        setInitialLoading(false);
-      }
+      setInitialLoading(false);
       if (!isRefresh) {
         Alert.alert('Error', 'Failed to load greeting templates. Please try again.');
       }
     }
-  }, [initialLoading]);
+  };
 
   // Client-side filtering for instant category switching
   const filterTemplatesByCategory = useCallback((categoryFilter: string, templates: GreetingTemplate[]) => {
@@ -148,10 +149,10 @@ const GreetingTemplatesScreen: React.FC = () => {
     }
   }, [allTemplates, selectedCategory, filterTemplatesByCategory]);
 
-  // Effects
+  // Effects - load data on mount only
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+  }, []); // Only run once on mount
 
 
 
@@ -167,7 +168,7 @@ const GreetingTemplatesScreen: React.FC = () => {
       const categoryFiltered = filterTemplatesByCategory(selectedCategory, allTemplates);
       setFilteredTemplates(categoryFiltered);
     }
-  }, [searchQuery, searchTemplates, selectedCategory, allTemplates, filterTemplatesByCategory]);
+  }, [searchQuery, selectedCategory, allTemplates]); // Removed function dependencies to prevent loops
 
   // Instant category switching - no API calls
   const handleCategorySelect = useCallback((categoryFilter: string) => {
@@ -203,7 +204,7 @@ const GreetingTemplatesScreen: React.FC = () => {
     // Fetch fresh data
     await fetchData(true);
     setRefreshing(false);
-  }, [fetchData]);
+  }, []);
 
   // Memoized render functions with optimized dependencies
   const renderCategoryTab = useCallback(({ item }: { item: GreetingCategory }) => {
@@ -308,12 +309,17 @@ const GreetingTemplatesScreen: React.FC = () => {
       },
       showsVerticalScrollIndicator: false,
       removeClippedSubviews: true,
-      maxToRenderPerBatch: isTablet ? 12 : 8,
-      windowSize: isTablet ? 10 : 8,
-      initialNumToRender: isTablet ? 12 : 8,
-      updateCellsBatchingPeriod: 50,
+      maxToRenderPerBatch: 10,
+      windowSize: 5,
+      initialNumToRender: 10,
+      updateCellsBatchingPeriod: 100,
+      getItemLayout: (data: any, index: number) => ({
+        length: cardGap + moderateScale(4),
+        offset: (cardGap + moderateScale(4)) * index,
+        index,
+      }),
     };
-  }, [filteredTemplates, renderTemplateCard, keyExtractor, visibleCards, isTablet]);
+  }, [filteredTemplates, visibleCards]);
 
   // Render upgrade modal
   const renderUpgradeModal = () => {
@@ -548,35 +554,37 @@ const GreetingTemplatesScreen: React.FC = () => {
         </View>
 
         {/* Templates Grid - Optimized FlatList */}
-        {initialLoading && filteredTemplates.length === 0 ? (
-          <View style={[styles.loadingContainer, { paddingTop: moderateScale(40) }]}>
-            <ActivityIndicator size="large" color={theme.colors.primary} />
-            <Text style={[
-              styles.loadingText, 
-              { 
-                color: theme.colors.text,
-                marginTop: moderateScale(8),
-                fontSize: moderateScale(10),
-              }
-            ]}>
-              Loading templates...
-            </Text>
-          </View>
-        ) : (
-          <FlatList
-            key={`grid-${visibleCards}`} // Key to force re-render when columns change
-            {...flatListProps}
-            refreshControl={
-              <RefreshControl
-                refreshing={refreshing}
-                onRefresh={handleRefresh}
-                colors={[theme.colors.primary]}
-                tintColor={theme.colors.primary}
-              />
-            }
-            ListEmptyComponent={renderEmptyState}
-          />
-        )}
+        <FlatList
+          key={`grid-${visibleCards}`} // Key to force re-render when columns change
+          {...flatListProps}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={handleRefresh}
+              colors={[theme.colors.primary]}
+              tintColor={theme.colors.primary}
+            />
+          }
+          ListEmptyComponent={
+            initialLoading ? (
+              <View style={[styles.loadingContainer, { paddingTop: moderateScale(40) }]}>
+                <ActivityIndicator size="large" color={theme.colors.primary} />
+                <Text style={[
+                  styles.loadingText, 
+                  { 
+                    color: theme.colors.text,
+                    marginTop: moderateScale(8),
+                    fontSize: moderateScale(10),
+                  }
+                ]}>
+                  Loading templates...
+                </Text>
+              </View>
+            ) : (
+              renderEmptyState()
+            )
+          }
+        />
       </LinearGradient>
       
       {/* Premium Modal */}

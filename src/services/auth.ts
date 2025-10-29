@@ -279,104 +279,52 @@ class AuthService {
     try {
       console.log('Signing out user...');
       
-      // Try API logout for all users
-      try {
-        console.log('Attempting API logout...');
-        await authApi.logout();
-        console.log('✅ API logout successful');
-      } catch (apiError: any) {
-        console.error('❌ API logout failed:', apiError);
-        // Continue with local cleanup even if API logout fails
-        // This ensures the user can still sign out locally
-      }
+      // STEP 1: Capture auth token BEFORE clearing (needed for API logout)
+      const authToken = await AsyncStorage.getItem('authToken');
+      const isGoogleUser = this.currentUser?.providerId === 'google';
       
-      // Sign out from Google if user was signed in with Google
-      if (this.currentUser?.providerId === 'google') {
-        try {
-          console.log('Signing out from Google...');
-          await GoogleSignin.signOut();
-          console.log('✅ Google Sign-Out successful');
-        } catch (googleError) {
-          console.error('❌ Google Sign-Out error:', googleError);
-          // Continue with local cleanup even if Google sign-out fails
-        }
-      }
-      
-      // Clear all service caches to prevent data leaking to next user
-      console.log('🗑️ Clearing all service caches...');
-      try {
-        const businessProfileService = require('./businessProfile').default;
-        businessProfileService.clearCache();
-        console.log('✅ Business profile cache cleared');
-      } catch (error) {
-        console.error('Failed to clear business profile cache:', error);
-      }
-      
-      try {
-        const businessCategoryPostersApi = require('./businessCategoryPostersApi').default;
-        businessCategoryPostersApi.clearCache();
-        console.log('✅ Business category posters cache cleared');
-      } catch (error) {
-        console.error('Failed to clear business category posters cache:', error);
-      }
-      
-      try {
-        const homeApi = require('./homeApi').default;
-        homeApi.clearCache();
-        console.log('✅ Home API cache cleared');
-      } catch (error) {
-        console.error('Failed to clear home API cache:', error);
-      }
-      
-      try {
-        const templatesService = require('./templates').default;
-        templatesService.clearCache();
-        console.log('✅ Templates cache cleared');
-      } catch (error) {
-        console.error('Failed to clear templates cache:', error);
-      }
-      
-      try {
-        const businessCategoriesService = require('./businessCategoriesService').default;
-        businessCategoriesService.clearCache();
-        console.log('✅ Business categories cache cleared');
-      } catch (error) {
-        console.error('Failed to clear business categories cache:', error);
-      }
-      
-      // Clear all local data
-      console.log('Clearing local data...');
+      // STEP 2: Clear critical local data FIRST for instant UI update
       this.currentUser = null;
-      await AsyncStorage.removeItem('currentUser');
-      await AsyncStorage.removeItem('authToken');
-      await AsyncStorage.removeItem('user'); // Clear any demo user data
-      await AsyncStorage.removeItem('isDemoUser'); // Clear demo flag
       
-      // Clear any other user-related data
-      await AsyncStorage.removeItem('user_likes');
-      await AsyncStorage.removeItem('transaction_history');
-      await AsyncStorage.removeItem('user_business_profiles');
-      await AsyncStorage.removeItem('user_preferences');
-      
-      // Clear profile cache keys
-      await AsyncStorage.removeItem('profile_cache_timestamp');
-      await AsyncStorage.removeItem('profile_data');
-      await AsyncStorage.removeItem('poster_stats');
-      await AsyncStorage.removeItem('business_stats');
-      await AsyncStorage.removeItem('download_stats');
-      
-      // Notify auth state listeners
+      // STEP 3: Notify listeners immediately (triggers navigation to login screen)
       this.notifyAuthStateListeners(null);
-      console.log('✅ Sign out completed successfully - all caches and data cleared');
+      
+      // STEP 4: Clear AsyncStorage in batch (much faster than individual removes)
+      const keysToRemove = [
+        'currentUser',
+        'authToken',
+        'user',
+        'isDemoUser',
+        'user_likes',
+        'transaction_history',
+        'user_business_profiles',
+        'user_preferences',
+        'profile_cache_timestamp',
+        'profile_data',
+        'poster_stats',
+        'business_stats',
+        'download_stats',
+        'profile_cache_data',
+        'profile_cache_download_stats',
+        'profile_cache_business_stats',
+        'profile_cache_last_update',
+        'profile_cache_user_id',
+      ];
+      
+      await AsyncStorage.multiRemove(keysToRemove);
+      
+      // STEP 5: Background cleanup (API logout with token, Google sign out, cache clearing)
+      // Don't await these - let them run in background
+      this.performBackgroundCleanup(authToken, isGoogleUser);
+      
+      console.log('✅ Sign out completed - user navigated to login');
     } catch (error) {
       console.error('❌ Sign out error:', error);
       // Even if there's an error, we should clear local data
       try {
         this.currentUser = null;
-        await AsyncStorage.removeItem('currentUser');
-        await AsyncStorage.removeItem('authToken');
-        await AsyncStorage.removeItem('user');
-        await AsyncStorage.removeItem('isDemoUser');
+        const keysToRemove = ['currentUser', 'authToken', 'user', 'isDemoUser'];
+        await AsyncStorage.multiRemove(keysToRemove);
         this.notifyAuthStateListeners(null);
         console.log('✅ Local cleanup completed despite error');
       } catch (cleanupError) {
@@ -384,6 +332,48 @@ class AuthService {
       }
       throw error;
     }
+  }
+
+  // Perform background cleanup after sign out (non-blocking)
+  private performBackgroundCleanup(authToken: string | null, isGoogleUser: boolean): void {
+    // Run in background without awaiting - user already navigated away
+    setTimeout(async () => {
+      try {
+        const cleanupTasks = [];
+        
+        // API logout with the captured token
+        if (authToken) {
+          cleanupTasks.push(
+            (async () => {
+              try {
+                // Temporarily restore token for logout API call
+                await AsyncStorage.setItem('authToken', authToken);
+                await authApi.logout();
+                // Remove it again after logout
+                await AsyncStorage.removeItem('authToken');
+              } catch (error) {
+                // Silent fail - user already logged out locally
+              }
+            })()
+          );
+        }
+        
+        // Google sign out
+        if (isGoogleUser) {
+          cleanupTasks.push(GoogleSignin.signOut().catch(() => {}));
+        }
+        
+        // Clear all service caches
+        cleanupTasks.push(this.clearAllCaches().catch(() => {}));
+        
+        // Execute all cleanup tasks in parallel
+        await Promise.all(cleanupTasks);
+        
+        console.log('✅ Background cleanup completed');
+      } catch (error) {
+        // Silent fail - user already logged out locally
+      }
+    }, 0);
   }
 
   // Get current user profile (API only)
@@ -547,61 +537,92 @@ class AuthService {
 
   // Helper method to clear all service caches
   private async clearAllCaches(): Promise<void> {
-    console.log('🗑️ Clearing all service caches...');
+    // Clear all service caches in parallel for better performance
+    const cachePromises = [
+      // Business profile cache
+      (async () => {
+        try {
+          const businessProfileService = require('./businessProfile').default;
+          await businessProfileService.clearCache();
+        } catch (error) {
+          // Silent fail
+        }
+      })(),
+      
+      // Business category posters cache
+      (async () => {
+        try {
+          const businessCategoryPostersApi = require('./businessCategoryPostersApi').default;
+          await businessCategoryPostersApi.clearCache();
+        } catch (error) {
+          // Silent fail
+        }
+      })(),
+      
+      // Home API cache
+      (async () => {
+        try {
+          const homeApi = require('./homeApi').default;
+          await homeApi.clearCache();
+        } catch (error) {
+          // Silent fail
+        }
+      })(),
+      
+      // Templates cache
+      (async () => {
+        try {
+          const templatesService = require('./templates').default;
+          await templatesService.clearCache();
+        } catch (error) {
+          // Silent fail
+        }
+      })(),
+      
+      // Business categories cache
+      (async () => {
+        try {
+          const businessCategoriesService = require('./businessCategoriesService').default;
+          await businessCategoriesService.clearCache();
+        } catch (error) {
+          // Silent fail
+        }
+      })(),
+      
+      // Greeting templates cache
+      (async () => {
+        try {
+          const greetingTemplatesService = require('./greetingTemplates').default;
+          greetingTemplatesService.clearCache();
+        } catch (error) {
+          // Silent fail
+        }
+      })(),
+      
+      // Profile-related AsyncStorage in batch
+      (async () => {
+        try {
+          const profileCacheKeys = [
+            'profile_cache_timestamp',
+            'profile_data',
+            'poster_stats',
+            'business_stats',
+            'download_stats',
+            'profile_cache_data',
+            'profile_cache_download_stats',
+            'profile_cache_business_stats',
+            'profile_cache_last_update',
+            'profile_cache_user_id',
+          ];
+          await AsyncStorage.multiRemove(profileCacheKeys);
+        } catch (error) {
+          // Silent fail
+        }
+      })(),
+    ];
     
-    try {
-      const businessProfileService = require('./businessProfile').default;
-      businessProfileService.clearCache();
-      console.log('✅ Business profile cache cleared');
-    } catch (error) {
-      console.error('Failed to clear business profile cache:', error);
-    }
-    
-    try {
-      const businessCategoryPostersApi = require('./businessCategoryPostersApi').default;
-      businessCategoryPostersApi.clearCache();
-      console.log('✅ Business category posters cache cleared');
-    } catch (error) {
-      console.error('Failed to clear business category posters cache:', error);
-    }
-    
-    try {
-      const homeApi = require('./homeApi').default;
-      homeApi.clearCache();
-      console.log('✅ Home API cache cleared');
-    } catch (error) {
-      console.error('Failed to clear home API cache:', error);
-    }
-    
-    try {
-      const templatesService = require('./templates').default;
-      templatesService.clearCache();
-      console.log('✅ Templates cache cleared');
-    } catch (error) {
-      console.error('Failed to clear templates cache:', error);
-    }
-    
-    try {
-      const businessCategoriesService = require('./businessCategoriesService').default;
-      businessCategoriesService.clearCache();
-      console.log('✅ Business categories cache cleared');
-    } catch (error) {
-      console.error('Failed to clear business categories cache:', error);
-    }
-    
-    // Clear profile-related AsyncStorage
-    try {
-      await AsyncStorage.removeItem('profile_cache_timestamp');
-      await AsyncStorage.removeItem('profile_data');
-      await AsyncStorage.removeItem('poster_stats');
-      await AsyncStorage.removeItem('business_stats');
-      await AsyncStorage.removeItem('download_stats');
-      console.log('✅ AsyncStorage profile caches cleared');
-    } catch (error) {
-      console.error('Failed to clear AsyncStorage caches:', error);
-    }
-    
-    console.log('✅ All caches cleared successfully');
+    // Execute all in parallel
+    await Promise.all(cachePromises);
   }
 }
 

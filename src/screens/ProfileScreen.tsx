@@ -74,15 +74,6 @@ const responsiveFontSize = {
 const ProfileScreen: React.FC = () => {
   const currentUser = authService.getCurrentUser();
   
-  // Debug: Log current user data to diagnose company name issue
-  console.log('🔍 ProfileScreen - User ID:', currentUser?.id);
-  console.log('🔍 ProfileScreen - companyName:', currentUser?.companyName);
-  console.log('🔍 ProfileScreen - _originalCompanyName:', currentUser?._originalCompanyName);
-  console.log('🔍 ProfileScreen - displayName:', currentUser?.displayName);
-  console.log('🔍 ProfileScreen - name:', currentUser?.name);
-  console.log('🖼️ ProfileScreen - User Logo:', currentUser?.logo || '(empty)');
-  console.log('🖼️ ProfileScreen - Company Logo:', currentUser?.companyLogo || '(empty)');
-  
   // Dynamic dimensions for responsive layout (matching HomeScreen)
   const [dimensions, setDimensions] = useState(() => {
     const { width, height } = Dimensions.get('window');
@@ -114,14 +105,14 @@ const ProfileScreen: React.FC = () => {
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [editFormData, setEditFormData] = useState({
-    name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.name || '',
-    description: currentUser?._originalDescription || currentUser?.description || '',
-    category: currentUser?._originalCategory || currentUser?.category || '',
-    address: currentUser?._originalAddress || currentUser?.address || '',
+    name: currentUser?.companyName || currentUser?.name || '',
+    description: currentUser?.description || '',
+    category: currentUser?.category || '',
+    address: currentUser?.address || '',
     phone: currentUser?.phoneNumber || currentUser?.phone || '',
-    alternatePhone: currentUser?.alternatePhone || '', // Use current value, not _original (can be updated)
+    alternatePhone: currentUser?.alternatePhone || '',
     email: currentUser?.email || '',
-    website: currentUser?._originalWebsite || currentUser?.website || '',
+    website: currentUser?.website || '',
     companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
   });
   const [phoneValidationError, setPhoneValidationError] = useState<string>('');
@@ -156,6 +147,7 @@ const ProfileScreen: React.FC = () => {
     DOWNLOAD_STATS: 'profile_cache_download_stats',
     BUSINESS_STATS: 'profile_cache_business_stats',
     LAST_UPDATE: 'profile_cache_last_update',
+    CACHED_USER_ID: 'profile_cache_user_id', // Track which user's data is cached
   };
 
   // Business categories (same as registration)
@@ -180,9 +172,29 @@ const ProfileScreen: React.FC = () => {
     darkModeAnimation.setValue(isDarkMode ? 1 : 0);
   }, [isDarkMode]);
 
+  // Clear state when user changes to prevent data leakage between users
+  useEffect(() => {
+    return () => {
+      // Cleanup function called when component unmounts or user changes
+      console.log('🧹 ProfileScreen unmounting, clearing local state');
+      setPosterStats({ total: 0, recentCount: 0 });
+      setBusinessProfileStats({ total: 0, recentCount: 0 });
+      setProfileImageUri(null);
+    };
+  }, [currentUser?.id]);
+
   // Cache utility functions
-  const isCacheValid = async (): Promise<boolean> => {
+  const isCacheValid = async (currentUserId: string): Promise<boolean> => {
     try {
+      // Check if cache belongs to current user
+      const cachedUserId = await AsyncStorage.getItem(CACHE_KEYS.CACHED_USER_ID);
+      if (cachedUserId !== currentUserId) {
+        console.log('🔄 Different user detected, invalidating cache');
+        console.log('   - Cached user ID:', cachedUserId);
+        console.log('   - Current user ID:', currentUserId);
+        return false;
+      }
+      
       const lastUpdate = await AsyncStorage.getItem(CACHE_KEYS.LAST_UPDATE);
       if (!lastUpdate) return false;
       
@@ -221,6 +233,7 @@ const ProfileScreen: React.FC = () => {
         CACHE_KEYS.DOWNLOAD_STATS,
         CACHE_KEYS.BUSINESS_STATS,
         CACHE_KEYS.LAST_UPDATE,
+        CACHE_KEYS.CACHED_USER_ID,
       ]);
       setLastCacheUpdate(0);
     } catch (error) {
@@ -228,10 +241,11 @@ const ProfileScreen: React.FC = () => {
     }
   };
 
-  const updateCacheTimestamp = async (): Promise<void> => {
+  const updateCacheTimestamp = async (userId: string): Promise<void> => {
     try {
       const now = Date.now();
       await AsyncStorage.setItem(CACHE_KEYS.LAST_UPDATE, now.toString());
+      await AsyncStorage.setItem(CACHE_KEYS.CACHED_USER_ID, userId);
       setLastCacheUpdate(now);
     } catch (error) {
       console.error('❌ Error updating cache timestamp:', error);
@@ -254,22 +268,26 @@ const ProfileScreen: React.FC = () => {
 
           // Check cache validity unless force refresh
           if (!forceRefresh) {
-            const cacheValid = await isCacheValid();
+            const cacheValid = await isCacheValid(userId);
             if (cacheValid) {
-              console.log('📦 Loading profile data from cache');
+              console.log('📦 Loading profile data from cache for user:', userId);
               
               // Load from cache
               const cachedProfile = await getCachedData<any>(CACHE_KEYS.PROFILE_DATA);
               const cachedDownloadStats = await getCachedData<any>(CACHE_KEYS.DOWNLOAD_STATS);
               const cachedBusinessStats = await getCachedData<any>(CACHE_KEYS.BUSINESS_STATS);
               
-              if (cachedProfile) {
+              // Verify cached profile belongs to current user
+              if (cachedProfile && cachedProfile.id === userId) {
                 authService.setCurrentUser(cachedProfile);
                 currentUser = cachedProfile;
                 if (cachedProfile?.logo || cachedProfile?.companyLogo) {
                   setProfileImageUri(cachedProfile?.logo || cachedProfile?.companyLogo || null);
                 }
                 console.log('✅ Profile data loaded from cache');
+              } else if (cachedProfile) {
+                console.log('⚠️ Cached profile belongs to different user, invalidating cache');
+                await invalidateCache();
               }
               
               if (cachedDownloadStats) {
@@ -282,13 +300,15 @@ const ProfileScreen: React.FC = () => {
                 console.log('✅ Business stats loaded from cache');
               }
               
-              // If all cache data is available, return early
-              if (cachedProfile && cachedDownloadStats && cachedBusinessStats) {
+              // If all cache data is available and belongs to correct user, return early
+              if (cachedProfile && cachedProfile.id === userId && cachedDownloadStats && cachedBusinessStats) {
                 console.log('✅ All data loaded from cache, skipping API calls');
                 return;
               }
             } else {
-              console.log('⏰ Cache expired or invalid, fetching fresh data');
+              console.log('⏰ Cache expired, invalid, or different user - fetching fresh data');
+              // Invalidate cache to be safe
+              await invalidateCache();
             }
           } else {
             console.log('🔄 Force refresh requested, fetching fresh data');
@@ -340,15 +360,21 @@ const ProfileScreen: React.FC = () => {
             console.log('🔍 Complete Profile Data from API:', JSON.stringify(completeUserData, null, 2));
             
             // Update current user with complete profile data
-            // CRITICAL: Exclude businessProfiles AND companyName from API to prevent contamination
-            const { businessProfiles, companyName: apiCompanyName, ...userDataWithoutProfiles } = completeUserData as any;
+            // CRITICAL: Exclude businessProfiles from API to prevent contamination
+            const { businessProfiles, ...cleanUserData } = completeUserData as any;
+            
+            // Use the name/companyName from API response (this is the user's actual current name)
+            const apiCompanyName = cleanUserData.name || cleanUserData.companyName || currentUser?.companyName;
+            
             const updatedUserData = {
               ...currentUser,
-              ...userDataWithoutProfiles,
-              // ALWAYS use the stored companyName, NEVER from API (API may return business profile data)
-              companyName: currentUser?._originalCompanyName || currentUser?.companyName,
-              // Ensure _originalCompanyName is always set and preserved
-              _originalCompanyName: currentUser?._originalCompanyName || currentUser?.companyName,
+              ...cleanUserData,
+              // Use the name from API (this is the user's actual registered/updated name)
+              companyName: apiCompanyName,
+              displayName: apiCompanyName,
+              name: apiCompanyName,
+              // Update _originalCompanyName to the current name from API
+              _originalCompanyName: apiCompanyName,
             };
             
             // Update auth service with complete data (without business profiles)
@@ -357,8 +383,8 @@ const ProfileScreen: React.FC = () => {
             // Cache the updated profile data
             await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUserData);
             
-            console.log('✅ User data updated (business profiles AND companyName excluded from API)');
-            console.log('✅ Preserved original registered company name:', updatedUserData.companyName);
+            console.log('✅ User data updated (business profiles excluded from API)');
+            console.log('✅ Company name from API:', updatedUserData.companyName);
             console.log('💾 Profile data cached');
             
             // Update profile image from logo field
@@ -424,7 +450,7 @@ const ProfileScreen: React.FC = () => {
           }
           
           // Update cache timestamp after successful data load
-          await updateCacheTimestamp();
+          await updateCacheTimestamp(userId);
           
           console.log('📊 Loaded stats for user:', userId, 'Posters:', posterStats?.total || 0, 'Business Profiles:', businessStats?.total || 0);
           console.log('✅ All profile data cached successfully');
@@ -460,13 +486,19 @@ const ProfileScreen: React.FC = () => {
         const profileResponse = await authApi.getProfile(userId);
         const completeUserData = profileResponse.data;
         
-        const { businessProfiles, companyName: apiCompanyName, ...cleanUserData } = completeUserData as any;
+        const { businessProfiles, ...cleanUserData } = completeUserData as any;
+        
+        // Use the name from API (this is the user's actual current name)
+        const apiCompanyName = cleanUserData.name || cleanUserData.companyName || currentUser?.companyName;
+        
         const updatedUserData = {
           ...currentUser,
           ...cleanUserData,
-          companyName: currentUser?._originalCompanyName || currentUser?.companyName,
-          // Ensure _originalCompanyName is always set and preserved
-          _originalCompanyName: currentUser?._originalCompanyName || currentUser?.companyName,
+          companyName: apiCompanyName,
+          displayName: apiCompanyName,
+          name: apiCompanyName,
+          // Update _originalCompanyName to match the current name from API
+          _originalCompanyName: apiCompanyName,
         };
         
         authService.setCurrentUser(updatedUserData);
@@ -518,7 +550,7 @@ const ProfileScreen: React.FC = () => {
       }
       
       // Update cache timestamp
-      await updateCacheTimestamp();
+      await updateCacheTimestamp(userId);
       
       console.log('✅ Profile data refreshed successfully');
     } catch (error) {
@@ -536,20 +568,13 @@ const ProfileScreen: React.FC = () => {
   const confirmSignOut = async () => {
     try {
       setShowSignOutModal(false);
-      console.log('ProfileScreen: Starting sign out process...');
       
-      // Clear profile cache before signing out
-      console.log('🗑️ Clearing profile cache before sign out...');
-      await invalidateCache();
-      
-      // Clear subscription data FIRST before signing out
-      console.log('🧹 Clearing subscription data before sign out...');
+      // Clear subscription data immediately
       clearSubscriptionData();
       
+      // Call signOut (this will handle all cache clearing internally)
       await authService.signOut();
       
-      console.log('ProfileScreen: Sign out completed successfully');
-              
       // Navigation will be handled by the auth state change listener
               
             } catch (error) {
@@ -661,25 +686,25 @@ const ProfileScreen: React.FC = () => {
       // Check if we already have complete user data from registration
       if (currentUser && currentUser.email && (currentUser.phone || currentUser.phoneNumber) && 
           (currentUser.companyName || currentUser.name) && hasProtectedFields) {
-        console.log('✅ User data already complete with protected fields, skipping API call');
-        console.log('📋 Loading Edit Form Data from PROTECTED REGISTRATION:');
-        console.log('   - Address (_original):', currentUser?._originalAddress || '(not set)');
-        console.log('   - Website (_original):', currentUser?._originalWebsite || '(not set)');
-        console.log('   - Category (_original):', currentUser?._originalCategory || '(not set)');
-        console.log('   - Description (_original):', currentUser?._originalDescription || '(not set)');
+        console.log('✅ User data already complete, skipping API call');
+        console.log('📋 Loading Edit Form Data from current user:');
+        console.log('   - Company Name:', currentUser?.companyName);
+        console.log('   - Address:', currentUser?.address || '(not set)');
+        console.log('   - Website:', currentUser?.website || '(not set)');
+        console.log('   - Category:', currentUser?.category || '(not set)');
+        console.log('   - Description:', currentUser?.description || '(not set)');
         
-        // Update edit form with existing registered user data
-        // Map stored user fields to form fields
-        // Use _original* fields if available to prevent contamination from business profiles
+        // Update edit form with existing user data
+        // Use current values (not _original values)
         setEditFormData({
-          name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.name || '',
-          description: currentUser?._originalDescription || currentUser?.description || '',
-          category: currentUser?._originalCategory || currentUser?.category || '',
-          address: currentUser?._originalAddress || currentUser?.address || '', // FROM USER REGISTRATION
+          name: currentUser?.companyName || currentUser?.name || '',
+          description: currentUser?.description || '',
+          category: currentUser?.category || '',
+          address: currentUser?.address || '',
           phone: currentUser?.phoneNumber || currentUser?.phone || '',
-          alternatePhone: currentUser?.alternatePhone || '', // Use current value (can be updated)
+          alternatePhone: currentUser?.alternatePhone || '',
           email: currentUser?.email || '',
-          website: currentUser?._originalWebsite || currentUser?.website || '', // FROM USER REGISTRATION
+          website: currentUser?.website || '',
           companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
         });
         
@@ -714,17 +739,16 @@ const ProfileScreen: React.FC = () => {
         token = await AsyncStorage.getItem('authToken');
         if (!token) {
           console.log('⚠️ Token still not available, skipping API fetch and using current user data');
-          // Use current registered user data instead of failing
-          // Use _original* fields to prevent contamination from business profiles
+          // Use current user data instead of failing
           setEditFormData({
-            name: currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.name || '',
-            description: currentUser?._originalDescription || currentUser?.description || '',
-            category: currentUser?._originalCategory || currentUser?.category || '',
-            address: currentUser?._originalAddress || currentUser?.address || '',
+            name: currentUser?.companyName || currentUser?.name || '',
+            description: currentUser?.description || '',
+            category: currentUser?.category || '',
+            address: currentUser?.address || '',
             phone: currentUser?.phoneNumber || currentUser?.phone || '',
-            alternatePhone: currentUser?.alternatePhone || '', // Use current value (can be updated)
+            alternatePhone: currentUser?.alternatePhone || '',
             email: currentUser?.email || '',
-            website: currentUser?._originalWebsite || currentUser?.website || '',
+            website: currentUser?.website || '',
             companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
           });
           setShowEditProfileModal(true);
@@ -784,22 +808,29 @@ const ProfileScreen: React.FC = () => {
       
       // Update current user with complete profile data
       // CRITICAL: Set _original* fields from API response (this is the CLEAN user profile data)
-      const { businessProfiles, companyName: apiCompanyName, ...cleanUserData } = completeUserData as any;
+      const { businessProfiles, ...cleanUserData } = completeUserData as any;
+      
+      // Use name from API (this is the user's actual current name)
+      const apiCompanyName = cleanUserData.name || cleanUserData.companyName || currentUser?.companyName;
+      
       const updatedUserData = {
         ...currentUser,
         ...cleanUserData,
-        // ALWAYS preserve the original registered company name
-        companyName: currentUser?.companyName,
+        // Use the name from API (this is the user's actual registered/updated name)
+        companyName: apiCompanyName,
+        displayName: apiCompanyName,
+        name: apiCompanyName,
         // Set _original* fields from API (this is the REAL user data from backend)
-        _originalCompanyName: currentUser?._originalCompanyName || currentUser?.companyName,
-        _originalAddress: currentUser?._originalAddress || completeUserData?.address || '',
-        _originalWebsite: currentUser?._originalWebsite || completeUserData?.website || '',
-        _originalCategory: currentUser?._originalCategory || completeUserData?.category || '',
-        _originalDescription: currentUser?._originalDescription || completeUserData?.description || '',
-        _originalAlternatePhone: currentUser?._originalAlternatePhone || completeUserData?.alternatePhone || '',
+        _originalCompanyName: apiCompanyName,
+        _originalAddress: completeUserData?.address || currentUser?._originalAddress || '',
+        _originalWebsite: completeUserData?.website || currentUser?._originalWebsite || '',
+        _originalCategory: completeUserData?.category || currentUser?._originalCategory || '',
+        _originalDescription: completeUserData?.description || currentUser?._originalDescription || '',
+        _originalAlternatePhone: completeUserData?.alternatePhone || currentUser?._originalAlternatePhone || '',
       };
       
-      console.log('🔒 Setting protected fields from API response:');
+      console.log('🔒 Setting fields from API response:');
+      console.log('   - _originalCompanyName:', updatedUserData._originalCompanyName);
       console.log('   - _originalAddress:', updatedUserData._originalAddress);
       console.log('   - _originalWebsite:', updatedUserData._originalWebsite);
       console.log('   - _originalCategory:', updatedUserData._originalCategory);
@@ -809,29 +840,23 @@ const ProfileScreen: React.FC = () => {
       authService.setCurrentUser(updatedUserData);
       await authService.saveUserToStorage(updatedUserData, await AsyncStorage.getItem('authToken') || '');
       
-      console.log('🔍 Using registered user data (EXCLUDING business profile fields)');
-      console.log('📋 Loading Edit Form Data from ORIGINAL REGISTRATION (now protected):');
-      console.log('   - Address (_original):', updatedUserData?._originalAddress || '(not set)');
-      console.log('   - Address (current):', updatedUserData?.address || '(empty)');
-      console.log('   - Website (_original):', updatedUserData?._originalWebsite || '(not set)');
-      console.log('   - Website (current):', updatedUserData?.website || '(empty)');
-      console.log('   - Category (_original):', updatedUserData?._originalCategory || '(not set)');
-      console.log('   - Category (current):', updatedUserData?.category || '(empty)');
-      console.log('📋 API data:');
-      console.log('   - Address from API:', completeUserData?.address || '(empty)');
-      console.log('   - Website from API:', completeUserData?.website || '(empty)');
+      console.log('🔍 Using user data from API (EXCLUDING business profile fields)');
+      console.log('📋 Loading Edit Form Data from API:');
+      console.log('   - Company Name:', updatedUserData?.companyName);
+      console.log('   - Address:', updatedUserData?.address || '(empty)');
+      console.log('   - Website:', updatedUserData?.website || '(empty)');
+      console.log('   - Category:', updatedUserData?.category || '(empty)');
       
-      // IMPORTANT: Use _original* fields which we just populated from API
-      // This is the REAL user profile data from backend (not business profile data)
+      // Use current fields from updatedUserData (which now has the latest data from API)
       setEditFormData({
-        name: updatedUserData?._originalCompanyName || updatedUserData?.companyName || updatedUserData?.name || '',
-        description: updatedUserData?._originalDescription || '',
-        category: updatedUserData?._originalCategory || '',
-        address: updatedUserData?._originalAddress || '', // FROM API - NOW PROTECTED
+        name: updatedUserData?.companyName || updatedUserData?.name || '',
+        description: updatedUserData?.description || '',
+        category: updatedUserData?.category || '',
+        address: updatedUserData?.address || '',
         phone: updatedUserData?.phoneNumber || updatedUserData?.phone || '',
         alternatePhone: updatedUserData?.alternatePhone || '',
         email: updatedUserData?.email || '',
-        website: updatedUserData?._originalWebsite || '', // FROM API - NOW PROTECTED
+        website: updatedUserData?.website || '',
         companyLogo: updatedUserData?.logo || updatedUserData?.companyLogo || '',
       });
       
@@ -967,13 +992,15 @@ const ProfileScreen: React.FC = () => {
         
         // Update the current user object with the response
         // CRITICAL: Since API doesn't return all fields, merge with what we sent
+        const updatedCompanyName = apiUserData.name || apiUserData.companyName || updateData.name;
+        
         const updatedUser = {
           ...currentUser,
           ...apiUserData,
           // User profile fields - map API fields to local fields
-          displayName: apiUserData.name || apiUserData.companyName || currentUser?.companyName,
-          companyName: apiUserData.name || apiUserData.companyName || currentUser?.companyName,
-          name: apiUserData.name || apiUserData.companyName || currentUser?.companyName,
+          displayName: updatedCompanyName,
+          companyName: updatedCompanyName,
+          name: updatedCompanyName,
           phoneNumber: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
           phone: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
           bio: updateData.description || '',
@@ -983,13 +1010,13 @@ const ProfileScreen: React.FC = () => {
           category: updateData.category || '',
           description: updateData.description || '',
           alternatePhone: updateData.alternatePhone || '',
-          // Original values (NEVER overwritten - stored on first save only)
-          _originalCompanyName: currentUser?._originalCompanyName || apiUserData.name || apiUserData.companyName || '',
-          _originalAddress: currentUser?._originalAddress || updateData.address || '',
-          _originalWebsite: currentUser?._originalWebsite || updateData.website || '',
-          _originalCategory: currentUser?._originalCategory || updateData.category || '',
-          _originalDescription: currentUser?._originalDescription || updateData.description || '',
-          _originalAlternatePhone: currentUser?._originalAlternatePhone || updateData.alternatePhone || '',
+          // Update _originalCompanyName if name was changed
+          _originalCompanyName: updatedCompanyName,
+          _originalAddress: updateData.address || currentUser?._originalAddress || '',
+          _originalWebsite: updateData.website || currentUser?._originalWebsite || '',
+          _originalCategory: updateData.category || currentUser?._originalCategory || '',
+          _originalDescription: updateData.description || currentUser?._originalDescription || '',
+          _originalAlternatePhone: updateData.alternatePhone || currentUser?._originalAlternatePhone || '',
         };
         
         console.log('✅ Updated user object (USER FIELDS ONLY):');
@@ -1015,7 +1042,7 @@ const ProfileScreen: React.FC = () => {
         
         // Cache the newly updated profile data
         await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUser);
-        await updateCacheTimestamp();
+        await updateCacheTimestamp(userId);
         console.log('💾 Updated profile data cached');
         
         // Clear business profile cache to force refresh on next visit
@@ -1055,14 +1082,14 @@ const ProfileScreen: React.FC = () => {
     const user = authService.getCurrentUser();
     setShowEditProfileModal(false);
     setEditFormData({
-      name: user?._originalCompanyName || user?.companyName || user?.name || '',
-      description: user?._originalDescription || user?.description || '',
-      category: user?._originalCategory || user?.category || '',
-      address: user?._originalAddress || user?.address || '',
+      name: user?.companyName || user?.name || '',
+      description: user?.description || '',
+      category: user?.category || '',
+      address: user?.address || '',
       phone: user?.phoneNumber || user?.phone || '',
-      alternatePhone: user?.alternatePhone || '', // Use current value (can be updated)
+      alternatePhone: user?.alternatePhone || '',
       email: user?.email || '',
-      website: user?._originalWebsite || user?.website || '',
+      website: user?.website || '',
       companyLogo: user?.logo || user?.companyLogo || '',
     });
   };
@@ -1151,7 +1178,7 @@ const ProfileScreen: React.FC = () => {
       try {
         console.log('✅ Step 4: Updating cache...');
         await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUser);
-        await updateCacheTimestamp();
+        await updateCacheTimestamp(currentUser.id);
         console.log('✅ Step 4 complete');
       } catch (error) {
         console.error('❌ Step 4 failed:', error);
@@ -1420,7 +1447,7 @@ const ProfileScreen: React.FC = () => {
                     <Text style={[styles.avatarText, {
                       fontSize: dynamicModerateScale(24),
                     }]}>
-                      {(currentUser?._originalCompanyName || currentUser?.companyName)?.charAt(0) || currentUser?.displayName?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
+                      {(currentUser?.companyName || currentUser?.displayName)?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
                     </Text>
                   </LinearGradient>
                 )}
@@ -1443,7 +1470,7 @@ const ProfileScreen: React.FC = () => {
                   fontSize: dynamicModerateScale(12),
                   marginBottom: dynamicModerateScale(2),
                 }]}>
-                  {currentUser?._originalCompanyName || currentUser?.companyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
+                  {currentUser?.companyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
                 </Text>
                 <Text style={[styles.userEmail, { 
                   color: theme.colors.textSecondary,

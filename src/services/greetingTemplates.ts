@@ -34,6 +34,12 @@ export interface GreetingFilters {
 
 class GreetingTemplatesService {
   private readonly BASE_URL = 'https://eventmarketersbackend.onrender.com';
+  
+  // Cache for faster subsequent loads
+  private categoriesCache: GreetingCategory[] | null = null;
+  private templatesCache: GreetingTemplate[] | null = null;
+  private cacheTimestamp: number = 0;
+  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   /**
    * Convert relative image URLs to absolute URLs (optimized - minimal logging)
@@ -53,8 +59,27 @@ class GreetingTemplatesService {
     return `${this.BASE_URL}${normalizedUrl}`;
   }
 
+  // Check if cache is still valid
+  private isCacheValid(): boolean {
+    if (!this.cacheTimestamp) return false;
+    const timeSinceCache = Date.now() - this.cacheTimestamp;
+    return timeSinceCache < this.CACHE_DURATION;
+  }
+
+  // Clear cache
+  clearCache(): void {
+    this.categoriesCache = null;
+    this.templatesCache = null;
+    this.cacheTimestamp = 0;
+  }
+
   // Get all greeting categories
   async getCategories(): Promise<GreetingCategory[]> {
+    // Return cached data if available and valid
+    if (this.categoriesCache && this.isCacheValid()) {
+      return this.categoriesCache;
+    }
+    
     try {
       const response = await api.get('/api/mobile/greetings/categories');
       
@@ -74,12 +99,20 @@ class GreetingTemplatesService {
           color: backendCategory.color || '#4A90E2'
         }));
         
+        // Cache the results
+        this.categoriesCache = mappedCategories;
+        this.cacheTimestamp = Date.now();
+        
         return mappedCategories;
       } else {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error) {
       console.error('Error fetching greeting categories:', error);
+      // Return cached data if available, even if expired
+      if (this.categoriesCache) {
+        return this.categoriesCache;
+      }
       return []; // Return empty array instead of mock data
     }
   }
@@ -142,6 +175,11 @@ class GreetingTemplatesService {
 
   // Get all greeting templates with filters
   async getTemplates(filters?: GreetingFilters): Promise<GreetingTemplate[]> {
+    // Return cached data if available, valid, and no filters applied
+    if (!filters && this.templatesCache && this.isCacheValid()) {
+      return this.templatesCache;
+    }
+    
     try {
       const params = new URLSearchParams();
       if (filters?.category) params.append('category', filters.category);
@@ -193,12 +231,22 @@ class GreetingTemplatesService {
           };
         });
         
+        // Cache the results if no filters were applied
+        if (!filters) {
+          this.templatesCache = mappedTemplates;
+          this.cacheTimestamp = Date.now();
+        }
+        
         return mappedTemplates;
       } else {
         throw new Error('API returned unsuccessful response');
       }
     } catch (error: any) {
       console.error('Error fetching greeting templates:', error);
+      // Return cached data if available, even if expired
+      if (!filters && this.templatesCache) {
+        return this.templatesCache;
+      }
       return []; // Return empty array instead of mock data
     }
   }

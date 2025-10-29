@@ -13,6 +13,7 @@ import {
   ActivityIndicator,
   RefreshControl,
   ScrollView,
+  Modal,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -71,6 +72,8 @@ const MyPostersScreen: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [categories, setCategories] = useState<string[]>([]);
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+  const [selectedPoster, setSelectedPoster] = useState<DownloadedPoster | null>(null);
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const navigation = useNavigation();
@@ -97,28 +100,15 @@ const MyPostersScreen: React.FC = () => {
       const userId = currentUser?.id;
       
       if (!userId) {
-        console.log('⚠️ No user ID available');
         setLoading(false);
         return;
       }
 
-      console.log('📥 [MY POSTERS] Fetching downloads from API for user:', userId);
-      
       // Fetch downloads from backend API
       const downloadsResponse = await downloadTrackingService.getUserDownloads(userId);
       
-      console.log('✅ [MY POSTERS] Downloads fetched:', downloadsResponse.downloads.length);
-      
       // Convert DownloadedContent to DownloadedPoster format
       const downloadedPosters: DownloadedPoster[] = downloadsResponse.downloads.map((download: DownloadedContent) => {
-        console.log('🔄 [MAPPING DOWNLOAD]', {
-          id: download.id,
-          resourceType: download.resourceType,
-          fileUrl: download.fileUrl,
-          thumbnail: download.thumbnail,
-          title: download.title,
-          category: download.category
-        });
         
         return {
           id: download.id,
@@ -139,10 +129,8 @@ const MyPostersScreen: React.FC = () => {
         new Set(downloadedPosters.map(poster => poster.category || 'Uncategorized'))
       );
       setCategories(uniqueCategories);
-      
-      console.log('✅ [MY POSTERS] Posters loaded:', downloadedPosters.length, 'Categories:', uniqueCategories.length);
     } catch (error) {
-      console.error('❌ [MY POSTERS] Error loading posters:', error);
+      console.error('Error loading posters:', error);
       Alert.alert('Error', 'Failed to load downloaded posters. Please check your internet connection.');
     } finally {
       setLoading(false);
@@ -224,53 +212,44 @@ const MyPostersScreen: React.FC = () => {
   };
 
   const handleViewPoster = (poster: DownloadedPoster) => {
-    // Navigate to poster preview or open in full screen
-    Alert.alert(
-      poster.title,
-      poster.description || 'No description available',
-      [
-        { text: 'Share', onPress: () => handleSharePoster(poster) },
-        { text: 'Delete', style: 'destructive', onPress: () => handleDeletePoster(poster) },
-        { text: 'Close', style: 'cancel' },
-      ]
-    );
+    setSelectedPoster(poster);
+    setPreviewModalVisible(true);
   };
 
-  const renderPosterItem = useCallback(({ item }: { item: DownloadedPoster }) => (
-    <View style={{ marginRight: gap }}>
-      <TouchableOpacity
-        style={[
-          styles.posterItem, 
-          { 
-            backgroundColor: theme.colors.cardBackground,
-            width: cardWidth,
-            height: cardHeight,
-          }
-        ]}
-        onPress={() => handleViewPoster(item)}
-        activeOpacity={0.7}
-      >
-        {(item.thumbnailUri || item.imageUri) ? (
-          <Image
-            source={{ uri: item.thumbnailUri || item.imageUri }}
-            style={styles.posterImage}
-            resizeMode="cover"
-            onLoad={() => {
-              console.log('✅ Image loaded successfully:', item.id);
-            }}
-            onError={(error) => {
-              console.error('❌ Image load failed:', item.id, 'URL:', item.thumbnailUri || item.imageUri);
-            }}
-          />
-        ) : (
-          <View style={[styles.posterImage, { backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' }]}>
-            <Icon name="image" size={moderateScale(24)} color="#999" />
-            <Text style={{ color: '#666', fontSize: moderateScale(8), marginTop: moderateScale(4) }}>No Image</Text>
-          </View>
-        )}
-      </TouchableOpacity>
-    </View>
-  ), [theme, cardWidth, cardHeight, gap]);
+  const renderPosterItem = useCallback(({ item, index }: { item: DownloadedPoster; index: number }) => {
+    // Calculate if this card is the last in its row
+    const isLastInRow = (index + 1) % visibleCards === 0;
+    
+    return (
+      <View style={{ marginRight: isLastInRow ? 0 : gap }}>
+        <TouchableOpacity
+          style={[
+            styles.posterItem, 
+            { 
+              backgroundColor: theme.colors.cardBackground,
+              width: cardWidth,
+              height: cardHeight,
+            }
+          ]}
+          onPress={() => handleViewPoster(item)}
+          activeOpacity={0.7}
+        >
+          {(item.thumbnailUri || item.imageUri) ? (
+            <Image
+              source={{ uri: item.thumbnailUri || item.imageUri }}
+              style={styles.posterImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View style={[styles.posterImage, { backgroundColor: '#E0E0E0', justifyContent: 'center', alignItems: 'center' }]}>
+              <Icon name="image" size={moderateScale(24)} color="#999" />
+              <Text style={{ color: '#666', fontSize: moderateScale(8), marginTop: moderateScale(4) }}>No Image</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+      </View>
+    );
+  }, [theme, cardWidth, cardHeight, gap, visibleCards]);
 
   const renderCategoryFilter = () => (
     <View style={styles.categoryFilter}>
@@ -327,6 +306,45 @@ const MyPostersScreen: React.FC = () => {
       </TouchableOpacity>
     </View>
   );
+
+  const renderPreviewModal = () => {
+    if (!selectedPoster) return null;
+
+    return (
+      <Modal
+        visible={previewModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setPreviewModalVisible(false)}
+      >
+        <View style={styles.previewModalOverlay}>
+          {/* Close Button */}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={() => setPreviewModalVisible(false)}
+          >
+            <Icon name="close" size={28} color="#ffffff" />
+          </TouchableOpacity>
+
+          {/* Image Preview */}
+          <View style={styles.previewImageContainer}>
+            {(selectedPoster.thumbnailUri || selectedPoster.imageUri) ? (
+              <Image
+                source={{ uri: selectedPoster.thumbnailUri || selectedPoster.imageUri }}
+                style={styles.previewImage}
+                resizeMode="contain"
+              />
+            ) : (
+              <View style={styles.previewImagePlaceholder}>
+                <Icon name="image" size={80} color="#999" />
+                <Text style={styles.previewPlaceholderText}>No Image Available</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+    );
+  };
 
   return (
     <SafeAreaView 
@@ -387,16 +405,24 @@ const MyPostersScreen: React.FC = () => {
           </View>
         ) : (
           <FlatList
+            key={`posters-${visibleCards}`}
             data={filteredPosters}
             renderItem={renderPosterItem}
             keyExtractor={(item) => item.id}
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
+            numColumns={visibleCards}
+            columnWrapperStyle={[
+              styles.posterRow,
+              {
+                paddingHorizontal: moderateScale(8),
+                marginBottom: moderateScale(4),
+              }
+            ]}
+            showsVerticalScrollIndicator={false}
             contentContainerStyle={[
               styles.contentContainer,
               { 
-                paddingHorizontal: moderateScale(3),
-                paddingBottom: 120 + insets.bottom 
+                paddingBottom: 120 + insets.bottom,
+                paddingTop: moderateScale(4),
               }
             ]}
             refreshControl={
@@ -407,7 +433,6 @@ const MyPostersScreen: React.FC = () => {
               />
             }
             ListEmptyComponent={renderEmptyState}
-            nestedScrollEnabled={true}
             removeClippedSubviews={true}
             maxToRenderPerBatch={isTablet ? 12 : 8}
             windowSize={isTablet ? 10 : 8}
@@ -415,6 +440,9 @@ const MyPostersScreen: React.FC = () => {
           />
         )}
       </LinearGradient>
+      
+      {/* Preview Modal */}
+      {renderPreviewModal()}
     </SafeAreaView>
   );
 };
@@ -490,6 +518,9 @@ const styles = StyleSheet.create({
   contentContainer: {
     paddingTop: moderateScale(4),
   },
+  posterRow: {
+    justifyContent: 'flex-start',
+  },
   posterItem: {
     borderRadius: moderateScale(10),
     overflow: 'hidden',
@@ -533,6 +564,42 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 13,
     fontWeight: '600',
+  },
+  // Preview Modal Styles
+  previewModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.95)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  closeButton: {
+    position: 'absolute',
+    top: 50,
+    right: 20,
+    zIndex: 10,
+    padding: 10,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: 20,
+  },
+  previewImageContainer: {
+    flex: 1,
+    width: '100%',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+  },
+  previewImage: {
+    width: '100%',
+    height: '100%',
+  },
+  previewImagePlaceholder: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  previewPlaceholderText: {
+    color: '#999',
+    fontSize: 16,
+    marginTop: 16,
   },
 });
 
