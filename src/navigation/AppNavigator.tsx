@@ -267,14 +267,14 @@ const CustomTabBar = (props: any) => {
   const isCurrentlySmall = dimensions.width < 375;
   
   // Ultra-compact responsive sizes - maximally reduced
-  const logoSize = currentModerateScale(isCurrentlySmall ? 30 : 35); // Further reduced from 38/45
-  const logoContainerSize = logoSize + currentModerateScale(4); // Further reduced from 6
+  const logoSize = currentModerateScale(isCurrentlySmall ? 36 : 42);
+  const logoContainerSize = logoSize + currentModerateScale(6);
   const logoTopOffset = -(logoContainerSize / 2);
-  const tabBarHeight = currentModerateScale(isCurrentlySmall ? 24 : 28); // Further reduced from 32/35
-  const tabBarPaddingTop = currentModerateScale(1); // Further reduced from 2
-  const tabBarPaddingBottom = Math.max(currentModerateScale(2), insets.bottom + currentModerateScale(0.5)); // Further reduced from 3/1
-  const iconSize = currentModerateScale(isCurrentlySmall ? 14 : 16); // Further reduced from 16/18
-  const fontSize = currentModerateScale(isCurrentlySmall ? 6 : 6.5); // Further reduced from 7/7.5
+  const tabBarHeight = currentModerateScale(isCurrentlySmall ? 40 : 44); // Increased for small devices
+  const tabBarPaddingTop = currentModerateScale(0);
+  const tabBarPaddingBottom = Math.max(currentModerateScale(6), insets.bottom + currentModerateScale(2));
+  const iconSize = currentModerateScale(isCurrentlySmall ? 18 : 20);
+  const fontSize = currentModerateScale(isCurrentlySmall ? 7 : 8);
   const borderWidth = currentModerateScale(0.8); // Further reduced from 1
   
   return (
@@ -349,7 +349,7 @@ const CustomTabBar = (props: any) => {
         justifyContent: 'space-around',
         alignItems: 'center',
         height: tabBarHeight,
-        marginTop: currentModerateScale(6), // Further reduced from 10 - Add space for the circular overlapping logo
+        marginTop: currentModerateScale(10), // Add space for the circular overlapping logo
       }}>
         {props.state.routes.map((route: any, index: number) => {
           const { options } = props.descriptors[route.key];
@@ -393,7 +393,7 @@ const CustomTabBar = (props: any) => {
                 flex: 1,
                 alignItems: 'center',
                 justifyContent: 'center',
-                paddingVertical: currentModerateScale(0.5), // Further reduced from 1
+                paddingVertical: currentModerateScale(4),
               }}
             >
               {options.tabBarIcon ? (

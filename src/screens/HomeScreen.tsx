@@ -1120,10 +1120,10 @@ const HomeScreen: React.FC = React.memo(() => {
         end={{ x: 1, y: 1 }}
       >
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + responsiveSpacing.xs * COMPACT_MULTIPLIER }]}>
+        <View style={styles.header}>
           <View style={styles.headerTop}>
             <View style={styles.greeting}>
-              <Text style={styles.userName}>Event Management</Text>
+              {/* <Text style={styles.userName}>Event Management</Text> */}
               {apiError && (
                 <View style={styles.apiStatusIndicator}>
                   <Icon name="wifi-off" size={statusIconSize} color="#ff9800" />
@@ -2623,7 +2623,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderRadius: moderateScale(14),
     paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(5),
+    paddingVertical: verticalScale(0),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,

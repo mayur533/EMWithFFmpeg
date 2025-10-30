@@ -56,6 +56,8 @@ const PosterPlayerScreen: React.FC = () => {
   const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
   const [currentRelatedPosters, setCurrentRelatedPosters] = useState<Template[]>(initialRelatedPosters);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
+  const [languageMenuVisible, setLanguageMenuVisible] = useState<boolean>(false);
+  const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
 
   // Console log initial data on screen mount
   useEffect(() => {
@@ -109,6 +111,7 @@ const PosterPlayerScreen: React.FC = () => {
     console.log('📌 Poster ID:', poster.id);
     console.log('📌 Poster Name:', poster.name);
     console.log('📌 Poster Thumbnail:', poster.thumbnail);
+    console.log('🔗 Endpoint (download):', `/api/mobile/home/templates/${poster.id}/download`);
     console.log('📌 Previous Current Poster:', JSON.stringify(currentPoster, null, 2));
     
     // Update state instead of navigating to prevent full page refresh
@@ -154,15 +157,38 @@ const PosterPlayerScreen: React.FC = () => {
   // Responsive poster height
   const posterHeight = useMemo(() => {
     if (screenWidth >= 768) {
-      return screenHeight * 0.35; // Tablet
+      return screenHeight * 0.30; // Tablet (reduced)
     } else if (screenWidth >= 600) {
-      return screenHeight * 0.30; // Large phone
+      return screenHeight * 0.26; // Large phone (reduced)
     } else if (screenWidth >= 400) {
-      return screenHeight * 0.28; // Medium phone
+      return screenHeight * 0.24; // Medium phone (reduced)
     } else {
-      return screenHeight * 0.25; // Small phone
+      return screenHeight * 0.20; // Small phone (reduced)
     }
   }, [screenWidth, screenHeight]);
+
+  // Derive height from image aspect ratio to fit width without stretching
+  const computedPreviewHeight = useMemo(() => {
+    if (imageDimensions && imageDimensions.width > 0 && imageDimensions.height > 0) {
+      const aspectHeight = screenWidth * (imageDimensions.height / imageDimensions.width);
+      return aspectHeight; // exact fit by aspect ratio
+    }
+    return posterHeight;
+  }, [imageDimensions, screenWidth, posterHeight]);
+
+  // Load intrinsic image size when poster changes
+  useEffect(() => {
+    const uri = currentPoster?.thumbnail;
+    if (!uri) {
+      setImageDimensions(null);
+      return;
+    }
+    Image.getSize(
+      uri,
+      (width, height) => setImageDimensions({ width, height }),
+      () => setImageDimensions(null)
+    );
+  }, [currentPoster?.thumbnail]);
 
   const handleNextPress = useCallback(() => {
     console.log('═══════════════════════════════════════════════════════');
@@ -174,6 +200,7 @@ const PosterPlayerScreen: React.FC = () => {
     console.log('📋 Description:', currentPoster.category);
     console.log('🌐 Selected Language:', selectedLanguage);
     console.log('🆔 Template ID:', currentPoster.id);
+    console.log('🔗 Endpoint (download):', `/api/mobile/home/templates/${currentPoster.id}/download`);
     console.log('📦 Full Poster Data:', JSON.stringify(currentPoster, null, 2));
     console.log('═══════════════════════════════════════════════════════');
     
@@ -251,38 +278,76 @@ const PosterPlayerScreen: React.FC = () => {
          start={{ x: 0, y: 0 }}
          end={{ x: 1, y: 1 }}
        >
-         {/* Safe Area Top Spacing */}
-         <View style={{ height: insets.top + moderateScale(12) }} />
+        {/* Safe Area Top Spacing */}
+        <View style={{ height: insets.top + moderateScale(12) }} />
+
+        {/* Header with Back, Language Dropdown, Next */}
+        <View style={styles.topHeader}>
+          <TouchableOpacity
+            onPress={() => navigation.goBack()}
+            style={styles.headerIconButton}
+            activeOpacity={0.7}
+          >
+            <Icon name="arrow-back" size={getIconSize(14)} color="#000000" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={() => setLanguageMenuVisible(v => !v)}
+            style={styles.languageDropdownButton}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.languageDropdownText}>
+              {languages.find(l => l.id === selectedLanguage)?.name || 'Select Language'}
+            </Text>
+            <Icon name={languageMenuVisible ? 'expand-less' : 'expand-more'} size={getIconSize(14)} color="#000000" />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleNextPress}
+            style={styles.headerIconButton}
+            activeOpacity={0.7}
+          >
+            <Icon name="arrow-forward" size={getIconSize(14)} color="#000000" />
+          </TouchableOpacity>
+        </View>
+
+        {/* Dropdown will render over the preview instead of full-width */}
 
          {/* Compact Poster Section */}
-         <View style={[styles.posterContainer, { height: posterHeight }]}>
-          <OptimizedImage
-            uri={currentPoster.thumbnail}
-            style={styles.posterImage}
-            resizeMode="contain"
-          />
-          <View style={styles.posterOverlay}>
-            {/* Next Button Overlay - Top Right */}
-            <TouchableOpacity
-              style={styles.nextButton}
-              onPress={handleNextPress}
-              activeOpacity={0.8}
-            >
-              <Icon name="arrow-forward" size={getIconSize(12)} color="#ffffff" />
-            </TouchableOpacity>
-          </View>
+         <View style={[styles.posterContainer, { height: computedPreviewHeight, width: '100%' }]}>
+         <OptimizedImage
+           uri={currentPoster.thumbnail}
+           style={styles.posterImage}
+           resizeMode="contain"
+           showLoader={false}
+         />
+         <View style={styles.posterOverlay}>
+           {languageMenuVisible && (
+             <View style={styles.languageDropdownMenuSmall}>
+               {languages.map((lang) => (
+                 <TouchableOpacity
+                   key={lang.id}
+                   style={[styles.languageDropdownItem, selectedLanguage === lang.id && styles.languageDropdownItemSelected]}
+                   onPress={() => {
+                     handleLanguageChange(lang.id);
+                     setLanguageMenuVisible(false);
+                   }}
+                   activeOpacity={0.8}
+                 >
+                   <Text style={[styles.languageDropdownItemText, selectedLanguage === lang.id && styles.languageDropdownItemTextSelected]}>
+                     {lang.name}
+                   </Text>
+                   {selectedLanguage === lang.id && (
+                     <Icon name="check" size={getIconSize(12)} color="#ffffff" />
+                   )}
+                 </TouchableOpacity>
+               ))}
+             </View>
+           )}
+         </View>
          </View>
 
-         {/* Compact Language Selection Section */}
-         <View style={styles.languageSection}>
-           <ScrollView 
-             horizontal 
-             showsHorizontalScrollIndicator={false}
-             contentContainerStyle={styles.languageButtonsContainer}
-           >
-             {languages.map(renderLanguageButton)}
-           </ScrollView>
-         </View>
+         {/* Language selection moved to header */}
 
          {/* Compact Related Posters Section */}
          <View style={styles.relatedSection}>
@@ -348,6 +413,81 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8), // Reduced padding
     paddingTop: moderateScale(4), // Reduced padding
     paddingBottom: moderateScale(4),
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: moderateScale(8),
+    paddingBottom: moderateScale(6),
+  },
+  headerIconButton: {
+    width: moderateScale(32),
+    height: moderateScale(32),
+    borderRadius: moderateScale(16),
+    backgroundColor: 'rgba(0,0,0,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerLanguageScroll: {
+    paddingHorizontal: moderateScale(6),
+    alignItems: 'center',
+    gap: moderateScale(6),
+  },
+  languageDropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(6),
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  languageDropdownText: {
+    color: '#000000',
+    fontSize: moderateScale(10),
+    fontWeight: '600',
+  },
+  languageDropdownMenu: {
+    marginHorizontal: moderateScale(8),
+    marginBottom: moderateScale(6),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    paddingVertical: moderateScale(4),
+    overflow: 'hidden',
+  },
+  languageDropdownMenuSmall: {
+    position: 'absolute',
+    top: moderateScale(8),
+    alignSelf: 'center',
+    minWidth: moderateScale(140),
+    maxWidth: '80%',
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    paddingVertical: moderateScale(4),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
+  },
+  languageDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+  },
+  languageDropdownItemSelected: {
+    backgroundColor: 'rgba(102, 126, 234, 0.35)',
+  },
+  languageDropdownItemText: {
+    color: '#ffffff',
+    fontSize: moderateScale(10),
+    fontWeight: '600',
+  },
+  languageDropdownItemTextSelected: {
+    fontWeight: '700',
   },
   backButton: {
     width: moderateScale(32), // Reduced from 36-52
@@ -417,12 +557,12 @@ const styles = StyleSheet.create({
   posterContainer: {
     position: 'relative',
     // Height is set dynamically via inline style based on screen dimensions
-    backgroundColor: '#000000',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: moderateScale(8), // Reduced padding
+    marginHorizontal: 0,
     marginBottom: moderateScale(6), // Reduced margin
-    borderRadius: moderateScale(12), // Smaller border radius
+    borderRadius: 0,
     overflow: 'hidden',
     shadowColor: '#000',
     shadowOffset: {
@@ -443,7 +583,7 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.1)',
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -643,18 +783,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8), // More compact
     borderRadius: moderateScale(10), // Smaller
     backgroundColor: 'rgba(0,0,0,0.08)',
-    borderWidth: moderateScale(1), // Thinner
-    borderColor: 'rgba(0,0,0,0.15)',
+    borderWidth: 0,
+    borderColor: 'transparent',
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: moderateScale(1), // Smaller
+      height: 0,
     },
-    shadowOpacity: 0.12, // Reduced
-    shadowRadius: moderateScale(3), // Smaller
-    elevation: 2, // Reduced
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
     marginHorizontal: moderateScale(2),
     minWidth: moderateScale(65), // Smaller minimum width
   },
@@ -677,6 +817,9 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#333333',
     letterSpacing: 0.2,
+    includeFontPadding: false,
+    textDecorationLine: 'none',
+    textAlignVertical: 'center',
   },
   languageButtonTextSelected: {
     fontWeight: '700',

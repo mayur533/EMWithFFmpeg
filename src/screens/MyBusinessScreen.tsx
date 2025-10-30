@@ -145,6 +145,11 @@ const MyBusinessScreen: React.FC = () => {
     return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
   };
   
+  // Consistent button sizing across devices (clamped for small/big screens)
+  const buttonSize = Math.max(26, Math.min(34, dynamicModerateScale(30)));
+  const iconSize = Math.max(14, Math.min(20, getIconSize(18)));
+  const buttonPadding = Math.max(4, Math.min(8, dynamicModerateScale(4)));
+  
   // Get dynamic dimensions with responsive columns
   const { cardWidth, cardHeight, columns, gap } = getPosterCardDimensions(currentScreenWidth, currentScreenHeight);
 
@@ -252,20 +257,20 @@ const MyBusinessScreen: React.FC = () => {
         end={{ x: 1, y: 1 }}
       >
         {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + dynamicModerateScale(2) }]}>
+        <View style={styles.header}>
           <View style={styles.headerContent}>
             <TouchableOpacity
               style={[styles.backButton, {
-                width: dynamicModerateScale(30),
-                height: dynamicModerateScale(30),
-                borderRadius: dynamicModerateScale(15),
-                padding: dynamicModerateScale(4),
+                width: buttonSize,
+                height: buttonSize,
+                borderRadius: buttonSize / 2,
+                padding: buttonPadding,
               }]}
               onPress={() => navigation.goBack()}
             >
               <Icon 
                 name="arrow-back" 
-                size={getIconSize(18)} 
+                size={iconSize} 
                 color={theme.colors.text} 
               />
             </TouchableOpacity>
@@ -351,7 +356,10 @@ const MyBusinessScreen: React.FC = () => {
                 style={[styles.refreshButton, {
                   paddingHorizontal: dynamicModerateScale(12),
                   paddingVertical: dynamicModerateScale(6),
-                  borderRadius: dynamicModerateScale(8),
+                  minHeight: buttonSize,
+                  borderRadius: buttonSize / 2,
+                  alignItems: 'center',
+                  justifyContent: 'center',
                 }]}
                 onPress={loadBusinessCategoryPosters}
               >
@@ -405,7 +413,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.08,
     shadowRadius: 2,
-    elevation: 2,
+    elevation: 0,
+    overflow: 'hidden',
   },
   headerTitle: {
     fontSize: moderateScale(10),

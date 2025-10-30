@@ -53,6 +53,39 @@ import { useTheme } from '../context/ThemeContext';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Utility: convert color to rgba with custom alpha (supports rgba(), rgb(), #RRGGBB)
+const toRgba = (color: string, alpha: number): string => {
+  if (!color) return `rgba(0,0,0,${alpha})`;
+  const trimmed = color.trim();
+  if (trimmed.startsWith('rgba')) {
+    const parts = trimmed.replace(/rgba\(|\)/g, '').split(',').map(p => p.trim());
+    const r = Number(parts[0]) || 0;
+    const g = Number(parts[1]) || 0;
+    const b = Number(parts[2]) || 0;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  if (trimmed.startsWith('rgb')) {
+    const parts = trimmed.replace(/rgb\(|\)/g, '').split(',').map(p => p.trim());
+    const r = Number(parts[0]) || 0;
+    const g = Number(parts[1]) || 0;
+    const b = Number(parts[2]) || 0;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  if (trimmed.startsWith('#')) {
+    const hex = trimmed.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  return `rgba(0,0,0,${alpha})`;
+};
+
+const getOmbreColors = (base: string | undefined) => {
+  const baseColor = base || 'rgba(0,0,0,1)';
+  return [toRgba(baseColor, 0.6), toRgba(baseColor, 0.3), toRgba(baseColor, 0.0)];
+};
+
 // Compact spacing multiplier to reduce all spacing (50% reduction)
 const COMPACT_MULTIPLIER = 0.5;
 
@@ -1988,6 +2021,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       case 'text':
         // Special handling for footer background
         if (layer.content === '' && layer.fieldType === 'footerBackground') {
+          const gradientColors = getOmbreColors(layer.style?.backgroundColor as string | undefined);
           return (
             <Animated.View
               key={layer.id}
@@ -1998,17 +2032,23 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   width: layer.size.width,
                   height: layer.size.height,
                   zIndex: layer.zIndex,
-                  backgroundColor: layer.style?.backgroundColor || 'rgba(0, 0, 0, 0.6)',
                   borderRadius: 0,
-                  borderBottomLeftRadius: 16,
-                  borderBottomRightRadius: 16,
+                  borderBottomLeftRadius: 0,
+                  borderBottomRightRadius: 0,
                   transform: [
                     { translateX: layerAnimations[layer.id].x },
                     { translateY: layerAnimations[layer.id].y }
                   ],
                 }
               ]}
-            />
+            >
+              <LinearGradient
+                colors={gradientColors}
+                start={{ x: 0, y: 1 }}
+                end={{ x: 0, y: 0 }}
+                style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+              />
+            </Animated.View>
           );
         }
         
@@ -2143,7 +2183,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={styles.headerTitle}>Poster Editor</Text>
-          <Text style={styles.headerSubtitle}>
+          <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
             {selectedImage.title || 'Custom Poster'} • {selectedLanguage.charAt(0).toUpperCase() + selectedLanguage.slice(1)}
           </Text>
         </View>
@@ -3697,6 +3737,7 @@ const styles = StyleSheet.create({
     marginTop: isLandscape ? (isTablet ? 2 : 1) : (isUltraSmallScreen ? 0 : isSmallScreen ? 1 : 2),
     textAlign: 'center',
     lineHeight: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16),
+    includeFontPadding: false,
   },
   nextButton: {
     padding: getHeaderPadding(),
@@ -3893,6 +3934,7 @@ const styles = StyleSheet.create({
     marginTop: isLandscape ? (isTablet ? 2 : 1) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : isMediumScreen ? 3 : isLargeScreen ? 4 : 5),
     fontWeight: '600',
     textAlign: 'center',
+    includeFontPadding: false,
   },
   modalOverlay: {
     flex: 1,
@@ -4685,37 +4727,37 @@ const styles = StyleSheet.create({
   },
   // Frame Styles
   canvasWithFrame: {
-    borderWidth: 8,
-    borderColor: '#333333',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   classicFrame: {
-    borderWidth: 12,
-    borderColor: '#8B4513',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   modernFrame: {
-    borderWidth: 6,
-    borderColor: '#667eea',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   elegantFrame: {
-    borderWidth: 8,
-    borderColor: '#D4AF37',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   boldFrame: {
-    borderWidth: 15,
-    borderColor: '#000000',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   minimalFrame: {
-    borderWidth: 2,
-    borderColor: '#CCCCCC',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   ornateFrame: {
-    borderWidth: 10,
-    borderColor: '#8B4513',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   cornerFrame: {
@@ -4723,129 +4765,129 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
   },
   borderFrame: {
-    borderWidth: 4,
-    borderColor: '#333333',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   // Additional Frame Styles
   businessFrame: {
-    borderWidth: 8,
-    borderColor: '#667eea',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   eventFrame: {
-    borderWidth: 6,
-    borderColor: '#f97316',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   restaurantFrame: {
-    borderWidth: 8,
-    borderColor: '#22c55e',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   fashionFrame: {
-    borderWidth: 10,
-    borderColor: '#ec4899',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   realEstateFrame: {
-    borderWidth: 6,
-    borderColor: '#8b5cf6',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   educationFrame: {
-    borderWidth: 8,
-    borderColor: '#3b82f6',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   healthcareFrame: {
-    borderWidth: 6,
-    borderColor: '#10b981',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   fitnessFrame: {
-    borderWidth: 8,
-    borderColor: '#ef4444',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   weddingFrame: {
-    borderWidth: 12,
-    borderColor: '#fbbf24',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   birthdayFrame: {
-    borderWidth: 10,
-    borderColor: '#f472b6',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   corporateFrame: {
-    borderWidth: 6,
-    borderColor: '#374151',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   creativeFrame: {
-    borderWidth: 8,
-    borderColor: '#000000',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   luxuryFrame: {
-    borderWidth: 12,
-    borderColor: '#d4af37',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   vintageFrame: {
-    borderWidth: 8,
-    borderColor: '#78716c',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   retroFrame: {
-    borderWidth: 6,
-    borderColor: '#fb923c',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   techFrame: {
-    borderWidth: 8,
-    borderColor: '#00ff00',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   natureFrame: {
-    borderWidth: 6,
-    borderColor: '#22c55e',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   oceanFrame: {
-    borderWidth: 8,
-    borderColor: '#06b6d4',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   sunsetFrame: {
-    borderWidth: 10,
-    borderColor: '#f59e0b',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   cosmicFrame: {
-    borderWidth: 8,
-    borderColor: '#1e293b',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   artisticFrame: {
-    borderWidth: 8,
-    borderColor: '#a855f7',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   sportFrame: {
-    borderWidth: 6,
-    borderColor: '#ef4444',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   warmFrame: {
-    borderWidth: 8,
-    borderColor: '#f59e0b',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   coolFrame: {
-    borderWidth: 6,
-    borderColor: '#3b82f6',
+    borderWidth: 0,
+    borderColor: 'transparent',
     borderStyle: 'solid',
   },
   // Frames Section Styles
@@ -5109,8 +5151,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     marginBottom: isUltraSmallScreen ? 2 : isSmallScreen ? 4 : 8,
-    borderWidth: 2,
-    borderColor: '#e9ecef',
+    borderWidth: 0,
+    borderColor: 'transparent',
     overflow: 'hidden',
   },
   templatePreviewContent: {
@@ -5139,198 +5181,198 @@ const styles = StyleSheet.create({
   },
   // Template Preview Styles
   businessTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#667eea',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   businessTemplateStyle: {
     backgroundColor: 'rgba(102, 126, 234, 0.8)',
   },
   eventTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#f97316',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   eventTemplateStyle: {
     backgroundColor: 'rgba(249, 115, 22, 0.8)',
   },
   restaurantTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#22c55e',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   restaurantTemplateStyle: {
     backgroundColor: 'rgba(34, 197, 94, 0.8)',
   },
   fashionTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#ec4899',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   fashionTemplateStyle: {
     backgroundColor: 'rgba(236, 72, 153, 0.8)',
   },
   realEstateTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#8b5cf6',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   realEstateTemplateStyle: {
     backgroundColor: 'rgba(139, 92, 246, 0.8)',
   },
   educationTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#3b82f6',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   educationTemplateStyle: {
     backgroundColor: 'rgba(59, 130, 246, 0.8)',
   },
   healthcareTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#10b981',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   healthcareTemplateStyle: {
     backgroundColor: 'rgba(16, 185, 129, 0.8)',
   },
   fitnessTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#ef4444',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   fitnessTemplateStyle: {
     backgroundColor: 'rgba(239, 68, 68, 0.8)',
   },
   weddingTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#fbbf24',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   weddingTemplateStyle: {
     backgroundColor: 'rgba(251, 191, 36, 0.8)',
   },
   birthdayTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#f472b6',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   birthdayTemplateStyle: {
     backgroundColor: 'rgba(244, 114, 182, 0.8)',
   },
   corporateTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#374151',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   corporateTemplateStyle: {
     backgroundColor: 'rgba(55, 65, 81, 0.8)',
   },
   creativeTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#000000',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   creativeTemplateStyle: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',
   },
   luxuryTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#d4af37',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   luxuryTemplateStyle: {
     backgroundColor: 'rgba(212, 175, 55, 0.8)',
   },
   vintageTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#78716c',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   vintageTemplateStyle: {
     backgroundColor: 'rgba(120, 113, 108, 0.8)',
   },
   retroTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#fb923c',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   retroTemplateStyle: {
     backgroundColor: 'rgba(251, 146, 60, 0.8)',
   },
   techTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#00ff00',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   techTemplateStyle: {
     backgroundColor: 'rgba(0, 255, 0, 0.8)',
   },
   natureTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#22c55e',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   natureTemplateStyle: {
     backgroundColor: 'rgba(34, 197, 94, 0.8)',
   },
   oceanTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#06b6d4',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   oceanTemplateStyle: {
     backgroundColor: 'rgba(6, 182, 212, 0.8)',
   },
   sunsetTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#f59e0b',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   sunsetTemplateStyle: {
     backgroundColor: 'rgba(245, 158, 11, 0.8)',
   },
   cosmicTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#1e293b',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   cosmicTemplateStyle: {
     backgroundColor: 'rgba(30, 41, 59, 0.8)',
   },
   artisticTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#a855f7',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   artisticTemplateStyle: {
     backgroundColor: 'rgba(168, 85, 247, 0.8)',
   },
   sportTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#ef4444',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   sportTemplateStyle: {
     backgroundColor: 'rgba(239, 68, 68, 0.8)',
   },
   warmTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#f59e0b',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   warmTemplateStyle: {
     backgroundColor: 'rgba(245, 158, 11, 0.8)',
   },
   coolTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#3b82f6',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   coolTemplateStyle: {
     backgroundColor: 'rgba(59, 130, 246, 0.8)',
   },
   // Additional Template Preview Styles
   minimalTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#CCCCCC',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   minimalTemplateStyle: {
     backgroundColor: 'rgba(204, 204, 204, 0.8)',
   },
   modernTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#667eea',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   modernTemplateStyle: {
     backgroundColor: 'rgba(102, 126, 234, 0.8)',
   },
   elegantTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#D4AF37',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   elegantTemplateStyle: {
     backgroundColor: 'rgba(212, 175, 55, 0.8)',
   },
   boldTemplatePreview: {
-    borderWidth: 3,
-    borderColor: '#000000',
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   boldTemplateStyle: {
     backgroundColor: 'rgba(0, 0, 0, 0.8)',

@@ -456,7 +456,7 @@ const GreetingTemplatesScreen: React.FC = () => {
         <View style={[
           styles.header, 
           { 
-            paddingTop: insets.top + (responsiveSpacing.xs * COMPACT_MULTIPLIER),
+            paddingTop: insets.top + moderateScale(0),
             paddingBottom: moderateScale(3),
             paddingHorizontal: moderateScale(4),
           }
@@ -609,7 +609,7 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: moderateScale(8),
+    paddingTop: moderateScale(4),
     paddingBottom: moderateScale(3),
     paddingHorizontal: moderateScale(4),
   },
@@ -633,7 +633,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(5),
+    paddingVertical: verticalScale(3),
     borderRadius: moderateScale(14),
     shadowColor: '#000',
     shadowOffset: {

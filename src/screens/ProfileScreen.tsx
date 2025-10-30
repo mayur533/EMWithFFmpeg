@@ -36,6 +36,7 @@ import downloadedPostersService from '../services/downloadedPosters';
 import downloadTrackingService from '../services/downloadTracking';
 import ImagePickerModal from '../components/ImagePickerModal';
 import ComingSoonModal from '../components/ComingSoonModal';
+import { API_CONFIG } from '../constants/api';
 
 // Compact spacing multiplier to reduce all spacing (matching HomeScreen)
 const COMPACT_MULTIPLIER = 0.5;
@@ -97,6 +98,51 @@ const ProfileScreen: React.FC = () => {
   const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
   const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
   
+  // Ensure avatar remains visible on small screens
+  const avatarSize = Math.max(64, dynamicModerateScale(60));
+  
+  // Normalize possibly relative image URLs to absolute (prefer HTTPS backend)
+  const toAbsoluteUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    const lower = url.toLowerCase();
+    if (
+      lower.startsWith('http://') ||
+      lower.startsWith('https://') ||
+      lower.startsWith('data:') ||
+      lower.startsWith('file:') ||
+      lower.startsWith('content:') ||
+      lower.startsWith('asset:') ||
+      lower.startsWith('blob:')
+    ) {
+      return url;
+    }
+    if (lower.startsWith('/storage') || lower.startsWith('/sdcard') || lower.startsWith('/data')) {
+      return `file://${url}`;
+    }
+    const normalized = url.startsWith('/') ? url : `/${url}`;
+    const REMOTE_BASE = 'https://eventmarketersbackend.onrender.com';
+    return `${REMOTE_BASE}${normalized}`;
+  };
+
+  // Sanitize raw URLs (trim, unify slashes, encode spaces)
+  const sanitizeUrl = (url?: string | null): string | null => {
+    if (!url) return null;
+    const trimmed = url.trim().replace(/\\\\/g, '/');
+    return trimmed.replace(/\s/g, '%20');
+  };
+
+  // Enforce HTTPS to avoid cleartext blocking on some devices
+  const ensureHttps = (url?: string | null): string | null => {
+    if (!url) return null;
+    if (url.startsWith('http://')) {
+      return 'https://' + url.substring('http://'.length);
+    }
+    if (url.startsWith('//')) {
+      return 'https:' + url;
+    }
+    return url;
+  };
+  
   // Responsive icon sizes (compact - 60% of original)
   const getIconSize = (baseSize: number) => {
     return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
@@ -124,6 +170,12 @@ const ProfileScreen: React.FC = () => {
   const [profileImageUri, setProfileImageUri] = useState<string | null>(
     currentUser?.logo || currentUser?.companyLogo || null
   );
+  const [avatarErrored, setAvatarErrored] = useState(false);
+
+  // Reset avatar error state whenever the underlying URI changes
+  useEffect(() => {
+    setAvatarErrored(false);
+  }, [profileImageUri, currentUser?.logo, currentUser?.companyLogo, currentUser?.photoURL, currentUser?.profileImage]);
   const [userPreferences, setUserPreferences] = useState<any>(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [successMessage, setSuccessMessage] = useState('');
@@ -1386,13 +1438,10 @@ const ProfileScreen: React.FC = () => {
       >
         {/* Header */}
         <View style={[styles.header, { 
-          paddingTop: insets.top + dynamicModerateScale(2),
-          paddingHorizontal: dynamicModerateScale(4),
-          paddingBottom: dynamicModerateScale(3),
-        }]}>
-          <Text style={[styles.headerTitle, {
-            fontSize: dynamicModerateScale(12),
-          }]}>Profile</Text>
+          paddingTop: dynamicModerateScale(10),
+          paddingHorizontal: dynamicModerateScale(2),
+          paddingBottom: dynamicModerateScale(1),
+        }]}> 
         </View>
 
         <ScrollView 
@@ -1421,27 +1470,43 @@ const ProfileScreen: React.FC = () => {
             <View style={styles.profileHeader}>
               <View style={[styles.avatarContainer, {
                 marginBottom: dynamicModerateScale(10),
+                zIndex: 1,
               }]}>
-                {profileImageUri || currentUser?.logo || currentUser?.companyLogo || currentUser?.photoURL || currentUser?.profileImage ? (
+                {(() => {
+                  const rawRaw = profileImageUri || currentUser?.logo || currentUser?.companyLogo || currentUser?.photoURL || currentUser?.profileImage || null;
+                  const rawUri = sanitizeUrl(rawRaw);
+                  const avatarUri = ensureHttps(toAbsoluteUrl(rawUri));
+                  if (avatarUri) {
+                    console.log('🖼️ [PROFILE] Avatar URI:', { raw: rawUri, normalized: avatarUri });
+                  } else {
+                    console.log('🖼️ [PROFILE] No avatar URI available');
+                  }
+                  return avatarUri && !avatarErrored ? (
                   <View style={[styles.avatarImageContainer, {
-                    width: dynamicModerateScale(60),
-                    height: dynamicModerateScale(60),
-                    borderRadius: dynamicModerateScale(30),
+                    width: avatarSize,
+                    height: avatarSize,
+                    borderRadius: avatarSize / 2,
                     borderWidth: 2,
+                    backgroundColor: '#eaeaea',
                   }]}>
                     <Image
-                      source={{ uri: profileImageUri || currentUser?.logo || currentUser?.companyLogo || currentUser?.photoURL || currentUser?.profileImage }}
+                      key={avatarUri}
+                      source={{ uri: avatarUri }}
                       style={styles.avatarImage}
                       resizeMode="cover"
+                      onError={() => {
+                        console.log('🖼️ [PROFILE] Avatar failed to load:', avatarUri);
+                        setAvatarErrored(true);
+                      }}
                     />
                   </View>
-                ) : (
+                  ) : (
                   <LinearGradient
                     colors={[theme.colors.primary, theme.colors.secondary]}
                     style={[styles.avatarGradient, {
-                      width: dynamicModerateScale(60),
-                      height: dynamicModerateScale(60),
-                      borderRadius: dynamicModerateScale(30),
+                      width: avatarSize,
+                      height: avatarSize,
+                      borderRadius: avatarSize / 2,
                     }]}
                   >
                     <Text style={[styles.avatarText, {
@@ -1450,7 +1515,8 @@ const ProfileScreen: React.FC = () => {
                       {(currentUser?.companyName || currentUser?.displayName)?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
                     </Text>
                   </LinearGradient>
-                )}
+                  );
+                })()}
                 <TouchableOpacity 
                   style={[styles.editAvatarButton, { 
                     backgroundColor: theme.colors.primary,
@@ -1467,14 +1533,14 @@ const ProfileScreen: React.FC = () => {
               <View style={styles.profileInfo}>
                 <Text style={[styles.userName, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(12),
+                  fontSize: dynamicModerateScale(10),
                   marginBottom: dynamicModerateScale(2),
                 }]}>
                   {currentUser?.companyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
                 </Text>
                 <Text style={[styles.userEmail, { 
                   color: theme.colors.textSecondary,
-                  fontSize: dynamicModerateScale(8.5),
+                  fontSize: dynamicModerateScale(8),
                   marginBottom: dynamicModerateScale(4),
                 }]}>
                   {currentUser?.email || 'eventmarketer@example.com'}
