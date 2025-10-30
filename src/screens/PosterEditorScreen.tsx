@@ -48,6 +48,7 @@ import { GOOGLE_FONTS, getFontsByCategory, SYSTEM_FONTS, getFontFamily } from '.
 import { useSubscription } from '../contexts/SubscriptionContext';
 import Watermark from '../components/Watermark';
 import { useTheme } from '../context/ThemeContext';
+import PremiumTemplateModal from '../components/PremiumTemplateModal';
 
 
 
@@ -902,6 +903,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const currentPositionsRef = useRef<{ [key: string]: { x: number; y: number } }>({});
   const [showRemoveFrameModal, setShowRemoveFrameModal] = useState(false);
   const [showDeleteElementModal, setShowDeleteElementModal] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -1148,7 +1150,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       return Math.max(baseSize * scaleFactor, baseSize * 0.8); // Minimum 80% of base size
     };
     
-    const footerTextSize = getResponsiveFooterFontSize(10);
+    const footerTextSize = getResponsiveFooterFontSize(11);
     
     // Footer background overlay for better readability
     const footerBackgroundLayer: Layer = {
@@ -1294,7 +1296,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         zIndex: 10,
         fieldType: 'services',
         style: {
-          fontSize: Math.max(8, footerTextSize - 1),
+          fontSize: Math.max(9, footerTextSize),
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '400',
@@ -2182,14 +2184,17 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           <Icon name="arrow-back" size={getResponsiveIconSize()} color="#333333" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Poster Editor</Text>
-          <Text style={styles.headerSubtitle} numberOfLines={1} ellipsizeMode="tail">
-            {selectedImage.title || 'Custom Poster'} • {selectedLanguage.charAt(0).toUpperCase() + selectedLanguage.slice(1)}
-          </Text>
         </View>
         <TouchableOpacity 
           style={styles.nextButton}
           onPress={async () => {
+            // Check subscription status first
+            if (!isSubscribed) {
+              console.log('User is not subscribed - showing premium modal');
+              setShowPremiumModal(true);
+              return;
+            }
+            
             // Test capture first
             console.log('=== TESTING VIEWSHOT CAPTURE ===');
             console.log('Canvas dimensions - Hidden:', { width: screenWidth * 0.98, height: screenHeight * 0.65 });
@@ -2476,19 +2481,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               >
                 <Icon name="text-fields" size={getResponsiveIconSize()} color="#ffffff" />
                 <Text style={styles.toolbarButtonText}>Text</Text>
-              </LinearGradient>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.toolbarButton}
-              onPress={() => setShowLogoModal(true)}
-            >
-              <LinearGradient
-                colors={['#667eea', '#764ba2']}
-                style={styles.toolbarButtonGradient}
-              >
-                <Icon name="account-balance" size={getResponsiveIconSize()} color="#ffffff" />
-                <Text style={styles.toolbarButtonText}>Logo</Text>
               </LinearGradient>
             </TouchableOpacity>
             
@@ -3691,6 +3683,18 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Premium Template Modal */}
+      <PremiumTemplateModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onUpgrade={async () => {
+          setShowPremiumModal(false);
+          await refreshSubscription();
+          (navigation as any).navigate('Subscription');
+        }}
+        selectedTemplate={null}
+      />
 
     </Animated.View>
   );
