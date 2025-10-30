@@ -534,13 +534,9 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={getIconSize(18)} color="#333333" />
+          <Icon name="arrow-back" size={getIconSize(24)} color="#333333" />
         </TouchableOpacity>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Preview Poster</Text>
-          <Text style={styles.headerSubtitle}>
-            Review your poster before saving
-          </Text>
         </View>
         <View style={styles.headerSpacer} />
       </View>
@@ -632,7 +628,7 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
               colors={isProcessing ? ['#cccccc', '#999999'] : ['#667eea', '#764ba2']}
               style={styles.shareButtonGradient}
             >
-              <Icon name="share" size={getIconSize(16)} color="#ffffff" />
+              <Icon name="share" size={getIconSize(28)} color="#ffffff" />
               <Text style={styles.shareButtonText}>
                 {isProcessing ? 'Sharing...' : 'Share'}
               </Text>
@@ -648,7 +644,7 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
               colors={isProcessing ? ['#cccccc', '#999999'] : ['#28a745', '#20c997']}
               style={styles.saveButtonGradient}
             >
-              <Icon name="download" size={getIconSize(16)} color="#ffffff" />
+              <Icon name="download" size={getIconSize(28)} color="#ffffff" />
               <Text style={styles.saveButtonText}>
                 {isProcessing ? 'Saving...' : 'Download'}
               </Text>
@@ -684,8 +680,8 @@ const styles = StyleSheet.create({
     elevation: moderateScale(4),
   },
   backButton: {
-    padding: moderateScale(4),
-    borderRadius: moderateScale(6),
+    padding: moderateScale(6),
+    borderRadius: moderateScale(8),
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   headerContent: {
@@ -1040,7 +1036,7 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   shareButtonGradient: {
-    paddingVertical: moderateScale(6),
+    paddingVertical: moderateScale(8),
     paddingHorizontal: moderateScale(8),
     flexDirection: 'row',
     alignItems: 'center',
@@ -1048,12 +1044,12 @@ const styles = StyleSheet.create({
   },
   shareButtonText: {
     color: '#ffffff',
-    fontSize: moderateScale(8.5),
+    fontSize: moderateScale(9.5),
     fontWeight: '600',
     marginLeft: moderateScale(2.5),
   },
   saveButtonGradient: {
-    paddingVertical: moderateScale(6),
+    paddingVertical: moderateScale(8),
     paddingHorizontal: moderateScale(8),
     flexDirection: 'row',
     alignItems: 'center',
@@ -1061,23 +1057,23 @@ const styles = StyleSheet.create({
   },
   saveButtonText: {
     color: '#ffffff',
-    fontSize: moderateScale(8.5),
+    fontSize: moderateScale(9.5),
     fontWeight: '600',
     marginLeft: moderateScale(2.5),
   },
   editButton: {
-    paddingVertical: moderateScale(5),
+    paddingVertical: moderateScale(8),
     paddingHorizontal: moderateScale(8),
     borderRadius: moderateScale(6),
     backgroundColor: '#f8f9fa',
     borderWidth: 1,
     borderColor: '#e9ecef',
     alignItems: 'center',
-    minHeight: moderateScale(28),
+    minHeight: moderateScale(40),
   },
   editButtonText: {
     color: '#666666',
-    fontSize: moderateScale(8.5),
+    fontSize: moderateScale(10),
     fontWeight: '600',
   },
 });

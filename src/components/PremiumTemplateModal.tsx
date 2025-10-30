@@ -36,7 +36,7 @@ const PremiumTemplateModal: React.FC<PremiumTemplateModalProps> = ({
         >
           <View style={[styles.upgradeModalContent, { backgroundColor: '#ffffff' }]}> 
             <View style={styles.premiumBadge}>
-              <Icon name="star" size={isSmallScreen ? 20 : 24} color="#DAA520" />
+              <Icon name="star" size={isSmallScreen ? 14 : 16} color="#DAA520" />
               <Text style={[styles.premiumBadgeText, { color: '#B8860B' }]}>PREMIUM</Text>
             </View>
 
@@ -61,19 +61,19 @@ const PremiumTemplateModal: React.FC<PremiumTemplateModalProps> = ({
 
             <View style={styles.featuresList}>
               <View style={styles.featureItem}>
-                <Icon name="check-circle" size={isSmallScreen ? 18 : 20} color="#4CAF50" />
+                <Icon name="check-circle" size={isSmallScreen ? 14 : 16} color="#4CAF50" />
                 <Text style={[styles.featureText, { color: '#1a1a1a' }]}>Access to all premium templates</Text>
               </View>
               <View style={styles.featureItem}>
-                <Icon name="check-circle" size={isSmallScreen ? 18 : 20} color="#4CAF50" />
+                <Icon name="check-circle" size={isSmallScreen ? 14 : 16} color="#4CAF50" />
                 <Text style={[styles.featureText, { color: '#1a1a1a' }]}>No watermarks on final designs</Text>
               </View>
               <View style={styles.featureItem}>
-                <Icon name="check-circle" size={isSmallScreen ? 18 : 20} color="#4CAF50" />
+                <Icon name="check-circle" size={isSmallScreen ? 14 : 16} color="#4CAF50" />
                 <Text style={[styles.featureText, { color: '#1a1a1a' }]}>Priority customer support</Text>
               </View>
               <View style={styles.featureItem}>
-                <Icon name="check-circle" size={isSmallScreen ? 18 : 20} color="#4CAF50" />
+                <Icon name="check-circle" size={isSmallScreen ? 14 : 16} color="#4CAF50" />
                 <Text style={[styles.featureText, { color: '#1a1a1a' }]}>Advanced editing features</Text>
               </View>
             </View>
@@ -95,7 +95,7 @@ const PremiumTemplateModal: React.FC<PremiumTemplateModalProps> = ({
                   start={{ x: 0, y: 0 }}
                   end={{ x: 1, y: 0 }}
                 >
-                  <Icon name="star" size={isSmallScreen ? 14 : 16} color="#ffffff" style={styles.upgradeButtonIcon} />
+                  <Icon name="star" size={isSmallScreen ? 12 : 14} color="#ffffff" style={styles.upgradeButtonIcon} />
                   <Text style={styles.upgradeButtonText}>Upgrade to Premium</Text>
                 </LinearGradient>
               </TouchableOpacity>
@@ -113,75 +113,78 @@ const styles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   modalScrollView: {
-    flex: 1,
+    maxHeight: screenHeight * 0.85,
+    width: '100%',
   },
   modalScrollContent: {
     flexGrow: 1,
+    justifyContent: 'center',
   },
   upgradeModalContent: {
-    margin: isSmallScreen ? 12 : 20,
-    borderRadius: 24,
-    padding: isSmallScreen ? 16 : 24,
+    margin: isSmallScreen ? 10 : 16,
+    borderRadius: 16,
+    padding: isSmallScreen ? 12 : 16,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 6,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 20,
-    maxHeight: screenHeight * 0.85,
-    minHeight: screenHeight * 0.4,
+    shadowOpacity: 0.2,
+    shadowRadius: 12,
+    elevation: 16,
+    maxHeight: screenHeight * 0.75,
+    minHeight: screenHeight * 0.35,
     width: '100%',
-    maxWidth: screenWidth - (isSmallScreen ? 24 : 40),
+    maxWidth: screenWidth - (isSmallScreen ? 20 : 32),
   },
   premiumBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: 'rgba(255, 215, 0, 0.1)',
-    paddingHorizontal: isSmallScreen ? 12 : 16,
-    paddingVertical: isSmallScreen ? 6 : 8,
-    borderRadius: 20,
+    paddingHorizontal: isSmallScreen ? 8 : 12,
+    paddingVertical: isSmallScreen ? 4 : 6,
+    borderRadius: 16,
     alignSelf: 'center',
-    marginBottom: isSmallScreen ? 16 : 20,
+    marginBottom: isSmallScreen ? 10 : 12,
     borderWidth: 1,
     borderColor: 'rgba(255, 215, 0, 0.3)',
   },
   premiumBadgeText: {
-    fontSize: isSmallScreen ? 10 : 12,
+    fontSize: isSmallScreen ? 8 : 10,
     fontWeight: '700',
     color: '#B8860B',
-    marginLeft: 6,
-    letterSpacing: 1,
+    marginLeft: 4,
+    letterSpacing: 0.8,
   },
   upgradeModalHeader: {
     alignItems: 'center',
-    marginBottom: isSmallScreen ? 20 : 24,
+    marginBottom: isSmallScreen ? 12 : 16,
   },
   upgradeModalTitle: {
-    fontSize: isSmallScreen ? 20 : 24,
+    fontSize: isSmallScreen ? 16 : 18,
     fontWeight: '700',
     textAlign: 'center',
-    marginBottom: isSmallScreen ? 6 : 8,
-    paddingHorizontal: isSmallScreen ? 8 : 0,
+    marginBottom: isSmallScreen ? 4 : 6,
+    paddingHorizontal: isSmallScreen ? 4 : 0,
     color: '#1a1a1a',
   },
   upgradeModalSubtitle: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 11 : 13,
     textAlign: 'center',
-    lineHeight: isSmallScreen ? 20 : 22,
-    paddingHorizontal: isSmallScreen ? 8 : 0,
+    lineHeight: isSmallScreen ? 16 : 18,
+    paddingHorizontal: isSmallScreen ? 4 : 0,
     color: '#666666',
   },
   templatePreview: {
-    height: isSmallScreen ? 100 : 120,
-    borderRadius: 16,
+    height: isSmallScreen ? 80 : 100,
+    borderRadius: 12,
     overflow: 'hidden',
-    marginBottom: isSmallScreen ? 20 : 24,
+    marginBottom: isSmallScreen ? 12 : 16,
     position: 'relative',
   },
   templatePreviewImage: {
@@ -194,75 +197,75 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    padding: isSmallScreen ? 12 : 16,
+    padding: isSmallScreen ? 8 : 10,
   },
   templatePreviewTitle: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 11 : 13,
     fontWeight: '600',
     color: '#ffffff',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   templatePreviewDescription: {
-    fontSize: isSmallScreen ? 12 : 14,
+    fontSize: isSmallScreen ? 9 : 11,
     color: 'rgba(255, 255, 255, 0.8)',
   },
   featuresList: {
-    marginBottom: isSmallScreen ? 20 : 24,
+    marginBottom: isSmallScreen ? 12 : 16,
   },
   featureItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: isSmallScreen ? 10 : 12,
+    marginBottom: isSmallScreen ? 6 : 8,
   },
   featureText: {
-    fontSize: isSmallScreen ? 14 : 16,
-    marginLeft: isSmallScreen ? 10 : 12,
+    fontSize: isSmallScreen ? 11 : 13,
+    marginLeft: isSmallScreen ? 8 : 10,
     flex: 1,
-    lineHeight: isSmallScreen ? 20 : 22,
+    lineHeight: isSmallScreen ? 16 : 18,
     color: '#1a1a1a',
   },
   upgradeModalFooter: {
     flexDirection: isSmallScreen ? 'column' : 'row',
-    gap: isSmallScreen ? 12 : 16,
+    gap: isSmallScreen ? 8 : 10,
     alignItems: 'stretch',
     width: '100%',
   },
   cancelButton: {
     flex: isSmallScreen ? undefined : 1,
-    paddingVertical: isSmallScreen ? 14 : 16,
-    paddingHorizontal: 16,
-    borderRadius: 12,
+    paddingVertical: isSmallScreen ? 10 : 12,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     borderWidth: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: 48,
+    minHeight: 40,
     maxWidth: '100%',
     borderColor: '#cccccc',
   },
   cancelButtonText: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 12 : 13,
     fontWeight: '600',
     color: '#666666',
   },
   upgradeButton: {
     flex: isSmallScreen ? undefined : 1,
-    borderRadius: 12,
+    borderRadius: 10,
     overflow: 'hidden',
-    minHeight: 48,
+    minHeight: 40,
     maxWidth: '100%',
   },
   upgradeButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: isSmallScreen ? 14 : 16,
-    minHeight: 48,
+    paddingVertical: isSmallScreen ? 10 : 12,
+    minHeight: 40,
   },
   upgradeButtonIcon: {
-    marginRight: isSmallScreen ? 6 : 8,
+    marginRight: isSmallScreen ? 4 : 6,
   },
   upgradeButtonText: {
-    fontSize: isSmallScreen ? 14 : 16,
+    fontSize: isSmallScreen ? 12 : 13,
     fontWeight: '700',
     color: '#ffffff',
   },

@@ -68,8 +68,8 @@ export const generateLayersFromFrame = (
   let zIndex = 10; // Start at z-index 10 to ensure layers are above frame overlay (z-index 0)
 
   // Standard frame dimensions (frames are designed for this size)
-  const standardWidth = 400;
-  const standardHeight = 600;
+  const standardWidth = 720;
+  const standardHeight = 487.2;
   
   // Calculate scaling factors to adapt frame placeholders to actual canvas size
   const scaleX = canvasWidth / standardWidth;

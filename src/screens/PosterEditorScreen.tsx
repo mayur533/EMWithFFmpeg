@@ -904,6 +904,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [showRemoveFrameModal, setShowRemoveFrameModal] = useState(false);
   const [showDeleteElementModal, setShowDeleteElementModal] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
+  const [showConnectionErrorModal, setShowConnectionErrorModal] = useState(false);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -942,29 +943,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       const userId = currentUser?.id;
       
       if (!userId) {
-        console.log('⚠️ No user ID available, using fallback business profiles');
-        // Use mock data if no user ID
-        const mockProfiles = [
-          {
-            id: '1',
-            name: 'Tech Solutions Inc.',
-            description: 'Leading technology solutions provider',
-            category: 'Technology',
-            address: '123 Innovation Drive, Tech City',
-            phone: '+1 (555) 123-4567',
-            email: 'contact@techsolutions.com',
-            services: ['Custom Software Development', 'Web Development'],
-            workingHours: {},
-            rating: 4.8,
-            reviewCount: 156,
-            isVerified: true,
-            createdAt: '2024-01-15T10:00:00Z',
-            updatedAt: '2024-01-20T14:30:00Z',
-          }
-        ];
-        setBusinessProfiles(mockProfiles);
-        setSelectedBusinessProfile(mockProfiles[0]);
-        applyBusinessProfileToPoster(mockProfiles[0]);
+        console.log('⚠️ No user ID available');
+        setShowConnectionErrorModal(true);
         return;
       }
       
@@ -986,55 +966,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           setShowProfileSelectionModal(true);
         }
       } else {
-        console.log('⚠️ No user-specific business profiles found, using fallback');
-        // Use mock data if no user profiles found
-        const mockProfiles = [
-          {
-            id: '1',
-            name: 'Tech Solutions Inc.',
-            description: 'Leading technology solutions provider',
-            category: 'Technology',
-            address: '123 Innovation Drive, Tech City',
-            phone: '+1 (555) 123-4567',
-            email: 'contact@techsolutions.com',
-            services: ['Custom Software Development', 'Web Development'],
-            workingHours: {},
-            rating: 4.8,
-            reviewCount: 156,
-            isVerified: true,
-            createdAt: '2024-01-15T10:00:00Z',
-            updatedAt: '2024-01-20T14:30:00Z',
-          }
-        ];
-        setBusinessProfiles(mockProfiles);
-        setSelectedBusinessProfile(mockProfiles[0]);
-        applyBusinessProfileToPoster(mockProfiles[0]);
+        console.log('⚠️ No user-specific business profiles found');
+        setShowConnectionErrorModal(true);
       }
     } catch (error) {
       console.error('Error fetching user-specific business profiles:', error);
-      // Use mock data immediately on error
-      const mockProfiles = [
-        {
-          id: '1',
-          name: 'Tech Solutions Inc.',
-          description: 'Leading technology solutions provider',
-          category: 'Technology',
-          address: '123 Innovation Drive, Tech City',
-          phone: '+1 (555) 123-4567',
-          email: 'contact@techsolutions.com',
-          services: ['Custom Software Development', 'Web Development'],
-          workingHours: {},
-          rating: 4.8,
-          reviewCount: 156,
-          isVerified: true,
-          createdAt: '2024-01-15T10:00:00Z',
-          updatedAt: '2024-01-20T14:30:00Z',
-        }
-      ];
-      setBusinessProfiles(mockProfiles);
-      setSelectedBusinessProfile(mockProfiles[0]);
-      applyBusinessProfileToPoster(mockProfiles[0]);
-      Alert.alert('Error', 'Failed to load business profiles');
+      setShowConnectionErrorModal(true);
     } finally {
       setLoadingProfiles(false);
     }
@@ -1388,12 +1325,15 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         }
         
         // Debug: Log the current position and field type
+        const frameFileName = selectedFrame?.background ? 
+          (typeof selectedFrame.background === 'number' ? selectedFrame.id : selectedFrame.background.toString()) : 
+          'unknown';
         console.log(`🎯 DEBUG: ${currentLayer.fieldType || 'Unknown Field'} moved to position:`);
         console.log(`   📍 X: ${newX.toFixed(1)}, Y: ${newY.toFixed(1)}`);
         console.log(`   📏 Canvas Size: ${canvasWidth}x${canvasHeight}`);
         console.log(`   🏷️ Field Type: ${currentLayer.fieldType || 'Unknown'}`);
         console.log(`   📝 Content: ${currentLayer.content || 'No content'}`);
-        console.log(`   🔧 For frame1.png, use: x: ${newX.toFixed(0)}, y: ${newY.toFixed(0)}`);
+        console.log(`   🔧 For ${frameFileName}.png, use: x: ${newX.toFixed(0)}, y: ${newY.toFixed(0)}`);
         
         // Update the animated position values directly
         if (layerAnimations[layerId]) {
@@ -2194,6 +2134,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               setShowPremiumModal(true);
               return;
             }
+
+            // Deselect any selected or dragged layers so borders don't appear in preview
+            setSelectedLayer(null);
+            setDraggedLayer(null);
+            // Allow a brief tick for UI to update before capture
+            await new Promise(resolve => setTimeout(resolve, 10));
             
             // Test capture first
             console.log('=== TESTING VIEWSHOT CAPTURE ===');
@@ -2257,7 +2203,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 setIsCapturing(true);
                 
                 // Add a delay to ensure the canvas is fully rendered with watermark
-                await new Promise(resolve => setTimeout(resolve, 500));
+                await new Promise(resolve => setTimeout(resolve, 100));
                 
                 // Capture the visible canvas as an image
                 const uri = await visibleCanvasRef.current.capture();
@@ -3695,6 +3641,132 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         }}
         selectedTemplate={null}
       />
+
+      {/* Connection Error Modal */}
+      <Modal
+        visible={showConnectionErrorModal}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          setShowConnectionErrorModal(false);
+          navigation.goBack();
+        }}
+      >
+        <View style={[styles.modalOverlay, { paddingHorizontal: responsiveSpacing.md }]}>
+          <View style={[
+            themeStyles.modalContent,
+            {
+              width: isTablet 
+                ? screenWidth * 0.5 
+                : isLandscape 
+                  ? screenWidth * 0.6 
+                  : isUltraSmallScreen 
+                    ? screenWidth * 0.92 
+                    : isSmallScreen 
+                      ? screenWidth * 0.9 
+                      : screenWidth * 0.85,
+              maxHeight: screenHeight * 0.4,
+            }
+          ]}>
+            <View style={{ alignItems: 'center', marginBottom: responsiveSpacing.lg }}>
+              <View style={{ 
+                width: isTablet ? 70 : isUltraSmallScreen ? 50 : 60, 
+                height: isTablet ? 70 : isUltraSmallScreen ? 50 : 60, 
+                borderRadius: isTablet ? 35 : isUltraSmallScreen ? 25 : 30, 
+                backgroundColor: '#fff0f0', 
+                justifyContent: 'center', 
+                alignItems: 'center',
+                marginBottom: responsiveSpacing.md
+              }}>
+                <Icon 
+                  name="wifi-off" 
+                  size={isTablet ? 36 : isUltraSmallScreen ? 24 : 32} 
+                  color="#ff4444" 
+                />
+              </View>
+              <Text style={[
+                themeStyles.modalTitle, 
+                { 
+                  fontSize: isTablet ? 24 : isUltraSmallScreen ? 18 : 20,
+                  marginBottom: responsiveSpacing.sm,
+                  textAlign: 'center'
+                }
+              ]}>
+                Connection Error
+              </Text>
+              <Text style={[
+                themeStyles.modalSubtitle, 
+                { 
+                  fontSize: isTablet ? 15 : isUltraSmallScreen ? 12 : 14,
+                  textAlign: 'center',
+                  lineHeight: isTablet ? 22 : isUltraSmallScreen ? 16 : 20,
+                  paddingHorizontal: responsiveSpacing.sm
+                }
+              ]}>
+                Please check your internet connection and try again.
+              </Text>
+            </View>
+            <View style={[
+              styles.modalButtons,
+              {
+                flexDirection: 'row',
+                gap: responsiveSpacing.sm
+              }
+            ]}>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  {
+                    flex: 1,
+                    backgroundColor: '#667eea',
+                    paddingVertical: isTablet ? 16 : isUltraSmallScreen ? 12 : 14,
+                    borderRadius: isTablet ? 12 : isUltraSmallScreen ? 8 : 10,
+                    marginHorizontal: 0
+                  }
+                ]}
+                onPress={() => {
+                  setShowConnectionErrorModal(false);
+                  fetchBusinessProfiles();
+                }}
+              >
+                <Text style={[
+                  styles.addButtonText,
+                  {
+                    fontSize: isTablet ? 16 : isUltraSmallScreen ? 13 : 15
+                  }
+                ]}>
+                  Retry
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.modalButton,
+                  themeStyles.cancelButton,
+                  {
+                    flex: 1,
+                    paddingVertical: isTablet ? 16 : isUltraSmallScreen ? 12 : 14,
+                    borderRadius: isTablet ? 12 : isUltraSmallScreen ? 8 : 10,
+                    marginHorizontal: 0
+                  }
+                ]}
+                onPress={() => {
+                  setShowConnectionErrorModal(false);
+                  navigation.goBack();
+                }}
+              >
+                <Text style={[
+                  themeStyles.cancelButtonText,
+                  {
+                    fontSize: isTablet ? 16 : isUltraSmallScreen ? 13 : 15
+                  }
+                ]}>
+                  Go Back
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
     </Animated.View>
   );
