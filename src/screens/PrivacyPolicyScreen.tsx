@@ -233,6 +233,7 @@ const PrivacyPolicyScreen = () => {
               {
                 borderRadius: dynamicModerateScale(12),
                 padding: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+                backgroundColor: theme.colors.cardBackground,
               },
               isHovered && styles.sectionHovered,
               style
@@ -265,7 +266,6 @@ const PrivacyPolicyScreen = () => {
     },
     headerTitle: {
       fontWeight: '600',
-      color: '#333333',
       flex: 1,
       textShadowColor: 'rgba(255, 255, 255, 0.5)',
       textShadowOffset: { width: 0, height: 1 },
@@ -280,7 +280,6 @@ const PrivacyPolicyScreen = () => {
       // Inline styles used
     },
     lastUpdated: {
-      color: 'rgba(102, 102, 102, 0.8)',
       textAlign: 'center',
       fontStyle: 'italic',
     },
@@ -296,7 +295,6 @@ const PrivacyPolicyScreen = () => {
       flex: 1,
     },
     section: {
-      backgroundColor: '#ffffff',
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.3)',
       shadowColor: '#000',
@@ -306,7 +304,6 @@ const PrivacyPolicyScreen = () => {
       elevation: 2,
     },
     sectionHovered: {
-      backgroundColor: '#ffffff',
       borderColor: 'transparent',
       borderWidth: 0,
       shadowOpacity: 0.15,
@@ -323,7 +320,6 @@ const PrivacyPolicyScreen = () => {
     sectionContent: {
       fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed text size
       lineHeight: moderateScale(isTablet ? 12 : 11),
-      color: '#555555',
       // marginBottom uses dynamic scaling in inline styles
     },
     bulletPoint: {
@@ -343,15 +339,12 @@ const PrivacyPolicyScreen = () => {
     bulletText: {
       fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed text size
       lineHeight: moderateScale(isTablet ? 12 : 11),
-      color: '#555555',
       flex: 1,
     },
     highlight: {
       fontWeight: '600',
-      color: '#333333',
     },
     contactSection: {
-      backgroundColor: '#ffffff',
       borderWidth: 1,
       borderColor: 'rgba(255, 255, 255, 0.5)',
       shadowColor: '#000',
@@ -371,7 +364,6 @@ const PrivacyPolicyScreen = () => {
     },
     contactText: {
       fontSize: moderateScale(isTablet ? 8 : 7.5), // Fixed text size
-      color: '#555555',
       textAlign: 'center',
       lineHeight: moderateScale(isTablet ? 12 : 11),
       // Dynamic spacing applied inline
@@ -388,7 +380,6 @@ const PrivacyPolicyScreen = () => {
     },
     heroTitle: {
       fontWeight: '800',
-      color: '#333333',
       textAlign: 'center',
       textShadowColor: 'rgba(255, 255, 255, 0.5)',
       textShadowOffset: { width: 0, height: 1 },
@@ -396,7 +387,6 @@ const PrivacyPolicyScreen = () => {
       letterSpacing: isTablet ? 1 : 0.5,
     },
     heroSubtitle: {
-      color: 'rgba(102, 102, 102, 0.9)',
       textAlign: 'center',
       maxWidth: isTablet ? 700 : '100%',
     },
@@ -439,11 +429,12 @@ const PrivacyPolicyScreen = () => {
             <Icon 
               name="arrow-back" 
               size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
-              color="#333333" 
+              color={theme.colors.text} 
             />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, {
             fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+            color: theme.colors.text,
           }]}>Privacy Policy</Text>
         </View>
 
@@ -471,11 +462,13 @@ const PrivacyPolicyScreen = () => {
             <Text style={[styles.heroTitle, {
               fontSize: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(14),
               marginBottom: dynamicModerateScale(6),
+              color: theme.colors.text,
             }]}>Your Privacy Matters</Text>
             <Text style={[styles.heroSubtitle, {
               fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
               lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               paddingHorizontal: dynamicModerateScale(8),
+              color: theme.colors.textSecondary,
             }]}>
               We're committed to protecting your personal information and being transparent about our data practices
             </Text>
@@ -489,6 +482,7 @@ const PrivacyPolicyScreen = () => {
           <Text style={[styles.lastUpdated, {
             fontSize: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(6.5),
             marginBottom: dynamicModerateScale(8),
+            color: theme.colors.textSecondary,
           }]}>
             Last updated: {new Date().toLocaleDateString()}
           </Text>
@@ -511,6 +505,7 @@ const PrivacyPolicyScreen = () => {
               fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
               lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginBottom: dynamicModerateScale(6),
+              color: theme.colors.text,
             }]}>
               Welcome to MarketBrand.ai ("we," "our," or "us"). This Privacy Policy explains how we collect, 
               use, disclose, and safeguard your information when you use our mobile application and related services 
@@ -520,6 +515,7 @@ const PrivacyPolicyScreen = () => {
               fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
               lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginBottom: dynamicModerateScale(6),
+              color: theme.colors.text,
             }]}>
               By using our Service, you agree to the collection and use of information in accordance with this policy.
             </Text>
@@ -540,6 +536,7 @@ const PrivacyPolicyScreen = () => {
             
             <Text style={[styles.sectionContent, styles.highlight, {
               marginBottom: dynamicModerateScale(4),
+              color: theme.colors.text,
             }]}>Personal Information:</Text>
             <View style={[styles.bulletPoint, {
               marginBottom: dynamicModerateScale(4),
@@ -548,7 +545,7 @@ const PrivacyPolicyScreen = () => {
               borderRadius: dynamicModerateScale(6),
             }]}>
               <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
-              <Text style={styles.bulletText}>Name and email address</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Name and email address</Text>
             </View>
             <View style={[styles.bulletPoint, {
               marginBottom: dynamicModerateScale(4),
@@ -557,7 +554,7 @@ const PrivacyPolicyScreen = () => {
               borderRadius: dynamicModerateScale(6),
             }]}>
               <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
-              <Text style={styles.bulletText}>Profile information and preferences</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Profile information and preferences</Text>
             </View>
             <View style={[styles.bulletPoint, {
               marginBottom: dynamicModerateScale(4),
@@ -566,12 +563,13 @@ const PrivacyPolicyScreen = () => {
               borderRadius: dynamicModerateScale(6),
             }]}>
               <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
-              <Text style={styles.bulletText}>Payment and billing information (processed securely through Razorpay)</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Payment and billing information (processed securely through Razorpay)</Text>
             </View>
 
             <Text style={[styles.sectionContent, styles.highlight, { 
               marginTop: dynamicModerateScale(8),
               marginBottom: dynamicModerateScale(4),
+              color: theme.colors.text,
             }]}>
               Usage Information:
             </Text>
@@ -582,7 +580,7 @@ const PrivacyPolicyScreen = () => {
               borderRadius: dynamicModerateScale(6),
             }]}>
               <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
-              <Text style={styles.bulletText}>App usage patterns and features accessed</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>App usage patterns and features accessed</Text>
             </View>
             <View style={[styles.bulletPoint, {
               marginBottom: dynamicModerateScale(4),
@@ -591,7 +589,7 @@ const PrivacyPolicyScreen = () => {
               borderRadius: dynamicModerateScale(6),
             }]}>
               <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
-              <Text style={styles.bulletText}>Device information (model, operating system, unique identifiers)</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Device information (model, operating system, unique identifiers)</Text>
             </View>
             <View style={[styles.bulletPoint, {
               marginBottom: dynamicModerateScale(4),
@@ -600,12 +598,13 @@ const PrivacyPolicyScreen = () => {
               borderRadius: dynamicModerateScale(6),
             }]}>
               <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
-              <Text style={styles.bulletText}>Crash reports and performance data</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Crash reports and performance data</Text>
             </View>
 
             <Text style={[styles.sectionContent, styles.highlight, { 
               marginTop: dynamicModerateScale(8),
               marginBottom: dynamicModerateScale(4),
+              color: theme.colors.text,
             }]}>
               Content Information:
             </Text>
@@ -616,7 +615,7 @@ const PrivacyPolicyScreen = () => {
               borderRadius: dynamicModerateScale(6),
             }]}>
               <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
-              <Text style={styles.bulletText}>Business profiles and marketing content you create</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Business profiles and marketing content you create</Text>
             </View>
             <View style={[styles.bulletPoint, {
               marginBottom: dynamicModerateScale(4),
@@ -625,7 +624,7 @@ const PrivacyPolicyScreen = () => {
               borderRadius: dynamicModerateScale(6),
             }]}>
               <Text style={[styles.bullet, { marginRight: dynamicModerateScale(4) }]}>•</Text>
-              <Text style={styles.bulletText}>Images, videos, and other media you upload</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Images, videos, and other media you upload</Text>
             </View>
           </HoverableCard>
 
@@ -635,32 +634,32 @@ const PrivacyPolicyScreen = () => {
               <Icon name="settings" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>How We Use Your Information</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle()]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
               We use the information we collect to:
             </Text>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Provide, maintain, and improve our Service</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Provide, maintain, and improve our Service</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Process payments and manage subscriptions</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Process payments and manage subscriptions</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Send you important updates and notifications</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Send you important updates and notifications</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Provide customer support and respond to inquiries</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Provide customer support and respond to inquiries</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Analyze usage patterns to enhance user experience</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Analyze usage patterns to enhance user experience</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Ensure security and prevent fraud</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Ensure security and prevent fraud</Text>
             </View>
           </HoverableCard>
 
@@ -670,24 +669,24 @@ const PrivacyPolicyScreen = () => {
               <Icon name="share" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Information Sharing</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle()]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
               We do not sell, trade, or otherwise transfer your personal information to third parties, except:
             </Text>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>With payment processors (Razorpay) for transaction processing</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>With payment processors (Razorpay) for transaction processing</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>With cloud service providers for data storage and processing</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>With cloud service providers for data storage and processing</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>When required by law or to protect our rights and safety</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>When required by law or to protect our rights and safety</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>With your explicit consent</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>With your explicit consent</Text>
             </View>
           </HoverableCard>
 
@@ -697,25 +696,25 @@ const PrivacyPolicyScreen = () => {
               <Icon name="verified-user" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Data Security</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle()]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
               We implement appropriate security measures to protect your personal information against unauthorized 
               access, alteration, disclosure, or destruction. This includes:
             </Text>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Encryption of sensitive data in transit and at rest</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Encryption of sensitive data in transit and at rest</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Secure authentication and authorization systems</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Secure authentication and authorization systems</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Regular security audits and updates</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Regular security audits and updates</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Access controls and monitoring</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Access controls and monitoring</Text>
             </View>
           </HoverableCard>
 
@@ -725,28 +724,28 @@ const PrivacyPolicyScreen = () => {
               <Icon name="account-circle" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Your Rights and Choices</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle()]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
               You have the right to:
             </Text>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Access and update your personal information</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Access and update your personal information</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Delete your account and associated data</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Delete your account and associated data</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Opt-out of marketing communications</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Opt-out of marketing communications</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Request a copy of your data</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Request a copy of your data</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Withdraw consent for data processing</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Withdraw consent for data processing</Text>
             </View>
           </HoverableCard>
 
@@ -756,7 +755,7 @@ const PrivacyPolicyScreen = () => {
               <Icon name="cookie" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Cookies and Tracking</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle()]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
               We may use cookies and similar tracking technologies to enhance your experience, 
               analyze usage patterns, and provide personalized content. You can control these 
               through your device settings.
@@ -769,22 +768,22 @@ const PrivacyPolicyScreen = () => {
               <Icon name="extension" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Third-Party Services</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle()]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
               Our Service integrates with third-party services including:
             </Text>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Razorpay for payment processing</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Razorpay for payment processing</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Google Fonts for typography</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Google Fonts for typography</Text>
             </View>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
               <Text style={[styles.bullet, getBulletStyle()]}>•</Text>
-              <Text style={styles.bulletText}>Cloud storage providers</Text>
+              <Text style={[styles.bulletText, { color: theme.colors.text }]}>Cloud storage providers</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle()]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
               These services have their own privacy policies, which we encourage you to review.
             </Text>
           </HoverableCard>
@@ -795,7 +794,7 @@ const PrivacyPolicyScreen = () => {
               <Icon name="child-care" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Children's Privacy</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle()]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
               Our Service is not intended for children under 13 years of age. We do not knowingly 
               collect personal information from children under 13. If we become aware that we have 
               collected personal information from a child under 13, we will take steps to delete such information.
@@ -808,7 +807,7 @@ const PrivacyPolicyScreen = () => {
               <Icon name="update" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
               <Text style={styles.sectionTitle}>Changes to This Privacy Policy</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle()]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
               We may update this Privacy Policy from time to time. We will notify you of any changes 
               by posting the new Privacy Policy in the app and updating the "Last updated" date. 
               You are advised to review this Privacy Policy periodically for any changes.
@@ -821,6 +820,7 @@ const PrivacyPolicyScreen = () => {
             borderRadius: dynamicModerateScale(12),
             marginTop: dynamicModerateScale(12),
             marginBottom: dynamicModerateScale(16),
+            backgroundColor: theme.colors.cardBackground,
           }]}>
             <Icon name="contact-support" size={isTabletDevice ? getIconSize(28) : getIconSize(24)} color="#667eea" style={{ 
               alignSelf: 'center', 
@@ -831,6 +831,7 @@ const PrivacyPolicyScreen = () => {
             }]}>Contact Us</Text>
             <Text style={[styles.contactText, {
               marginBottom: dynamicModerateScale(4),
+              color: theme.colors.text,
             }]}>
               If you have any questions about this Privacy Policy or our data practices, 
               please contact us at:
@@ -842,6 +843,7 @@ const PrivacyPolicyScreen = () => {
             </Text>
             <Text style={[styles.contactText, {
               marginBottom: dynamicModerateScale(4),
+              color: theme.colors.text,
             }]}>
               We will respond to your inquiry within 48 hours.
             </Text>
