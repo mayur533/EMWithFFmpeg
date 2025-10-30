@@ -467,7 +467,10 @@ const GreetingTemplatesScreen: React.FC = () => {
           ]}>
             <Text style={[
               styles.headerTitle,
-              { fontSize: moderateScale(12) }
+              { 
+                fontSize: moderateScale(12),
+                color: theme.colors.text,
+              }
             ]}>Greeting Templates</Text>
           </View>
         </View>

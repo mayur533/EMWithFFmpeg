@@ -161,194 +161,6 @@ const HomeScreen: React.FC = React.memo(() => {
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
 
 
-
-  // Mock data removed - using only API data
-
-  // Mock video templates removed - using only API data
-  // const mockVideoTemplates: Template[] = useMemo(() => [
-  // All mock video template data removed
-
-  // Mock templates removed - using only API data
-  // const mockTemplates: Template[] = useMemo(() => [
-  //   {
-  //     id: '1',
-  //     name: 'Wedding Planning',
-  //     thumbnail: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop',
-  //     category: 'Event Planners',
-  //     likes: 156,
-  //     downloads: 89,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  //   {
-  //     id: '2',
-  //     name: 'Corporate Event Setup',
-  //     thumbnail: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=300&h=200&fit=crop',
-  //     category: 'Event Planners',
-  //     likes: 234,
-  //     downloads: 167,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  //   {
-  //     id: '3',
-  //     name: 'Birthday Celebration',
-  //     thumbnail: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=200&fit=crop',
-  //     category: 'Event Planners',
-  //     likes: 89,
-  //     downloads: 45,
-  //     isLiked: false,
-  //     isDownloaded: true,
-  //   },
-  //   {
-  //     id: '4',
-  //     name: 'Floral Decorations',
-  //     thumbnail: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop',
-  //     category: 'Decorators',
-  //     likes: 312,
-  //     downloads: 198,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  //   {
-  //     id: '5',
-  //     name: 'Balloon Arrangements',
-  //     thumbnail: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=200&fit=crop',
-  //     category: 'Decorators',
-  //     likes: 178,
-  //     downloads: 123,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  //   {
-  //     id: '6',
-  //     name: 'Table Settings',
-  //     thumbnail: 'https://images.unsplash.com/photo-1511795409834-ef04bbd61622?w=300&h=200&fit=crop',
-  //     category: 'Decorators',
-  //     likes: 145,
-  //     downloads: 87,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  //   {
-  //     id: '7',
-  //     name: 'Stage Lighting',
-  //     thumbnail: 'https://images.unsplash.com/photo-1516321318423-f06f85e504b3?w=300&h=200&fit=crop',
-  //     category: 'Light Suppliers',
-  //     likes: 203,
-  //     downloads: 134,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  //   {
-  //     id: '8',
-  //     name: 'Sound System Setup',
-  //     thumbnail: 'https://images.unsplash.com/photo-1515187029135-18ee286d815b?w=300&h=200&fit=crop',
-  //     category: 'Sound Suppliers',
-  //     likes: 167,
-  //     downloads: 98,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  //   {
-  //     id: '9',
-  //     name: 'DJ Equipment',
-  //     thumbnail: 'https://images.unsplash.com/photo-1497366216548-37526070297c?w=300&h=200&fit=crop',
-  //     category: 'Sound Suppliers',
-  //     likes: 145,
-  //     downloads: 76,
-  //     isLiked: false,
-  //     isDownloaded: true,
-  //   },
-  //   {
-  //     id: '10',
-  //     name: 'LED Displays',
-  //     thumbnail: 'https://images.unsplash.com/photo-1522071820081-009f0129c71c?w=300&h=200&fit=crop',
-  //     category: 'Light Suppliers',
-  //     likes: 189,
-  //     downloads: 112,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  //   {
-  //     id: '11',
-  //     name: 'Conference Setup',
-  //     thumbnail: 'https://images.unsplash.com/photo-1556761175-b413da4baf72?w=300&h=200&fit=crop',
-  //     category: 'Event Planners',
-  //     likes: 234,
-  //     downloads: 156,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  //   {
-  //     id: '12',
-  //     name: 'Wedding Decor',
-  //     thumbnail: 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
-  //     category: 'Decorators',
-  //     likes: 178,
-  //     downloads: 89,
-  //     isLiked: false,
-  //     isDownloaded: false,
-  //   },
-  // ], []);
-
-  // Mock categories removed - using only API data
-  // const mockCategories: Category[] = useMemo(() => [
-  //   { id: 'all', name: 'All' },
-  //   { id: 'event-planners', name: 'Event Planners' },
-  //   { id: 'decorators', name: 'Decorators' },
-  //   { id: 'sound-suppliers', name: 'Sound Suppliers' },
-  //   { id: 'light-suppliers', name: 'Light Suppliers' },
-  // ], []);
-
-
-
-  // Mock upcoming festivals removed - using only API data
-  // const mockUpcomingEvents = useMemo(() => [
-  //   {
-  //     id: '1',
-  //     title: 'Tech Conference 2024',
-  //     date: 'Dec 15, 2024',
-  //     time: '9:00 AM',
-  //     location: 'Convention Center',
-  //     imageUrl: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=150&fit=crop',
-  //     attendees: 250,
-  //     category: 'Conference',
-  //   },
-  //   {
-  //     id: '2',
-  //     title: 'Wedding Expo',
-  //     date: 'Dec 20, 2024',
-  //     time: '2:00 PM',
-  //     location: 'Grand Hotel',
-  //     imageUrl: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?w=300&h=150&fit=crop',
-  //     attendees: 180,
-  //     category: 'Wedding',
-  //   },
-  //   {
-  //     id: '3',
-  //     title: 'Corporate Gala',
-  //     date: 'Dec 25, 2024',
-  //     time: '7:00 PM',
-  //     location: 'Business Center',
-  //     imageUrl: 'https://images.unsplash.com/photo-1511578314322-379afb476865?w=300&h=150&fit=crop',
-  //     attendees: 120,
-  //     category: 'Corporate',
-  //   },
-  //   {
-  //     id: '4',
-  //     title: 'Music Festival',
-  //     date: 'Dec 30, 2024',
-  //     time: '6:00 PM',
-  //     location: 'City Park',
-  //     imageUrl: 'https://images.unsplash.com/photo-1464366400600-7168b8af9bc3?w=300&h=150&fit=crop',
-  //     attendees: 500,
-  //     category: 'Festival',
-  //   },
-  // ], []);
-
-
-
   // Load data from APIs with caching for instant loads
   const loadApiData = useCallback(async (isRefresh: boolean = false) => {
     setApiLoading(true);
@@ -1096,7 +908,7 @@ const HomeScreen: React.FC = React.memo(() => {
           style={styles.loadingContainer}
         >
           <ActivityIndicator size="large" color="#667eea" />
-          <Text style={styles.loadingText}>Loading dashboard...</Text>
+          <Text style={[styles.loadingText, { color: theme.colors.text }]}>Getting things ready...</Text>
         </LinearGradient>
       </SafeAreaView>
     );
@@ -1226,7 +1038,7 @@ const HomeScreen: React.FC = React.memo(() => {
 
           {/* Banner Carousel */}
           <View style={styles.bannerSection}>
-            <Text style={styles.sectionTitle}>Featured Content</Text>
+            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Featured Content</Text>
             <FlatList
               data={banners}
               renderItem={renderBanner}
@@ -1246,9 +1058,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {upcomingEvents.length > 0 && (
             <View style={styles.upcomingEventsSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Upcoming Festivals</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Upcoming Festivals</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllUpcomingEvents}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
 
@@ -1303,9 +1115,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {/* Templates Grid */}
           <View style={styles.templatesSection}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Business Events</Text>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Events</Text>
               <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllTemplates}>
-                <Text style={styles.viewAllButtonText}>Browse All</Text>
+                <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
               </TouchableOpacity>
             </View>
             <FlatList
@@ -1327,9 +1139,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {videoContent.length > 0 && (
             <View style={styles.videoSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Video Content</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Video Content</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllVideos}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1352,9 +1164,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {motivationTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Motivation</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Motivation</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllMotivation}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1373,9 +1185,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {goodMorningTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Good Morning</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Good Morning</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllGoodMorning}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1394,9 +1206,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {businessEthicsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Business Ethics</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Ethics</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllBusinessEthics}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1415,9 +1227,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {devotionalTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Devotional</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Devotional</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllDevotional}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1436,9 +1248,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {leaderQuotesTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Leader Quotes</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Leader Quotes</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllLeaderQuotes}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1457,9 +1269,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {atmanirbharBharatTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Atmanirbhar Bharat</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Atmanirbhar Bharat</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllAtmanirbharBharat}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1478,9 +1290,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {goodThoughtsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Good Thoughts</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Good Thoughts</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllGoodThoughts}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1499,9 +1311,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {trendingTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Trending</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Trending</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllTrending}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1520,9 +1332,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {bhagvatGitaTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Bhagvat Gita</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Bhagvat Gita</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllBhagvatGita}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1541,9 +1353,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {booksTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Books</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Books</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllBooks}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -1562,9 +1374,9 @@ const HomeScreen: React.FC = React.memo(() => {
           {celebratesMomentsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0 }]}>Celebrates the Moments</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Celebrates the Moments</Text>
                 <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllCelebratesMoments}>
-                  <Text style={styles.viewAllButtonText}>Browse All</Text>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
                 </TouchableOpacity>
               </View>
               <FlatList
@@ -2551,7 +2363,6 @@ const styles = StyleSheet.create({
   loadingText: {
     marginTop: 20,
     fontSize: 18,
-    color: '#333333',
     fontWeight: '600',
   },
   header: {
@@ -2573,7 +2384,6 @@ const styles = StyleSheet.create({
   userName: {
     fontSize: moderateScale(12),
     fontWeight: 'bold',
-    color: '#333333',
   },
   apiStatusIndicator: {
     flexDirection: 'row',
@@ -2675,7 +2485,6 @@ const styles = StyleSheet.create({
   sectionTitle: {
     fontSize: moderateScale(12),
     fontWeight: 'bold',
-    color: '#333333',
     marginBottom: verticalScale(4),
     paddingHorizontal: moderateScale(10),
   },
@@ -2743,11 +2552,10 @@ const styles = StyleSheet.create({
      backgroundColor: 'rgba(0,0,0,0.08)',
      borderRadius: moderateScale(8),
    },
-   viewAllButtonText: {
-     fontSize: moderateScale(8),
-     color: '#333333',
-     fontWeight: '600',
-   },
+  viewAllButtonText: {
+    fontSize: moderateScale(8),
+    fontWeight: '600',
+  },
        upcomingEventsList: {
       paddingHorizontal: moderateScale(3),
     },

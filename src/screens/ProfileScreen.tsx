@@ -406,10 +406,62 @@ const ProfileScreen: React.FC = () => {
 
           // Load complete user profile from backend
           try {
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('📡 FETCHING USER PROFILE DATA FROM API');
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('🔍 User ID:', userId);
+            console.log('📡 Calling authApi.getProfile()...');
+            
             const profileResponse = await authApi.getProfile(userId);
+            
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('📥 GET PROFILE API RESPONSE - FULL RESPONSE');
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('📦 Full profileResponse Object:');
+            console.log(JSON.stringify(profileResponse, null, 2));
+            console.log('─────────────────────────────────────────────────────────');
+            console.log('✅ Response Success:', profileResponse?.success);
+            console.log('✅ Response Message:', profileResponse?.message || 'N/A');
+            console.log('─────────────────────────────────────────────────────────');
+            
             const completeUserData = profileResponse.data;
             
-            console.log('🔍 Complete Profile Data from API:', JSON.stringify(completeUserData, null, 2));
+            console.log('📋 Complete User Data Object:');
+            console.log(JSON.stringify(completeUserData, null, 2));
+            console.log('─────────────────────────────────────────────────────────');
+            console.log('📊 Individual User Data Fields:');
+            console.log('   🆔 id:', completeUserData?.id || '(not set)');
+            console.log('   📧 email:', completeUserData?.email || '(not set)');
+            console.log('   🏢 companyName:', (completeUserData as any)?.companyName || '(not set)');
+            console.log('   🏢 name:', (completeUserData as any)?.name || '(not set)');
+            console.log('   📱 phone:', (completeUserData as any)?.phone || '(not set)');
+            console.log('   📱 phoneNumber:', (completeUserData as any)?.phoneNumber || '(not set)');
+            console.log('   📱 alternatePhone:', (completeUserData as any)?.alternatePhone || '(not set)');
+            console.log('   📍 address:', (completeUserData as any)?.address || '(not set)');
+            console.log('   🌐 website:', (completeUserData as any)?.website || '(not set)');
+            console.log('   🏷️ category:', (completeUserData as any)?.category || '(not set)');
+            console.log('   📝 description:', (completeUserData as any)?.description || '(not set)');
+            console.log('─────────────────────────────────────────────────────────');
+            console.log('🖼️ PROFILE PHOTO/LOGO FIELDS:');
+            console.log('   🖼️ logo:', (completeUserData as any)?.logo || '(not set)');
+            console.log('   🖼️ companyLogo:', (completeUserData as any)?.companyLogo || '(not set)');
+            console.log('   🖼️ photo:', (completeUserData as any)?.photo || '(not set)');
+            console.log('   🖼️ photoURL:', (completeUserData as any)?.photoURL || '(not set)');
+            console.log('   🖼️ profileImage:', (completeUserData as any)?.profileImage || '(not set)');
+            console.log('─────────────────────────────────────────────────────────');
+            console.log('📅 Timestamps:');
+            console.log('   📅 createdAt:', (completeUserData as any)?.createdAt || '(not set)');
+            console.log('   📅 updatedAt:', (completeUserData as any)?.updatedAt || '(not set)');
+            console.log('─────────────────────────────────────────────────────────');
+            console.log('⚠️ Business Profiles Check:');
+            console.log('   🏢 businessProfiles present?', !!(completeUserData as any)?.businessProfiles);
+            if ((completeUserData as any)?.businessProfiles) {
+              console.log('   🏢 businessProfiles count:', (completeUserData as any).businessProfiles.length);
+              console.log('   🏢 businessProfiles data:', JSON.stringify((completeUserData as any).businessProfiles, null, 2));
+            }
+            console.log('═══════════════════════════════════════════════════════════');
+            console.log('📥 GET PROFILE API RESPONSE - END');
+            console.log('═══════════════════════════════════════════════════════════');
             
             // Update current user with complete profile data
             // CRITICAL: Exclude businessProfiles from API to prevent contamination
@@ -441,7 +493,11 @@ const ProfileScreen: React.FC = () => {
             
             // Update profile image from logo field
             if (completeUserData?.logo || completeUserData?.companyLogo) {
-              setProfileImageUri(completeUserData?.logo || completeUserData?.companyLogo || null);
+              const profileImageUrl = completeUserData?.logo || completeUserData?.companyLogo || null;
+              console.log('🖼️ Setting profile image URI from API:', profileImageUrl);
+              setProfileImageUri(profileImageUrl);
+            } else {
+              console.log('⚠️ No profile image/logo found in API response');
             }
             
             console.log('✅ User profile data loaded and updated');
@@ -1185,6 +1241,13 @@ const ProfileScreen: React.FC = () => {
         return;
       }
       
+      const userId = currentUser?.id;
+      if (!userId) {
+        console.error('❌ No user ID available');
+        Alert.alert('Error', 'User ID not found. Please try again.');
+        return;
+      }
+      
       // Step 1: Update UI state
       try {
         console.log('✅ Step 1: Setting profile image URI...');
@@ -1195,10 +1258,28 @@ const ProfileScreen: React.FC = () => {
         throw error;
       }
       
-      // Step 2: Update user object
+      // Step 2: Call API to update logo immediately
+      try {
+        console.log('✅ Step 2: Calling API to update logo...');
+        const updateData = {
+          companyLogo: imageUri,
+          logo: imageUri,
+        };
+        
+        const response = await authApi.updateProfile(updateData, userId);
+        console.log('✅ Step 2 complete - API response:', response);
+      } catch (error) {
+        console.error('❌ Step 2 API call failed:', error);
+        Alert.alert('Error', 'Failed to update profile picture on server. Please try again.');
+        // Revert UI state
+        setProfileImageUri(currentUser?.logo || currentUser?.companyLogo || null);
+        return;
+      }
+      
+      // Step 3: Update user object locally
       let updatedUser;
       try {
-        console.log('✅ Step 2: Creating updated user object...');
+        console.log('✅ Step 3: Creating updated user object...');
         updatedUser = {
           ...currentUser,
           logo: imageUri, // Primary field from API
@@ -1209,42 +1290,41 @@ const ProfileScreen: React.FC = () => {
         
         // Update in auth service
         authService.setCurrentUser(updatedUser);
-        console.log('✅ Step 2 complete');
-      } catch (error) {
-        console.error('❌ Step 2 failed:', error);
-        throw error;
-      }
-      
-      // Step 3: Save to storage
-      try {
-        console.log('✅ Step 3: Saving to storage...');
-        const authToken = await AsyncStorage.getItem('authToken');
-        await authService.saveUserToStorage(updatedUser, authToken || '');
         console.log('✅ Step 3 complete');
       } catch (error) {
         console.error('❌ Step 3 failed:', error);
-        // Continue anyway - this is not critical
+        throw error;
       }
       
-      // Step 4: Update cache
+      // Step 4: Save to storage
       try {
-        console.log('✅ Step 4: Updating cache...');
-        await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUser);
-        await updateCacheTimestamp(currentUser.id);
+        console.log('✅ Step 4: Saving to storage...');
+        const authToken = await AsyncStorage.getItem('authToken');
+        await authService.saveUserToStorage(updatedUser, authToken || '');
         console.log('✅ Step 4 complete');
       } catch (error) {
         console.error('❌ Step 4 failed:', error);
         // Continue anyway - this is not critical
       }
       
+      // Step 5: Update cache
+      try {
+        console.log('✅ Step 5: Updating cache...');
+        await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUser);
+        await updateCacheTimestamp(currentUser.id);
+        console.log('✅ Step 5 complete');
+      } catch (error) {
+        console.error('❌ Step 5 failed:', error);
+        // Continue anyway - this is not critical
+      }
+      
       console.log('✅ Profile picture updated in storage');
       console.log('💾 Profile picture cached');
       
-      // Step 5: Update ONLY the MAIN business profile (first profile from registration) with the new logo
+      // Step 6: Update ONLY the MAIN business profile (first profile from registration) with the new logo
       try {
-        console.log('✅ Step 5: Updating MAIN business profile with new logo...');
+        console.log('✅ Step 6: Updating MAIN business profile with new logo...');
         console.log('🔍 Image URI to sync:', imageUri);
-        const userId = currentUser?.id;
         
         if (!userId) {
           console.log('⚠️ No user ID available for business profile update, skipping');
@@ -1303,20 +1383,20 @@ const ProfileScreen: React.FC = () => {
             console.log('ℹ️ No business profiles found, skipping logo sync');
           }
         }
-        console.log('✅ Step 5 complete');
-      } catch (error) {
-        console.error('❌ Step 5 failed:', error);
-        // Don't fail the user profile update if business profile update fails
-      }
-      
-      // Step 6: Show success message
-      try {
-        console.log('✅ Step 6: Showing success message...');
-        setSuccessMessage('Profile picture updated successfully!');
-        setShowSuccessModal(true);
         console.log('✅ Step 6 complete');
       } catch (error) {
         console.error('❌ Step 6 failed:', error);
+        // Don't fail the user profile update if business profile update fails
+      }
+      
+      // Step 7: Show success message
+      try {
+        console.log('✅ Step 7: Showing success message...');
+        setSuccessMessage('Profile picture updated successfully!');
+        setShowSuccessModal(true);
+        console.log('✅ Step 7 complete');
+      } catch (error) {
+        console.error('❌ Step 7 failed:', error);
       }
       
       console.log('✅ [COMPLETE] Profile picture update complete');
