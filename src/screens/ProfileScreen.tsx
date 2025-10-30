@@ -1698,6 +1698,7 @@ const ProfileScreen: React.FC = () => {
               fontSize: dynamicModerateScale(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
+              color: theme.colors.text,
             }]}>Account Settings</Text>
             {renderMenuItem('business', 'Business Profiles', `${businessProfileStats.total} profiles • ${businessProfileStats.recentCount} recent`, handleBusinessProfiles)}
             {/* Notifications temporarily hidden */}
@@ -1712,6 +1713,7 @@ const ProfileScreen: React.FC = () => {
               fontSize: dynamicModerateScale(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
+              color: theme.colors.text,
             }]}>My Posters</Text>
             <TouchableOpacity 
               style={[styles.myPostersCard, { 
@@ -1765,6 +1767,7 @@ const ProfileScreen: React.FC = () => {
               fontSize: dynamicModerateScale(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
+              color: theme.colors.text,
             }]}>Subscription</Text>
             <TouchableOpacity 
               style={[styles.subscriptionCard, { 
@@ -1875,6 +1878,7 @@ const ProfileScreen: React.FC = () => {
                fontSize: dynamicModerateScale(10),
                marginBottom: dynamicModerateScale(5),
                paddingHorizontal: dynamicModerateScale(8),
+               color: theme.colors.text,
              }]}>App Settings</Text>
              {renderMenuItem('dark-mode', 'Dark Mode', 'Switch to dark theme', undefined, true, isDarkMode, handleDarkModeToggle, darkModeAnimation)}
            </View>
@@ -1887,6 +1891,7 @@ const ProfileScreen: React.FC = () => {
               fontSize: dynamicModerateScale(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
+              color: theme.colors.text,
             }]}>Support & Legal</Text>
             {renderMenuItem('help', 'Help & Support', 'Get help and contact support', () => navigation.navigate('HelpSupport' as never))}
             {renderMenuItem('privacy-tip', 'Privacy Policy', 'Read our privacy policy', () => navigation.navigate('PrivacyPolicy' as never))}
@@ -1901,6 +1906,7 @@ const ProfileScreen: React.FC = () => {
               fontSize: dynamicModerateScale(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
+              color: theme.colors.text,
             }]}>Share & Support</Text>
             <TouchableOpacity 
               style={[styles.shareAppCard, { 
@@ -1968,7 +1974,7 @@ const ProfileScreen: React.FC = () => {
 
           {/* App Version */}
             <Text style={[styles.versionText, { 
-            color: 'rgba(102, 102, 102, 0.8)',
+            color: theme.colors.textSecondary,
             fontSize: dynamicModerateScale(8),
             marginTop: dynamicModerateScale(14),
           }]}>Version 1.0.0</Text>
@@ -2712,7 +2718,6 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: moderateScale(12),
     fontWeight: 'bold',
-    color: '#333333',
     textAlign: 'center',
   },
   content: {
@@ -2799,7 +2804,6 @@ const styles = StyleSheet.create({
   },
   sectionTitle: {
     fontWeight: '600',
-    color: '#333333',
   },
   menuItem: {
     flexDirection: 'row',
