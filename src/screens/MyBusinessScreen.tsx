@@ -355,9 +355,8 @@ const MyBusinessScreen: React.FC = () => {
               <TouchableOpacity
                 style={[styles.refreshButton, {
                   paddingHorizontal: dynamicModerateScale(12),
-                  paddingVertical: dynamicModerateScale(6),
-                  minHeight: buttonSize,
-                  borderRadius: buttonSize / 2,
+                  paddingVertical: dynamicModerateScale(8),
+                  borderRadius: dynamicModerateScale(8),
                   alignItems: 'center',
                   justifyContent: 'center',
                 }]}

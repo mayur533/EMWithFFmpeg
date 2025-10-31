@@ -856,7 +856,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const keyExtractor = useCallback((item: any) => item.id, []);
 
   // Factory function to create category-specific render functions for greeting cards
-  const createGreetingCardRenderer = useCallback((categoryTemplates: any[]) => {
+  const createGreetingCardRenderer = useCallback((categoryTemplates: any[], searchQuery?: string) => {
     return ({ item }: { item: any }) => {
       if (!item || !item.thumbnail) {
         console.error('❌ [RENDER GREETING CARD] Invalid item:', item);
@@ -872,6 +872,8 @@ const HomeScreen: React.FC = React.memo(() => {
             navigation.navigate('PosterPlayer', {
               selectedPoster: item,
               relatedPosters: relatedTemplates,
+              searchQuery: searchQuery,
+              templateSource: 'greeting',
             });
           }}
           style={styles.templateCardWrapper}
@@ -1171,7 +1173,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={motivationTemplates}
-                renderItem={createGreetingCardRenderer(motivationTemplates)}
+                renderItem={createGreetingCardRenderer(motivationTemplates, 'motivational')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1192,7 +1194,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={goodMorningTemplates}
-                renderItem={createGreetingCardRenderer(goodMorningTemplates)}
+                renderItem={createGreetingCardRenderer(goodMorningTemplates, 'good morning')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1213,7 +1215,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={businessEthicsTemplates}
-                renderItem={createGreetingCardRenderer(businessEthicsTemplates)}
+                renderItem={createGreetingCardRenderer(businessEthicsTemplates, 'business ethics')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1234,7 +1236,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={devotionalTemplates}
-                renderItem={createGreetingCardRenderer(devotionalTemplates)}
+                renderItem={createGreetingCardRenderer(devotionalTemplates, 'devotional')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1255,7 +1257,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={leaderQuotesTemplates}
-                renderItem={createGreetingCardRenderer(leaderQuotesTemplates)}
+                renderItem={createGreetingCardRenderer(leaderQuotesTemplates, 'leader quotes')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1276,7 +1278,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={atmanirbharBharatTemplates}
-                renderItem={createGreetingCardRenderer(atmanirbharBharatTemplates)}
+                renderItem={createGreetingCardRenderer(atmanirbharBharatTemplates, 'atmanirbhar bharat')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1297,7 +1299,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={goodThoughtsTemplates}
-                renderItem={createGreetingCardRenderer(goodThoughtsTemplates)}
+                renderItem={createGreetingCardRenderer(goodThoughtsTemplates, 'good thoughts')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1318,7 +1320,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={trendingTemplates}
-                renderItem={createGreetingCardRenderer(trendingTemplates)}
+                renderItem={createGreetingCardRenderer(trendingTemplates, 'trending')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1339,7 +1341,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={bhagvatGitaTemplates}
-                renderItem={createGreetingCardRenderer(bhagvatGitaTemplates)}
+                renderItem={createGreetingCardRenderer(bhagvatGitaTemplates, 'bhagvat gita')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1360,7 +1362,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={booksTemplates}
-                renderItem={createGreetingCardRenderer(booksTemplates)}
+                renderItem={createGreetingCardRenderer(booksTemplates, 'books')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1381,7 +1383,7 @@ const HomeScreen: React.FC = React.memo(() => {
               </View>
               <FlatList
                 data={celebratesMomentsTemplates}
-                renderItem={createGreetingCardRenderer(celebratesMomentsTemplates)}
+                renderItem={createGreetingCardRenderer(celebratesMomentsTemplates, 'celebrates the moments')}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}

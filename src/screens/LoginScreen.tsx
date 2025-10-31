@@ -159,8 +159,8 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
                 style={styles.logo}
                 resizeMode="contain"
               />
-              <Text style={styles.title}>Welcome Back</Text>
-              <Text style={styles.subtitle}>Sign in to continue your journey</Text>
+              <Text style={[styles.title, { color: theme.colors.text }]}>Welcome Back</Text>
+              <Text style={[styles.subtitle, { color: theme.colors.textSecondary }]}>Sign in to continue your journey</Text>
             </View>
 
             {/* Form */}
@@ -346,12 +346,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: Math.min(screenWidth * 0.08, 32),
     fontWeight: 'bold',
-    color: '#333333',
     marginBottom: screenHeight * 0.01,
   },
   subtitle: {
     fontSize: Math.min(screenWidth * 0.04, 16),
-    color: 'rgba(102, 102, 102, 0.9)',
     textAlign: 'center',
   },
   formContainer: {

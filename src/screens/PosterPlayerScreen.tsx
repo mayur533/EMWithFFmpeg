@@ -19,6 +19,8 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import { Template } from '../services/dashboard';
 import { useTheme } from '../context/ThemeContext';
 import OptimizedImage from '../components/OptimizedImage';
+import greetingTemplatesService from '../services/greetingTemplates';
+import homeApi from '../services/homeApi';
 
 type PosterPlayerScreenRouteProp = RouteProp<MainStackParamList, 'PosterPlayer'>;
 type PosterPlayerScreenNavigationProp = StackNavigationProp<MainStackParamList, 'PosterPlayer'>;
@@ -52,12 +54,37 @@ const PosterPlayerScreen: React.FC = () => {
   const verticalScale = (size: number) => (screenHeight / 667) * size;
   const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
   
-  const { selectedPoster: initialPoster, relatedPosters: initialRelatedPosters } = route.params;
+  const { 
+    selectedPoster: initialPoster, 
+    relatedPosters: initialRelatedPosters,
+    searchQuery,
+    templateSource = 'professional'
+  } = route.params;
   const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
   const [currentRelatedPosters, setCurrentRelatedPosters] = useState<Template[]>(initialRelatedPosters);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
   const [languageMenuVisible, setLanguageMenuVisible] = useState<boolean>(false);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [isLoadingLanguage, setIsLoadingLanguage] = useState<boolean>(false);
+
+  // Get high quality image URL for preview (replace thumbnail params with high quality)
+  const getHighQualityImageUrl = (poster: Template): string => {
+    // Check if poster has a previewUrl property (cast to any to access)
+    const previewUrl = (poster as any).previewUrl;
+    if (previewUrl) {
+      return previewUrl;
+    }
+    
+    // Otherwise, enhance the thumbnail URL for higher quality
+    let url = poster.thumbnail;
+    
+    // Remove any existing quality/size parameters
+    url = url.replace(/[?&](quality|width|height|w|h|size)=[^&]*/gi, '');
+    
+    // Add high quality parameters
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}quality=high&width=2400`;
+  };
 
   // Console log initial data on screen mount
   useEffect(() => {
@@ -83,24 +110,14 @@ const PosterPlayerScreen: React.FC = () => {
     { id: 'hindi', name: 'Hindi', code: 'HI' },
   ], []);
 
-  // Filter posters by selected language
+  // Display current related posters (now fetched by language from API)
   const filteredPosters = useMemo(() => {
-    const filtered = currentRelatedPosters.filter(poster => {
-      // If poster doesn't have languages property, show it for all languages
-      if (!poster.languages || poster.languages.length === 0) {
-        return true;
-      }
-      // Otherwise, filter based on poster's supported languages
-      return poster.languages.includes(selectedLanguage);
-    });
-    
-    console.log('🔍 [POSTER PLAYER] FILTERED POSTERS');
+    console.log('🔍 [POSTER PLAYER] DISPLAYING POSTERS');
     console.log('🌐 Selected Language:', selectedLanguage);
     console.log('📊 Total Related Posters:', currentRelatedPosters.length);
-    console.log('📊 Filtered Posters Count:', filtered.length);
-    console.log('📊 Filtered Poster IDs:', filtered.map(p => ({ id: p.id, name: p.name })));
+    console.log('📊 Poster IDs:', currentRelatedPosters.map(p => ({ id: p.id, name: p.name })));
     
-    return filtered;
+    return currentRelatedPosters;
   }, [currentRelatedPosters, selectedLanguage]);
 
   const handlePosterSelect = useCallback((poster: Template) => {
@@ -126,15 +143,76 @@ const PosterPlayerScreen: React.FC = () => {
     });
   }, [currentPoster]);
 
-  const handleLanguageChange = useCallback((languageId: string) => {
+  const handleLanguageChange = useCallback(async (languageId: string) => {
     console.log('═══════════════════════════════════════════════════════');
     console.log('🌐 [POSTER PLAYER] LANGUAGE CHANGED');
     console.log('═══════════════════════════════════════════════════════');
     console.log('🌐 Previous Language:', selectedLanguage);
     console.log('🌐 New Language:', languageId);
+    console.log('🔍 Search Query:', searchQuery);
+    console.log('📦 Template Source:', templateSource);
     console.log('═══════════════════════════════════════════════════════');
+    
     setSelectedLanguage(languageId);
-  }, [selectedLanguage]);
+    setLanguageMenuVisible(false);
+    
+    // If we have a search query (greeting templates), refetch with language filter
+    if (searchQuery && templateSource === 'greeting') {
+      setIsLoadingLanguage(true);
+      try {
+        console.log(`🔄 [POSTER PLAYER] Fetching templates for language: ${languageId}, query: ${searchQuery}`);
+        const languageParam = languageId === 'english' ? 'english' : languageId === 'hindi' ? 'hindi' : 'marathi';
+        const templates = await greetingTemplatesService.searchTemplates(searchQuery, languageParam);
+        
+        console.log(`✅ [POSTER PLAYER] Fetched ${templates.length} templates for ${languageParam}`);
+        
+        if (templates.length > 0) {
+          // Set the first template as current poster
+          setCurrentPoster(templates[0]);
+          // Set the rest as related posters
+          setCurrentRelatedPosters(templates.slice(1));
+        } else {
+          console.warn('⚠️ [POSTER PLAYER] No templates found for this language');
+          // Keep existing data but show empty related posters
+          setCurrentRelatedPosters([]);
+        }
+      } catch (error) {
+        console.error('❌ [POSTER PLAYER] Error fetching templates by language:', error);
+      } finally {
+        setIsLoadingLanguage(false);
+      }
+    } else if (templateSource === 'professional') {
+      // For professional templates from homeApi
+      setIsLoadingLanguage(true);
+      try {
+        console.log(`🔄 [POSTER PLAYER] Fetching professional templates for language: ${languageId}`);
+        const languageParam = languageId === 'english' ? 'english' : languageId === 'hindi' ? 'hindi' : 'marathi';
+        const response = await homeApi.getProfessionalTemplates({ language: languageParam });
+        
+        if (response.success && response.data.length > 0) {
+          console.log(`✅ [POSTER PLAYER] Fetched ${response.data.length} professional templates for ${languageParam}`);
+          // Convert ProfessionalTemplate to Template format
+          const convertedTemplates = response.data.map(t => ({
+            id: t.id,
+            name: t.name,
+            thumbnail: t.thumbnail,
+            category: t.category,
+            downloads: t.downloads,
+            isDownloaded: t.isDownloaded,
+          }));
+          setCurrentPoster(convertedTemplates[0]);
+          setCurrentRelatedPosters(convertedTemplates.slice(1));
+        } else {
+          console.warn('⚠️ [POSTER PLAYER] No professional templates found for this language');
+          setCurrentRelatedPosters([]);
+        }
+      } catch (error) {
+        console.error('❌ [POSTER PLAYER] Error fetching professional templates by language:', error);
+      } finally {
+        setIsLoadingLanguage(false);
+      }
+    }
+  }, [selectedLanguage, searchQuery, templateSource]);
 
   // Responsive icon sizes
   const getIconSize = useCallback((baseSize: number) => {
@@ -178,7 +256,11 @@ const PosterPlayerScreen: React.FC = () => {
 
   // Load intrinsic image size when poster changes
   useEffect(() => {
-    const uri = currentPoster?.thumbnail;
+    if (!currentPoster) {
+      setImageDimensions(null);
+      return;
+    }
+    const uri = getHighQualityImageUrl(currentPoster);
     if (!uri) {
       setImageDimensions(null);
       return;
@@ -188,7 +270,7 @@ const PosterPlayerScreen: React.FC = () => {
       (width, height) => setImageDimensions({ width, height }),
       () => setImageDimensions(null)
     );
-  }, [currentPoster?.thumbnail]);
+  }, [currentPoster]);
 
   const handleNextPress = useCallback(() => {
     console.log('═══════════════════════════════════════════════════════');
@@ -206,7 +288,7 @@ const PosterPlayerScreen: React.FC = () => {
     
     navigation.navigate('PosterEditor', {
       selectedImage: {
-        uri: currentPoster.thumbnail,
+        uri: getHighQualityImageUrl(currentPoster),
         title: currentPoster.name,
         description: currentPoster.category,
       },
@@ -316,7 +398,7 @@ const PosterPlayerScreen: React.FC = () => {
          {/* Compact Poster Section */}
          <View style={[styles.posterContainer, { height: computedPreviewHeight, width: '100%' }]}>
          <OptimizedImage
-           uri={currentPoster.thumbnail}
+           uri={getHighQualityImageUrl(currentPoster)}
            style={styles.posterImage}
            resizeMode="contain"
            showLoader={false}

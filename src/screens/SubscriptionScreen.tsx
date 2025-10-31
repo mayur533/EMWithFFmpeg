@@ -22,6 +22,7 @@ import PaymentErrorModal from '../components/PaymentErrorModal';
 import { useTheme } from '../context/ThemeContext';
 import subscriptionApi, { SubscriptionPlan, SubscriptionStatus } from '../services/subscriptionApi';
 import authService from '../services/auth';
+import { API_CONFIG } from '../constants/api';
 
 // Compact spacing multiplier to reduce all spacing (matching HomeScreen)
 const COMPACT_MULTIPLIER = 0.5;
@@ -264,37 +265,37 @@ const SubscriptionScreen: React.FC = () => {
             // Verify payment with backend and activate subscription
             console.log('🔄 Activating subscription...');
             await verifyPaymentAndActivateSubscription(response);
-            console.log('✅ Subscription activated');
-            
-            // Update local subscription state immediately (optimistic update)
-            setIsSubscribed(true);
+            console.log('✅ Subscription activated with backend');
             
             // Give backend a moment to process the subscription
             await new Promise(resolve => setTimeout(resolve, 1000));
             
-            // Refresh subscription status from backend multiple times to ensure consistency
+            // Refresh subscription status from backend to get the actual state
             console.log('🔄 Refreshing subscription status (attempt 1)...');
             await refreshSubscription();
             
             // Try again after a short delay if not subscribed yet
-            if (!isSubscribed) {
-              console.log('⚠️ Subscription not active yet, retrying...');
-              await new Promise(resolve => setTimeout(resolve, 1500));
-              console.log('🔄 Refreshing subscription status (attempt 2)...');
-              await refreshSubscription();
-            }
+            await new Promise(resolve => setTimeout(resolve, 1500));
+            console.log('🔄 Refreshing subscription status (attempt 2)...');
+            await refreshSubscription();
             
             // Force reload the subscription data from the screen
             await loadSubscriptionData();
             
-            if (Platform.OS === 'android') {
-              ToastAndroid.show('🎉 Payment successful! Welcome to Pro!', ToastAndroid.LONG);
+            // Only show success if subscription is actually active
+            if (isSubscribed) {
+              if (Platform.OS === 'android') {
+                ToastAndroid.show('🎉 Payment successful! Welcome to Pro!', ToastAndroid.LONG);
+              } else {
+                Alert.alert('🎉 Success', 'Payment successful! Welcome to Pro!');
+              }
+              console.log('✅ Payment processing complete, navigating back');
+              navigation.goBack();
             } else {
-              Alert.alert('🎉 Success', 'Payment successful! Welcome to Pro!');
+              // Subscription verification failed
+              console.warn('⚠️ Payment successful but subscription not activated');
+              showErrorModal('Subscription Activation Failed', 'Payment was successful but subscription could not be activated. Please contact support or check your subscription status.');
             }
-            
-            console.log('✅ Payment processing complete, navigating back');
-            navigation.goBack();
           } catch (error) {
             console.error('❌ Error processing successful payment:', error);
             showErrorModal('Payment Processing Error', 'Payment was successful but there was an error activating your subscription. Please contact support or refresh the app.');
@@ -311,13 +312,15 @@ const SubscriptionScreen: React.FC = () => {
       const data = await RazorpayCheckout.open(options);
       console.log('📦 Payment data received:', JSON.stringify(data, null, 2));
       
-      // If payment succeeds but handler wasn't called (common with test mode)
-      if (data && data.razorpay_payment_id && !isSubscribed) {
+      // If payment succeeds but handler wasn't called (uncommon scenario)
+      // Only activate if we have a valid payment_id AND it's a successful payment
+      if (data && data.razorpay_payment_id && data.razorpay_order_id && !isSubscribed) {
         console.log('⚠️ Payment succeeded but handler not called, activating manually...');
         try {
           await options.handler(data);
         } catch (handlerError) {
           console.error('❌ Handler error:', handlerError);
+          throw handlerError; // Re-throw to ensure error is handled properly
         }
       }
     } catch (error: any) {
@@ -371,22 +374,12 @@ const SubscriptionScreen: React.FC = () => {
     try {
       console.log('🔍 Verifying payment and activating subscription:', paymentResponse);
       
-      // First, verify the payment with Razorpay (in production, this should be done on backend)
-      // For now, we'll call the backend to create/update subscription
+      // IMPORTANT: First verify the payment with backend before activating subscription
+      // This ensures we don't activate subscription for failed payments
+      let paymentVerified = false;
       
-      // Call subscription API to activate subscription
-      // Note: Backend uses 'quarterly_pro', frontend displays as "Quarterly Pro" (promotional 3-month plan)
-      const subscriptionResponse = await subscriptionApi.subscribe({
-        planId: 'quarterly_pro',  // Backend expects quarterly_pro for Quarterly Pro plan
-        paymentMethod: 'razorpay',
-        autoRenew: true,
-      });
-      
-      console.log('✅ Subscription activated via API:', subscriptionResponse.data);
-      
-      // Also call backend payment verification endpoint if available
       try {
-        const verifyResponse = await fetch(`${process.env.REACT_APP_API_URL || 'http://localhost:3001'}/api/mobile/subscriptions/verify-payment`, {
+        const verifyResponse = await fetch(`${API_CONFIG.BASE_URL}/api/mobile/subscriptions/verify-payment`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -402,12 +395,31 @@ const SubscriptionScreen: React.FC = () => {
         if (verifyResponse.ok) {
           const verifyData = await verifyResponse.json();
           console.log('✅ Payment verified with backend:', verifyData);
+          paymentVerified = true;
         } else {
-          console.log('⚠️ Backend payment verification failed, but subscription activated locally');
+          const errorData = await verifyResponse.json().catch(() => ({}));
+          console.error('❌ Backend payment verification failed:', errorData);
+          throw new Error('Payment verification failed: ' + (errorData.message || 'Invalid payment'));
         }
-      } catch (backendError) {
-        console.log('⚠️ Backend payment verification not available, subscription activated locally');
+      } catch (backendError: any) {
+        console.error('❌ Backend payment verification error:', backendError);
+        throw new Error('Payment verification failed: ' + (backendError.message || 'Unable to verify payment'));
       }
+      
+      // Only proceed with subscription activation if payment is verified
+      if (!paymentVerified) {
+        throw new Error('Payment verification failed - subscription not activated');
+      }
+      
+      // Call subscription API to activate subscription
+      // Note: Backend uses 'quarterly_pro', frontend displays as "Quarterly Pro" (promotional 3-month plan)
+      const subscriptionResponse = await subscriptionApi.subscribe({
+        planId: 'quarterly_pro',  // Backend expects quarterly_pro for Quarterly Pro plan
+        paymentMethod: 'razorpay',
+        autoRenew: true,
+      });
+      
+      console.log('✅ Subscription activated via API:', subscriptionResponse.data);
       
       // Refresh subscription status from backend
       await loadSubscriptionData();
@@ -456,12 +468,12 @@ const SubscriptionScreen: React.FC = () => {
       />
       
              {/* Header */}
-       <LinearGradient
-         colors={['#667eea', '#764ba2']}
+       <View
          style={[styles.header, { 
            paddingTop: insets.top + (isTabletDevice ? dynamicModerateScale(4) : dynamicModerateScale(2)),
            paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
            paddingBottom: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
+           backgroundColor: theme.colors.cardBackground,
          }]}
        >
         <TouchableOpacity
@@ -471,15 +483,17 @@ const SubscriptionScreen: React.FC = () => {
           }]}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#ffffff" />
+          <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color={theme.colors.text} />
         </TouchableOpacity>
                  <View style={styles.headerContent}>
            <Text style={[styles.headerTitle, {
              fontSize: dynamicModerateScale(14),
+             color: theme.colors.text,
            }]}>Upgrade to Pro</Text>
            <Text style={[styles.headerSubtitle, {
              fontSize: dynamicModerateScale(9),
              marginTop: dynamicModerateScale(1),
+             color: theme.colors.textSecondary,
            }]}>
              Unlock unlimited possibilities
            </Text>
@@ -512,7 +526,7 @@ const SubscriptionScreen: React.FC = () => {
            </View>
          </View>
         <View style={[styles.headerSpacer, { width: dynamicModerateScale(36) }]} />
-      </LinearGradient>
+      </View>
 
       <ScrollView 
         style={styles.scrollView}
@@ -931,7 +945,7 @@ const styles = StyleSheet.create({
     elevation: moderateScale(6),
   },
   backButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    backgroundColor: 'rgba(0, 0, 0, 0.08)',
   },
   headerContent: {
     flex: 1,
@@ -939,10 +953,8 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontWeight: '700',
-    color: '#ffffff',
   },
      headerSubtitle: {
-     color: 'rgba(255, 255, 255, 0.8)',
    },
    statusContainer: {
    },

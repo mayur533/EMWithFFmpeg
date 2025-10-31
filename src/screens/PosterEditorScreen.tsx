@@ -134,43 +134,37 @@ const responsiveFontSize = {
 };
 
 // Enhanced responsive dimensions calculation with orientation support
+// Canvas is square (1:1 ratio) to match 1024x1024 image ratio
 const getResponsiveDimensions = (insets: any) => {
   const availableWidth = screenWidth - (insets.left + insets.right);
   const availableHeight = screenHeight - (insets.top + insets.bottom);
   
-  // Calculate canvas dimensions based on screen size and orientation
+  // Calculate square canvas dimensions based on screen size
   let canvasWidthRatio = 0.95;
-  let canvasHeightRatio = 0.6;
   
   if (isLandscape) {
-    // Landscape mode - prioritize width
-    canvasWidthRatio = isTablet ? 0.7 : 0.8;
-    canvasHeightRatio = isTablet ? 0.8 : 0.7;
+    // Landscape mode - smaller square canvas
+    canvasWidthRatio = isTablet ? 0.5 : 0.6;
   } else {
-    // Portrait mode - adjusted ratios to prevent toolbar overlap
+    // Portrait mode - square canvas that fits the screen
     if (isTablet) {
-      canvasWidthRatio = 0.9;
-      canvasHeightRatio = 0.42; // Reduced for tablets to give more space for toolbar
+      canvasWidthRatio = 0.7;
     } else if (isUltraSmallScreen) {
-      canvasWidthRatio = 0.98;
-      canvasHeightRatio = 0.38; // Further reduced to prevent overlap
+      canvasWidthRatio = 0.95;
     } else if (isSmallScreen) {
-      canvasWidthRatio = 0.96;
-      canvasHeightRatio = 0.40; // Reduced to give toolbar more space
+      canvasWidthRatio = 0.93;
     } else if (isMediumScreen) {
-      canvasWidthRatio = 0.94;
-      canvasHeightRatio = 0.42; // Reduced from 0.52
-    } else if (isLargeScreen) {
       canvasWidthRatio = 0.92;
-      canvasHeightRatio = 0.44; // Reduced from 0.55
+    } else if (isLargeScreen) {
+      canvasWidthRatio = 0.90;
     } else {
-      canvasWidthRatio = 0.9;
-      canvasHeightRatio = 0.45; // Reduced from 0.5
+      canvasWidthRatio = 0.88;
     }
   }
   
+  // Make canvas square: width = height (1:1 aspect ratio for 1024x1024 images)
   const canvasWidth = Math.min(availableWidth * canvasWidthRatio, screenWidth * canvasWidthRatio);
-  const canvasHeight = Math.min(availableHeight * canvasHeightRatio, screenHeight * canvasHeightRatio);
+  const canvasHeight = canvasWidth; // Square canvas!
   
   return {
     canvasWidth,
@@ -178,7 +172,7 @@ const getResponsiveDimensions = (insets: any) => {
     availableWidth,
     availableHeight,
     canvasWidthRatio,
-    canvasHeightRatio
+    canvasHeightRatio: canvasWidthRatio // Same as width ratio for square
   };
 };
 
@@ -315,6 +309,18 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const { selectedImage, selectedLanguage, selectedTemplateId } = route.params;
   const { isSubscribed, checkPremiumAccess, refreshSubscription } = useSubscription();
   const { isDarkMode, theme } = useTheme();
+  
+  // Get high quality image URL for editor (replace thumbnail params with high quality)
+  const getHighQualityImageUrl = (imageUri: string): string => {
+    let url = imageUri;
+    
+    // Remove any existing quality/size parameters
+    url = url.replace(/[?&](quality|width|height|w|h|size)=[^&]*/gi, '');
+    
+    // Add high quality parameters for editor
+    const separator = url.includes('?') ? '&' : '?';
+    return `${url}${separator}quality=high&width=2400`;
+  };
   
   // State for dynamic dimensions to handle orientation changes
   const [dimensions, setDimensions] = useState(() => {
@@ -1076,9 +1082,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     }
 
     // Create professional footer with contact information (3 lines)
-    const contactLineHeight = 16;
+    const contactLineHeight = isTablet ? 20 : 16;
     const footerPadding = 10; // Top and bottom padding
-    const footerHeight = (contactLineHeight * 3) + (footerPadding * 2); // 3 lines + padding = 68px
+    const footerHeight = (contactLineHeight * 3) + (footerPadding * 2); // 3 lines + padding
     const footerY = canvasHeight - footerHeight;
     
     // Responsive font sizes for footer elements
@@ -1087,7 +1093,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       return Math.max(baseSize * scaleFactor, baseSize * 0.8); // Minimum 80% of base size
     };
     
-    const footerTextSize = getResponsiveFooterFontSize(11);
+    const footerTextSize = getResponsiveFooterFontSize(isTablet ? 14 : 11);
     
     // Footer background overlay for better readability
     const footerBackgroundLayer: Layer = {
@@ -1233,7 +1239,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         zIndex: 10,
         fieldType: 'services',
         style: {
-          fontSize: Math.max(9, footerTextSize),
+          fontSize: Math.max(isTablet ? 12 : 9, footerTextSize),
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '400',
@@ -2313,8 +2319,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           {/* Background Image (always show the poster image) */}
           <View style={styles.backgroundImageContainer}>
             <Image
-              source={{ uri: selectedImage.uri }}
+              source={{ uri: getHighQualityImageUrl(selectedImage.uri), cache: 'force-cache' }}
               style={styles.backgroundImage}
+              resizeMode="contain"
             />
           </View>
           
@@ -3939,8 +3946,7 @@ const styles = StyleSheet.create({
   backgroundImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 0, // Remove rounded corners
-    resizeMode: 'stretch', // Stretch to match exact canvas dimensions
+    borderRadius: 0,
   },
   layer: {
     position: 'absolute',

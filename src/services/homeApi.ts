@@ -305,12 +305,21 @@ class HomeApiService {
    */
   private convertProfessionalTemplatesUrls(templates: ProfessionalTemplate[]): ProfessionalTemplate[] {
     return templates.map(template => {
-      const convertedThumbnail = this.convertToAbsoluteUrl(template.thumbnail);
+      // Convert both thumbnail and preview URLs
+      let convertedThumbnail = this.convertToAbsoluteUrl(template.thumbnail);
+      const convertedPreview = template.previewUrl ? this.convertToAbsoluteUrl(template.previewUrl) : undefined;
+      
+      // If thumbnail URL exists, request higher quality by adding size parameters
+      if (convertedThumbnail && !convertedThumbnail.includes('unsplash')) {
+        // Add quality parameters if server supports it
+        const separator = convertedThumbnail.includes('?') ? '&' : '?';
+        convertedThumbnail = `${convertedThumbnail}${separator}quality=high&width=1200`;
+      }
       
       return {
         ...template,
-        thumbnail: convertedThumbnail || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop',
-        previewUrl: template.previewUrl ? this.convertToAbsoluteUrl(template.previewUrl) : template.previewUrl,
+        thumbnail: convertedThumbnail || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85',
+        previewUrl: convertedPreview,
       };
     });
   }
@@ -529,6 +538,7 @@ class HomeApiService {
     isPremium?: boolean;
     sortBy?: 'popular' | 'recent' | 'likes' | 'downloads';
     tags?: string[];
+    language?: string;
   }): Promise<ProfessionalTemplatesResponse> {
     // Only cache when no params are provided (default request)
     const shouldCache = !params || Object.keys(params).length === 0;
@@ -556,6 +566,7 @@ class HomeApiService {
       if (params?.tags && params.tags.length > 0) {
         params.tags.forEach(tag => queryParams.append('tags', tag));
       }
+      if (params?.language) queryParams.append('language', params.language);
       
       const queryString = queryParams.toString();
       const url = `/api/mobile/home/templates${queryString ? `?${queryString}` : ''}`;

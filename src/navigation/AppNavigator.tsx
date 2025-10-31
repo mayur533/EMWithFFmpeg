@@ -44,6 +44,8 @@ export type MainStackParamList = {
   PosterPlayer: {
     selectedPoster: any;
     relatedPosters: any[];
+    searchQuery?: string;
+    templateSource?: 'greeting' | 'professional' | 'featured';
   };
   MyBusinessPlayer: {
     selectedPoster: any;

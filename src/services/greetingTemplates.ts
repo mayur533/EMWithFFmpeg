@@ -42,21 +42,33 @@ class GreetingTemplatesService {
   private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
 
   /**
-   * Convert relative image URLs to absolute URLs (optimized - minimal logging)
+   * Convert relative image URLs to absolute URLs with quality parameters (optimized - minimal logging)
    */
-  private convertToAbsoluteUrl(url: string | undefined | null): string | undefined {
+  private convertToAbsoluteUrl(url: string | undefined | null, addQuality: boolean = false): string | undefined {
     if (!url) {
       return undefined;
     }
     
     // Already absolute URL (including Cloudinary URLs)
     if (url.startsWith('http://') || url.startsWith('https://')) {
+      // Add quality parameters for higher resolution if requested and not Unsplash
+      if (addQuality && !url.includes('unsplash') && !url.includes('cloudinary')) {
+        const separator = url.includes('?') ? '&' : '?';
+        return `${url}${separator}quality=high&width=1200`;
+      }
       return url;
     }
     
     // Handle URLs that don't start with /
     const normalizedUrl = url.startsWith('/') ? url : `/${url}`;
-    return `${this.BASE_URL}${normalizedUrl}`;
+    const absoluteUrl = `${this.BASE_URL}${normalizedUrl}`;
+    
+    // Add quality parameters for higher resolution if requested
+    if (addQuality) {
+      return `${absoluteUrl}?quality=high&width=1200`;
+    }
+    
+    return absoluteUrl;
   }
 
   // Check if cache is still valid
@@ -141,9 +153,9 @@ class GreetingTemplatesService {
           let imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
           let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
           
-          const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl);
-          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl);
-          const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
+          const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl, true);
+          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl, true);
+          const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85';
           const finalBackground = absoluteImageUrl || absoluteThumbnailUrl || finalThumbnail;
           
           return {
@@ -209,9 +221,9 @@ class GreetingTemplatesService {
           let imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
           let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
           
-          const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl);
-          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl);
-          const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
+          const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl, true);
+          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl, true);
+          const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85';
           const finalBackground = absoluteImageUrl || absoluteThumbnailUrl || finalThumbnail;
           
           return {
@@ -252,9 +264,15 @@ class GreetingTemplatesService {
   }
 
   // Search greeting templates
-  async searchTemplates(query: string): Promise<GreetingTemplate[]> {
+  async searchTemplates(query: string, language?: string): Promise<GreetingTemplate[]> {
     try {
-      const response = await api.get(`/api/mobile/greetings/templates?search=${encodeURIComponent(query)}`);
+      const params = new URLSearchParams();
+      params.append('search', encodeURIComponent(query));
+      if (language) {
+        params.append('language', language);
+      }
+      
+      const response = await api.get(`/api/mobile/greetings/templates?${params.toString()}`);
       
       if (response.data.success) {
         // API returns images in businessCategoryImages, not templates
