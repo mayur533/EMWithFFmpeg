@@ -1111,20 +1111,20 @@ const ProfileScreen: React.FC = () => {
           name: updatedCompanyName,
           phoneNumber: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
           phone: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
-          bio: updateData.description || '',
-          // Current values - Use what we SENT (since API doesn't return these fields)
-          address: updateData.address || '',
-          website: updateData.website || '',
-          category: updateData.category || '',
-          description: updateData.description || '',
-          alternatePhone: updateData.alternatePhone || '',
+          bio: apiUserData.description || updateData.description || '',
+          // Current values - Use API response values first, then fall back to what we sent
+          address: apiUserData.address || updateData.address || '',
+          website: apiUserData.website || updateData.website || '',
+          category: apiUserData.category || updateData.category || '',
+          description: apiUserData.description || updateData.description || '',
+          alternatePhone: apiUserData.alternatePhone || updateData.alternatePhone || '',
           // Update _originalCompanyName if name was changed
           _originalCompanyName: updatedCompanyName,
-          _originalAddress: updateData.address || currentUser?._originalAddress || '',
-          _originalWebsite: updateData.website || currentUser?._originalWebsite || '',
-          _originalCategory: updateData.category || currentUser?._originalCategory || '',
-          _originalDescription: updateData.description || currentUser?._originalDescription || '',
-          _originalAlternatePhone: updateData.alternatePhone || currentUser?._originalAlternatePhone || '',
+          _originalAddress: apiUserData.address || updateData.address || currentUser?._originalAddress || '',
+          _originalWebsite: apiUserData.website || updateData.website || currentUser?._originalWebsite || '',
+          _originalCategory: apiUserData.category || updateData.category || currentUser?._originalCategory || '',
+          _originalDescription: apiUserData.description || updateData.description || currentUser?._originalDescription || '',
+          _originalAlternatePhone: apiUserData.alternatePhone || updateData.alternatePhone || currentUser?._originalAlternatePhone || '',
         };
         
         console.log('✅ Updated user object (USER FIELDS ONLY):');
