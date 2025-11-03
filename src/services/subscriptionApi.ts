@@ -346,6 +346,42 @@ class SubscriptionApiService {
       throw error;
     }
   }
+
+  // Verify payment with backend
+  async verifyPayment(paymentData: {
+    orderId: string;
+    paymentId: string;
+    signature: string;
+  }): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const currentUser = authService.getCurrentUser();
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      console.log('🔍 Verifying payment with backend:', {
+        orderId: paymentData.orderId,
+        paymentId: paymentData.paymentId,
+      });
+      
+      const response = await api.post('/api/mobile/subscriptions/verify-payment', {
+        orderId: paymentData.orderId,
+        paymentId: paymentData.paymentId,
+        signature: paymentData.signature,
+      });
+      
+      console.log('✅ Payment verified successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Payment verification error:', error);
+      
+      // Provide more detailed error message
+      const errorMessage = error.response?.data?.message || error.message || 'Payment verification failed';
+      throw new Error(errorMessage);
+    }
+  }
 }
 
 export default new SubscriptionApiService();

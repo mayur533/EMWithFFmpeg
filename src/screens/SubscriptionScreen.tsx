@@ -22,7 +22,6 @@ import PaymentErrorModal from '../components/PaymentErrorModal';
 import { useTheme } from '../context/ThemeContext';
 import subscriptionApi, { SubscriptionPlan, SubscriptionStatus } from '../services/subscriptionApi';
 import authService from '../services/auth';
-import { API_CONFIG } from '../constants/api';
 
 // Compact spacing multiplier to reduce all spacing (matching HomeScreen)
 const COMPACT_MULTIPLIER = 0.5;
@@ -379,28 +378,15 @@ const SubscriptionScreen: React.FC = () => {
       let paymentVerified = false;
       
       try {
-        const verifyResponse = await fetch(`${API_CONFIG.BASE_URL}/api/mobile/subscriptions/verify-payment`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${authService.getCurrentUser()?.token || ''}`,
-          },
-          body: JSON.stringify({
-            orderId: paymentResponse.razorpay_order_id,
-            paymentId: paymentResponse.razorpay_payment_id,
-            signature: paymentResponse.razorpay_signature,
-          }),
+        // Use the subscriptionApi service for payment verification
+        const verifyData = await subscriptionApi.verifyPayment({
+          orderId: paymentResponse.razorpay_order_id,
+          paymentId: paymentResponse.razorpay_payment_id,
+          signature: paymentResponse.razorpay_signature,
         });
         
-        if (verifyResponse.ok) {
-          const verifyData = await verifyResponse.json();
-          console.log('✅ Payment verified with backend:', verifyData);
-          paymentVerified = true;
-        } else {
-          const errorData = await verifyResponse.json().catch(() => ({}));
-          console.error('❌ Backend payment verification failed:', errorData);
-          throw new Error('Payment verification failed: ' + (errorData.message || 'Invalid payment'));
-        }
+        console.log('✅ Payment verified with backend:', verifyData);
+        paymentVerified = true;
       } catch (backendError: any) {
         console.error('❌ Backend payment verification error:', backendError);
         throw new Error('Payment verification failed: ' + (backendError.message || 'Unable to verify payment'));

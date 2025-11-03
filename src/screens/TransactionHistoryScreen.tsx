@@ -96,24 +96,22 @@ const TransactionHistoryScreen: React.FC = () => {
   const isTabletDevice = currentScreenWidth >= 768;
   const isLandscapeMode = currentScreenWidth > currentScreenHeight;
   
-  // Adaptive grid columns for stats
+  // Adaptive grid columns for stats - Always 2 columns, 3 rows
   const getStatsColumns = () => {
-    if (isTabletDevice) return 6; // All 6 stats in one row on tablets
-    if (isMediumScreenDevice) return 3; // 3 columns on medium screens
-    if (isSmallScreenDevice) return 2; // 2 columns on small screens
-    return 2; // 2 columns on ultra-small screens
+    return 2; // 2 columns for all screen sizes (3 rows total)
   };
   
   const statsColumns = getStatsColumns();
   
-  // Calculate stat item width based on columns
+  // Calculate stat item width based on columns - Fixed for 2 columns
   const getStatItemWidth = () => {
     const horizontalPadding = isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8);
     const containerPadding = isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12);
     const containerWidth = currentScreenWidth - (horizontalPadding * 2) - (containerPadding * 2);
     const gap = dynamicModerateScale(6);
-    const totalGaps = (statsColumns - 1) * gap;
-    return (containerWidth - totalGaps) / statsColumns;
+    // For 2 columns: calculate width to fit exactly 2 items per row
+    // Using Math.floor to prevent rounding issues that could break wrapping
+    return Math.floor((containerWidth - gap) / 2);
   };
   
   const [refreshing, setRefreshing] = useState(false);
@@ -368,7 +366,6 @@ const TransactionHistoryScreen: React.FC = () => {
       {showStats && (
         <View style={[styles.statsGrid, {
           gap: dynamicModerateScale(6),
-          justifyContent: 'flex-start',
         }]}>
           <View style={[styles.statItem, { 
             width: getStatItemWidth(),
