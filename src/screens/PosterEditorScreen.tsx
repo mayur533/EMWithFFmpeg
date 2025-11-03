@@ -1677,23 +1677,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     setLayers(prev => [...prev, newLayer]);
   }, [layers.length]);
 
-  // Apply template to poster
-  const applyTemplate = useCallback((templateType: string) => {
-    // Check if a frame is already selected
-    if (selectedFrame) {
-      setShowRemoveFrameWarningModal(true);
-      return; // Don't apply template if frame is selected
-    }
-    
-    setSelectedTemplate(templateType);
-    setShowTemplatesModal(false);
-    
-    // Clear original layers when changing templates so new positions can be stored
-    setOriginalLayers([]);
-    console.log('🔄 [APPLY TEMPLATE] Cleared original layers for new template:', templateType);
-    
-    // Apply different poster layouts and styles based on template
-    setLayers(prev => prev.map(layer => {
+  // Helper to apply template styles to layers
+  const applyTemplateStylesToLayers = useCallback((templateType: string, layersToStyle: Layer[]): Layer[] => {
+    return layersToStyle.map(layer => {
       if (layer.fieldType === 'footerBackground') {
         // Template-based footer styles
         const templateStyles = {
@@ -1779,8 +1765,27 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       }
       
       return layer;
-    }));
-  }, [selectedFrame]);
+    });
+  }, []);
+
+  // Apply template to poster
+  const applyTemplate = useCallback((templateType: string) => {
+    // Check if a frame is already selected
+    if (selectedFrame) {
+      setShowRemoveFrameWarningModal(true);
+      return; // Don't apply template if frame is selected
+    }
+    
+    setSelectedTemplate(templateType);
+    setShowTemplatesModal(false);
+    
+    // Clear original layers when changing templates so new positions can be stored
+    setOriginalLayers([]);
+    console.log('🔄 [APPLY TEMPLATE] Cleared original layers for new template:', templateType);
+    
+    // Apply different poster layouts and styles based on template
+    setLayers(prev => applyTemplateStylesToLayers(templateType, prev));
+  }, [selectedFrame, applyTemplateStylesToLayers]);
 
   // Update layer position
   const updateLayerPosition = useCallback((layerId: string, position: { x: number; y: number }) => {
@@ -2528,10 +2533,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                     // Restore layers with their original positions
                     setLayers(originalLayers);
                     
-                    // Restore original template
+                    // Restore original template and apply template styles
                     setSelectedTemplate(originalTemplate);
                     
-                    console.log('✅ [REMOVE FRAME] Frame removed and original positions restored');
+                    // Apply template styles to the restored layers
+                    const styledLayers = applyTemplateStylesToLayers(originalTemplate, originalLayers);
+                    setLayers(styledLayers);
+                    
+                    console.log('✅ [REMOVE FRAME] Frame removed and original positions restored with template styles');
                   } else {
                     console.log('⚠️ [REMOVE FRAME] No original layers found');
                   }
