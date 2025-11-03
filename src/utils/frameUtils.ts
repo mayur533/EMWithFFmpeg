@@ -89,7 +89,8 @@ export const generateLayersFromFrame = (
       const scaledX = placeholder.x * scaleX;
       const scaledY = placeholder.y * scaleY;
       const scaledWidth = (placeholder.maxWidth || 300) * scaleX;
-      const scaledFontSize = (placeholder.fontSize || 16) * Math.min(scaleX, scaleY);
+      // Use fontSize directly without scaling to match template text size (templates use fontSize: 16 directly)
+      const finalFontSize = placeholder.fontSize || 16;
       
       layers.push({
         id: `frame-${placeholder.key}`,
@@ -101,20 +102,20 @@ export const generateLayersFromFrame = (
         },
         size: {
           width: scaledWidth,
-          height: scaledFontSize * 3, // Height based on font size for proper wrapping
+          height: finalFontSize * 3, // Height based on font size for proper wrapping
         },
         rotation: 0,
         zIndex: zIndex++,
         fieldType: placeholder.key,
         style: {
-          fontSize: scaledFontSize,
+          fontSize: finalFontSize,
           color: placeholder.color || '#FFFFFF',
           fontFamily: placeholder.fontFamily || 'System',
           fontWeight: placeholder.fontWeight || 'normal',
           textAlign: placeholder.textAlign || 'left',
         },
       });
-      console.log(`✅ Added text layer for ${placeholder.key}: position (${scaledX.toFixed(1)}, ${scaledY.toFixed(1)}), fontSize: ${scaledFontSize.toFixed(1)}`);
+      console.log(`✅ Added text layer for ${placeholder.key}: position (${scaledX.toFixed(1)}, ${scaledY.toFixed(1)}), fontSize: ${finalFontSize.toFixed(1)}`);
     } else if (placeholder.type === 'image') {
       // Scale position and size based on canvas dimensions
       const scaledX = placeholder.x * scaleX;
