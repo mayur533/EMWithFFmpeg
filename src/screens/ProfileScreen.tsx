@@ -786,52 +786,8 @@ const ProfileScreen: React.FC = () => {
         throw new Error('No user data available');
       }
       
-      // Check if _original* fields exist - if not, we need to fetch from API to populate them
-      const hasProtectedFields = currentUser?._originalAddress !== undefined || 
-                                  currentUser?._originalWebsite !== undefined ||
-                                  currentUser?._originalCategory !== undefined;
-      
-      // Check if we already have complete user data from registration
-      if (currentUser && currentUser.email && (currentUser.phone || currentUser.phoneNumber) && 
-          (currentUser.companyName || currentUser.name) && hasProtectedFields) {
-        console.log('✅ User data already complete, skipping API call');
-        console.log('📋 Loading Edit Form Data from current user:');
-        console.log('   - Company Name:', currentUser?.companyName);
-        console.log('   - Address:', currentUser?.address || '(not set)');
-        console.log('   - Website:', currentUser?.website || '(not set)');
-        console.log('   - Category:', currentUser?.category || '(not set)');
-        console.log('   - Description:', currentUser?.description || '(not set)');
-        
-        // Update edit form with existing user data
-        // Use current values (not _original values)
-        setEditFormData({
-          name: currentUser?.companyName || currentUser?.name || '',
-          description: currentUser?.description || '',
-          category: currentUser?.category || '',
-          address: currentUser?.address || '',
-          phone: currentUser?.phoneNumber || currentUser?.phone || '',
-          alternatePhone: currentUser?.alternatePhone || '',
-          email: currentUser?.email || '',
-          website: currentUser?.website || '',
-          companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
-        });
-        
-        // Update profile image if available
-        if (currentUser?.logo || currentUser?.companyLogo) {
-          setProfileImageUri(currentUser?.logo || currentUser?.companyLogo);
-        }
-        
-        setShowEditProfileModal(true);
-        return;
-      }
-      
-      // If _original* fields are missing, we MUST fetch from API to get clean user data
-      if (!hasProtectedFields) {
-        console.log('⚠️ Protected fields missing - fetching from API to populate _original* values');
-      }
-      
-      // Only fetch from API if we don't have complete data
-      console.log('🔍 Fetching complete profile data from API...');
+      // Always fetch from backend API
+      console.log('🔍 Fetching profile data from backend API...');
       
       const userId = currentUser?.id;
       
@@ -848,15 +804,16 @@ const ProfileScreen: React.FC = () => {
         if (!token) {
           console.log('⚠️ Token still not available, skipping API fetch and using current user data');
           // Use current user data instead of failing
+          // Convert null to empty string for form fields
           setEditFormData({
             name: currentUser?.companyName || currentUser?.name || '',
-            description: currentUser?.description || '',
-            category: currentUser?.category || '',
-            address: currentUser?.address || '',
+            description: currentUser?.description ?? '',
+            category: currentUser?.category ?? '',
+            address: currentUser?.address ?? '',
             phone: currentUser?.phoneNumber || currentUser?.phone || '',
-            alternatePhone: currentUser?.alternatePhone || '',
+            alternatePhone: currentUser?.alternatePhone ?? '',
             email: currentUser?.email || '',
-            website: currentUser?.website || '',
+            website: currentUser?.website ?? '',
             companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
           });
           setShowEditProfileModal(true);
@@ -880,92 +837,47 @@ const ProfileScreen: React.FC = () => {
       console.log('✅ Response Success:', profileResponse?.success || 'N/A');
       console.log('───────────────────────────────────────────────');
       
-      const completeUserData = profileResponse.data;
-      const userDataAny = completeUserData as any;
+      const apiResponse = profileResponse.data as any;
       
-      console.log('📋 Response Data Fields:', Object.keys(completeUserData || {}));
-      console.log('───────────────────────────────────────────────');
-      console.log('🔍 Complete Profile Data (Formatted):');
-      console.log(JSON.stringify(completeUserData, null, 2));
-      console.log('───────────────────────────────────────────────');
-      console.log('📊 Individual Fields:');
-      console.log('   - ID:', completeUserData?.id || '(not set)');
-      console.log('   - Email:', completeUserData?.email || '(not set)');
-      console.log('   - Company Name:', userDataAny?.companyName || '(not set)');
-      console.log('   - Phone:', userDataAny?.phoneNumber || userDataAny?.phone || '(not set)');
-      console.log('   - Address:', userDataAny?.address || '(not set)');
-      console.log('   - Website:', userDataAny?.website || '(not set)');
-      console.log('   - Category:', userDataAny?.category || '(not set)');
-      console.log('   - Description:', userDataAny?.description || '(not set)');
-      console.log('   - Alternate Phone:', userDataAny?.alternatePhone || '(not set)');
-      console.log('   - Logo:', userDataAny?.logo || '(not set)');
-      console.log('   - Photo:', userDataAny?.photo || '(not set)');
-      console.log('   - Total Views:', userDataAny?.totalViews || 0);
-      console.log('   - Is Converted:', userDataAny?.isConverted || false);
-      console.log('   - Created At:', userDataAny?.createdAt || '(not set)');
-      console.log('   - Updated At:', userDataAny?.updatedAt || '(not set)');
-      console.log('───────────────────────────────────────────────');
-      console.log('⚠️  Business Profiles Present?', !!userDataAny?.businessProfiles);
-      if (userDataAny?.businessProfiles) {
-        console.log('📋 Business Profiles Count:', userDataAny.businessProfiles.length || 0);
-        console.log('📋 Business Profiles:', JSON.stringify(userDataAny.businessProfiles, null, 2));
-      }
       console.log('═══════════════════════════════════════════════');
-      console.log('📥 GET PROFILE RESPONSE - END');
+      console.log('📥 API RESPONSE FROM /api/mobile/auth/me');
+      console.log('═══════════════════════════════════════════════');
+      console.log(JSON.stringify(apiResponse, null, 2));
       console.log('═══════════════════════════════════════════════');
       
-      // Update current user with complete profile data
-      // CRITICAL: Set _original* fields from API response (this is the CLEAN user profile data)
-      const { businessProfiles, ...cleanUserData } = completeUserData as any;
+      // Remove business profiles from API response to prevent contamination
+      const { businessProfiles, ...cleanApiData } = apiResponse;
       
-      // Use name from API (this is the user's actual current name)
-      const apiCompanyName = cleanUserData.name || cleanUserData.companyName || currentUser?.companyName;
-      
-      const updatedUserData = {
+      // Update current user with API data
+      const updatedUser = {
         ...currentUser,
-        ...cleanUserData,
-        // Use the name from API (this is the user's actual registered/updated name)
-        companyName: apiCompanyName,
-        displayName: apiCompanyName,
-        name: apiCompanyName,
-        // Set _original* fields from API (this is the REAL user data from backend)
-        _originalCompanyName: apiCompanyName,
-        _originalAddress: completeUserData?.address || currentUser?._originalAddress || '',
-        _originalWebsite: completeUserData?.website || currentUser?._originalWebsite || '',
-        _originalCategory: completeUserData?.category || currentUser?._originalCategory || '',
-        _originalDescription: completeUserData?.description || currentUser?._originalDescription || '',
-        _originalAlternatePhone: completeUserData?.alternatePhone || currentUser?._originalAlternatePhone || '',
+        ...cleanApiData,
       };
       
-      console.log('🔒 Setting fields from API response:');
-      console.log('   - _originalCompanyName:', updatedUserData._originalCompanyName);
-      console.log('   - _originalAddress:', updatedUserData._originalAddress);
-      console.log('   - _originalWebsite:', updatedUserData._originalWebsite);
-      console.log('   - _originalCategory:', updatedUserData._originalCategory);
-      console.log('   - _originalDescription:', updatedUserData._originalDescription);
+      authService.setCurrentUser(updatedUser);
       
-      // Update auth service with clean data AND save to storage
-      authService.setCurrentUser(updatedUserData);
-      await authService.saveUserToStorage(updatedUserData, await AsyncStorage.getItem('authToken') || '');
+      console.log('✅ Updated currentUser with API data');
+      console.log('📋 Populating Edit Form DIRECTLY from API response:');
+      console.log('   - name/companyName:', apiResponse.companyName || apiResponse.name);
+      console.log('   - description:', apiResponse.description);
+      console.log('   - category:', apiResponse.category);
+      console.log('   - address:', apiResponse.address);
+      console.log('   - phone:', apiResponse.phoneNumber || apiResponse.phone);
+      console.log('   - alternatePhone:', apiResponse.alternatePhone);
+      console.log('   - email:', apiResponse.email);
+      console.log('   - website:', apiResponse.website);
       
-      console.log('🔍 Using user data from API (EXCLUDING business profile fields)');
-      console.log('📋 Loading Edit Form Data from API:');
-      console.log('   - Company Name:', updatedUserData?.companyName);
-      console.log('   - Address:', updatedUserData?.address || '(empty)');
-      console.log('   - Website:', updatedUserData?.website || '(empty)');
-      console.log('   - Category:', updatedUserData?.category || '(empty)');
-      
-      // Use current fields from updatedUserData (which now has the latest data from API)
+      // Populate edit form DIRECTLY from API response (no merging, no fallbacks)
       setEditFormData({
-        name: updatedUserData?.companyName || updatedUserData?.name || '',
-        description: updatedUserData?.description || '',
-        category: updatedUserData?.category || '',
-        address: updatedUserData?.address || '',
-        phone: updatedUserData?.phoneNumber || updatedUserData?.phone || '',
-        alternatePhone: updatedUserData?.alternatePhone || '',
-        email: updatedUserData?.email || '',
-        website: updatedUserData?.website || '',
-        companyLogo: updatedUserData?.logo || updatedUserData?.companyLogo || '',
+        name: apiResponse.companyName || apiResponse.name || '',
+        description: apiResponse.description ?? '',
+        category: apiResponse.category ?? '',
+        address: apiResponse.address ?? '',
+        phone: apiResponse.phoneNumber || apiResponse.phone || '',
+        alternatePhone: apiResponse.alternatePhone ?? '',
+        email: apiResponse.email || '',
+        website: apiResponse.website ?? '',
+        companyLogo: apiResponse.logo || apiResponse.companyLogo || '',
       });
       
       setShowEditProfileModal(true);
@@ -1097,6 +1009,12 @@ const ProfileScreen: React.FC = () => {
         const apiUserData = responseData.user || response.data;
         
         console.log('📥 Extracted user data:', JSON.stringify(apiUserData, null, 2));
+        console.log('📤 What we sent (updateData):', JSON.stringify(updateData, null, 2));
+        console.log('🔍 Checking which fields API returned:');
+        console.log('   - category in API?', 'category' in apiUserData, apiUserData.category);
+        console.log('   - description in API?', 'description' in apiUserData, apiUserData.description);
+        console.log('   - address in API?', 'address' in apiUserData, apiUserData.address);
+        console.log('   - website in API?', 'website' in apiUserData, apiUserData.website);
         
         // Update the current user object with the response
         // CRITICAL: Since API doesn't return all fields, merge with what we sent
@@ -1111,20 +1029,20 @@ const ProfileScreen: React.FC = () => {
           name: updatedCompanyName,
           phoneNumber: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
           phone: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
-          bio: apiUserData.description || updateData.description || '',
-          // Current values - Use API response values first, then fall back to what we sent
-          address: apiUserData.address || updateData.address || '',
-          website: apiUserData.website || updateData.website || '',
-          category: apiUserData.category || updateData.category || '',
-          description: apiUserData.description || updateData.description || '',
-          alternatePhone: apiUserData.alternatePhone || updateData.alternatePhone || '',
-          // Update _originalCompanyName if name was changed
+          bio: apiUserData.description !== undefined ? apiUserData.description : (updateData.description ?? ''),
+          // Current values - Use API response if property exists (even if null), otherwise use what we SENT (which user intended)
+          address: apiUserData.address !== undefined ? apiUserData.address : (updateData.address ?? ''),
+          website: apiUserData.website !== undefined ? apiUserData.website : (updateData.website ?? ''),
+          category: apiUserData.category !== undefined ? apiUserData.category : (updateData.category ?? ''),
+          description: apiUserData.description !== undefined ? apiUserData.description : (updateData.description ?? ''),
+          alternatePhone: apiUserData.alternatePhone !== undefined ? apiUserData.alternatePhone : (updateData.alternatePhone ?? ''),
+          // Update _original fields with what we SENT (user's intended values)
           _originalCompanyName: updatedCompanyName,
-          _originalAddress: apiUserData.address || updateData.address || currentUser?._originalAddress || '',
-          _originalWebsite: apiUserData.website || updateData.website || currentUser?._originalWebsite || '',
-          _originalCategory: apiUserData.category || updateData.category || currentUser?._originalCategory || '',
-          _originalDescription: apiUserData.description || updateData.description || currentUser?._originalDescription || '',
-          _originalAlternatePhone: apiUserData.alternatePhone || updateData.alternatePhone || currentUser?._originalAlternatePhone || '',
+          _originalAddress: apiUserData.address !== undefined ? apiUserData.address : (updateData.address ?? ''),
+          _originalWebsite: apiUserData.website !== undefined ? apiUserData.website : (updateData.website ?? ''),
+          _originalCategory: apiUserData.category !== undefined ? apiUserData.category : (updateData.category ?? ''),
+          _originalDescription: apiUserData.description !== undefined ? apiUserData.description : (updateData.description ?? ''),
+          _originalAlternatePhone: apiUserData.alternatePhone !== undefined ? apiUserData.alternatePhone : (updateData.alternatePhone ?? ''),
         };
         
         console.log('✅ Updated user object (USER FIELDS ONLY):');
@@ -1144,12 +1062,18 @@ const ProfileScreen: React.FC = () => {
         
         authService.setCurrentUser(updatedUser);
         
+        console.log('✅ Profile updated in memory');
+        console.log('   - address:', updatedUser.address);
+        console.log('   - website:', updatedUser.website);
+        console.log('   - category:', updatedUser.category);
+        console.log('   - description:', updatedUser.description)
+        
         // Invalidate profile cache to force fresh data on next load
         console.log('🗑️ Invalidating profile cache after update');
         await invalidateCache();
         
         // Cache the newly updated profile data
-        await setCachedData(CACHE_KEYS.PROFILE_DATA, updatedUser);
+        await setCachedData(CACHE_KEYS.PROFILE_DATA, authService.getCurrentUser());
         await updateCacheTimestamp(userId);
         console.log('💾 Updated profile data cached');
         
@@ -1189,15 +1113,16 @@ const ProfileScreen: React.FC = () => {
   const handleCancelEdit = () => {
     const user = authService.getCurrentUser();
     setShowEditProfileModal(false);
+    // Convert null to empty string for form fields
     setEditFormData({
       name: user?.companyName || user?.name || '',
-      description: user?.description || '',
-      category: user?.category || '',
-      address: user?.address || '',
+      description: user?.description ?? '',
+      category: user?.category ?? '',
+      address: user?.address ?? '',
       phone: user?.phoneNumber || user?.phone || '',
-      alternatePhone: user?.alternatePhone || '',
+      alternatePhone: user?.alternatePhone ?? '',
       email: user?.email || '',
-      website: user?.website || '',
+      website: user?.website ?? '',
       companyLogo: user?.logo || user?.companyLogo || '',
     });
   };
@@ -1625,17 +1550,6 @@ const ProfileScreen: React.FC = () => {
                 }]}>
                   {currentUser?.email || 'eventmarketer@example.com'}
                 </Text>
-                {currentUser?.bio && (
-                  <Text style={[styles.userBio, { 
-                    color: theme.colors.textSecondary,
-                    fontSize: dynamicModerateScale(8),
-                    marginBottom: dynamicModerateScale(6),
-                    lineHeight: dynamicModerateScale(12),
-                    paddingHorizontal: dynamicModerateScale(10),
-                  }]}>
-                    {currentUser.bio}
-                  </Text>
-                )}
                 <View style={styles.profileStats}>
                   <View style={[styles.statItem, {
                     paddingHorizontal: dynamicModerateScale(8),
