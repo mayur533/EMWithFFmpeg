@@ -200,9 +200,38 @@ const MyBusinessScreen: React.FC = () => {
   }, [loadBusinessCategoryPosters]);
 
   const handlePosterPress = (poster: BusinessCategoryPoster) => {
-    navigation.navigate('MyBusinessPlayer', {
-      selectedPoster: poster,
-      relatedPosters: businessCategoryPosters.filter(p => p.id !== poster.id),
+    // Convert BusinessCategoryPoster to Template format
+    // Use imageUrl for main display, thumbnail for preview
+    const selectedTemplate = {
+      id: poster.id,
+      name: poster.title,
+      thumbnail: poster.imageUrl || poster.thumbnail, // Use main image URL
+      category: poster.category,
+      downloads: poster.downloads || 0,
+      isDownloaded: false,
+    };
+
+    // Get other posters as related posters (exclude the selected one)
+    const relatedTemplates = businessCategoryPosters
+      .filter(p => p.id !== poster.id)
+      .map(p => ({
+        id: p.id,
+        name: p.title,
+        thumbnail: p.imageUrl || p.thumbnail, // Use main image URL
+        category: p.category,
+        downloads: p.downloads || 0,
+        isDownloaded: false,
+      }));
+
+    console.log('📱 [MY BUSINESS] Navigating to PosterPlayer');
+    console.log('Selected Poster:', selectedTemplate);
+    console.log('Using imageUrl:', poster.imageUrl);
+
+    navigation.navigate('PosterPlayer', {
+      selectedPoster: selectedTemplate,
+      relatedPosters: relatedTemplates,
+      searchQuery: '',
+      templateSource: 'professional',
     });
   };
 

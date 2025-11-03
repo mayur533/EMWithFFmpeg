@@ -47,10 +47,6 @@ export type MainStackParamList = {
     searchQuery?: string;
     templateSource?: 'greeting' | 'professional' | 'featured';
   };
-  MyBusinessPlayer: {
-    selectedPoster: any;
-    relatedPosters: any[];
-  };
   AboutUs: undefined;
   PrivacyPolicy: undefined;
   PosterPreview: {
@@ -135,7 +131,6 @@ import GreetingTemplatesScreen from '../screens/GreetingTemplatesScreen';
 import GreetingEditorScreen from '../screens/GreetingEditorScreen';
 import MyPostersScreen from '../screens/MyPostersScreen';
 import MyBusinessScreen from '../screens/MyBusinessScreen';
-import MyBusinessPlayerScreen from '../screens/MyBusinessPlayerScreen';
 import AboutUsScreen from '../screens/AboutUsScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
@@ -163,11 +158,6 @@ const TabNavigator = () => {
       <MainStack.Screen 
         name="PosterPlayer" 
         component={PosterPlayerScreen}
-        options={{ headerShown: false }}
-      />
-      <MainStack.Screen 
-        name="MyBusinessPlayer" 
-        component={MyBusinessPlayerScreen}
         options={{ headerShown: false }}
       />
       <MainStack.Screen 

@@ -19,11 +19,16 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
 import { Share } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import downloadedPostersService, { DownloadedPoster } from '../services/downloadedPosters';
 import downloadTrackingService, { DownloadedContent } from '../services/downloadTracking';
 import authService from '../services/auth';
+import { MainStackParamList } from '../navigation/AppNavigator';
+import { Template } from '../services/dashboard';
+
+type MyPostersScreenNavigationProp = StackNavigationProp<MainStackParamList, 'MyPosters'>;
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -76,7 +81,7 @@ const MyPostersScreen: React.FC = () => {
   const [selectedPoster, setSelectedPoster] = useState<DownloadedPoster | null>(null);
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
-  const navigation = useNavigation();
+  const navigation = useNavigation<MyPostersScreenNavigationProp>();
   
   // Get card dimensions for horizontal scrolling
   const { cardWidth, cardHeight, visibleCards, gap } = getPosterCardDimensions();
@@ -212,8 +217,41 @@ const MyPostersScreen: React.FC = () => {
   };
 
   const handleViewPoster = (poster: DownloadedPoster) => {
-    setSelectedPoster(poster);
-    setPreviewModalVisible(true);
+    // Convert DownloadedPoster to Template format
+    // Use imageUri (full image) for main display, not thumbnailUri
+    const selectedTemplate: Template = {
+      id: poster.id,
+      name: poster.name || poster.title || 'Downloaded Poster',
+      thumbnail: poster.imageUri || poster.thumbnailUri || '', // Use main image first
+      category: poster.category || 'Uncategorized',
+      downloads: 0,
+      isDownloaded: true,
+    };
+
+    // Get other posters as related posters (exclude the selected one)
+    const relatedTemplates: Template[] = posters
+      .filter(p => p.id !== poster.id)
+      .map(p => ({
+        id: p.id,
+        name: p.name || p.title || 'Downloaded Poster',
+        thumbnail: p.imageUri || p.thumbnailUri || '', // Use main image first
+        category: p.category || 'Uncategorized',
+        downloads: 0,
+        isDownloaded: true,
+      }));
+
+    console.log('📱 [MY POSTERS] Navigating to PosterPlayer');
+    console.log('Selected Poster:', selectedTemplate);
+    console.log('Using imageUri:', poster.imageUri);
+    console.log('Related Posters Count:', relatedTemplates.length);
+
+    // Navigate to PosterPlayerScreen
+    navigation.navigate('PosterPlayer', {
+      selectedPoster: selectedTemplate,
+      relatedPosters: relatedTemplates,
+      searchQuery: '',
+      templateSource: 'professional',
+    });
   };
 
   const renderPosterItem = useCallback(({ item, index }: { item: DownloadedPoster; index: number }) => {
@@ -249,7 +287,7 @@ const MyPostersScreen: React.FC = () => {
         </TouchableOpacity>
       </View>
     );
-  }, [theme, cardWidth, cardHeight, gap, visibleCards]);
+  }, [theme, cardWidth, cardHeight, gap, visibleCards, handleViewPoster, posters]);
 
   const renderCategoryFilter = () => (
     <View style={styles.categoryFilter}>
