@@ -2624,10 +2624,11 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
     ...responsiveShadow.small,
   },
-  templateImageContainer: {
-    height: verticalScale(60),
-    position: 'relative',
-  },
+    templateImageContainer: {
+      height: verticalScale(60),
+      position: 'relative',
+      overflow: 'hidden',
+    },
   templateImage: {
     width: '100%',
     height: '100%',
@@ -2891,11 +2892,14 @@ const styles = StyleSheet.create({
       borderWidth: 0.5,
       borderColor: 'rgba(0,0,0,0.03)',
     },
-    upcomingEventModalImageContainer: {
-      width: '100%',
-      aspectRatio: isTablet ? 1 : 0.9, // More square for compact layout
-      position: 'relative',
-    },
+      upcomingEventModalImageContainer: {
+        width: '100%',
+        aspectRatio: isTablet ? 1 : 0.9, // More square for compact layout
+        position: 'relative',
+        overflow: 'hidden',
+        borderTopLeftRadius: moderateScale(8),
+        borderTopRightRadius: moderateScale(8),
+      },
     upcomingEventModalImage: {
       width: '100%',
       height: '100%',

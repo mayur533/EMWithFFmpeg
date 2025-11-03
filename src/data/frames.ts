@@ -1255,6 +1255,622 @@ export const frames: Frame[] = [
     ],
     category: 'event',
     description: 'Festive event frame 16'
+  },
+  {
+    id: 'frame17',
+    name: 'Frame 17',
+    background: require('../assets/frames/frame17.png'),
+    placeholders: [
+      {
+        type: 'image',
+        key: 'logo',
+        x: 50,
+        y: 35,
+        width: 85,
+        height: 85
+      },
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 350,
+        y: 50,
+        fontSize: 26,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        maxWidth: 300
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 20,
+        y: 420,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 200,
+        y: 420,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 380,
+        y: 420,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 560,
+        y: 420,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      }
+    ],
+    category: 'business',
+    description: 'Professional business frame 17'
+  },
+  {
+    id: 'frame18',
+    name: 'Frame 18',
+    background: require('../assets/frames/frame18.png'),
+    placeholders: [
+      {
+        type: 'image',
+        key: 'logo',
+        x: 520,
+        y: 30,
+        width: 90,
+        height: 90
+      },
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 50,
+        y: 45,
+        fontSize: 28,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'left',
+        maxWidth: 280
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 30,
+        y: 425,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 210,
+        y: 425,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 390,
+        y: 425,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 540,
+        y: 425,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'right',
+        maxWidth: 150
+      }
+    ],
+    category: 'creative',
+    description: 'Creative design frame 18'
+  },
+  {
+    id: 'frame19',
+    name: 'Frame 19',
+    background: require('../assets/frames/frame19.png'),
+    placeholders: [
+      {
+        type: 'image',
+        key: 'logo',
+        x: 70,
+        y: 40,
+        width: 80,
+        height: 80
+      },
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 600,
+        y: 55,
+        fontSize: 24,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'right',
+        maxWidth: 250
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 25,
+        y: 430,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 180,
+        y: 430,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 360,
+        y: 430,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 550,
+        y: 430,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'right',
+        maxWidth: 150
+      }
+    ],
+    category: 'event',
+    description: 'Event celebration frame 19'
+  },
+  {
+    id: 'frame20',
+    name: 'Frame 20',
+    background: require('../assets/frames/frame20.png'),
+    placeholders: [
+      {
+        type: 'image',
+        key: 'logo',
+        x: 500,
+        y: 35,
+        width: 88,
+        height: 88
+      },
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 60,
+        y: 50,
+        fontSize: 27,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'left',
+        maxWidth: 270
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 35,
+        y: 415,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 190,
+        y: 415,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 370,
+        y: 415,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 545,
+        y: 415,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'right',
+        maxWidth: 150
+      }
+    ],
+    category: 'personal',
+    description: 'Personal greeting frame 20'
+  },
+  {
+    id: 'frame21',
+    name: 'Frame 21',
+    background: require('../assets/frames/frame21.png'),
+    placeholders: [
+      {
+        type: 'image',
+        key: 'logo',
+        x: 60,
+        y: 38,
+        width: 84,
+        height: 84
+      },
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 350,
+        y: 60,
+        fontSize: 25,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'center',
+        maxWidth: 280
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 40,
+        y: 435,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 200,
+        y: 435,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 385,
+        y: 435,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 555,
+        y: 435,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'right',
+        maxWidth: 150
+      }
+    ],
+    category: 'business',
+    description: 'Modern business frame 21'
+  },
+  {
+    id: 'frame22',
+    name: 'Frame 22',
+    background: require('../assets/frames/frame22.png'),
+    placeholders: [
+      {
+        type: 'image',
+        key: 'logo',
+        x: 515,
+        y: 32,
+        width: 86,
+        height: 86
+      },
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 45,
+        y: 48,
+        fontSize: 26,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'left',
+        maxWidth: 275
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 28,
+        y: 422,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 195,
+        y: 422,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 375,
+        y: 422,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 548,
+        y: 422,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'right',
+        maxWidth: 150
+      }
+    ],
+    category: 'creative',
+    description: 'Creative artistic frame 22'
+  },
+  {
+    id: 'frame23',
+    name: 'Frame 23',
+    background: require('../assets/frames/frame23.png'),
+    placeholders: [
+      {
+        type: 'image',
+        key: 'logo',
+        x: 75,
+        y: 42,
+        width: 82,
+        height: 82
+      },
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 590,
+        y: 58,
+        fontSize: 24,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'right',
+        maxWidth: 260
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 32,
+        y: 428,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 205,
+        y: 428,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 395,
+        y: 428,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 558,
+        y: 428,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'right',
+        maxWidth: 150
+      }
+    ],
+    category: 'event',
+    description: 'Festive celebration frame 23'
+  },
+  {
+    id: 'frame24',
+    name: 'Frame 24',
+    background: require('../assets/frames/frame24.png'),
+    placeholders: [
+      {
+        type: 'image',
+        key: 'logo',
+        x: 510,
+        y: 36,
+        width: 87,
+        height: 87
+      },
+      {
+        type: 'text',
+        key: 'companyName',
+        x: 55,
+        y: 52,
+        fontSize: 27,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'bold',
+        textAlign: 'left',
+        maxWidth: 268
+      },
+      {
+        type: 'text',
+        key: 'phone',
+        x: 38,
+        y: 418,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'email',
+        x: 198,
+        y: 418,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'website',
+        x: 382,
+        y: 418,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'left',
+        maxWidth: 150
+      },
+      {
+        type: 'text',
+        key: 'address',
+        x: 552,
+        y: 418,
+        fontSize: 12,
+        color: '#FFFFFF',
+        fontFamily: 'System',
+        fontWeight: 'normal',
+        textAlign: 'right',
+        maxWidth: 150
+      }
+    ],
+    category: 'personal',
+    description: 'Personal modern frame 24'
   }
 ];
 

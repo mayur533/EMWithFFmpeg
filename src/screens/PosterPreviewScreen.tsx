@@ -545,70 +545,77 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
       <View style={themeStyles.previewContainer}>
         <View style={styles.previewHeader}>
           <Text style={themeStyles.previewTitle}>Your Poster</Text>
-          <Text style={themeStyles.previewSubtitle}>
-            {selectedImage.title || 'Custom Poster'} • {selectedLanguage.charAt(0).toUpperCase() + selectedLanguage.slice(1)}
-          </Text>
         </View>
         
-        {/* Improved Image Container with Better Alignment */}
-        <View style={[
-          themeStyles.imageContainer, 
-          { 
-            width: imageWidth, 
-            height: imageHeight,
-            alignSelf: 'center',
-            marginTop: responsiveSpacing.sm,
-          }
-        ]}>
-           {!capturedImageUri ? (
-             <View style={styles.errorContainer}>
-               <Icon name="error" size={getIconSize(32)} color="#ff6b6b" />
-               <Text style={themeStyles.errorText}>No poster image captured</Text>
-               <Text style={themeStyles.errorSubtext}>Using original image</Text>
-               <Image
-                 source={{ uri: selectedImage.uri }}
-                 style={styles.posterImage}
-                 resizeMode="contain"
-               />
-             </View>
-           ) : imageLoadError ? (
-             <View style={styles.errorContainer}>
-               <Icon name="error" size={getIconSize(32)} color="#ff6b6b" />
-               <Text style={themeStyles.errorText}>Failed to load poster image</Text>
-               <Text style={themeStyles.errorSubtext}>Using fallback image</Text>
-               <Image
-                 source={{ uri: selectedImage.uri }}
-                 style={styles.posterImage}
-                 resizeMode="contain"
-               />
-             </View>
-                       ) : (
-              <View style={styles.imageWrapper}>
-                {imageLoading && (
-                  <View style={styles.loadingContainer}>
-                    <Text style={themeStyles.loadingText}>Loading poster...</Text>
-                  </View>
-                )}
-                <Image
-                  source={{ uri: capturedImageUri }}
-                  style={styles.posterImage}
-                  resizeMode="contain"
-                  onError={(error) => {
-                    console.log('Image load error:', error);
-                    console.log('Error details:', error.nativeEvent);
-                    console.log('Error message:', error.nativeEvent?.error);
-                    setImageLoadError(true);
-                    setImageLoading(false);
-                  }}
-                  onLoad={(event) => {
-                    console.log('Poster image loaded successfully');
-                    console.log('Image dimensions:', event.nativeEvent);
-                    setImageLoading(false);
-                  }}
-                                 />
-               </View>
+        {/* Direct Image Display without Container */}
+        {!capturedImageUri ? (
+          <View style={styles.errorContainer}>
+            <Icon name="error" size={getIconSize(32)} color="#ff6b6b" />
+            <Text style={themeStyles.errorText}>No poster image captured</Text>
+            <Text style={themeStyles.errorSubtext}>Using original image</Text>
+            <Image
+              source={{ uri: selectedImage.uri }}
+              style={[styles.directPosterImage, { 
+                width: imageWidth, 
+                height: imageHeight,
+                alignSelf: 'center',
+                marginTop: responsiveSpacing.sm,
+              }]}
+              resizeMode="contain"
+            />
+          </View>
+        ) : imageLoadError ? (
+          <View style={styles.errorContainer}>
+            <Icon name="error" size={getIconSize(32)} color="#ff6b6b" />
+            <Text style={themeStyles.errorText}>Failed to load poster image</Text>
+            <Text style={themeStyles.errorSubtext}>Using fallback image</Text>
+            <Image
+              source={{ uri: selectedImage.uri }}
+              style={[styles.directPosterImage, { 
+                width: imageWidth, 
+                height: imageHeight,
+                alignSelf: 'center',
+                marginTop: responsiveSpacing.sm,
+              }]}
+              resizeMode="contain"
+            />
+          </View>
+        ) : (
+          <>
+            {imageLoading && (
+              <View style={[styles.loadingOverlay, { 
+                width: imageWidth, 
+                height: imageHeight,
+                alignSelf: 'center',
+                marginTop: responsiveSpacing.sm,
+              }]}>
+                <Text style={themeStyles.loadingText}>Loading poster...</Text>
+              </View>
             )}
-         </View>
+            <Image
+              source={{ uri: capturedImageUri }}
+              style={[styles.directPosterImage, { 
+                width: imageWidth, 
+                height: imageHeight,
+                alignSelf: 'center',
+                marginTop: responsiveSpacing.sm,
+              }]}
+              resizeMode="contain"
+              onError={(error) => {
+                console.log('Image load error:', error);
+                console.log('Error details:', error.nativeEvent);
+                console.log('Error message:', error.nativeEvent?.error);
+                setImageLoadError(true);
+                setImageLoading(false);
+              }}
+              onLoad={(event) => {
+                console.log('Poster image loaded successfully');
+                console.log('Image dimensions:', event.nativeEvent);
+                setImageLoading(false);
+              }}
+            />
+          </>
+        )}
       </View>
 
              {/* Action Buttons */}
@@ -751,6 +758,17 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  directPosterImage: {
+    borderRadius: moderateScale(8),
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(248, 249, 250, 0.9)',
+    zIndex: 1,
+    borderRadius: moderateScale(8),
   },
   loadingContainer: {
     position: 'absolute',

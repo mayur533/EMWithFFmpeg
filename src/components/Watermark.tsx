@@ -68,7 +68,7 @@ const Watermark: React.FC<WatermarkProps> = ({ isSubscribed, style }) => {
             fontSize: responsiveValues.fontSize,
           }
         ]}>
-          Made with EventMarketers
+          Made with MarketBrand
         </Text>
       </View>
     </View>

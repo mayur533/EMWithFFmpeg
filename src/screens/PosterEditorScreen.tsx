@@ -857,6 +857,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [newLogoUrl, setNewLogoUrl] = useState('');
   const [showLogoModal, setShowLogoModal] = useState(false);
   const [showLogoUrlInput, setShowLogoUrlInput] = useState(false);
+  const [selectedFontSize, setSelectedFontSize] = useState<number>(16);
   
   // State for dragging
   const [draggedLayer, setDraggedLayer] = useState<string | null>(null);
@@ -1905,13 +1906,41 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   // Apply font style
   const applyFontStyle = useCallback((fontFamily: string) => {
     const actualFontFamily = getFontFamily(fontFamily);
-    setLayers(prev => prev.map(layer => 
-      layer.type === 'text' 
-        ? { ...layer, style: { ...layer.style, fontFamily: actualFontFamily } }
-        : layer
-    ));
+    setLayers(prev => prev.map(layer => {
+      // Only apply to selected layer if one is selected, otherwise apply to all text layers
+      if (layer.type === 'text') {
+        if (selectedLayer && layer.id === selectedLayer) {
+          return { ...layer, style: { ...layer.style, fontFamily: actualFontFamily, fontSize: selectedFontSize } };
+        } else if (!selectedLayer) {
+          return { ...layer, style: { ...layer.style, fontFamily: actualFontFamily } };
+        }
+      }
+      return layer;
+    }));
     setShowFontStyleModal(false);
-  }, []);
+  }, [selectedLayer, selectedFontSize]);
+  
+  // Apply font size to selected layer
+  const applyFontSize = useCallback((fontSize: number) => {
+    setSelectedFontSize(fontSize);
+    if (selectedLayer) {
+      setLayers(prev => prev.map(layer => 
+        layer.id === selectedLayer && layer.type === 'text'
+          ? { ...layer, style: { ...layer.style, fontSize } }
+          : layer
+      ));
+    }
+  }, [selectedLayer]);
+  
+  // Update selectedFontSize when a layer is selected
+  useEffect(() => {
+    if (selectedLayer) {
+      const layer = layers.find(l => l.id === selectedLayer);
+      if (layer && layer.type === 'text' && layer.style?.fontSize) {
+        setSelectedFontSize(layer.style.fontSize);
+      }
+    }
+  }, [selectedLayer, layers]);
 
   // Render layer
   const renderLayer = useCallback((layer: Layer) => {
@@ -2260,7 +2289,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             }
           }}
         >
-          <Icon name="arrow-forward" size={getResponsiveIconSize()} color="#333333" />
+          <Text style={styles.nextButtonText}>Next</Text>
         </TouchableOpacity>
       </View>
 
@@ -2644,7 +2673,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         <View style={styles.templatesSection}>
           <View style={styles.templatesHeader}>
             <Text style={styles.templatesTitle}>Templates</Text>
-            <Text style={styles.templatesSubtitle}>Choose a poster template design</Text>
           </View>
           <ScrollView 
             style={styles.templatesContent} 
@@ -2662,9 +2690,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.businessTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'business' && styles.templateTextActive]}>
-                Business
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2676,9 +2701,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.eventTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'event' && styles.templateTextActive]}>
-                Event
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2690,9 +2712,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.restaurantTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'restaurant' && styles.templateTextActive]}>
-                Restaurant
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2704,9 +2723,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.fashionTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'fashion' && styles.templateTextActive]}>
-                Fashion
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2718,9 +2734,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.realEstateTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'real-estate' && styles.templateTextActive]}>
-                Real Estate
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2732,9 +2745,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.educationTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'education' && styles.templateTextActive]}>
-                Education
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2746,9 +2756,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.healthcareTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'healthcare' && styles.templateTextActive]}>
-                Healthcare
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2760,9 +2767,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.fitnessTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'fitness' && styles.templateTextActive]}>
-                Fitness
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2774,9 +2778,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.weddingTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'wedding' && styles.templateTextActive]}>
-                Wedding
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2788,9 +2789,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.birthdayTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'birthday' && styles.templateTextActive]}>
-                Birthday
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2802,9 +2800,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.corporateTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'corporate' && styles.templateTextActive]}>
-                Corporate
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2816,9 +2811,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.creativeTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'creative' && styles.templateTextActive]}>
-                Creative
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2830,9 +2822,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.minimalTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'minimal' && styles.templateTextActive]}>
-                Minimal
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2844,9 +2833,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.luxuryTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'luxury' && styles.templateTextActive]}>
-                Luxury
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2858,9 +2844,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.modernTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'modern' && styles.templateTextActive]}>
-                Modern
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2872,9 +2855,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.vintageTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'vintage' && styles.templateTextActive]}>
-                Vintage
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2886,9 +2866,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.retroTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'retro' && styles.templateTextActive]}>
-                Retro
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2900,9 +2877,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.elegantTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'elegant' && styles.templateTextActive]}>
-                Elegant
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2914,9 +2888,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.boldTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'bold' && styles.templateTextActive]}>
-                Bold
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2928,9 +2899,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.techTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'tech' && styles.templateTextActive]}>
-                Tech
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2942,9 +2910,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.natureTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'nature' && styles.templateTextActive]}>
-                Nature
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2956,9 +2921,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.oceanTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'ocean' && styles.templateTextActive]}>
-                Ocean
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2970,9 +2932,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.sunsetTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'sunset' && styles.templateTextActive]}>
-                Sunset
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2984,9 +2943,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.cosmicTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'cosmic' && styles.templateTextActive]}>
-                Cosmic
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2998,9 +2954,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.artisticTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'artistic' && styles.templateTextActive]}>
-                Artistic
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -3012,9 +2965,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.sportTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'sport' && styles.templateTextActive]}>
-                Sport
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -3026,9 +2976,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.warmTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'warm' && styles.templateTextActive]}>
-                Warm
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -3040,9 +2987,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.coolTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'cool' && styles.templateTextActive]}>
-                Cool
-              </Text>
             </TouchableOpacity>
           </ScrollView>
         </View>
@@ -3261,125 +3205,196 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       >
         <View style={styles.modalOverlay}>
           <View style={styles.fontModalContent}>
-            <Text style={styles.modalTitle}>Choose Font Style</Text>
-            <Text style={styles.modalSubtitle}>Select a font style for your text</Text>
-            
-            <ScrollView 
-              style={styles.fontStyleModalContent} 
-              showsVerticalScrollIndicator={false}
-            >
-              <View style={styles.footerStylesModalGrid}>
-                {/* System Fonts */}
-                <TouchableOpacity
-                  style={styles.footerStyleModalButton}
-                  onPress={() => applyFontStyle(SYSTEM_FONTS.default)}
-                >
-                  <Text style={[styles.footerStyleModalText, { fontFamily: SYSTEM_FONTS.default }]}>Aa</Text>
-                  <Text style={styles.fontStyleModalTitle}>System</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.footerStyleModalButton}
-                  onPress={() => applyFontStyle(SYSTEM_FONTS.serif)}
-                >
-                  <Text style={[styles.footerStyleModalText, { fontFamily: SYSTEM_FONTS.serif }]}>Aa</Text>
-                  <Text style={styles.fontStyleModalTitle}>Serif</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.footerStyleModalButton}
-                  onPress={() => applyFontStyle(SYSTEM_FONTS.monospace)}
-                >
-                  <Text style={[styles.footerStyleModalText, { fontFamily: SYSTEM_FONTS.monospace }]}>Aa</Text>
-                  <Text style={styles.fontStyleModalTitle}>Monospace</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.footerStyleModalButton}
-                  onPress={() => applyFontStyle(SYSTEM_FONTS.cursive)}
-                >
-                  <Text style={[styles.footerStyleModalText, { fontFamily: SYSTEM_FONTS.cursive }]}>Aa</Text>
-                  <Text style={styles.fontStyleModalTitle}>Cursive</Text>
-                </TouchableOpacity>
-                
-                <TouchableOpacity
-                  style={styles.footerStyleModalButton}
-                  onPress={() => applyFontStyle(SYSTEM_FONTS.fantasy)}
-                >
-                  <Text style={[styles.footerStyleModalText, { fontFamily: SYSTEM_FONTS.fantasy }]}>Aa</Text>
-                  <Text style={styles.fontStyleModalTitle}>Fantasy</Text>
-                </TouchableOpacity>
-                
-                {/* Google Fonts - Sans-serif */}
-                {getFontsByCategory('sans-serif').slice(0, 5).map((font) => (
-                  <TouchableOpacity
-                    key={font.name}
-                    style={styles.footerStyleModalButton}
-                    onPress={() => applyFontStyle(font.name)}
-                  >
-                    <Text style={[styles.footerStyleModalText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
-                    <Text style={styles.fontStyleModalTitle}>{font.displayName}</Text>
-                  </TouchableOpacity>
-                ))}
-                
-                {/* Google Fonts - Serif */}
-                {getFontsByCategory('serif').slice(0, 3).map((font) => (
-                  <TouchableOpacity
-                    key={font.name}
-                    style={styles.footerStyleModalButton}
-                    onPress={() => applyFontStyle(font.name)}
-                  >
-                    <Text style={[styles.footerStyleModalText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
-                    <Text style={styles.fontStyleModalTitle}>{font.displayName}</Text>
-                  </TouchableOpacity>
-                ))}
-                
-                {/* Google Fonts - Display */}
-                {getFontsByCategory('display').slice(0, 3).map((font) => (
-                  <TouchableOpacity
-                    key={font.name}
-                    style={styles.footerStyleModalButton}
-                    onPress={() => applyFontStyle(font.name)}
-                  >
-                    <Text style={[styles.footerStyleModalText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
-                    <Text style={styles.fontStyleModalTitle}>{font.displayName}</Text>
-                  </TouchableOpacity>
-                ))}
-                
-                {/* Google Fonts - Handwriting */}
-                {getFontsByCategory('handwriting').slice(0, 3).map((font) => (
-                  <TouchableOpacity
-                    key={font.name}
-                    style={styles.footerStyleModalButton}
-                    onPress={() => applyFontStyle(font.name)}
-                  >
-                    <Text style={[styles.footerStyleModalText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
-                    <Text style={styles.fontStyleModalTitle}>{font.displayName}</Text>
-                  </TouchableOpacity>
-                ))}
-                
-                {/* Google Fonts - Monospace */}
-                {getFontsByCategory('monospace').slice(0, 2).map((font) => (
-                  <TouchableOpacity
-                    key={font.name}
-                    style={styles.footerStyleModalButton}
-                    onPress={() => applyFontStyle(font.name)}
-                  >
-                    <Text style={[styles.footerStyleModalText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
-                    <Text style={styles.fontStyleModalTitle}>{font.displayName}</Text>
-                  </TouchableOpacity>
-                ))}
+            {/* Modal Header */}
+            <View style={styles.fontModalHeader}>
+              <View>
+                <Text style={styles.modalTitle}>Font & Size</Text>
+                <Text style={styles.modalSubtitle}>
+                  {selectedLayer ? 'Customize selected text' : 'Choose a font style'}
+                </Text>
               </View>
-            </ScrollView>
-
-            <View style={styles.modalButtons}>
               <TouchableOpacity
-                style={[styles.modalButton, styles.cancelButton]}
+                style={styles.fontModalCloseButton}
                 onPress={() => setShowFontStyleModal(false)}
               >
-                <Text style={styles.cancelButtonText}>Close</Text>
+                <Icon name="close" size={getResponsiveIconSize()} color="#666666" />
               </TouchableOpacity>
             </View>
+            
+            {/* Scrollable Content Container */}
+            <ScrollView 
+              style={styles.fontModalScrollView}
+              contentContainerStyle={styles.fontModalScrollContent}
+              showsVerticalScrollIndicator={true}
+              nestedScrollEnabled={true}
+            >
+              {/* Font Size Controls */}
+              {selectedLayer && (
+                <View style={styles.fontSizeControlsContainer}>
+                  <View style={styles.fontSizeHeader}>
+                    <Icon name="format-size" size={getResponsiveIconSize()} color="#667eea" />
+                    <Text style={styles.fontSizeLabel}>Font Size</Text>
+                  </View>
+                  <View style={styles.fontSizeButtons}>
+                    {[10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48].map(size => (
+                      <TouchableOpacity
+                        key={size}
+                        style={[
+                          styles.fontSizeButton,
+                          selectedFontSize === size && styles.fontSizeButtonActive
+                        ]}
+                        onPress={() => applyFontSize(size)}
+                      >
+                        <Text style={[
+                          styles.fontSizeButtonText,
+                          selectedFontSize === size && styles.fontSizeButtonTextActive
+                        ]}>
+                          {size}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </View>
+              )}
+              
+              {/* Font Family Section */}
+              <View style={styles.fontFamilySection}>
+                <View style={styles.fontFamilySectionHeader}>
+                  <Icon name="font-download" size={getResponsiveIconSize()} color="#667eea" />
+                  <Text style={styles.fontFamilySectionTitle}>Font Family</Text>
+                </View>
+              </View>
+              {/* System Fonts Category */}
+              <View style={styles.fontCategorySection}>
+                <Text style={styles.fontCategoryTitle}>System Fonts</Text>
+                <View style={styles.fontCategoryGrid}>
+                  <TouchableOpacity
+                    style={styles.fontOptionButton}
+                    onPress={() => applyFontStyle(SYSTEM_FONTS.default)}
+                  >
+                    <Text style={[styles.fontPreviewText, { fontFamily: SYSTEM_FONTS.default }]}>Aa</Text>
+                    <Text style={styles.fontOptionName}>System</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.fontOptionButton}
+                    onPress={() => applyFontStyle(SYSTEM_FONTS.serif)}
+                  >
+                    <Text style={[styles.fontPreviewText, { fontFamily: SYSTEM_FONTS.serif }]}>Aa</Text>
+                    <Text style={styles.fontOptionName}>Serif</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.fontOptionButton}
+                    onPress={() => applyFontStyle(SYSTEM_FONTS.monospace)}
+                  >
+                    <Text style={[styles.fontPreviewText, { fontFamily: SYSTEM_FONTS.monospace }]}>Aa</Text>
+                    <Text style={styles.fontOptionName}>Monospace</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.fontOptionButton}
+                    onPress={() => applyFontStyle(SYSTEM_FONTS.cursive)}
+                  >
+                    <Text style={[styles.fontPreviewText, { fontFamily: SYSTEM_FONTS.cursive }]}>Aa</Text>
+                    <Text style={styles.fontOptionName}>Cursive</Text>
+                  </TouchableOpacity>
+                  
+                  <TouchableOpacity
+                    style={styles.fontOptionButton}
+                    onPress={() => applyFontStyle(SYSTEM_FONTS.fantasy)}
+                  >
+                    <Text style={[styles.fontPreviewText, { fontFamily: SYSTEM_FONTS.fantasy }]}>Aa</Text>
+                    <Text style={styles.fontOptionName}>Fantasy</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
+                
+              {/* Google Fonts - Sans-serif */}
+              <View style={styles.fontCategorySection}>
+                <Text style={styles.fontCategoryTitle}>Sans-Serif Fonts</Text>
+                <View style={styles.fontCategoryGrid}>
+                  {getFontsByCategory('sans-serif').slice(0, 6).map((font) => (
+                    <TouchableOpacity
+                      key={font.name}
+                      style={styles.fontOptionButton}
+                      onPress={() => applyFontStyle(font.name)}
+                    >
+                      <Text style={[styles.fontPreviewText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
+                      <Text style={styles.fontOptionName}>{font.displayName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+                
+              {/* Google Fonts - Serif */}
+              <View style={styles.fontCategorySection}>
+                <Text style={styles.fontCategoryTitle}>Serif Fonts</Text>
+                <View style={styles.fontCategoryGrid}>
+                  {getFontsByCategory('serif').slice(0, 4).map((font) => (
+                    <TouchableOpacity
+                      key={font.name}
+                      style={styles.fontOptionButton}
+                      onPress={() => applyFontStyle(font.name)}
+                    >
+                      <Text style={[styles.fontPreviewText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
+                      <Text style={styles.fontOptionName}>{font.displayName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+                
+              {/* Google Fonts - Display */}
+              <View style={styles.fontCategorySection}>
+                <Text style={styles.fontCategoryTitle}>Display Fonts</Text>
+                <View style={styles.fontCategoryGrid}>
+                  {getFontsByCategory('display').slice(0, 4).map((font) => (
+                    <TouchableOpacity
+                      key={font.name}
+                      style={styles.fontOptionButton}
+                      onPress={() => applyFontStyle(font.name)}
+                    >
+                      <Text style={[styles.fontPreviewText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
+                      <Text style={styles.fontOptionName}>{font.displayName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+                
+              {/* Google Fonts - Handwriting */}
+              <View style={styles.fontCategorySection}>
+                <Text style={styles.fontCategoryTitle}>Handwriting Fonts</Text>
+                <View style={styles.fontCategoryGrid}>
+                  {getFontsByCategory('handwriting').slice(0, 4).map((font) => (
+                    <TouchableOpacity
+                      key={font.name}
+                      style={styles.fontOptionButton}
+                      onPress={() => applyFontStyle(font.name)}
+                    >
+                      <Text style={[styles.fontPreviewText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
+                      <Text style={styles.fontOptionName}>{font.displayName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+                
+              {/* Google Fonts - Monospace */}
+              <View style={styles.fontCategorySection}>
+                <Text style={styles.fontCategoryTitle}>Monospace Fonts</Text>
+                <View style={styles.fontCategoryGrid}>
+                  {getFontsByCategory('monospace').slice(0, 2).map((font) => (
+                    <TouchableOpacity
+                      key={font.name}
+                      style={styles.fontOptionButton}
+                      onPress={() => applyFontStyle(font.name)}
+                    >
+                      <Text style={[styles.fontPreviewText, { fontFamily: getFontFamily(font.name) }]}>Aa</Text>
+                      <Text style={styles.fontOptionName}>{font.displayName}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+            </ScrollView>
           </View>
         </View>
       </Modal>
@@ -3830,13 +3845,20 @@ const styles = StyleSheet.create({
     minHeight: getHeaderButtonSize(),
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
+  },
+  nextButtonText: {
+    fontSize: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : 14),
+    fontWeight: '600',
+    color: '#333333',
+    letterSpacing: 0.3,
   },
   canvasContainer: {
     justifyContent: 'flex-start',
     alignItems: 'center',
-    padding: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.sm),
-    paddingBottom: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.sm),
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : responsiveSpacing.xs,
+    padding: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : responsiveSpacing.xs),
+    paddingBottom: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : responsiveSpacing.xs),
+    marginBottom: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md,
     maxHeight: isLandscape 
       ? screenHeight * 0.65 
       : isTablet 
@@ -3850,7 +3872,7 @@ const styles = StyleSheet.create({
   controlsContainer: {
     flex: 0, // Don't use flex to prevent expansion
     paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.sm),
-    paddingTop: responsiveSpacing.xs,
+    paddingTop: 0,
   },
   viewShotContainer: {
     // These will be set dynamically based on responsive dimensions
@@ -3880,7 +3902,7 @@ const styles = StyleSheet.create({
     elevation: 12,
     position: 'relative',
     overflow: 'hidden',
-    marginBottom: isSmallScreen ? 6 : 15,
+    marginBottom: 0,
   },
   instructionsContainer: {
     position: 'absolute',
@@ -3979,8 +4001,9 @@ const styles = StyleSheet.create({
   bottomToolbar: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
-    padding: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
-    marginTop: isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm,
+    paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
+    marginTop: isTablet ? 40 : isLandscape ? 35 : isUltraSmallScreen ? 25 : isSmallScreen ? 30 : 35,
     marginBottom: isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.md,
     marginHorizontal: isTablet ? responsiveSpacing.lg : isLandscape ? responsiveSpacing.md : isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md,
     shadowColor: '#000',
@@ -4042,10 +4065,20 @@ const styles = StyleSheet.create({
   },
   fontModalContent: {
     backgroundColor: '#ffffff',
-    borderRadius: isLandscape ? (isTablet ? 24 : 20) : (isUltraSmallScreen ? 16 : isSmallScreen ? 18 : isMediumScreen ? 20 : isLargeScreen ? 22 : 24),
-    padding: isLandscape ? (isTablet ? 24 : 20) : (isUltraSmallScreen ? 12 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 22),
-    width: isLandscape ? (isTablet ? screenWidth * 0.7 : screenWidth * 0.8) : (isUltraSmallScreen ? screenWidth * 0.95 : isSmallScreen ? screenWidth * 0.92 : isMediumScreen ? screenWidth * 0.9 : isLargeScreen ? screenWidth * 0.88 : screenWidth * 0.85),
-    height: isLandscape ? (isTablet ? screenHeight * 0.6 : screenHeight * 0.5) : (isUltraSmallScreen ? screenHeight * 0.6 : isSmallScreen ? screenHeight * 0.55 : isMediumScreen ? screenHeight * 0.5 : isLargeScreen ? screenHeight * 0.45 : screenHeight * 0.4),
+    borderRadius: isLandscape 
+      ? (isTablet ? 20 : 16) 
+      : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : isTablet ? 20 : 16),
+    padding: isLandscape 
+      ? (isTablet ? 18 : 14) 
+      : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : isTablet ? 18 : 16),
+    width: isLandscape 
+      ? (isTablet ? screenWidth * 0.65 : screenWidth * 0.75) 
+      : (isUltraSmallScreen ? screenWidth * 0.95 : isSmallScreen ? screenWidth * 0.92 : isMediumScreen ? screenWidth * 0.88 : isLargeScreen ? screenWidth * 0.85 : isTablet ? screenWidth * 0.8 : screenWidth * 0.85),
+    height: isLandscape 
+      ? (isTablet ? screenHeight * 0.82 : screenHeight * 0.80) 
+      : (isUltraSmallScreen ? screenHeight * 0.78 : isSmallScreen ? screenHeight * 0.80 : isMediumScreen ? screenHeight * 0.81 : isLargeScreen ? screenHeight * 0.82 : isTablet ? screenHeight * 0.84 : screenHeight * 0.81),
+    maxHeight: screenHeight * 0.85,
+    flexDirection: 'column',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -4055,16 +4088,29 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
   },
+  fontModalScrollView: {
+    flex: 1,
+    marginTop: moderateScale(3),
+  },
+  fontModalScrollContent: {
+    paddingBottom: moderateScale(12),
+    paddingHorizontal: moderateScale(2),
+    flexGrow: 1,
+  },
   modalTitle: {
-    fontSize: moderateScale(12),
+    fontSize: isLandscape 
+      ? (isTablet ? moderateScale(13) : moderateScale(12)) 
+      : (isUltraSmallScreen ? moderateScale(11) : isSmallScreen ? moderateScale(12) : isTablet ? moderateScale(14) : moderateScale(13)),
     fontWeight: '700',
     color: '#333333',
-    marginBottom: moderateScale(8),
+    marginBottom: moderateScale(1),
   },
   modalSubtitle: {
-    fontSize: moderateScale(10),
+    fontSize: isLandscape 
+      ? (isTablet ? moderateScale(9.5) : moderateScale(9)) 
+      : (isUltraSmallScreen ? moderateScale(8) : isSmallScreen ? moderateScale(8.5) : isTablet ? moderateScale(10) : moderateScale(9)),
     color: '#666666',
-    marginBottom: moderateScale(8),
+    marginBottom: moderateScale(1),
     fontWeight: '500',
   },
   profileList: {
@@ -4227,7 +4273,8 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
-    padding: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
+    paddingHorizontal: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
+    paddingVertical: isTablet ? responsiveSpacing.sm : isLandscape ? responsiveSpacing.xs : isUltraSmallScreen ? 2 : isSmallScreen ? 3 : responsiveSpacing.xs,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -4243,20 +4290,22 @@ const styles = StyleSheet.create({
   },
   fieldToggleHeader: {
     alignItems: 'center',
-    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.xs : isSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md),
+    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.xs : 0) : (isUltraSmallScreen ? 0 : isSmallScreen ? 0 : 1),
   },
   fieldToggleTitle: {
     fontSize: isLandscape ? (isTablet ? responsiveFontSize.lg : responsiveFontSize.md) : (isUltraSmallScreen ? responsiveFontSize.sm : isSmallScreen ? responsiveFontSize.md : responsiveFontSize.lg),
     fontWeight: '700',
     color: '#333333',
+    marginBottom: 0,
+    lineHeight: isUltraSmallScreen ? 10 : isSmallScreen ? 11 : 14,
   },
   fieldToggleSubtitle: {
     fontSize: isLandscape ? (isTablet ? responsiveFontSize.sm : responsiveFontSize.xs) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
     color: '#666666',
-    marginTop: isLandscape ? (isTablet ? responsiveSpacing.xs : 1) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : responsiveSpacing.xs),
+    marginTop: isLandscape ? (isTablet ? responsiveSpacing.xs : 0) : (isUltraSmallScreen ? 0 : isSmallScreen ? 0 : 1),
   },
   fieldToggleContent: {
-    height: isTablet ? 80 : isLandscape ? 70 : isUltraSmallScreen ? 60 : isSmallScreen ? 65 : 70,
+    height: isTablet ? 60 : isLandscape ? 55 : isUltraSmallScreen ? 45 : isSmallScreen ? 50 : 55,
   },
   fieldToggleScrollContent: {
     paddingHorizontal: 5,
@@ -4295,14 +4344,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
-  // Enhanced Font Style Modal Styles (compact & responsive)
-  fontStyleModalContent: {
-    flex: 1,
-    paddingHorizontal: moderateScale(10),
-    paddingVertical: moderateScale(10),
-    minHeight: verticalScale(250),
-    maxHeight: verticalScale(350),
-  },
+  // Enhanced Font Style Modal Styles (compact & responsive) - Deprecated, using fontModalScrollView instead
   fontStyleModalHeader: {
     paddingVertical: moderateScale(14),
     paddingHorizontal: moderateScale(14),
@@ -4976,8 +5018,9 @@ const styles = StyleSheet.create({
   framesSection: {
     width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: isSmallScreen ? 8 : 16,
-    padding: getResponsiveSectionPadding(),
+    borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
+    paddingHorizontal: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
+    paddingVertical: isTablet ? responsiveSpacing.sm : isLandscape ? responsiveSpacing.xs : isUltraSmallScreen ? 2 : isSmallScreen ? 3 : responsiveSpacing.xs,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -4989,16 +5032,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e9ecef',
     marginBottom: getResponsiveSectionMargin(),
-    marginHorizontal: getResponsiveSectionPadding(),
+    marginHorizontal: isTablet ? responsiveSpacing.lg : isLandscape ? responsiveSpacing.md : isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md,
   },
   framesHeader: {
     alignItems: 'center',
-    marginBottom: isSmallScreen ? 4 : 8,
+    marginBottom: isUltraSmallScreen ? 0 : isSmallScreen ? 0 : 1,
   },
   framesTitle: {
     fontSize: isSmallScreen ? 11 : 14,
     fontWeight: '700',
     color: '#333333',
+    marginBottom: 0,
+    lineHeight: isUltraSmallScreen ? 12 : isSmallScreen ? 13 : 16,
   },
   framesSubtitle: {
     fontSize: isSmallScreen ? 8 : 10,
@@ -5006,7 +5051,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   framesContent: {
-    maxHeight: getResponsiveSectionHeight(),
+    height: isTablet ? 70 : isLandscape ? 65 : isUltraSmallScreen ? 55 : isSmallScreen ? 60 : 65,
   },
   framesScrollContent: {
     paddingHorizontal: 5,
@@ -5180,7 +5225,8 @@ const styles = StyleSheet.create({
     width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
-    padding: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
+    paddingHorizontal: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
+    paddingVertical: isTablet ? responsiveSpacing.sm : isLandscape ? responsiveSpacing.xs : isUltraSmallScreen ? 2 : isSmallScreen ? 3 : responsiveSpacing.xs,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -5196,12 +5242,14 @@ const styles = StyleSheet.create({
   },
   templatesHeader: {
     alignItems: 'center',
-    marginBottom: isSmallScreen ? 4 : 8,
+    marginBottom: isUltraSmallScreen ? 0 : isSmallScreen ? 0 : 1,
   },
   templatesTitle: {
     fontSize: isSmallScreen ? 11 : 14,
     fontWeight: '700',
     color: '#333333',
+    marginBottom: 0,
+    lineHeight: isUltraSmallScreen ? 12 : isSmallScreen ? 13 : 16,
   },
   templatesSubtitle: {
     fontSize: isSmallScreen ? 8 : 10,
@@ -5209,7 +5257,7 @@ const styles = StyleSheet.create({
     marginTop: 1,
   },
   templatesContent: {
-    height: isTablet ? 100 : isLandscape ? 90 : isUltraSmallScreen ? 80 : isSmallScreen ? 85 : 90,
+    height: isTablet ? 70 : isLandscape ? 65 : isUltraSmallScreen ? 55 : isSmallScreen ? 60 : 65,
   },
   templatesScrollContent: {
     paddingHorizontal: 5,
@@ -5931,6 +5979,187 @@ const styles = StyleSheet.create({
   frameOverlayImage: {
     width: '100%',
     height: '100%',
+  },
+  // Font Modal Header
+  fontModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: isLandscape 
+      ? (isTablet ? moderateScale(7) : moderateScale(6)) 
+      : (isUltraSmallScreen ? moderateScale(5) : isSmallScreen ? moderateScale(5) : isTablet ? moderateScale(7) : moderateScale(6)),
+    paddingBottom: isLandscape 
+      ? (isTablet ? moderateScale(6) : moderateScale(5)) 
+      : (isUltraSmallScreen ? moderateScale(4) : isSmallScreen ? moderateScale(5) : isTablet ? moderateScale(6) : moderateScale(5)),
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  fontModalCloseButton: {
+    padding: moderateScale(3),
+    borderRadius: moderateScale(14),
+    backgroundColor: '#f8f9fa',
+    width: isLandscape 
+      ? (isTablet ? moderateScale(28) : moderateScale(26)) 
+      : (isUltraSmallScreen ? moderateScale(24) : isSmallScreen ? moderateScale(26) : isTablet ? moderateScale(28) : moderateScale(26)),
+    height: isLandscape 
+      ? (isTablet ? moderateScale(28) : moderateScale(26)) 
+      : (isUltraSmallScreen ? moderateScale(24) : isSmallScreen ? moderateScale(26) : isTablet ? moderateScale(28) : moderateScale(26)),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  // Font Size Controls
+  fontSizeControlsContainer: {
+    backgroundColor: '#f8f9fa',
+    borderRadius: moderateScale(6),
+    padding: isLandscape 
+      ? (isTablet ? moderateScale(10) : moderateScale(8)) 
+      : (isUltraSmallScreen ? moderateScale(8) : isSmallScreen ? moderateScale(8) : isTablet ? moderateScale(10) : moderateScale(8)),
+    marginBottom: moderateScale(8),
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  fontSizeHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: moderateScale(6),
+    gap: moderateScale(4),
+  },
+  fontSizeLabel: {
+    fontSize: isLandscape 
+      ? (isTablet ? moderateScale(12) : moderateScale(11)) 
+      : (isUltraSmallScreen ? moderateScale(10) : isSmallScreen ? moderateScale(10.5) : isTablet ? moderateScale(12) : moderateScale(11)),
+    fontWeight: '700',
+    color: '#333333',
+  },
+  fontSizeButtons: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'flex-start',
+    gap: isUltraSmallScreen ? moderateScale(3) : moderateScale(4),
+  },
+  fontSizeButton: {
+    paddingVertical: isLandscape 
+      ? (isTablet ? moderateScale(7) : moderateScale(6)) 
+      : (isUltraSmallScreen ? moderateScale(5) : isSmallScreen ? moderateScale(5) : isTablet ? moderateScale(7) : moderateScale(6)),
+    paddingHorizontal: isLandscape 
+      ? (isTablet ? moderateScale(10) : moderateScale(8)) 
+      : (isUltraSmallScreen ? moderateScale(6) : isSmallScreen ? moderateScale(7) : isTablet ? moderateScale(10) : moderateScale(8)),
+    borderRadius: moderateScale(5),
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    minWidth: isUltraSmallScreen ? moderateScale(34) : isSmallScreen ? moderateScale(36) : moderateScale(38),
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  fontSizeButtonActive: {
+    backgroundColor: '#667eea',
+    borderColor: '#667eea',
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 2,
+  },
+  fontSizeButtonText: {
+    fontSize: isLandscape 
+      ? (isTablet ? moderateScale(11) : moderateScale(10)) 
+      : (isUltraSmallScreen ? moderateScale(9) : isSmallScreen ? moderateScale(9.5) : isTablet ? moderateScale(11) : moderateScale(10)),
+    fontWeight: '600',
+    color: '#666666',
+  },
+  fontSizeButtonTextActive: {
+    color: '#ffffff',
+    fontWeight: '700',
+  },
+  // Font Family Section
+  fontFamilySection: {
+    marginBottom: moderateScale(5),
+  },
+  fontFamilySectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(3),
+    paddingBottom: moderateScale(5),
+    borderBottomWidth: 1,
+    borderBottomColor: '#e9ecef',
+  },
+  fontFamilySectionTitle: {
+    fontSize: isLandscape 
+      ? (isTablet ? moderateScale(11) : moderateScale(10)) 
+      : (isUltraSmallScreen ? moderateScale(9.5) : isSmallScreen ? moderateScale(10) : isTablet ? moderateScale(11) : moderateScale(10.5)),
+    fontWeight: '700',
+    color: '#333333',
+  },
+  // Font Category Section
+  fontCategorySection: {
+    marginBottom: isLandscape 
+      ? (isTablet ? moderateScale(10) : moderateScale(8)) 
+      : (isUltraSmallScreen ? moderateScale(6) : isSmallScreen ? moderateScale(7) : isTablet ? moderateScale(10) : moderateScale(8)),
+  },
+  fontCategoryTitle: {
+    fontSize: isLandscape 
+      ? (isTablet ? moderateScale(10) : moderateScale(9)) 
+      : (isUltraSmallScreen ? moderateScale(8.5) : isSmallScreen ? moderateScale(9) : isTablet ? moderateScale(10) : moderateScale(9.5)),
+    fontWeight: '600',
+    color: '#667eea',
+    marginBottom: moderateScale(5),
+    marginLeft: moderateScale(2),
+  },
+  fontCategoryGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: isUltraSmallScreen ? moderateScale(2.5) : moderateScale(3),
+  },
+  // Font Option Button
+  fontOptionButton: {
+    width: (() => {
+      const modalWidth = isLandscape 
+        ? (isTablet ? screenWidth * 0.65 : screenWidth * 0.75) 
+        : (isUltraSmallScreen ? screenWidth * 0.95 : isSmallScreen ? screenWidth * 0.92 : isMediumScreen ? screenWidth * 0.88 : isLargeScreen ? screenWidth * 0.85 : isTablet ? screenWidth * 0.8 : screenWidth * 0.85);
+      const padding = isLandscape 
+        ? (isTablet ? 18 : 14) 
+        : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : isTablet ? 18 : 16);
+      const gapSize = isUltraSmallScreen ? moderateScale(2.5) : moderateScale(3);
+      const scrollPadding = moderateScale(2) * 2;
+      const availableWidth = modalWidth - (padding * 2) - scrollPadding;
+      const columns = isLandscape ? (isTablet ? 4 : 3) : (isUltraSmallScreen ? 2 : isTablet ? 4 : 3);
+      return (availableWidth - (gapSize * (columns - 1))) / columns;
+    })(),
+    backgroundColor: '#ffffff',
+    borderRadius: moderateScale(4),
+    padding: isLandscape 
+      ? (isTablet ? moderateScale(6) : moderateScale(5)) 
+      : (isUltraSmallScreen ? moderateScale(4) : isSmallScreen ? moderateScale(4) : isTablet ? moderateScale(6) : moderateScale(5)),
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
+    elevation: 1,
+  },
+  fontPreviewText: {
+    fontSize: isLandscape 
+      ? (isTablet ? moderateScale(16) : moderateScale(14)) 
+      : (isUltraSmallScreen ? moderateScale(13) : isSmallScreen ? moderateScale(14) : isTablet ? moderateScale(18) : moderateScale(15)),
+    fontWeight: '400',
+    color: '#333333',
+    marginBottom: moderateScale(1.5),
+  },
+  fontOptionName: {
+    fontSize: isLandscape 
+      ? (isTablet ? moderateScale(7) : moderateScale(6.5)) 
+      : (isUltraSmallScreen ? moderateScale(6) : isSmallScreen ? moderateScale(6.5) : isTablet ? moderateScale(7.5) : moderateScale(7)),
+    fontWeight: '600',
+    color: '#666666',
+    textAlign: 'center',
+    lineHeight: isLandscape 
+      ? (isTablet ? moderateScale(9) : moderateScale(8)) 
+      : (isUltraSmallScreen ? moderateScale(8) : isSmallScreen ? moderateScale(8) : isTablet ? moderateScale(9.5) : moderateScale(9)),
   },
 
 });
