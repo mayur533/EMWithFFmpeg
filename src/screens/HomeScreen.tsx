@@ -720,7 +720,7 @@ const HomeScreen: React.FC = React.memo(() => {
              style={styles.bannerOverlay}
            />
            <View style={styles.bannerContent}>
-             <Text style={styles.bannerTitle}>{item.title}</Text>
+             {/* Banner title removed as per user request */}
              <TouchableOpacity 
                style={[styles.bannerButton, { backgroundColor: theme.colors.cardBackground }]}
                onPress={() => {

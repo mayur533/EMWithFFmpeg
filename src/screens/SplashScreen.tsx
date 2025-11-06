@@ -119,7 +119,7 @@ const SplashScreen: React.FC = () => {
 
   const onVideoError = (error: any) => {
     console.log('❌ Video error:', error);
-    console.log('❌ Video path: MarketBrand_App_Intro_Video.mp4');
+    console.log('❌ Video path: intro.mp4');
     console.log('❌ Error details:', JSON.stringify(error, null, 2));
     // Clear timeout on error
     if (videoTimeout) {
@@ -132,7 +132,7 @@ const SplashScreen: React.FC = () => {
   };
 
   const onVideoLoad = () => {
-    console.log('✅ Video loaded successfully: MarketBrand_App_Intro_Video.mp4');
+    console.log('✅ Video loaded successfully: intro.mp4');
     setVideoReady(true);
     // Clear timeout on successful load
     if (videoTimeout) {
@@ -142,7 +142,7 @@ const SplashScreen: React.FC = () => {
   };
 
   const onVideoReadyForDisplay = () => {
-    console.log('🎬 Video ready for display: MarketBrand_App_Intro_Video.mp4');
+    console.log('🎬 Video ready for display: intro.mp4');
   };
 
   const onVideoProgress = (data: any) => {
@@ -154,7 +154,7 @@ const SplashScreen: React.FC = () => {
   };
 
   const onVideoLoadStart = () => {
-    console.log('🔄 Video loading started: MarketBrand_App_Intro_Video.mp4');
+    console.log('🔄 Video loading started: intro.mp4');
     // Set a timeout to fallback if video doesn't load within 8 seconds
     const timeout = setTimeout(() => {
       console.log('⏰ Video loading timeout - falling back to regular splash');
@@ -214,7 +214,7 @@ const SplashScreen: React.FC = () => {
   return (
     <SafeAreaView 
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['top', 'left', 'right']}
+      edges={['top', 'left', 'right', 'bottom']}
     >
       <StatusBar 
         barStyle="light-content"
@@ -222,19 +222,25 @@ const SplashScreen: React.FC = () => {
         translucent={true}
       />
       
-      {/* Video Background */}
+      {/* Video Background - Fully Responsive Across All Screen Sizes */}
       {showVideo && (
         <Animated.View style={[
           styles.videoContainer, 
-          { opacity: videoOpacity }
+          { 
+            opacity: videoOpacity,
+            width: dimensions.screenWidth,
+            height: dimensions.screenHeight,
+          }
         ]}>
           <Video
-            source={require('../assets/intro/MarketBrand_App_Intro_Video.mp4')}
+            source={require('../assets/intro/intro.mp4')}
             style={[
               styles.video,
               {
-                width: dimensions.screenWidth,
-                height: dimensions.screenHeight,
+                width: '100%',
+                height: '100%',
+                minWidth: dimensions.screenWidth,
+                minHeight: dimensions.screenHeight,
               }
             ]}
             resizeMode="cover"
@@ -360,13 +366,17 @@ const styles = StyleSheet.create({
   },
   videoContainer: {
     flex: 1,
+    width: '100%',
+    height: '100%',
     backgroundColor: '#000000', // Black background
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden', // Ensures video stays within bounds
   },
   video: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    // Width and height are set dynamically inline
+    flex: 1,
+    alignSelf: 'stretch',
+    // Responsive across all screen sizes - uses percentage-based dimensions with min constraints
   },
   gradientBackground: {
     flex: 1,

@@ -1,0 +1,443 @@
+================================================================================
+  🔴 CRITICAL ISSUE: Profile Logo Upload Not Working Correctly
+================================================================================
+
+DATE: November 4, 2025
+PRIORITY: HIGH
+ISSUE TYPE: Backend Implementation Required
+ESTIMATED TIME: 2-3 days
+
+================================================================================
+  PROBLEM SUMMARY
+================================================================================
+
+The profile logo feature is currently NOT working correctly.
+
+CURRENT BEHAVIOR (WRONG):
+- API is storing local Android file paths instead of server URLs
+- Example: "logo": "file:///storage/emulated/0/Android/data/com.marketbrand/files/Pictures/abc.jpg"
+
+IMPACT:
+❌ Logo only visible on user's current device
+❌ Logo disappears when user logs in from another device
+❌ Logo not accessible by server or other users
+❌ Logo lost if user uninstalls app
+
+EXPECTED BEHAVIOR (CORRECT):
+- API should upload image files to cloud storage (S3, Cloudinary, etc.)
+- API should return public HTTPS URLs
+- Example: "logo": "https://your-cdn.com/user-logos/abc123.jpg"
+
+================================================================================
+  ROOT CAUSE ANALYSIS
+================================================================================
+
+BACKEND RESPONSIBILITY: 70% ⚠️
+- No file upload endpoint exists
+- Backend is accepting and storing file:// URLs (should reject these)
+- No cloud storage integration for profile images
+- No URL validation on the logo field
+
+FRONTEND RESPONSIBILITY: 30%
+- Sending local file path as string instead of uploading file
+- Will be fixed once backend provides proper upload endpoint
+
+================================================================================
+  WHAT BACKEND NEEDS TO IMPLEMENT
+================================================================================
+
+1. CREATE FILE UPLOAD ENDPOINT
+   ────────────────────────────────────────────────────────────────────────
+   Endpoint: POST /api/mobile/users/:userId/upload-logo
+   Content-Type: multipart/form-data
+   Authentication: Bearer token (existing auth)
+
+   REQUEST:
+   - Field name: "logo" or "profileImage"
+   - File type: image/jpeg, image/png, image/gif
+   - Max size: 5MB
+   - Recommended dimensions: 400x400px minimum
+
+   RESPONSE (Success):
+   {
+     "success": true,
+     "data": {
+       "logo": "https://your-cdn.com/user-logos/user-abc123-1699084800.jpg",
+       "thumbnail": "https://your-cdn.com/user-logos/user-abc123-1699084800_thumb.jpg"
+     },
+     "message": "Logo uploaded successfully"
+   }
+
+   RESPONSE (Error):
+   {
+     "success": false,
+     "message": "Invalid file type. Only JPEG, PNG, and GIF are allowed.",
+     "error": "INVALID_FILE_TYPE"
+   }
+
+   ERROR CODES:
+   - 400 Bad Request: Invalid file type or missing file
+   - 413 Payload Too Large: File exceeds 5MB
+   - 401 Unauthorized: Invalid or missing auth token
+   - 500 Internal Server Error: Upload to cloud storage failed
+
+
+2. SET UP CLOUD STORAGE
+   ────────────────────────────────────────────────────────────────────────
+   Choose one of these services:
+
+   OPTION A - CLOUDINARY (Recommended - Easiest):
+   - Free tier: 25GB storage, 25GB bandwidth/month
+   - Built-in image optimization and transformations
+   - Easy setup with Node.js SDK
+   - Setup time: ~1 hour
+   
+   OPTION B - AWS S3:
+   - More control and scalability
+   - Requires IAM setup and S3 bucket configuration
+   - Setup time: ~2-3 hours
+   
+   OPTION C - Google Cloud Storage:
+   - Similar to S3
+   - Good if already using Google Cloud
+   - Setup time: ~2-3 hours
+
+
+3. UPDATE EXISTING UPDATE ENDPOINT
+   ────────────────────────────────────────────────────────────────────────
+   Endpoint: PUT /api/mobile/users/:userId
+   
+   ADD URL VALIDATION for the "logo" field:
+   
+   ACCEPT:
+   ✅ https://cloudinary.com/...
+   ✅ https://s3.amazonaws.com/...
+   ✅ "" (empty string to remove logo)
+   ✅ null (to remove logo)
+   
+   REJECT:
+   ❌ file:///storage/...
+   ❌ content://...
+   ❌ /storage/...
+   ❌ C:\Users\...
+   ❌ Any local file path
+   
+   If rejected, return:
+   {
+     "success": false,
+     "message": "Invalid logo URL. Please upload the image file using the upload endpoint.",
+     "error": "INVALID_LOGO_URL"
+   }
+
+
+4. DATABASE CHANGES (If Needed)
+   ────────────────────────────────────────────────────────────────────────
+   Ensure the users table has these fields:
+   - logo: VARCHAR(500) or TEXT - stores HTTPS URL
+   - photo: VARCHAR(500) or TEXT - alternative field (optional)
+   
+   MIGRATION (If there are existing file:// URLs):
+   - Set all logo fields containing "file://" to NULL or ""
+   - Notify affected users to re-upload their profile pictures
+
+================================================================================
+  IMPLEMENTATION GUIDE (CLOUDINARY - RECOMMENDED)
+================================================================================
+
+STEP 1: Install Cloudinary
+──────────────────────────────────────────────────────────────────────────
+npm install cloudinary multer multer-storage-cloudinary
+
+STEP 2: Configure Cloudinary
+──────────────────────────────────────────────────────────────────────────
+// config/cloudinary.js
+const cloudinary = require('cloudinary').v2;
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+module.exports = cloudinary;
+
+// .env file (add these):
+CLOUDINARY_CLOUD_NAME=your_cloud_name
+CLOUDINARY_API_KEY=your_api_key
+CLOUDINARY_API_SECRET=your_api_secret
+
+STEP 3: Create Upload Middleware
+──────────────────────────────────────────────────────────────────────────
+// middleware/uploadLogo.js
+const multer = require('multer');
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const cloudinary = require('../config/cloudinary');
+
+const storage = new CloudinaryStorage({
+  cloudinary: cloudinary,
+  params: {
+    folder: 'user-logos',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'gif'],
+    transformation: [
+      { width: 400, height: 400, crop: 'limit' },
+      { quality: 'auto' }
+    ],
+  },
+});
+
+const upload = multer({
+  storage: storage,
+  limits: {
+    fileSize: 5 * 1024 * 1024, // 5MB
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype.startsWith('image/')) {
+      cb(null, true);
+    } else {
+      cb(new Error('Invalid file type. Only images allowed.'), false);
+    }
+  },
+});
+
+module.exports = upload;
+
+STEP 4: Create Upload Route
+──────────────────────────────────────────────────────────────────────────
+// routes/users.js
+const express = require('express');
+const router = express.Router();
+const upload = require('../middleware/uploadLogo');
+const { authenticateToken } = require('../middleware/auth');
+
+// Upload logo endpoint
+router.post('/:userId/upload-logo', authenticateToken, upload.single('logo'), async (req, res) => {
+  try {
+    // Verify user owns this profile
+    if (req.user.id !== req.params.userId) {
+      return res.status(403).json({
+        success: false,
+        message: 'You can only update your own profile',
+        error: 'FORBIDDEN'
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded',
+        error: 'NO_FILE'
+      });
+    }
+
+    // Get Cloudinary URL
+    const logoUrl = req.file.path; // Cloudinary URL
+
+    // Update user in database
+    await User.update(
+      { logo: logoUrl, photo: logoUrl },
+      { where: { id: req.params.userId } }
+    );
+
+    // Return URL
+    res.json({
+      success: true,
+      data: {
+        logo: logoUrl,
+        thumbnail: logoUrl.replace('/upload/', '/upload/w_200,h_200,c_fill/')
+      },
+      message: 'Logo uploaded successfully'
+    });
+  } catch (error) {
+    console.error('Logo upload error:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to upload logo',
+      error: 'UPLOAD_FAILED'
+    });
+  }
+});
+
+module.exports = router;
+
+STEP 5: Add URL Validation to Update Endpoint
+──────────────────────────────────────────────────────────────────────────
+// In your existing PUT /api/mobile/users/:userId endpoint
+
+const isValidLogoUrl = (url) => {
+  if (!url || url === '') return true; // Allow empty (to remove logo)
+  
+  // Reject local file paths
+  if (url.startsWith('file://') || 
+      url.startsWith('content://') || 
+      url.startsWith('/storage/') ||
+      url.includes('\\')) {
+    return false;
+  }
+  
+  // Must be HTTPS URL
+  return url.startsWith('https://');
+};
+
+// In update route:
+if (req.body.logo !== undefined) {
+  if (!isValidLogoUrl(req.body.logo)) {
+    return res.status(400).json({
+      success: false,
+      message: 'Invalid logo URL. Please upload the image file using the upload endpoint.',
+      error: 'INVALID_LOGO_URL'
+    });
+  }
+}
+
+STEP 6: Test the Endpoint
+──────────────────────────────────────────────────────────────────────────
+Using Postman or curl:
+
+curl -X POST \
+  https://eventmarketersbackend.onrender.com/api/mobile/users/USER_ID/upload-logo \
+  -H "Authorization: Bearer YOUR_TOKEN" \
+  -F "logo=@/path/to/image.jpg"
+
+Expected response:
+{
+  "success": true,
+  "data": {
+    "logo": "https://res.cloudinary.com/your-cloud/image/upload/v1699084800/user-logos/abc123.jpg"
+  },
+  "message": "Logo uploaded successfully"
+}
+
+================================================================================
+  CLOUDINARY SETUP GUIDE (Quick Start)
+================================================================================
+
+1. CREATE ACCOUNT:
+   - Go to: https://cloudinary.com/users/register/free
+   - Sign up with email or Google
+   - Free tier is sufficient for testing
+
+2. GET CREDENTIALS:
+   - After signup, you'll see your Dashboard
+   - Copy these values:
+     * Cloud Name
+     * API Key
+     * API Secret
+   - Add them to your .env file
+
+3. CONFIGURE FOLDER:
+   - In Cloudinary dashboard, go to Media Library
+   - Create folder: "user-logos"
+   - Set folder permissions to Public Read
+
+4. TEST UPLOAD:
+   - Use the test endpoint above
+   - Check Cloudinary dashboard to see uploaded image
+   - Copy the URL and verify it's publicly accessible
+
+================================================================================
+  TESTING CHECKLIST
+================================================================================
+
+Backend Testing:
+□ Upload endpoint accepts image files
+□ Files are uploaded to cloud storage
+□ Public HTTPS URL is returned
+□ URL is stored in database
+□ Old file:// URLs are rejected in update endpoint
+□ Error handling works (invalid file type, too large, etc.)
+□ Authentication is enforced
+□ User can only upload to their own profile
+
+Integration Testing:
+□ Frontend can upload image and receives URL
+□ Uploaded image is visible in profile
+□ Image persists across devices
+□ Image persists after logout/login
+□ Other users can see the profile image
+□ Deleting logo works (empty string)
+
+================================================================================
+  API ENDPOINTS SUMMARY
+================================================================================
+
+NEW ENDPOINT (MUST CREATE):
+POST /api/mobile/users/:userId/upload-logo
+- Uploads image file to cloud storage
+- Returns public HTTPS URL
+- Updates user.logo in database
+
+EXISTING ENDPOINT (NEEDS UPDATE):
+PUT /api/mobile/users/:userId
+- Add validation to reject file:// URLs in logo field
+- Only accept HTTPS URLs or empty string
+
+EXISTING ENDPOINT (NO CHANGES):
+GET /api/mobile/auth/me
+- Already returns logo field
+- Will automatically return new HTTPS URLs
+
+================================================================================
+  MIGRATION PLAN FOR EXISTING USERS
+================================================================================
+
+If there are users with file:// URLs in database:
+
+OPTION 1 - Clear Invalid URLs (Recommended):
+UPDATE users 
+SET logo = NULL, photo = NULL 
+WHERE logo LIKE 'file://%' OR logo LIKE 'content://%' OR logo LIKE '/storage/%';
+
+OPTION 2 - Mark for Re-upload:
+- Keep the invalid URLs
+- Add validation on GET endpoint to return NULL if URL is invalid
+- Notify users to re-upload profile picture
+
+================================================================================
+  ESTIMATED TIMELINE
+================================================================================
+
+Cloudinary Setup:        0.5 - 1 hour
+Upload Endpoint:         2 - 4 hours
+URL Validation:          1 hour
+Testing:                 2 - 4 hours
+Migration (if needed):   1 hour
+──────────────────────────────────────────────────────────────────────────
+TOTAL:                   1.5 - 3 days
+
+================================================================================
+  QUESTIONS OR ISSUES?
+================================================================================
+
+If you have questions or run into issues, please let me know:
+
+Common Issues:
+1. Cloudinary credentials not working
+   → Double-check cloud name, API key, API secret in .env
+   
+2. CORS errors
+   → Add allowed origins in Cloudinary dashboard settings
+   
+3. Files not uploading
+   → Check file size limit, file type validation, and multer config
+   
+4. URLs not accessible
+   → Verify Cloudinary folder is set to public read
+
+================================================================================
+  AFTER BACKEND IS READY
+================================================================================
+
+Once the upload endpoint is implemented and tested:
+1. Share the endpoint URL with frontend team
+2. Provide sample request/response format
+3. Frontend will update to use the new endpoint
+4. We'll do end-to-end testing together
+
+================================================================================
+  END OF DOCUMENT
+================================================================================
+
+Backend Team: Please confirm receipt and estimated completion date.
+
+Thank you!
+

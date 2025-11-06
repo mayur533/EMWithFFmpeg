@@ -254,6 +254,20 @@ class BusinessProfileService {
     try {
       console.log('Updating business profile via API:', id);
       
+      // Validate logo URLs before sending to backend
+      if (data.logo && this.isLocalFilePath(data.logo)) {
+        console.error('❌ [UPDATE] Attempting to save local file path as logo:', data.logo);
+        throw new Error(
+          'Cannot save local file path as logo. Please use uploadImage() to upload the image file first.'
+        );
+      }
+      if (data.companyLogo && this.isLocalFilePath(data.companyLogo)) {
+        console.error('❌ [UPDATE] Attempting to save local file path as companyLogo:', data.companyLogo);
+        throw new Error(
+          'Cannot save local file path as logo. Please use uploadImage() to upload the image file first.'
+        );
+      }
+      
       // Map frontend data to backend format - only include fields that are provided
       const backendData: any = {};
       
@@ -262,7 +276,9 @@ class BusinessProfileService {
       if (data.phone !== undefined) backendData.phone = data.phone;
       if (data.address !== undefined) backendData.address = data.address;
       if (data.category !== undefined) backendData.category = data.category;
-      if (data.companyLogo !== undefined) backendData.logo = data.companyLogo;
+      // Use 'logo' field if provided, otherwise use 'companyLogo'
+      if (data.logo !== undefined) backendData.logo = data.logo;
+      else if (data.companyLogo !== undefined) backendData.logo = data.companyLogo;
       if (data.description !== undefined) backendData.description = data.description;
       if (data.website !== undefined) backendData.website = data.website;
       
@@ -343,34 +359,84 @@ class BusinessProfileService {
   // Upload image (logo or banner) using business profile upload endpoint
   async uploadImage(profileId: string, imageType: 'logo' | 'banner', imageUri: string): Promise<{ url: string }> {
     try {
-      console.log('Uploading business profile image via API:', imageType, 'for profile:', profileId);
+      console.log('📤 [UPLOAD] Uploading business profile image:', imageType, 'for profile:', profileId);
+      console.log('📍 [UPLOAD] Image URI:', imageUri);
+      
+      // Validate that it's not a local file path
+      if (this.isLocalFilePath(imageUri)) {
+        console.log('⚠️ [UPLOAD] Local file path detected, will upload to server');
+      }
+      
+      // Extract filename and determine MIME type
+      const filename = imageUri.split('/').pop() || `${imageType}.jpg`;
+      const fileExtension = filename.split('.').pop()?.toLowerCase() || 'jpg';
+      
+      let mimeType = 'image/jpeg';
+      if (fileExtension === 'png') mimeType = 'image/png';
+      else if (fileExtension === 'gif') mimeType = 'image/gif';
+      else if (fileExtension === 'webp') mimeType = 'image/webp';
+      
+      console.log('📋 [UPLOAD] File info:', { filename, fileExtension, mimeType });
+      
       const formData = new FormData();
       formData.append('file', {
         uri: imageUri,
-        type: 'image/jpeg',
-        name: `${imageType}_${Date.now()}.jpg`,
+        type: mimeType,
+        name: filename,
       } as any);
 
-      const response = await api.post(`/api/mobile/business-profile/${profileId}/upload`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      console.log('📡 [UPLOAD] Uploading to:', `/api/mobile/business-profile/${profileId}/upload`);
       
-      if (response.data.success) {
-        console.log('✅ Business profile image uploaded via API:', response.data.data.url);
-        // Clear cache to force refresh
-        this.clearCache();
-        return { url: response.data.data.url };
-      } else {
-        throw new Error('API returned unsuccessful response');
+      try {
+        const response = await api.post(`/api/mobile/business-profile/${profileId}/upload`, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        
+        if (response.data.success) {
+          const uploadedUrl = response.data.data?.url || response.data.url;
+          console.log('✅ [UPLOAD] Business profile image uploaded successfully:', uploadedUrl);
+          // Clear cache to force refresh
+          this.clearCache();
+          return { url: uploadedUrl };
+        } else {
+          throw new Error('API returned unsuccessful response');
+        }
+      } catch (uploadError: any) {
+        const status = uploadError.response?.status;
+        const errorMessage = uploadError.response?.data?.message || uploadError.message;
+        
+        console.error('❌ [UPLOAD] Upload failed:', status, errorMessage);
+        
+        // If endpoint doesn't exist (404), provide helpful error
+        if (status === 404) {
+          throw new Error(
+            'Backend upload endpoint not implemented yet. ' +
+            'Please ask the backend team to implement POST /api/mobile/business-profile/:profileId/upload. ' +
+            'See BACKEND_LOGO_UPLOAD_FIX_REQUIRED.txt for implementation guide.'
+          );
+        }
+        
+        // Re-throw other errors
+        throw new Error(`Upload failed: ${errorMessage}`);
       }
-    } catch (error) {
-      console.error('❌ Error uploading business profile image via API:', error);
-      console.log('⚠️ Image upload failed due to API error');
-      // Throw error instead of returning mock URL
-      throw new Error('Failed to upload image');
+    } catch (error: any) {
+      console.error('❌ [UPLOAD] Error uploading business profile image:', error);
+      throw error;
     }
+  }
+
+  // Helper: Check if a URL is a local file path
+  private isLocalFilePath(url: string): boolean {
+    if (!url) return false;
+    return (
+      url.startsWith('file://') ||
+      url.startsWith('content://') ||
+      url.startsWith('/storage/') ||
+      url.startsWith('/data/') ||
+      url.includes('\\') // Windows paths
+    );
   }
 
   // Search business profiles (API endpoint removed - use client-side filtering)

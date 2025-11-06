@@ -470,6 +470,9 @@ const ProfileScreen: React.FC = () => {
             // Use the name/companyName from API response (this is the user's actual current name)
             const apiCompanyName = cleanUserData.name || cleanUserData.companyName || currentUser?.companyName;
             
+            // Sync logo from API response (prefer 'logo' field, fallback to 'companyLogo')
+            const apiLogo = cleanUserData.logo || cleanUserData.companyLogo || currentUser?.logo || currentUser?.companyLogo;
+            
             const updatedUserData = {
               ...currentUser,
               ...cleanUserData,
@@ -479,6 +482,11 @@ const ProfileScreen: React.FC = () => {
               name: apiCompanyName,
               // Update _originalCompanyName to the current name from API
               _originalCompanyName: apiCompanyName,
+              // Sync all logo fields
+              logo: apiLogo,
+              companyLogo: apiLogo,
+              photoURL: apiLogo,
+              profileImage: apiLogo,
             };
             
             // Update auth service with complete data (without business profiles)
@@ -489,13 +497,13 @@ const ProfileScreen: React.FC = () => {
             
             console.log('✅ User data updated (business profiles excluded from API)');
             console.log('✅ Company name from API:', updatedUserData.companyName);
+            console.log('🖼️ Logo from API:', updatedUserData.logo);
             console.log('💾 Profile data cached');
             
             // Update profile image from logo field
-            if (completeUserData?.logo || completeUserData?.companyLogo) {
-              const profileImageUrl = completeUserData?.logo || completeUserData?.companyLogo || null;
-              console.log('🖼️ Setting profile image URI from API:', profileImageUrl);
-              setProfileImageUri(profileImageUrl);
+            if (apiLogo) {
+              console.log('🖼️ Setting profile image URI from API:', apiLogo);
+              setProfileImageUri(apiLogo);
             } else {
               console.log('⚠️ No profile image/logo found in API response');
             }
@@ -986,6 +994,7 @@ const ProfileScreen: React.FC = () => {
 
       // Update profile via backend API
       // Send null for empty fields to allow clearing them
+      const logoValue = editFormData.companyLogo.trim() || null;
       const updateData = {
         name: editFormData.name.trim(),
         email: editFormData.email.trim(),
@@ -995,7 +1004,8 @@ const ProfileScreen: React.FC = () => {
         address: editFormData.address.trim() || null,
         alternatePhone: editFormData.alternatePhone.trim() || null, // Send null to clear
         website: editFormData.website.trim() || null,
-        companyLogo: editFormData.companyLogo.trim() || null
+        companyLogo: logoValue,
+        logo: logoValue, // Sync both logo fields to ensure API stores correctly
       };
 
       const response = await authApi.updateProfile(updateData, userId);
@@ -1020,6 +1030,9 @@ const ProfileScreen: React.FC = () => {
         // CRITICAL: Since API doesn't return all fields, merge with what we sent
         const updatedCompanyName = apiUserData.name || apiUserData.companyName || updateData.name;
         
+        // Sync logo from API response (prefer 'logo' field, fallback to 'companyLogo')
+        const updatedLogo = apiUserData.logo || apiUserData.companyLogo || (updateData as any).logo || (updateData as any).companyLogo || currentUser?.logo || currentUser?.companyLogo;
+        
         const updatedUser = {
           ...currentUser,
           ...apiUserData,
@@ -1036,6 +1049,11 @@ const ProfileScreen: React.FC = () => {
           category: apiUserData.category !== undefined ? apiUserData.category : (updateData.category ?? ''),
           description: apiUserData.description !== undefined ? apiUserData.description : (updateData.description ?? ''),
           alternatePhone: apiUserData.alternatePhone !== undefined ? apiUserData.alternatePhone : (updateData.alternatePhone ?? ''),
+          // Logo fields - sync from API response
+          logo: updatedLogo,
+          companyLogo: updatedLogo,
+          photoURL: updatedLogo,
+          profileImage: updatedLogo,
           // Update _original fields with what we SENT (user's intended values)
           _originalCompanyName: updatedCompanyName,
           _originalAddress: apiUserData.address !== undefined ? apiUserData.address : (updateData.address ?? ''),
@@ -1062,11 +1080,18 @@ const ProfileScreen: React.FC = () => {
         
         authService.setCurrentUser(updatedUser);
         
+        // Update profile image URI if logo changed
+        if (updatedLogo && updatedLogo !== profileImageUri) {
+          console.log('🖼️ Updating profile image URI to:', updatedLogo);
+          setProfileImageUri(updatedLogo);
+        }
+        
         console.log('✅ Profile updated in memory');
         console.log('   - address:', updatedUser.address);
         console.log('   - website:', updatedUser.website);
         console.log('   - category:', updatedUser.category);
-        console.log('   - description:', updatedUser.description)
+        console.log('   - description:', updatedUser.description);
+        console.log('   - logo:', updatedUser.logo)
         
         // Invalidate profile cache to force fresh data on next load
         console.log('🗑️ Invalidating profile cache after update');
@@ -1173,9 +1198,9 @@ const ProfileScreen: React.FC = () => {
         return;
       }
       
-      // Step 1: Update UI state
+      // Step 1: Update UI state immediately (optimistic update)
       try {
-        console.log('✅ Step 1: Setting profile image URI...');
+        console.log('✅ Step 1: Setting profile image URI (optimistic)...');
         setProfileImageUri(imageUri);
         console.log('✅ Step 1 complete');
       } catch (error) {
@@ -1183,39 +1208,69 @@ const ProfileScreen: React.FC = () => {
         throw error;
       }
       
-      // Step 2: Call API to update logo immediately
+      // Step 2: Upload image file to server using FormData
+      let uploadedLogoUrl: string;
       try {
-        console.log('✅ Step 2: Calling API to update logo...');
-        const updateData = {
-          companyLogo: imageUri,
-          logo: imageUri,
-        };
+        console.log('✅ Step 2: Uploading image file to server...');
+        console.log('📤 [STEP 2] Using proper file upload (FormData)');
         
-        const response = await authApi.updateProfile(updateData, userId);
-        console.log('✅ Step 2 complete - API response:', response);
-      } catch (error) {
-        console.error('❌ Step 2 API call failed:', error);
-        Alert.alert('Error', 'Failed to update profile picture on server. Please try again.');
+        const response = await authApi.uploadProfileImage(userId, imageUri);
+        
+        // Extract the logo URL from response
+        uploadedLogoUrl = response.data?.logo || response.data?.data?.logo;
+        
+        if (!uploadedLogoUrl) {
+          console.error('❌ [STEP 2] No logo URL in response:', response);
+          throw new Error('Server did not return a logo URL');
+        }
+        
+        console.log('✅ Step 2 complete - Uploaded logo URL:', uploadedLogoUrl);
+        console.log('🔗 [STEP 2] Image now available at:', uploadedLogoUrl);
+      } catch (error: any) {
+        console.error('❌ Step 2 file upload failed:', error);
+        
+        // Check if backend endpoint doesn't exist
+        if (error.message?.includes('Backend upload endpoint not implemented')) {
+          Alert.alert(
+            'Feature Not Ready',
+            'The image upload feature requires backend updates.\n\n' +
+            'Please contact the development team to implement the upload endpoint.\n\n' +
+            'Details: POST /api/mobile/users/:userId/upload-logo',
+            [{ text: 'OK' }]
+          );
+        } else {
+          Alert.alert(
+            'Upload Failed',
+            error.message || 'Failed to upload profile picture. Please try again.',
+            [{ text: 'OK' }]
+          );
+        }
+        
         // Revert UI state
         setProfileImageUri(currentUser?.logo || currentUser?.companyLogo || null);
         return;
       }
       
-      // Step 3: Update user object locally
+      // Step 3: Update user object locally with the uploaded URL
       let updatedUser;
       try {
-        console.log('✅ Step 3: Creating updated user object...');
+        console.log('✅ Step 3: Creating updated user object with uploaded URL...');
         updatedUser = {
           ...currentUser,
-          logo: imageUri, // Primary field from API
-          photoURL: imageUri,
-          profileImage: imageUri,
-          companyLogo: imageUri, // Keep for backward compatibility
+          logo: uploadedLogoUrl, // Use the HTTPS URL from server
+          photoURL: uploadedLogoUrl,
+          profileImage: uploadedLogoUrl,
+          companyLogo: uploadedLogoUrl, // Keep for backward compatibility
         };
         
         // Update in auth service
         authService.setCurrentUser(updatedUser);
+        
+        // Update UI with the server URL
+        setProfileImageUri(uploadedLogoUrl);
+        
         console.log('✅ Step 3 complete');
+        console.log('🔗 [STEP 3] Profile now uses server URL:', uploadedLogoUrl);
       } catch (error) {
         console.error('❌ Step 3 failed:', error);
         throw error;
@@ -1249,7 +1304,7 @@ const ProfileScreen: React.FC = () => {
       // Step 6: Update ONLY the MAIN business profile (first profile from registration) with the new logo
       try {
         console.log('✅ Step 6: Updating MAIN business profile with new logo...');
-        console.log('🔍 Image URI to sync:', imageUri);
+        console.log('🔗 [STEP 6] Using uploaded URL:', uploadedLogoUrl);
         
         if (!userId) {
           console.log('⚠️ No user ID available for business profile update, skipping');
@@ -1271,12 +1326,13 @@ const ProfileScreen: React.FC = () => {
             
             console.log(`📍 MAIN profile identified: ${mainProfile.name} (created: ${mainProfile.createdAt})`);
             
-            // Update MAIN profile with new logo
+            // Update MAIN profile with new logo (using uploaded URL, not local path)
             try {
               await businessProfileService.updateBusinessProfile(mainProfile.id, {
-                companyLogo: imageUri,
+                logo: uploadedLogoUrl, // Use HTTPS URL from server
               });
               console.log(`✅ Logo updated for MAIN profile: ${mainProfile.name}`);
+              console.log(`🔗 [STEP 6] Main profile now uses: ${uploadedLogoUrl}`);
             } catch (error) {
               console.error(`❌ Failed to update logo for main profile:`, error);
             }
@@ -1287,10 +1343,10 @@ const ProfileScreen: React.FC = () => {
             for (const profile of otherProfiles) {
               const profileLogo = profile.logo || profile.companyLogo;
               const oldUserLogo = currentUser?.logo || currentUser?.companyLogo;
-              if (profileLogo && (profileLogo === oldUserLogo || profileLogo === imageUri)) {
+              if (profileLogo && (profileLogo === oldUserLogo || profileLogo === imageUri || profileLogo === uploadedLogoUrl)) {
                 try {
                   await businessProfileService.updateBusinessProfile(profile.id, {
-                    companyLogo: '',
+                    logo: '', // Clear logo from non-main profiles
                   });
                   removedCount++;
                 } catch (error) {

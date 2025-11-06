@@ -281,11 +281,20 @@ class LoginAPIsService {
           if (profileResponse.success && profileResponse.data) {
             // CRITICAL: Exclude companyName from API to prevent business profile contamination
             const { companyName: apiCompanyName, businessProfiles, ...cleanApiData } = profileResponse.data as any;
+            
+            // Sync logo from API response (prefer 'logo' field, fallback to 'companyLogo')
+            const apiLogo = cleanApiData.logo || cleanApiData.companyLogo || user.logo || user.companyLogo;
+            
             completeUserData = {
               ...user,
               ...cleanApiData, // Merge clean profile data (without companyName from API)
               // ALWAYS preserve the companyName from login response, never from getProfile API
               companyName: user.companyName,
+              // Sync all logo fields
+              logo: apiLogo,
+              companyLogo: apiLogo,
+              photoURL: apiLogo,
+              profileImage: apiLogo,
             };
             console.log('✅ Complete profile data fetched from API and merged (companyName protected)');
             console.log('═══════════════════════════════════════════════════════════');
@@ -301,6 +310,7 @@ class LoginAPIsService {
             console.log('Display Name:', completeUserData.displayName);
             console.log('Phone:', completeUserData.phoneNumber || completeUserData.phone);
             console.log('Category:', completeUserData.category);
+            console.log('Logo:', completeUserData.logo);
             console.log('═══════════════════════════════════════════════════════════');
             
             // Update storage with complete profile data

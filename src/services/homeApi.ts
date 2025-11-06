@@ -305,21 +305,35 @@ class HomeApiService {
    */
   private convertProfessionalTemplatesUrls(templates: ProfessionalTemplate[]): ProfessionalTemplate[] {
     return templates.map(template => {
-      // Convert both thumbnail and preview URLs
+      // Convert both thumbnail and preview URLs to absolute
       let convertedThumbnail = this.convertToAbsoluteUrl(template.thumbnail);
-      const convertedPreview = template.previewUrl ? this.convertToAbsoluteUrl(template.previewUrl) : undefined;
+      let convertedPreview = template.previewUrl ? this.convertToAbsoluteUrl(template.previewUrl) : undefined;
       
-      // If thumbnail URL exists, request higher quality by adding size parameters
+      // If no previewUrl, try to derive high-quality URL from thumbnail
+      if (!convertedPreview && convertedThumbnail) {
+        // Try to convert thumbnail path to full image path
+        if (convertedThumbnail.includes('/thumbnailUrl/')) {
+          convertedPreview = convertedThumbnail.replace(/\/thumbnailUrl\//g, '/url/');
+        } else if (convertedThumbnail.includes('/thumbnail/')) {
+          convertedPreview = convertedThumbnail.replace(/\/thumbnail\//g, '/images/');
+        }
+      }
+      
+      // Add quality parameters to both URLs if server supports it
       if (convertedThumbnail && !convertedThumbnail.includes('unsplash')) {
-        // Add quality parameters if server supports it
         const separator = convertedThumbnail.includes('?') ? '&' : '?';
         convertedThumbnail = `${convertedThumbnail}${separator}quality=high&width=1200`;
+      }
+      
+      if (convertedPreview && !convertedPreview.includes('unsplash') && !convertedPreview.includes('quality=')) {
+        const separator = convertedPreview.includes('?') ? '&' : '?';
+        convertedPreview = `${convertedPreview}${separator}quality=high&width=2400`;
       }
       
       return {
         ...template,
         thumbnail: convertedThumbnail || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85',
-        previewUrl: convertedPreview,
+        previewUrl: convertedPreview || convertedThumbnail, // Use thumbnail as fallback if no preview
       };
     });
   }

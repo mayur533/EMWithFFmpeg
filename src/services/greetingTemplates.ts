@@ -288,18 +288,22 @@ class GreetingTemplatesService {
         
         // Map backend response to frontend format
         const mappedTemplates = dataToMap.map((backendTemplate: any) => {
-          // For businessCategoryImages: prefer thumbnailUrl, then url
+          // For businessCategoryImages: prefer url (full quality), then thumbnailUrl
           // For templates: use imageUrl or thumbnail
+          let fullUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnailUrl || backendTemplate.thumbnail || backendTemplate.image;
           let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail || backendTemplate.image;
-          let fullUrl = backendTemplate.url || backendTemplate.thumbnailUrl || backendTemplate.imageUrl || backendTemplate.thumbnail;
           
           // If thumbnail URL is missing extension, use the full URL instead
           if (thumbnailUrl && !thumbnailUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
             thumbnailUrl = fullUrl;
           }
           
-          const finalThumbnail = thumbnailUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=300&h=200&fit=crop';
-          const finalBackground = fullUrl || finalThumbnail;
+          // Convert to absolute URLs with high quality
+          const absoluteFullUrl = this.convertToAbsoluteUrl(fullUrl, true);
+          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl, true);
+          
+          const finalBackground = absoluteFullUrl || absoluteThumbnailUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85';
+          const finalThumbnail = absoluteThumbnailUrl || absoluteFullUrl || finalBackground;
           
           return {
             id: backendTemplate.id,

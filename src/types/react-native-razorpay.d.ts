@@ -18,6 +18,19 @@ declare module 'react-native-razorpay' {
     theme?: {
       color?: string;
     };
+    method?: {
+      upi?: boolean;
+      card?: boolean;
+      netbanking?: boolean;
+      wallet?: boolean;
+      emi?: boolean;
+      paylater?: boolean;
+    };
+    config?: {
+      display?: {
+        hide?: Array<{ method: string }>;
+      };
+    };
     modal?: {
       ondismiss?: () => void;
     };

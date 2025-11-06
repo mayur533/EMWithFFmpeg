@@ -230,13 +230,40 @@ const SubscriptionScreen: React.FC = () => {
         currency: 'INR',
         key: 'rzp_test_RQ5lTAzm7AyNN9', // Updated Razorpay test key
         amount: 49900, // Amount in paise (₹499)
-        name: 'EventMarketers Pro',
+        name: 'Market Brand',
+        // TO DISPLAY LOGO: Razorpay requires a publicly accessible URL
+        // Option 1: Upload MB.png to your website/server and use:
+        // image: 'https://your-domain.com/MB.png',
+        // 
+        // Option 2: Use a CDN (Cloudinary, AWS S3, Firebase Storage)
+        // Example: image: 'https://res.cloudinary.com/your-account/image/upload/v1/MB.png',
+        // 
+        // Option 3: Use base64 data URL (may have size limits):
+        // image: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA...',
         prefill: {
           email: currentUser?.email || 'user@example.com',
           contact: currentUser?.phoneNumber || '9999999999',
           name: currentUser?.name || 'User Name',
         },
         theme: { color: '#667eea' },
+        // Restrict payment methods to UPI, Cards, and NetBanking only
+        method: {
+          upi: true,
+          card: true,
+          netbanking: true,
+          wallet: false,
+          emi: false,
+          paylater: false,
+        },
+        config: {
+          display: {
+            hide: [
+              { method: 'wallet' },
+              { method: 'emi' },
+              { method: 'paylater' },
+            ],
+          },
+        },
         handler: async (response: any) => {
           console.log('💳 Payment success response:', response);
           
@@ -402,7 +429,6 @@ const SubscriptionScreen: React.FC = () => {
       const subscriptionResponse = await subscriptionApi.subscribe({
         planId: 'quarterly_pro',  // Backend expects quarterly_pro for Quarterly Pro plan
         paymentMethod: 'razorpay',
-        autoRenew: true,
       });
       
       console.log('✅ Subscription activated via API:', subscriptionResponse.data);
@@ -566,22 +592,6 @@ const SubscriptionScreen: React.FC = () => {
                 </Text>
               </View>
             </View>
-            {subscriptionStatus.autoRenew && (
-              <View style={[styles.autoRenewBadge, {
-                marginTop: dynamicModerateScale(6),
-                paddingTop: dynamicModerateScale(6),
-                borderTopWidth: 0.5,
-              }]}>
-                <Icon name="autorenew" size={getIconSize(12)} color="#667eea" />
-                <Text style={[styles.autoRenewText, { 
-                  color: theme.colors.textSecondary,
-                  fontSize: dynamicModerateScale(8),
-                  marginLeft: dynamicModerateScale(3),
-                }]}>
-                  Auto-renew enabled
-                </Text>
-              </View>
-            )}
           </View>
         )}
 
@@ -988,13 +998,6 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   currentSubscriptionSubtitle: {
-  },
-  autoRenewBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderTopColor: 'rgba(0, 0, 0, 0.08)',
-  },
-  autoRenewText: {
   },
   comparisonContainer: {
   },

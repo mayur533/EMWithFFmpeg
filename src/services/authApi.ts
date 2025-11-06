@@ -199,11 +199,92 @@ class AuthApiService {
     }
   }
 
+  // Upload profile image (proper file upload using FormData)
+  async uploadProfileImage(userId: string, imageUri: string): Promise<ProfileResponse> {
+    try {
+      console.log('📤 [UPLOAD] Starting profile image upload...');
+      console.log('📍 [UPLOAD] User ID:', userId);
+      console.log('📍 [UPLOAD] Image URI:', imageUri);
+      
+      // Extract filename from URI
+      const filename = imageUri.split('/').pop() || 'profile.jpg';
+      const fileExtension = filename.split('.').pop()?.toLowerCase() || 'jpg';
+      
+      // Determine MIME type based on extension
+      let mimeType = 'image/jpeg';
+      if (fileExtension === 'png') mimeType = 'image/png';
+      else if (fileExtension === 'gif') mimeType = 'image/gif';
+      else if (fileExtension === 'webp') mimeType = 'image/webp';
+      
+      console.log('📋 [UPLOAD] File info:', { filename, fileExtension, mimeType });
+      
+      // Create FormData
+      const formData = new FormData();
+      formData.append('logo', {
+        uri: imageUri,
+        type: mimeType,
+        name: filename,
+      } as any);
+      
+      console.log('📦 [UPLOAD] FormData created');
+      
+      // Try the new upload endpoint first
+      const uploadEndpoint = `/api/mobile/users/${userId}/upload-logo`;
+      
+      try {
+        console.log('📡 [UPLOAD] Attempting upload endpoint:', uploadEndpoint);
+        const response = await api.post(uploadEndpoint, formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+        
+        console.log('✅ [UPLOAD] Image uploaded successfully via upload endpoint');
+        console.log('📥 [UPLOAD] Response:', response.data);
+        return response.data;
+      } catch (uploadError: any) {
+        const status = uploadError.response?.status;
+        const errorMessage = uploadError.response?.data?.message || uploadError.message;
+        
+        console.log('⚠️ [UPLOAD] Upload endpoint failed:', status, errorMessage);
+        
+        // If endpoint doesn't exist (404), provide helpful error
+        if (status === 404) {
+          throw new Error(
+            'Backend upload endpoint not implemented yet. ' +
+            'Please ask the backend team to implement POST /api/mobile/users/:userId/upload-logo. ' +
+            'See BACKEND_LOGO_UPLOAD_FIX_REQUIRED.txt for implementation guide.'
+          );
+        }
+        
+        // Re-throw other errors
+        throw new Error(`Upload failed: ${errorMessage}`);
+      }
+    } catch (error: any) {
+      console.error('❌ [UPLOAD] Profile image upload error:', error);
+      throw error;
+    }
+  }
+
   // Update user profile
   async updateProfile(data: UpdateProfileRequest, userId?: string): Promise<ProfileResponse> {
     try {
       if (!userId) {
         throw new Error('User ID is required for profile update');
+      }
+      
+      // Validate that logo/companyLogo are not local file paths
+      if (data.logo && this.isLocalFilePath(data.logo)) {
+        console.error('❌ [UPDATE] Attempting to save local file path as logo:', data.logo);
+        throw new Error(
+          'Cannot save local file path. Please use uploadProfileImage() to upload the image file first.'
+        );
+      }
+      if (data.companyLogo && this.isLocalFilePath(data.companyLogo)) {
+        console.error('❌ [UPDATE] Attempting to save local file path as companyLogo:', data.companyLogo);
+        throw new Error(
+          'Cannot save local file path. Please use uploadProfileImage() to upload the image file first.'
+        );
       }
       
       // Use the correct update endpoint with user ID
@@ -218,6 +299,18 @@ class AuthApiService {
       console.error('❌ Update profile error:', error);
       throw error;
     }
+  }
+
+  // Helper: Check if a URL is a local file path
+  private isLocalFilePath(url: string): boolean {
+    if (!url) return false;
+    return (
+      url.startsWith('file://') ||
+      url.startsWith('content://') ||
+      url.startsWith('/storage/') ||
+      url.startsWith('/data/') ||
+      url.includes('\\') // Windows paths
+    );
   }
 
   // Logout user
