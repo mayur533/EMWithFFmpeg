@@ -1012,19 +1012,19 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         'Creative': 'creative',
         'Corporate': 'corporate',
         'Luxury': 'luxury',
-        'Modern': 'modern',
+        'Modern': 'business',
         'Vintage': 'vintage',
         'Retro': 'retro',
         'Elegant': 'elegant',
-        'Bold': 'bold',
-        'Nature': 'nature',
+        'Bold': 'creative',
+        'Nature': 'restaurant',
         'Ocean': 'ocean',
         'Sunset': 'sunset',
-        'Cosmic': 'cosmic',
+        'Cosmic': 'tech',
         'Artistic': 'artistic',
-        'Sport': 'sport',
-        'Warm': 'warm',
-        'Cool': 'cool',
+        'Sport': 'fitness',
+        'Warm': 'sunset',
+        'Cool': 'education',
       };
       
       const template = categoryToTemplate[profile.category] || 'business';
@@ -1697,20 +1697,23 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           'creative': { backgroundColor: 'rgba(147, 51, 234, 0.9)' },
           'minimal': { backgroundColor: 'rgba(255, 255, 255, 0.95)' },
           'luxury': { backgroundColor: 'rgba(212, 175, 55, 0.95)' },
-          'modern': { backgroundColor: 'rgba(102, 126, 234, 0.8)' },
           'vintage': { backgroundColor: 'rgba(120, 113, 108, 0.9)' },
           'retro': { backgroundColor: 'rgba(251, 146, 60, 0.9)' },
           'elegant': { backgroundColor: 'rgba(139, 69, 19, 0.9)' },
-          'bold': { backgroundColor: 'rgba(0, 0, 0, 0.9)' },
           'tech': { backgroundColor: 'rgba(30, 41, 59, 0.95)' },
-          'nature': { backgroundColor: 'rgba(34, 197, 94, 0.8)' },
           'ocean': { backgroundColor: 'rgba(6, 182, 212, 0.9)' },
           'sunset': { backgroundColor: 'rgba(239, 68, 68, 0.9)' },
-          'cosmic': { backgroundColor: 'rgba(30, 41, 59, 0.95)' },
           'artistic': { backgroundColor: 'rgba(168, 85, 247, 0.9)' },
-          'sport': { backgroundColor: 'rgba(239, 68, 68, 0.9)' },
-          'warm': { backgroundColor: 'rgba(245, 158, 11, 0.9)' },
-          'cool': { backgroundColor: 'rgba(59, 130, 246, 0.9)' },
+          'ombre-sunset': { backgroundColor: 'rgba(255, 107, 107, 0.9)', gradient: ['#FF6B6B', '#FFA500', '#FFD700'] },
+          'ombre-ocean': { backgroundColor: 'rgba(102, 126, 234, 0.9)', gradient: ['#667eea', '#06b6d4', '#22c55e'] },
+          'ombre-purple': { backgroundColor: 'rgba(147, 51, 234, 0.9)', gradient: ['#9333ea', '#ec4899', '#f43f5e'] },
+          'ombre-forest': { backgroundColor: 'rgba(6, 95, 70, 0.9)', gradient: ['#065f46', '#059669', '#10b981'] },
+          'ombre-fire': { backgroundColor: 'rgba(220, 38, 38, 0.9)', gradient: ['#dc2626', '#f59e0b', '#fbbf24'] },
+          'ombre-night': { backgroundColor: 'rgba(30, 58, 138, 0.9)', gradient: ['#1e3a8a', '#7c3aed', '#ec4899'] },
+          'ombre-tropical': { backgroundColor: 'rgba(244, 114, 182, 0.9)', gradient: ['#f472b6', '#fb923c', '#06b6d4'] },
+          'ombre-autumn': { backgroundColor: 'rgba(120, 53, 15, 0.9)', gradient: ['#78350f', '#ea580c', '#dc2626'] },
+          'ombre-rose': { backgroundColor: 'rgba(190, 18, 60, 0.9)', gradient: ['#be123c', '#f472b6', '#fda4af'] },
+          'ombre-galaxy': { backgroundColor: 'rgba(99, 102, 241, 0.9)', gradient: ['#6366f1', '#8b5cf6', '#06b6d4'] },
         };
         
         return {
@@ -1739,20 +1742,23 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           'creative': '#ffffff',
           'minimal': '#1f2937',
           'luxury': '#000000',
-          'modern': '#ffffff',
           'vintage': '#ffffff',
           'retro': '#ffffff',
           'elegant': '#ffffff',
-          'bold': '#ffffff',
           'tech': '#00ff00',
-          'nature': '#ffffff',
           'ocean': '#ffffff',
           'sunset': '#ffffff',
-          'cosmic': '#ffffff',
           'artistic': '#ffffff',
-          'sport': '#ffffff',
-          'warm': '#ffffff',
-          'cool': '#ffffff',
+          'ombre-sunset': '#ffffff',
+          'ombre-ocean': '#ffffff',
+          'ombre-purple': '#ffffff',
+          'ombre-forest': '#ffffff',
+          'ombre-fire': '#ffffff',
+          'ombre-night': '#ffffff',
+          'ombre-tropical': '#ffffff',
+          'ombre-autumn': '#ffffff',
+          'ombre-rose': '#ffffff',
+          'ombre-galaxy': '#ffffff',
         };
         
         return {
@@ -2003,7 +2009,36 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       case 'text':
         // Special handling for footer background
         if (layer.content === '' && layer.fieldType === 'footerBackground') {
-          const gradientColors = getOmbreColors(layer.style?.backgroundColor as string | undefined);
+          // Check if it's an ombre template (horizontal gradient)
+          const isOmbreTemplate = selectedTemplate?.startsWith('ombre-');
+          let gradientColors;
+          let gradientStart;
+          let gradientEnd;
+          
+          if (isOmbreTemplate) {
+            // Horizontal gradient for ombre templates
+            const ombreGradients: { [key: string]: string[] } = {
+              'ombre-sunset': ['#FF6B6B', '#FFA500', '#FFD700'],
+              'ombre-ocean': ['#667eea', '#06b6d4', '#22c55e'],
+              'ombre-purple': ['#9333ea', '#ec4899', '#f43f5e'],
+              'ombre-forest': ['#065f46', '#059669', '#10b981'],
+              'ombre-fire': ['#dc2626', '#f59e0b', '#fbbf24'],
+              'ombre-night': ['#1e3a8a', '#7c3aed', '#ec4899'],
+              'ombre-tropical': ['#f472b6', '#fb923c', '#06b6d4'],
+              'ombre-autumn': ['#78350f', '#ea580c', '#dc2626'],
+              'ombre-rose': ['#be123c', '#f472b6', '#fda4af'],
+              'ombre-galaxy': ['#6366f1', '#8b5cf6', '#06b6d4'],
+            };
+            gradientColors = ombreGradients[selectedTemplate] || getOmbreColors(layer.style?.backgroundColor as string | undefined);
+            gradientStart = { x: 0, y: 0 };
+            gradientEnd = { x: 1, y: 0 };
+          } else {
+            // Vertical gradient for non-ombre templates
+            gradientColors = getOmbreColors(layer.style?.backgroundColor as string | undefined);
+            gradientStart = { x: 0, y: 1 };
+            gradientEnd = { x: 0, y: 0 };
+          }
+          
           return (
             <Animated.View
               key={layer.id}
@@ -2026,8 +2061,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             >
               <LinearGradient
                 colors={gradientColors}
-                start={{ x: 0, y: 1 }}
-                end={{ x: 0, y: 0 }}
+                start={gradientStart}
+                end={gradientEnd}
                 style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
               />
             </Animated.View>
@@ -2102,7 +2137,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       default:
         return null;
     }
-  }, [selectedLayer, visibleFields, draggedLayer, layerAnimations, translationValues]);
+  }, [selectedLayer, visibleFields, draggedLayer, layerAnimations, translationValues, selectedTemplate]);
 
   // Render business profile selection item
   const renderProfileItem = ({ item }: { item: BusinessProfile }) => (
@@ -2153,7 +2188,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       {/* Professional Header */}
       <View
         style={[styles.header, { 
-          paddingTop: insets.top + (isUltraSmallScreen ? 2 : isSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm),
+          paddingTop: insets.top + moderateScale(12),
           backgroundColor: theme?.colors?.surface || '#ffffff'
         }]}
       >
@@ -2161,7 +2196,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           style={styles.backButton}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={getResponsiveIconSize()} color="#333333" />
+          <Text style={styles.backButtonText}>Back</Text>
         </TouchableOpacity>
         <View style={styles.headerContent}>
         </View>
@@ -2329,20 +2364,23 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 !selectedFrame && selectedTemplate === 'creative' && styles.creativeFrame,
                 !selectedFrame && selectedTemplate === 'minimal' && styles.minimalFrame,
                 !selectedFrame && selectedTemplate === 'luxury' && styles.luxuryFrame,
-                !selectedFrame && selectedTemplate === 'modern' && styles.modernFrame,
                 !selectedFrame && selectedTemplate === 'vintage' && styles.vintageFrame,
                 !selectedFrame && selectedTemplate === 'retro' && styles.retroFrame,
                 !selectedFrame && selectedTemplate === 'elegant' && styles.elegantFrame,
-                !selectedFrame && selectedTemplate === 'bold' && styles.boldFrame,
                 !selectedFrame && selectedTemplate === 'tech' && styles.techFrame,
-                !selectedFrame && selectedTemplate === 'nature' && styles.natureFrame,
                 !selectedFrame && selectedTemplate === 'ocean' && styles.oceanFrame,
                 !selectedFrame && selectedTemplate === 'sunset' && styles.sunsetFrame,
-                !selectedFrame && selectedTemplate === 'cosmic' && styles.cosmicFrame,
                 !selectedFrame && selectedTemplate === 'artistic' && styles.artisticFrame,
-                !selectedFrame && selectedTemplate === 'sport' && styles.sportFrame,
-                !selectedFrame && selectedTemplate === 'warm' && styles.warmFrame,
-                !selectedFrame && selectedTemplate === 'cool' && styles.coolFrame,
+                !selectedFrame && selectedTemplate === 'ombre-sunset' && styles.ombreSunsetFrame,
+                !selectedFrame && selectedTemplate === 'ombre-ocean' && styles.ombreOceanFrame,
+                !selectedFrame && selectedTemplate === 'ombre-purple' && styles.ombrePurpleFrame,
+                !selectedFrame && selectedTemplate === 'ombre-forest' && styles.ombreForestFrame,
+                !selectedFrame && selectedTemplate === 'ombre-fire' && styles.ombreFireFrame,
+                !selectedFrame && selectedTemplate === 'ombre-night' && styles.ombreNightFrame,
+                !selectedFrame && selectedTemplate === 'ombre-tropical' && styles.ombreTropicalFrame,
+                !selectedFrame && selectedTemplate === 'ombre-autumn' && styles.ombreAutumnFrame,
+                !selectedFrame && selectedTemplate === 'ombre-rose' && styles.ombreRoseFrame,
+                !selectedFrame && selectedTemplate === 'ombre-galaxy' && styles.ombreGalaxyFrame,
                 { 
                   width: canvasWidth, 
                   height: canvasHeight,
@@ -2446,7 +2484,11 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           style={[
             styles.controlsContainer, 
             { 
-              paddingBottom: Math.max(insets.bottom + responsiveSpacing.md, responsiveSpacing.lg)
+              paddingBottom: isUltraSmallScreen 
+                ? insets.bottom + 20 
+                : isSmallScreen 
+                  ? insets.bottom + 16 
+                  : Math.max(insets.bottom + responsiveSpacing.md, responsiveSpacing.lg)
             }
           ]}
         >
@@ -2845,17 +2887,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.templateButton, selectedTemplate === 'modern' && styles.templateButtonActive]}
-              onPress={() => applyTemplate('modern')}
-            >
-              <View style={[styles.templatePreview, styles.modernTemplatePreview]}>
-                <View style={styles.templatePreviewContent}>
-                  <View style={[styles.templatePreviewFooter, styles.modernTemplateStyle]} />
-                </View>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
               style={[styles.templateButton, selectedTemplate === 'vintage' && styles.templateButtonActive]}
               onPress={() => applyTemplate('vintage')}
             >
@@ -2889,34 +2920,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.templateButton, selectedTemplate === 'bold' && styles.templateButtonActive]}
-              onPress={() => applyTemplate('bold')}
-            >
-              <View style={[styles.templatePreview, styles.boldTemplatePreview]}>
-                <View style={styles.templatePreviewContent}>
-                  <View style={[styles.templatePreviewFooter, styles.boldTemplateStyle]} />
-                </View>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
               style={[styles.templateButton, selectedTemplate === 'tech' && styles.templateButtonActive]}
               onPress={() => applyTemplate('tech')}
             >
               <View style={[styles.templatePreview, styles.techTemplatePreview]}>
                 <View style={styles.templatePreviewContent}>
                   <View style={[styles.templatePreviewFooter, styles.techTemplateStyle]} />
-                </View>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.templateButton, selectedTemplate === 'nature' && styles.templateButtonActive]}
-              onPress={() => applyTemplate('nature')}
-            >
-              <View style={[styles.templatePreview, styles.natureTemplatePreview]}>
-                <View style={styles.templatePreviewContent}>
-                  <View style={[styles.templatePreviewFooter, styles.natureTemplateStyle]} />
                 </View>
               </View>
             </TouchableOpacity>
@@ -2944,17 +2953,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.templateButton, selectedTemplate === 'cosmic' && styles.templateButtonActive]}
-              onPress={() => applyTemplate('cosmic')}
-            >
-              <View style={[styles.templatePreview, styles.cosmicTemplatePreview]}>
-                <View style={styles.templatePreviewContent}>
-                  <View style={[styles.templatePreviewFooter, styles.cosmicTemplateStyle]} />
-                </View>
-              </View>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
               style={[styles.templateButton, selectedTemplate === 'artistic' && styles.templateButtonActive]}
               onPress={() => applyTemplate('artistic')}
             >
@@ -2966,34 +2964,161 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.templateButton, selectedTemplate === 'sport' && styles.templateButtonActive]}
-              onPress={() => applyTemplate('sport')}
+              style={[styles.templateButton, selectedTemplate === 'ombre-sunset' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-sunset')}
             >
-              <View style={[styles.templatePreview, styles.sportTemplatePreview]}>
+              <View style={[styles.templatePreview, styles.ombreSunsetTemplatePreview]}>
                 <View style={styles.templatePreviewContent}>
-                  <View style={[styles.templatePreviewFooter, styles.sportTemplateStyle]} />
+                  <LinearGradient
+                    colors={['#FF6B6B', '#FFA500', '#FFD700']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
                 </View>
               </View>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.templateButton, selectedTemplate === 'warm' && styles.templateButtonActive]}
-              onPress={() => applyTemplate('warm')}
+              style={[styles.templateButton, selectedTemplate === 'ombre-ocean' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-ocean')}
             >
-              <View style={[styles.templatePreview, styles.warmTemplatePreview]}>
+              <View style={[styles.templatePreview, styles.ombreOceanTemplatePreview]}>
                 <View style={styles.templatePreviewContent}>
-                  <View style={[styles.templatePreviewFooter, styles.warmTemplateStyle]} />
+                  <LinearGradient
+                    colors={['#667eea', '#06b6d4', '#22c55e']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
                 </View>
               </View>
             </TouchableOpacity>
             
             <TouchableOpacity
-              style={[styles.templateButton, selectedTemplate === 'cool' && styles.templateButtonActive]}
-              onPress={() => applyTemplate('cool')}
+              style={[styles.templateButton, selectedTemplate === 'ombre-purple' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-purple')}
             >
-              <View style={[styles.templatePreview, styles.coolTemplatePreview]}>
+              <View style={[styles.templatePreview, styles.ombrePurpleTemplatePreview]}>
                 <View style={styles.templatePreviewContent}>
-                  <View style={[styles.templatePreviewFooter, styles.coolTemplateStyle]} />
+                  <LinearGradient
+                    colors={['#9333ea', '#ec4899', '#f43f5e']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-forest' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-forest')}
+            >
+              <View style={[styles.templatePreview, styles.ombreForestTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#065f46', '#059669', '#10b981']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-fire' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-fire')}
+            >
+              <View style={[styles.templatePreview, styles.ombreFireTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#dc2626', '#f59e0b', '#fbbf24']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-night' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-night')}
+            >
+              <View style={[styles.templatePreview, styles.ombreNightTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#1e3a8a', '#7c3aed', '#ec4899']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-tropical' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-tropical')}
+            >
+              <View style={[styles.templatePreview, styles.ombreTropicalTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#f472b6', '#fb923c', '#06b6d4']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-autumn' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-autumn')}
+            >
+              <View style={[styles.templatePreview, styles.ombreAutumnTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#78350f', '#ea580c', '#dc2626']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-rose' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-rose')}
+            >
+              <View style={[styles.templatePreview, styles.ombreRoseTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#be123c', '#f472b6', '#fda4af']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-galaxy' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-galaxy')}
+            >
+              <View style={[styles.templatePreview, styles.ombreGalaxyTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#6366f1', '#8b5cf6', '#06b6d4']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
                 </View>
               </View>
             </TouchableOpacity>
@@ -3811,19 +3936,23 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.xs : isSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md),
-    paddingVertical: isLandscape ? (isTablet ? responsiveSpacing.md : responsiveSpacing.sm) : (isUltraSmallScreen ? responsiveSpacing.xs : isSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md),
+    justifyContent: 'space-between',
+    paddingHorizontal: moderateScale(8),
+    paddingBottom: moderateScale(6),
     borderBottomWidth: 0,
-    minHeight: isLandscape ? (isTablet ? 60 : 50) : (isUltraSmallScreen ? 44 : isSmallScreen ? 50 : isMediumScreen ? 55 : isLargeScreen ? 60 : 65),
   },
   backButton: {
-    padding: getHeaderPadding(),
-    borderRadius: isLandscape ? (isTablet ? 12 : 8) : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8),
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    minWidth: getHeaderButtonSize(),
-    minHeight: getHeaderButtonSize(),
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  backButtonText: {
+    color: '#000000',
+    fontSize: moderateScale(11),
+    fontWeight: '600',
   },
   headerContent: {
     flex: 1,
@@ -3847,20 +3976,17 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   nextButton: {
-    padding: getHeaderPadding(),
-    borderRadius: isLandscape ? (isTablet ? 12 : 8) : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8),
-    backgroundColor: 'rgba(0, 0, 0, 0.05)',
-    minWidth: getHeaderButtonSize(),
-    minHeight: getHeaderButtonSize(),
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
     justifyContent: 'center',
     alignItems: 'center',
-    paddingHorizontal: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : 14),
   },
   nextButtonText: {
-    fontSize: isLandscape ? (isTablet ? 16 : 14) : (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : 14),
+    color: '#000000',
+    fontSize: moderateScale(11),
     fontWeight: '600',
-    color: '#333333',
-    letterSpacing: 0.3,
   },
   canvasContainer: {
     justifyContent: 'flex-start',
@@ -3880,7 +4006,6 @@ const styles = StyleSheet.create({
   },
   controlsContainer: {
     flex: 0, // Don't use flex to prevent expansion
-    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.sm),
     paddingTop: 0,
   },
   viewShotContainer: {
@@ -4013,8 +4138,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
     paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
     marginTop: isTablet ? 40 : isLandscape ? 35 : isUltraSmallScreen ? 25 : isSmallScreen ? 30 : 35,
-    marginBottom: isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.md,
-    marginHorizontal: isTablet ? responsiveSpacing.lg : isLandscape ? responsiveSpacing.md : isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md,
+    marginBottom: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 5 : 10,
+    marginHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -4279,11 +4404,10 @@ const styles = StyleSheet.create({
     zIndex: 100, // Ensure dragged layer is on top
   },
   fieldToggleSection: {
-    width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
-    paddingHorizontal: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
-    paddingVertical: isTablet ? responsiveSpacing.sm : isLandscape ? responsiveSpacing.xs : isUltraSmallScreen ? 2 : isSmallScreen ? 3 : responsiveSpacing.xs,
+    borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
+    paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -4294,8 +4418,8 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: '#e9ecef',
-    marginBottom: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
-    marginHorizontal: isTablet ? responsiveSpacing.lg : isLandscape ? responsiveSpacing.md : isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md,
+    marginBottom: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 5 : 10,
+    marginHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
   },
   fieldToggleHeader: {
     alignItems: 'center',
@@ -4868,17 +4992,7 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     borderStyle: 'solid',
   },
-  modernFrame: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-    borderStyle: 'solid',
-  },
   elegantFrame: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-    borderStyle: 'solid',
-  },
-  boldFrame: {
     borderWidth: 0,
     borderColor: 'transparent',
     borderStyle: 'solid',
@@ -4983,11 +5097,6 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     borderStyle: 'solid',
   },
-  natureFrame: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-    borderStyle: 'solid',
-  },
   oceanFrame: {
     borderWidth: 0,
     borderColor: 'transparent',
@@ -4998,38 +5107,67 @@ const styles = StyleSheet.create({
     borderColor: 'transparent',
     borderStyle: 'solid',
   },
-  cosmicFrame: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-    borderStyle: 'solid',
-  },
   artisticFrame: {
     borderWidth: 0,
     borderColor: 'transparent',
     borderStyle: 'solid',
   },
-  sportFrame: {
+  ombreSunsetFrame: {
     borderWidth: 0,
     borderColor: 'transparent',
     borderStyle: 'solid',
   },
-  warmFrame: {
+  ombreOceanFrame: {
     borderWidth: 0,
     borderColor: 'transparent',
     borderStyle: 'solid',
   },
-  coolFrame: {
+  ombrePurpleFrame: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderStyle: 'solid',
+  },
+  ombreForestFrame: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderStyle: 'solid',
+  },
+  ombreFireFrame: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderStyle: 'solid',
+  },
+  ombreNightFrame: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderStyle: 'solid',
+  },
+  ombreTropicalFrame: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderStyle: 'solid',
+  },
+  ombreAutumnFrame: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderStyle: 'solid',
+  },
+  ombreRoseFrame: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+    borderStyle: 'solid',
+  },
+  ombreGalaxyFrame: {
     borderWidth: 0,
     borderColor: 'transparent',
     borderStyle: 'solid',
   },
   // Frames Section Styles
   framesSection: {
-    width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
-    paddingHorizontal: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
-    paddingVertical: isTablet ? responsiveSpacing.sm : isLandscape ? responsiveSpacing.xs : isUltraSmallScreen ? 2 : isSmallScreen ? 3 : responsiveSpacing.xs,
+    paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -5040,8 +5178,8 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: '#e9ecef',
-    marginBottom: getResponsiveSectionMargin(),
-    marginHorizontal: isTablet ? responsiveSpacing.lg : isLandscape ? responsiveSpacing.md : isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md,
+    marginBottom: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 5 : 10,
+    marginHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
   },
   framesHeader: {
     alignItems: 'center',
@@ -5231,11 +5369,10 @@ const styles = StyleSheet.create({
   },
   // Templates Section Styles - Fixed height, fully responsive
   templatesSection: {
-    width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
     borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
-    paddingHorizontal: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : responsiveSpacing.sm,
-    paddingVertical: isTablet ? responsiveSpacing.sm : isLandscape ? responsiveSpacing.xs : isUltraSmallScreen ? 2 : isSmallScreen ? 3 : responsiveSpacing.xs,
+    paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -5246,8 +5383,8 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: '#e9ecef',
-    marginBottom: 0, // No bottom margin - last section
-    marginHorizontal: isTablet ? responsiveSpacing.lg : isLandscape ? responsiveSpacing.md : isUltraSmallScreen ? 2 : isSmallScreen ? 4 : responsiveSpacing.md,
+    marginBottom: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 5 : 10,
+    marginHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
   },
   templatesHeader: {
     alignItems: 'center',
@@ -5431,13 +5568,6 @@ const styles = StyleSheet.create({
   techTemplateStyle: {
     backgroundColor: 'rgba(0, 255, 0, 0.8)',
   },
-  natureTemplatePreview: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  natureTemplateStyle: {
-    backgroundColor: 'rgba(34, 197, 94, 0.8)',
-  },
   oceanTemplatePreview: {
     borderWidth: 0,
     borderColor: 'transparent',
@@ -5452,13 +5582,6 @@ const styles = StyleSheet.create({
   sunsetTemplateStyle: {
     backgroundColor: 'rgba(245, 158, 11, 0.8)',
   },
-  cosmicTemplatePreview: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  cosmicTemplateStyle: {
-    backgroundColor: 'rgba(30, 41, 59, 0.8)',
-  },
   artisticTemplatePreview: {
     borderWidth: 0,
     borderColor: 'transparent',
@@ -5466,26 +5589,45 @@ const styles = StyleSheet.create({
   artisticTemplateStyle: {
     backgroundColor: 'rgba(168, 85, 247, 0.8)',
   },
-  sportTemplatePreview: {
+  ombreSunsetTemplatePreview: {
     borderWidth: 0,
     borderColor: 'transparent',
   },
-  sportTemplateStyle: {
-    backgroundColor: 'rgba(239, 68, 68, 0.8)',
-  },
-  warmTemplatePreview: {
+  ombreOceanTemplatePreview: {
     borderWidth: 0,
     borderColor: 'transparent',
   },
-  warmTemplateStyle: {
-    backgroundColor: 'rgba(245, 158, 11, 0.8)',
-  },
-  coolTemplatePreview: {
+  ombrePurpleTemplatePreview: {
     borderWidth: 0,
     borderColor: 'transparent',
   },
-  coolTemplateStyle: {
-    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+  ombreForestTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreFireTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreNightTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreTropicalTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreAutumnTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreRoseTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreGalaxyTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
   },
   // Additional Template Preview Styles
   minimalTemplatePreview: {
@@ -5495,13 +5637,6 @@ const styles = StyleSheet.create({
   minimalTemplateStyle: {
     backgroundColor: 'rgba(204, 204, 204, 0.8)',
   },
-  modernTemplatePreview: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  modernTemplateStyle: {
-    backgroundColor: 'rgba(102, 126, 234, 0.8)',
-  },
   elegantTemplatePreview: {
     borderWidth: 0,
     borderColor: 'transparent',
@@ -5509,14 +5644,6 @@ const styles = StyleSheet.create({
   elegantTemplateStyle: {
     backgroundColor: 'rgba(212, 175, 55, 0.8)',
   },
-  boldTemplatePreview: {
-    borderWidth: 0,
-    borderColor: 'transparent',
-  },
-  boldTemplateStyle: {
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
-  },
-
   glassMorphismFooterPreview: {
     borderWidth: 2,
     borderColor: '#ffffff',
@@ -5912,10 +6039,10 @@ const styles = StyleSheet.create({
   },
   // Footer Styles Section Styles
   footerStylesSection: {
-    width: '100%',
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: isSmallScreen ? 8 : 16,
-    padding: getResponsiveSectionPadding(),
+    borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
+    paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -5926,8 +6053,8 @@ const styles = StyleSheet.create({
     elevation: 8,
     borderWidth: 1,
     borderColor: '#e9ecef',
-    marginBottom: getResponsiveSectionMargin(),
-    marginHorizontal: getResponsiveSectionPadding(),
+    marginBottom: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 5 : 10,
+    marginHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
   },
   footerStylesHeader: {
     alignItems: 'center',
