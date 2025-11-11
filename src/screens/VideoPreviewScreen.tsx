@@ -609,14 +609,7 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
         translucent
       />
 
-      <View
-        style={[
-          styles.header,
-          {
-            paddingTop: insets.top + responsiveSpacing.xs,
-          },
-        ]}
-      >
+      <View style={[styles.header, { paddingTop: insets.top }]}>
         <TouchableOpacity style={styles.backButton} onPress={handleBackToEditor}>
           <Icon name="arrow-back" size={getIconSize(24)} color="#333333" />
         </TouchableOpacity>
@@ -796,7 +789,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: moderateScale(4),
-    paddingVertical: moderateScale(3),
+    paddingTop: 0,
+    paddingBottom: moderateScale(3),
     borderBottomWidth: 0,
     backgroundColor: '#ffffff',
     zIndex: 1000,

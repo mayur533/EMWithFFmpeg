@@ -34,7 +34,6 @@ import { mapBusinessProfileToFrameContent, generateLayersFromFrame, getFrameBack
 import FrameSelector from '../components/FrameSelector';
 import { GOOGLE_FONTS, getFontsByCategory, SYSTEM_FONTS, getFontFamily } from '../services/fontService';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import Watermark from '../components/Watermark';
 import { useTheme } from '../context/ThemeContext';
 import ViewShot from 'react-native-view-shot';
 import { convertCanvasToVideoFormat, createSampleVideoCanvas } from '../utils/videoCanvasConverter';
@@ -2375,7 +2374,6 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
                     />
                   </View>
                 )}
-                {isCapturing && <Watermark isSubscribed={checkPremiumAccess('video_export')} />}
               </View>
             </ViewShot>
           </View>
@@ -2416,7 +2414,6 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
                     />
                   </View>
                 )}
-                {isCapturing && <Watermark isSubscribed={checkPremiumAccess('video_export')} />}
               </View>
             </ViewShot>
           </View>
