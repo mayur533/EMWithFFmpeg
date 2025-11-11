@@ -69,25 +69,15 @@ const PosterPlayerScreen: React.FC = () => {
 
   // Get high quality image URL for preview (replace thumbnail params with high quality)
   const getHighQualityImageUrl = (poster: Template): string => {
-    console.log('🔍 [GET HIGH QUALITY URL] Processing poster:', { 
-      id: poster.id, 
-      name: poster.name,
-      thumbnailPreview: poster.thumbnail?.substring(0, 80) + '...',
-      hasPreviewUrl: !!(poster as any).previewUrl,
-      hasContent: !!(poster as any).content
-    });
-    
     // Check if poster has a previewUrl property (cast to any to access)
     const previewUrl = (poster as any).previewUrl;
     if (previewUrl) {
-      console.log('✅ Using previewUrl:', previewUrl.substring(0, 100) + '...');
       return previewUrl;
     }
     
     // Check for content.background (used in greeting templates for full quality image)
     const contentBackground = (poster as any).content?.background;
     if (contentBackground) {
-      console.log('✅ Using content.background:', contentBackground.substring(0, 100) + '...');
       return contentBackground;
     }
     
@@ -99,13 +89,10 @@ const PosterPlayerScreen: React.FC = () => {
       return '';
     }
     
-    console.log('🔧 Processing thumbnail URL:', url.substring(0, 100) + '...');
-    
     // If URL already contains 'thumbnailUrl' or 'thumbnail' in path, try to get full URL
     // by replacing /thumbnailUrl/ or /thumbnail/ with /url/ or removing it
     if (url.includes('/thumbnailUrl/') || url.includes('/thumbnail/')) {
       const fullUrl = url.replace(/\/thumbnailUrl\//g, '/url/').replace(/\/thumbnail\//g, '/images/');
-      console.log('🔄 Converted thumbnail path to full image:', fullUrl.substring(0, 100) + '...');
       url = fullUrl;
     }
     
@@ -115,31 +102,22 @@ const PosterPlayerScreen: React.FC = () => {
     // Add high quality parameters
     const separator = url.includes('?') ? '&' : '?';
     const highQualityUrl = `${url}${separator}quality=high&width=2400`;
-    
-    console.log('✅ Final high quality URL:', highQualityUrl.substring(0, 100) + '...');
-    
     return highQualityUrl;
   };
-
-  // Console log initial data on screen mount
-  useEffect(() => {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('📺 [POSTER PLAYER SCREEN] INITIAL DATA LOADED');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('🎯 Selected Poster:', JSON.stringify(initialPoster, null, 2));
-    console.log('📚 Related Posters Count:', initialRelatedPosters.length);
-    console.log('📚 Related Posters:', JSON.stringify(initialRelatedPosters, null, 2));
-    console.log('═══════════════════════════════════════════════════════');
-  }, []);
 
   // Sync state when route params change
   useEffect(() => {
     // Ensure templates have languages property - if missing, set based on initial selectedLanguage
     const ensureLanguages = (template: Template): Template => {
       if (!template.languages || !Array.isArray(template.languages) || template.languages.length === 0) {
+        const fallbackLanguage =
+          (template as any).language ||
+          (Array.isArray(template.languages) && template.languages.length > 0
+            ? template.languages[0]
+            : selectedLanguage);
         return {
           ...template,
-          languages: [selectedLanguage], // Set to current selected language if missing
+          languages: [fallbackLanguage || 'english'], // Set to best available language
         };
       }
       return template;
@@ -156,7 +134,7 @@ const PosterPlayerScreen: React.FC = () => {
     // Ensure all templates have languages property
     const templatesWithLanguages = allTemplates.map(ensureLanguages);
     setCurrentRelatedPosters(templatesWithLanguages);
-  }, [initialPoster, initialRelatedPosters, selectedLanguage]);
+  }, [initialPoster, initialRelatedPosters]);
 
   // Language options
   const languages = useMemo(() => [
@@ -167,59 +145,24 @@ const PosterPlayerScreen: React.FC = () => {
 
   // Display ALL posters (filtered by language) - currentRelatedPosters now contains ALL templates
   const filteredPosters = useMemo(() => {
-    console.log('🔍 [POSTER PLAYER] FILTERING POSTERS BY LANGUAGE');
-    console.log('🌐 Selected Language:', selectedLanguage);
-    console.log('📊 Total Posters (ALL):', currentRelatedPosters.length);
-    console.log('📊 Posters with languages:', currentRelatedPosters.map(p => ({
-      id: p.id,
-      name: p.name,
-      languages: p.languages
-    })));
-    
     // Filter posters by selected language
     const filtered = currentRelatedPosters.filter(poster => {
       // Check if poster has languages array
       if (poster.languages && Array.isArray(poster.languages) && poster.languages.length > 0) {
-        const matches = poster.languages.includes(selectedLanguage);
-        console.log(`  ✓ Poster ${poster.id} (${poster.name}): languages=${JSON.stringify(poster.languages)}, matches=${matches}`);
-        return matches;
+        return poster.languages.includes(selectedLanguage);
       }
       // If no languages array, don't show it (only show templates with explicit language)
-      console.log(`  ✗ Poster ${poster.id} (${poster.name}): no languages property, excluding`);
       return false;
     });
-    
-    console.log('📊 Filtered Posters Count:', filtered.length);
-    console.log('📊 Filtered Poster IDs:', filtered.map(p => ({ id: p.id, name: p.name, languages: p.languages })));
-    
     return filtered;
   }, [currentRelatedPosters, selectedLanguage]);
 
   const handlePosterSelect = useCallback((poster: Template) => {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('🖱️ [POSTER PLAYER] POSTER CLICKED');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('📌 Clicked Poster:', JSON.stringify(poster, null, 2));
-    console.log('📌 Poster ID:', poster.id);
-    console.log('📌 Poster Name:', poster.name);
-    
     // Simply update the preview - don't modify the grid at all
     setCurrentPoster(poster);
-    
-    console.log('✅ Preview updated, grid positions unchanged');
-    console.log('═══════════════════════════════════════════════════════');
   }, []);
 
   const handleLanguageChange = useCallback(async (languageId: string) => {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('🌐 [POSTER PLAYER] LANGUAGE CHANGED');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('🌐 Previous Language:', selectedLanguage);
-    console.log('🌐 New Language:', languageId);
-    console.log('🔍 Search Query:', searchQuery);
-    console.log('📦 Template Source:', templateSource);
-    console.log('═══════════════════════════════════════════════════════');
-    
     setSelectedLanguage(languageId);
     setLanguageMenuVisible(false);
     
@@ -227,11 +170,8 @@ const PosterPlayerScreen: React.FC = () => {
     if (searchQuery && templateSource === 'greeting') {
       setIsLoadingLanguage(true);
       try {
-        console.log(`🔄 [POSTER PLAYER] Fetching templates for language: ${languageId}, query: ${searchQuery}`);
         const languageParam = languageId === 'english' ? 'english' : languageId === 'hindi' ? 'hindi' : 'marathi';
         const templates = await greetingTemplatesService.searchTemplates(searchQuery, languageParam);
-        
-        console.log(`✅ [POSTER PLAYER] Fetched ${templates.length} templates for ${languageParam}`);
         
         if (templates.length > 0) {
           // Convert GreetingTemplate to Template format with languages property
@@ -251,6 +191,10 @@ const PosterPlayerScreen: React.FC = () => {
           setCurrentPoster(convertedTemplates[0]);
           // Set ALL templates as related posters (for grid) - including the first one
           setCurrentRelatedPosters(convertedTemplates);
+          console.log(
+            '[PosterPlayer] Greeting templates response:',
+            JSON.stringify(convertedTemplates, null, 2),
+          );
         } else {
           console.warn('⚠️ [POSTER PLAYER] No templates found for this language');
           // Keep existing data but show empty related posters
@@ -265,12 +209,10 @@ const PosterPlayerScreen: React.FC = () => {
       // For professional templates from homeApi
       setIsLoadingLanguage(true);
       try {
-        console.log(`🔄 [POSTER PLAYER] Fetching professional templates for language: ${languageId}`);
         const languageParam = languageId === 'english' ? 'english' : languageId === 'hindi' ? 'hindi' : 'marathi';
         const response = await homeApi.getProfessionalTemplates({ language: languageParam });
         
         if (response.success && response.data.length > 0) {
-          console.log(`✅ [POSTER PLAYER] Fetched ${response.data.length} professional templates for ${languageParam}`);
           // Convert ProfessionalTemplate to Template format, preserving previewUrl for high quality
           const convertedTemplates: Template[] = response.data.map(t => ({
             id: t.id,
@@ -282,15 +224,13 @@ const PosterPlayerScreen: React.FC = () => {
             languages: [languageId], // Set the language property based on the fetched language
             previewUrl: t.previewUrl, // Preserve previewUrl for high-quality display
           }));
-          console.log('📸 [POSTER PLAYER] Template URLs:', convertedTemplates.map(t => ({ 
-            id: t.id, 
-            thumbnail: t.thumbnail?.substring(0, 100), 
-            previewUrl: t.previewUrl?.substring(0, 100),
-            languages: t.languages
-          })));
           setCurrentPoster(convertedTemplates[0]);
           // Set ALL templates as related posters (for grid) - including the first one
           setCurrentRelatedPosters(convertedTemplates);
+          console.log(
+            '[PosterPlayer] Professional templates response:',
+            JSON.stringify(convertedTemplates, null, 2),
+          );
         } else {
           console.warn('⚠️ [POSTER PLAYER] No professional templates found for this language');
           setCurrentRelatedPosters([]);
@@ -362,19 +302,6 @@ const PosterPlayerScreen: React.FC = () => {
   }, [currentPoster]);
 
   const handleNextPress = useCallback(() => {
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('➡️ [POSTER PLAYER] NEXT BUTTON CLICKED');
-    console.log('═══════════════════════════════════════════════════════');
-    console.log('📤 Navigation to PosterEditor with params:');
-    console.log('🖼️ Selected Image URI:', currentPoster.thumbnail);
-    console.log('📝 Title:', currentPoster.name);
-    console.log('📋 Description:', currentPoster.category);
-    console.log('🌐 Selected Language:', selectedLanguage);
-    console.log('🆔 Template ID:', currentPoster.id);
-    console.log('🔗 Endpoint (download):', `/api/mobile/home/templates/${currentPoster.id}/download`);
-    console.log('📦 Full Poster Data:', JSON.stringify(currentPoster, null, 2));
-    console.log('═══════════════════════════════════════════════════════');
-    
     navigation.navigate('PosterEditor', {
       selectedImage: {
         uri: getHighQualityImageUrl(currentPoster),

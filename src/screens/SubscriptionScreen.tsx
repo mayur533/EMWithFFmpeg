@@ -17,6 +17,7 @@ import { useNavigation } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import RazorpayCheckout from 'react-native-razorpay';
+import { RAZORPAY_KEY_ID } from '@env';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import PaymentErrorModal from '../components/PaymentErrorModal';
 import { useTheme } from '../context/ThemeContext';
@@ -228,7 +229,7 @@ const SubscriptionScreen: React.FC = () => {
       const options = {
         description: `${currentPlan.name} Subscription`,
         currency: 'INR',
-        key: 'rzp_test_RQ5lTAzm7AyNN9', // Updated Razorpay test key
+        key: RAZORPAY_KEY_ID || 'rzp_test_RQ5lTAzm7AyNN9',
         amount: 49900, // Amount in paise (₹499)
         name: 'Market Brand',
         // TO DISPLAY LOGO: Razorpay requires a publicly accessible URL
@@ -429,6 +430,7 @@ const SubscriptionScreen: React.FC = () => {
       const subscriptionResponse = await subscriptionApi.subscribe({
         planId: 'quarterly_pro',  // Backend expects quarterly_pro for Quarterly Pro plan
         paymentMethod: 'razorpay',
+        autoRenew: true,
       });
       
       console.log('✅ Subscription activated via API:', subscriptionResponse.data);

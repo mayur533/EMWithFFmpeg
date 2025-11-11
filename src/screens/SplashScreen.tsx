@@ -10,7 +10,6 @@ import {
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import Video from 'react-native-video';
 import { useTheme } from '../context/ThemeContext';
 
 // Get responsive dimensions function
@@ -71,7 +70,7 @@ const SplashScreen: React.FC = () => {
   
   // Responsive dimensions state
   const [dimensions, setDimensions] = useState(getResponsiveDimensions());
-  
+
   // Listen for orientation changes
   useEffect(() => {
     const subscription = Dimensions.addEventListener('change', () => {
@@ -86,83 +85,22 @@ const SplashScreen: React.FC = () => {
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const rotateAnim = useRef(new Animated.Value(0)).current;
-  const videoOpacity = useRef(new Animated.Value(1)).current;
-  
-  // Video state
-  const [showVideo, setShowVideo] = useState(true);
-  const [videoEnded, setVideoEnded] = useState(false);
-  const [videoTimeout, setVideoTimeout] = useState<NodeJS.Timeout | null>(null);
-  const [videoReady, setVideoReady] = useState(false);
+  const featureAnim = useRef(new Animated.Value(0)).current;
+  const progressAnim = useRef(new Animated.Value(0)).current;
+  const backgroundPulse = useRef(new Animated.Value(0)).current;
 
-  // Video event handlers
-  const onVideoEnd = () => {
-    console.log('✅ Video ended successfully');
-    setVideoEnded(true);
-    // Clear timeout if video ends successfully
-    if (videoTimeout) {
-      clearTimeout(videoTimeout);
-      setVideoTimeout(null);
+  const logoSize = useMemo(() => {
+    const minDimension = Math.min(dimensions.screenWidth, dimensions.screenHeight);
+    if (dimensions.isTablet) {
+      return minDimension * 0.25;
     }
-    // Add a small delay before fading out video for smooth transition
-    setTimeout(() => {
-      // Fade out video
-      Animated.timing(videoOpacity, {
-        toValue: 0,
-        duration: 800, // Slower fade out for smoother transition
-        useNativeDriver: true,
-      }).start(() => {
-        setShowVideo(false);
-        startAnimations();
-      });
-    }, 500); // Hold video at end for 500ms before fading
-  };
+    return minDimension * 0.22;
+  }, [dimensions]);
 
-  const onVideoError = (error: any) => {
-    console.log('❌ Video error:', error);
-    console.log('❌ Video path: intro.mp4');
-    console.log('❌ Error details:', JSON.stringify(error, null, 2));
-    // Clear timeout on error
-    if (videoTimeout) {
-      clearTimeout(videoTimeout);
-      setVideoTimeout(null);
-    }
-    // If video fails to load, show regular splash screen
-    setShowVideo(false);
-    startAnimations();
-  };
-
-  const onVideoLoad = () => {
-    console.log('✅ Video loaded successfully: intro.mp4');
-    setVideoReady(true);
-    // Clear timeout on successful load
-    if (videoTimeout) {
-      clearTimeout(videoTimeout);
-      setVideoTimeout(null);
-    }
-  };
-
-  const onVideoReadyForDisplay = () => {
-    console.log('🎬 Video ready for display: intro.mp4');
-  };
-
-  const onVideoProgress = (data: any) => {
-    console.log('📊 Video progress:', data);
-  };
-
-  const onVideoBuffer = (data: any) => {
-    console.log('🔄 Video buffer:', data);
-  };
-
-  const onVideoLoadStart = () => {
-    console.log('🔄 Video loading started: intro.mp4');
-    // Set a timeout to fallback if video doesn't load within 8 seconds
-    const timeout = setTimeout(() => {
-      console.log('⏰ Video loading timeout - falling back to regular splash');
-      setShowVideo(false);
-      startAnimations();
-    }, 8000); // 8 seconds timeout
-    setVideoTimeout(timeout);
-  };
+  const progressWidth = useMemo(() => progressAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0, dimensions.screenWidth * 0.45],
+  }), [progressAnim, dimensions.screenWidth]);
 
   // Memoized animation sequence
   const startAnimations = useMemo(() => () => {
@@ -196,19 +134,63 @@ const SplashScreen: React.FC = () => {
         useNativeDriver: true,
       })
     ).start();
-  }, [fadeAnim, scaleAnim, slideAnim, rotateAnim]);
+
+    Animated.timing(featureAnim, {
+      toValue: 1,
+      duration: 900,
+      delay: 600,
+      useNativeDriver: true,
+    }).start();
+
+    progressAnim.setValue(0);
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(progressAnim, {
+          toValue: 1,
+          duration: 2200,
+          useNativeDriver: false,
+        }),
+        Animated.timing(progressAnim, {
+          toValue: 0,
+          duration: 0,
+          useNativeDriver: false,
+        }),
+      ])
+    ).start();
+
+    Animated.loop(
+      Animated.sequence([
+        Animated.timing(backgroundPulse, {
+          toValue: 1,
+          duration: 2800,
+          useNativeDriver: true,
+        }),
+        Animated.timing(backgroundPulse, {
+          toValue: 0,
+          duration: 2800,
+          useNativeDriver: true,
+        }),
+      ])
+    ).start();
+  }, [fadeAnim, scaleAnim, slideAnim, rotateAnim, featureAnim, progressAnim, backgroundPulse]);
 
   useEffect(() => {
-    // Don't start animations immediately if video is showing
-    // They will start after video ends
-    if (!showVideo) {
-      startAnimations();
-    }
-  }, [startAnimations, showVideo]);
+    startAnimations();
+  }, [startAnimations]);
 
   const spin = rotateAnim.interpolate({
     inputRange: [0, 1],
     outputRange: ['0deg', '360deg'],
+  });
+
+  const haloScale = backgroundPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.95, 1.1],
+  });
+
+  const haloOpacity = backgroundPulse.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.28, 0.08],
   });
 
   return (
@@ -222,84 +204,69 @@ const SplashScreen: React.FC = () => {
         translucent={true}
       />
       
-      {/* Video Background - Fully Responsive Across All Screen Sizes */}
-      {showVideo && (
-        <Animated.View style={[
-          styles.videoContainer, 
-          { 
-            opacity: videoOpacity,
-            width: dimensions.screenWidth,
-            height: dimensions.screenHeight,
-          }
-        ]}>
-          <Video
-            source={require('../assets/intro/intro.mp4')}
+      <LinearGradient
+        colors={theme.colors.gradient}
+        style={styles.gradientBackground}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <Animated.View
+          pointerEvents="none"
+          style={[
+            styles.backgroundGlow,
+            {
+              transform: [{ scale: haloScale }],
+              opacity: haloOpacity,
+            },
+          ]}
+        />
+
+        <View style={styles.content}>
+          <View style={styles.contentOverlay} />
+          <Animated.View
             style={[
-              styles.video,
+              styles.logoContainer,
               {
-                width: '100%',
-                height: '100%',
-                minWidth: dimensions.screenWidth,
-                minHeight: dimensions.screenHeight,
-              }
+                opacity: fadeAnim,
+                transform: [
+                  { scale: scaleAnim },
+                  { translateY: slideAnim },
+                ],
+              },
             ]}
-            resizeMode="cover"
-            onEnd={onVideoEnd}
-            onError={onVideoError}
-            onLoad={onVideoLoad}
-            onLoadStart={onVideoLoadStart}
-            onReadyForDisplay={onVideoReadyForDisplay}
-            onProgress={onVideoProgress}
-            onBuffer={onVideoBuffer}
-            repeat={false}
-            muted={false}
-            volume={1.0}
-            playInBackground={false}
-            playWhenInactive={false}
-            paused={false}
-            ignoreSilentSwitch="ignore"
-            mixWithOthers="mix"
-            progressUpdateInterval={1000}
-            bufferConfig={{
-              minBufferMs: 15000,
-              maxBufferMs: 50000,
-              bufferForPlaybackMs: 2500,
-              bufferForPlaybackAfterRebufferMs: 5000,
-            }}
-            maxBitRate={2000000}
-            allowsExternalPlayback={false}
-            hideShutterView={false}
-            automaticallyWaitsToMinimizeStalling={false}
-          />
-        </Animated.View>
-      )}
-      
-      {/* Manual Splash Screen - COMMENTED OUT - Only video plays as splash */}
-      {/* 
-      {!showVideo && (
-        <LinearGradient
-          colors={theme.colors.gradient}
-          style={styles.gradientBackground}
-          start={{ x: 0, y: 0 }}
-          end={{ x: 1, y: 1 }}
-        >
-          <View style={styles.content}>
-            <Animated.View
-              style={[
-                styles.logoContainer,
-                {
-                  opacity: fadeAnim,
-                  transform: [
-                    { scale: scaleAnim },
-                    { translateY: slideAnim },
-                  ],
-                },
-              ]}
-            >
+          >
+            <View style={styles.logoStack}>
+              <Animated.View
+                style={[
+                  styles.logoGlow,
+                  {
+                    width: logoSize * 1.55,
+                    height: logoSize * 1.55,
+                    borderRadius: (logoSize * 1.55) / 2,
+                    opacity: haloOpacity,
+                    transform: [{ scale: haloScale }],
+                  },
+                ]}
+              />
+              <LinearGradient
+                colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.05)']}
+                style={[
+                  styles.logoRing,
+                  {
+                    width: logoSize * 1.25,
+                    height: logoSize * 1.25,
+                    borderRadius: (logoSize * 1.25) / 2,
+                  },
+                ]}
+              />
               <Animated.View
                 style={[
                   styles.logoCircle,
                   {
+                    width: logoSize,
+                    height: logoSize,
+                    borderRadius: logoSize / 2,
+                    padding: logoSize * 0.18,
                     backgroundColor: theme.colors.cardBackground,
                     transform: [{ rotate: spin }],
                   },
@@ -311,51 +278,36 @@ const SplashScreen: React.FC = () => {
                   resizeMode="contain"
                 />
               </Animated.View>
-            </Animated.View>
+            </View>
+          </Animated.View>
 
-            <Animated.View
-              style={[
-                styles.titleContainer,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
-                },
-              ]}
-            >
-              <Text style={styles.appTitle}>MarketBrand</Text>
-              <Text style={styles.appSubtitle}>Professional Event Marketing Solutions</Text>
-            </Animated.View>
+          <Animated.View
+            style={[
+              styles.titleContainer,
+              {
+                opacity: fadeAnim,
+                transform: [{ translateY: slideAnim }],
+              },
+            ]}
+          >
+            <Text style={styles.appTitle}>MarketBrand</Text>
+            <Text style={styles.appSubtitle}>Enterprise marketing suite for ambitious creators</Text>
+            <Text style={styles.appSecondarySubtitle}>Trusted by 2K+ businesses worldwide</Text>
+          </Animated.View>
 
-            <Animated.View
-              style={[
-                styles.loadingContainer,
-                {
-                  opacity: fadeAnim,
-                  transform: [{ translateY: slideAnim }],
-                },
-              ]}
-            >
-              <View style={[styles.loadingDots, { backgroundColor: theme.colors.cardBackground }]}>
-                <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
-                <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
-                <View style={[styles.dot, { backgroundColor: theme.colors.primary }]} />
-              </View>
-            </Animated.View>
-
-            <Animated.View
-              style={[
-                styles.poweredByContainer,
-                {
-                  opacity: fadeAnim,
-                },
-              ]}
-            >
-              <Text style={styles.poweredByText}>Powered by RSL Solution Private Limited</Text>
-            </Animated.View>
-          </View>
-        </LinearGradient>
-      )}
-      */}
+          <Animated.View
+            style={[
+              styles.poweredByContainer,
+              {
+                opacity: fadeAnim,
+              },
+            ]}
+          >
+            <Text style={styles.poweredByText}>Powered by RSL Solution PVT LTD</Text>
+            <Text style={styles.versionText}>Build 1.0.0 • Secure • Encrypted</Text>
+          </Animated.View>
+        </View>
+      </LinearGradient>
     </SafeAreaView>
   );
 };
@@ -364,20 +316,6 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  videoContainer: {
-    flex: 1,
-    width: '100%',
-    height: '100%',
-    backgroundColor: '#000000', // Black background
-    justifyContent: 'center',
-    alignItems: 'center',
-    overflow: 'hidden', // Ensures video stays within bounds
-  },
-  video: {
-    flex: 1,
-    alignSelf: 'stretch',
-    // Responsive across all screen sizes - uses percentage-based dimensions with min constraints
-  },
   gradientBackground: {
     flex: 1,
   },
@@ -385,9 +323,42 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  contentOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(6, 11, 25, 0.38)',
+  },
+  backgroundGlow: {
+    position: 'absolute',
+    width: 420,
+    height: 420,
+    borderRadius: 210,
+    backgroundColor: 'rgba(255,255,255,0.18)',
+    top: '18%',
+    alignSelf: 'center',
   },
   logoContainer: {
     alignItems: 'center',
+  },
+  logoStack: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  logoGlow: {
+    position: 'absolute',
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    shadowColor: '#ffffff',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0.6,
+    shadowRadius: 30,
+  },
+  logoRing: {
+    position: 'absolute',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   logoCircle: {
     justifyContent: 'center',
@@ -402,7 +373,8 @@ const styles = StyleSheet.create({
     elevation: 12,
   },
   logoImage: {
-    // Dimensions set dynamically
+    width: '100%',
+    height: '100%',
   },
   logoText: {
     fontWeight: 'bold',
@@ -410,47 +382,45 @@ const styles = StyleSheet.create({
   },
   titleContainer: {
     alignItems: 'center',
+    marginTop: 32,
   },
   appTitle: {
-    fontWeight: 'bold',
-    color: '#ffffff',
+    fontWeight: '700',
+    color: '#F8FAFF',
     letterSpacing: 3,
+    fontSize: 24,
   },
   appSubtitle: {
-    color: 'rgba(255,255,255,0.8)',
+    color: 'rgba(244,247,255,0.92)',
     textAlign: 'center',
-    lineHeight: 20,
+    lineHeight: 24,
+    marginTop: 12,
+    fontSize: 16,
+    letterSpacing: 0.55,
   },
-  loadingContainer: {
-    alignItems: 'center',
-  },
-  loadingDots: {
-    flexDirection: 'row',
-    borderRadius: 25,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
-    elevation: 6,
-  },
-  dot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    marginHorizontal: 4,
+  appSecondarySubtitle: {
+    marginTop: 6,
+    color: 'rgba(226,237,255,0.82)',
+    textAlign: 'center',
+    fontSize: 13,
+    letterSpacing: 0.45,
   },
   poweredByContainer: {
     position: 'absolute',
     alignItems: 'center',
     width: '100%',
+    bottom: 32,
   },
   poweredByText: {
     color: 'rgba(255,255,255,0.6)',
     textAlign: 'center',
     letterSpacing: 0.5,
+  },
+  versionText: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.45)',
+    fontSize: 11,
+    letterSpacing: 0.6,
   },
 });
 

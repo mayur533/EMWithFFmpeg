@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, ViewStyle, ImageStyle, Image } from 'react-native';
 
 // Type-safe ResizeMode
@@ -13,6 +13,38 @@ interface OptimizedImageProps {
   loaderSize?: 'small' | 'large';
   fallbackSource?: any;
 }
+
+const ensureImageUri = (input: string): string => {
+  if (!input) {
+    return input;
+  }
+
+  try {
+    const [path, query] = input.split('?');
+    const hasImageExtension = /\.(png|jpe?g|gif|webp|bmp|avif|heic)$/i.test(path);
+    const hasVideoExtension = /\.(mp4|mov|webm|mkv|avi)$/i.test(path);
+
+    if (hasImageExtension) {
+      return input;
+    }
+
+    let transformedPath = path;
+
+    if (hasVideoExtension) {
+      transformedPath = path.replace(/\.[^/.]+$/, '.jpg');
+    } else if (path.includes('/video/')) {
+      transformedPath = `${path}.jpg`;
+    }
+
+    if (transformedPath === path) {
+      return input;
+    }
+
+    return query ? `${transformedPath}?${query}` : transformedPath;
+  } catch (error) {
+    return input;
+  }
+};
 
 /**
  * OptimizedImage Component
@@ -34,6 +66,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const displayUri = useMemo(() => ensureImageUri(uri), [uri]);
 
   const handleLoadStart = () => {
     setLoading(true);
@@ -48,14 +81,19 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
     setLoading(false);
     setError(true);
     console.error('❌ [IMAGE LOAD ERROR]');
-    console.error('  - URI:', uri);
-    console.error('  - Error:', err);
+    console.error('  - Requested URI:', uri);
+    console.error('  - Loaded URI   :', displayUri);
+    console.error('  - Error        :', err);
   };
 
   return (
     <View style={style}>
       <Image
-        source={error && fallbackSource ? fallbackSource : { uri }}
+        source={
+          error && fallbackSource
+            ? fallbackSource
+            : { uri: displayUri }
+        }
         style={StyleSheet.absoluteFill}
         resizeMode={resizeMode}
         onLoadStart={handleLoadStart}

@@ -416,6 +416,10 @@ class AuthService {
   // Set current user (for external services)
   setCurrentUser(user: any) {
     this.currentUser = user;
+    // Persist to AsyncStorage to ensure consistency
+    this.saveUserToStorage(user).catch(error => {
+      console.error('❌ Failed to persist user to storage:', error);
+    });
   }
 
   // Debug helper: Check AsyncStorage status

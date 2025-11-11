@@ -72,6 +72,7 @@ export interface VideoContent {
   duration: number; // in seconds
   category: string;
   language: string;
+  languages?: string[];
   views: number;
   downloads: number;
   isDownloaded: boolean;
@@ -931,10 +932,11 @@ class HomeApiService {
         title: 'Product Launch Video',
         description: 'Professional product launch video template',
         thumbnail: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?w=300&h=200&fit=crop',
-        videoUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_1mb.mp4',
+        videoUrl: 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_1mb.mp4',
         duration: 30,
         category: 'Business',
         language: 'en',
+        languages: ['en'],
 
         views: 800,
         downloads: 45,
@@ -950,10 +952,11 @@ class HomeApiService {
         title: 'Event Promo Video',
         description: 'Dynamic event promotion video template',
         thumbnail: 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=300&h=200&fit=crop',
-        videoUrl: 'https://sample-videos.com/zip/10/mp4/SampleVideo_1280x720_2mb.mp4',
+        videoUrl: 'https://sample-videos.com/video123/mp4/720/big_buck_bunny_720p_2mb.mp4',
         duration: 60,
         category: 'Events',
         language: 'en',
+        languages: ['en'],
 
         views: 1200,
         downloads: 78,

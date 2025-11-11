@@ -35,7 +35,6 @@ import greetingTemplatesService from '../services/greetingTemplates';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 // import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
-import ComingSoonModal from '../components/ComingSoonModal';
 import OptimizedImage from '../components/OptimizedImage';
 import responsiveUtils, { 
   responsiveSpacing, 
@@ -157,10 +156,6 @@ const HomeScreen: React.FC = React.memo(() => {
   const [booksTemplates, setBooksTemplates] = useState<any[]>([]);
   const [celebratesMomentsTemplates, setCelebratesMomentsTemplates] = useState<any[]>([]);
   
-  // Coming Soon Modal state
-  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
-
-
   // Load data from APIs with caching for instant loads
   const loadApiData = useCallback(async (isRefresh: boolean = false) => {
     setApiLoading(true);
@@ -547,26 +542,26 @@ const HomeScreen: React.FC = React.memo(() => {
 
 
 
-  const handleTemplatePress = useCallback((template: Template) => {
-    // Check if this is a video template
-    const isVideoTemplate = template.id.startsWith('video-');
-    
-    if (isVideoTemplate) {
-      // Navigate to VideoPlayer screen for video templates
-      const related = videoContent.filter(video => video.id !== template.id);
-      navigation.navigate('VideoPlayer', {
-        selectedVideo: template,
-        relatedVideos: related,
-      });
-    } else {
-      // Navigate to PosterPlayer screen for regular templates
-      const related = professionalTemplates.filter(poster => poster.id !== template.id);
-      navigation.navigate('PosterPlayer', {
-        selectedPoster: template,
-        relatedPosters: related,
-      });
-    }
-  }, [videoContent, professionalTemplates, navigation]);
+const handleTemplatePress = useCallback((template: Template | VideoContent) => {
+  const matchedVideo = videoContent.find(video => video.id === template.id);
+
+  if (matchedVideo) {
+    const related = videoContent.filter(video => video.id !== matchedVideo.id);
+    navigation.navigate('VideoPlayer', {
+      selectedVideo: matchedVideo,
+      relatedVideos: related,
+    });
+    return;
+  }
+
+  const matchedPoster = professionalTemplates.find(poster => poster.id === template.id);
+  const related = professionalTemplates.filter(poster => poster.id !== (matchedPoster?.id ?? template.id));
+
+  navigation.navigate('PosterPlayer', {
+    selectedPoster: (matchedPoster ?? template) as Template,
+    relatedPosters: related,
+  });
+}, [videoContent, professionalTemplates, navigation]);
 
   const closeModal = useCallback(() => {
     setIsModalVisible(false);
@@ -818,8 +813,7 @@ const HomeScreen: React.FC = React.memo(() => {
     };
 
     const handleCardPress = () => {
-      // Show Coming Soon modal for video content
-      setShowComingSoonModal(true);
+      handleTemplatePress(item);
     };
 
 
@@ -2320,14 +2314,6 @@ const HomeScreen: React.FC = React.memo(() => {
             </View>
           </View>
         </Modal>
-
-        {/* Coming Soon Modal for Video Content */}
-        <ComingSoonModal
-          visible={showComingSoonModal}
-          onClose={() => setShowComingSoonModal(false)}
-          title="Video Editor Coming Soon!"
-          subtitle="We're working hard to bring you an amazing video editing experience. Stay tuned for updates!"
-        />
 
       </SafeAreaView>
     );

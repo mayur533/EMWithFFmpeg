@@ -473,6 +473,22 @@ const ProfileScreen: React.FC = () => {
             // Sync logo from API response (prefer 'logo' field, fallback to 'companyLogo')
             const apiLogo = cleanUserData.logo || cleanUserData.companyLogo || currentUser?.logo || currentUser?.companyLogo;
             
+            // CRITICAL: If we have _original values, use them instead of potentially contaminated API data
+            // This protects against backend bugs where business profile data leaks into user profile
+            const protectedAddress = currentUser?._originalAddress !== undefined ? currentUser._originalAddress : cleanUserData.address;
+            const protectedWebsite = currentUser?._originalWebsite !== undefined ? currentUser._originalWebsite : cleanUserData.website;
+            const protectedCategory = currentUser?._originalCategory !== undefined ? currentUser._originalCategory : cleanUserData.category;
+            const protectedDescription = currentUser?._originalDescription !== undefined ? currentUser._originalDescription : cleanUserData.description;
+            const protectedAlternatePhone = currentUser?._originalAlternatePhone !== undefined ? currentUser._originalAlternatePhone : cleanUserData.alternatePhone;
+            
+            console.log('🛡️ BACKEND CONTAMINATION PROTECTION (on load):');
+            console.log('   - Using _originalAddress:', currentUser?._originalAddress !== undefined ? 'YES' : 'NO (using API)');
+            console.log('   - Protected address:', protectedAddress);
+            console.log('   - API returned address:', cleanUserData.address);
+            if (currentUser?._originalAddress !== undefined && protectedAddress !== cleanUserData.address) {
+              console.warn('   ⚠️ CONTAMINATION DETECTED: API address differs from _original!');
+            }
+            
             const updatedUserData = {
               ...currentUser,
               ...cleanUserData,
@@ -480,8 +496,20 @@ const ProfileScreen: React.FC = () => {
               companyName: apiCompanyName,
               displayName: apiCompanyName,
               name: apiCompanyName,
+              // Use protected values (prefer _original over potentially contaminated API data)
+              address: protectedAddress,
+              website: protectedWebsite,
+              category: protectedCategory,
+              description: protectedDescription,
+              alternatePhone: protectedAlternatePhone,
               // Update _originalCompanyName to the current name from API
               _originalCompanyName: apiCompanyName,
+              // Keep _original values unchanged (they are the source of truth)
+              _originalAddress: currentUser?._originalAddress !== undefined ? currentUser._originalAddress : cleanUserData.address,
+              _originalWebsite: currentUser?._originalWebsite !== undefined ? currentUser._originalWebsite : cleanUserData.website,
+              _originalCategory: currentUser?._originalCategory !== undefined ? currentUser._originalCategory : cleanUserData.category,
+              _originalDescription: currentUser?._originalDescription !== undefined ? currentUser._originalDescription : cleanUserData.description,
+              _originalAlternatePhone: currentUser?._originalAlternatePhone !== undefined ? currentUser._originalAlternatePhone : cleanUserData.alternatePhone,
               // Sync all logo fields
               logo: apiLogo,
               companyLogo: apiLogo,
@@ -607,14 +635,40 @@ const ProfileScreen: React.FC = () => {
         // Use the name from API (this is the user's actual current name)
         const apiCompanyName = cleanUserData.name || cleanUserData.companyName || currentUser?.companyName;
         
+        // CRITICAL: Protect against backend contamination during refresh too
+        const protectedAddress = currentUser?._originalAddress !== undefined ? currentUser._originalAddress : cleanUserData.address;
+        const protectedWebsite = currentUser?._originalWebsite !== undefined ? currentUser._originalWebsite : cleanUserData.website;
+        const protectedCategory = currentUser?._originalCategory !== undefined ? currentUser._originalCategory : cleanUserData.category;
+        const protectedDescription = currentUser?._originalDescription !== undefined ? currentUser._originalDescription : cleanUserData.description;
+        const protectedAlternatePhone = currentUser?._originalAlternatePhone !== undefined ? currentUser._originalAlternatePhone : cleanUserData.alternatePhone;
+        
+        console.log('🛡️ BACKEND CONTAMINATION PROTECTION (on refresh):');
+        console.log('   - Protected address:', protectedAddress);
+        console.log('   - API returned address:', cleanUserData.address);
+        if (currentUser?._originalAddress !== undefined && protectedAddress !== cleanUserData.address) {
+          console.warn('   ⚠️ CONTAMINATION DETECTED on refresh: API address differs from _original!');
+        }
+        
         const updatedUserData = {
           ...currentUser,
           ...cleanUserData,
           companyName: apiCompanyName,
           displayName: apiCompanyName,
           name: apiCompanyName,
+          // Use protected values
+          address: protectedAddress,
+          website: protectedWebsite,
+          category: protectedCategory,
+          description: protectedDescription,
+          alternatePhone: protectedAlternatePhone,
           // Update _originalCompanyName to match the current name from API
           _originalCompanyName: apiCompanyName,
+          // Keep _original values unchanged (source of truth)
+          _originalAddress: currentUser?._originalAddress !== undefined ? currentUser._originalAddress : cleanUserData.address,
+          _originalWebsite: currentUser?._originalWebsite !== undefined ? currentUser._originalWebsite : cleanUserData.website,
+          _originalCategory: currentUser?._originalCategory !== undefined ? currentUser._originalCategory : cleanUserData.category,
+          _originalDescription: currentUser?._originalDescription !== undefined ? currentUser._originalDescription : cleanUserData.description,
+          _originalAlternatePhone: currentUser?._originalAlternatePhone !== undefined ? currentUser._originalAlternatePhone : cleanUserData.alternatePhone,
         };
         
         authService.setCurrentUser(updatedUserData);
@@ -1018,6 +1072,17 @@ const ProfileScreen: React.FC = () => {
         const responseData: any = response.data;
         const apiUserData = responseData.user || response.data;
         
+        // CRITICAL WORKAROUND FOR BACKEND BUG:
+        // Backend sometimes returns contaminated data from business profiles
+        // We MUST use what WE SENT (updateData) as the source of truth for fields we updated
+        console.log('🛡️ BACKEND BUG PROTECTION: Using sent data as source of truth');
+        console.log('   - address (sent):', updateData.address);
+        console.log('   - address (backend returned):', apiUserData.address);
+        console.log('   - website (sent):', updateData.website);
+        console.log('   - website (backend returned):', apiUserData.website);
+        console.log('   - category (sent):', updateData.category);
+        console.log('   - category (backend returned):', apiUserData.category);
+        
         console.log('📥 Extracted user data:', JSON.stringify(apiUserData, null, 2));
         console.log('📤 What we sent (updateData):', JSON.stringify(updateData, null, 2));
         console.log('🔍 Checking which fields API returned:');
@@ -1027,7 +1092,8 @@ const ProfileScreen: React.FC = () => {
         console.log('   - website in API?', 'website' in apiUserData, apiUserData.website);
         
         // Update the current user object with the response
-        // CRITICAL: Since API doesn't return all fields, merge with what we sent
+        // CRITICAL WORKAROUND: Backend has a bug where it returns contaminated data
+        // We MUST use what WE SENT (updateData) as the source of truth
         const updatedCompanyName = apiUserData.name || apiUserData.companyName || updateData.name;
         
         // Sync logo from API response (prefer 'logo' field, fallback to 'companyLogo')
@@ -1043,12 +1109,12 @@ const ProfileScreen: React.FC = () => {
           phoneNumber: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
           phone: apiUserData.phone || apiUserData.phoneNumber || currentUser?.phoneNumber,
           bio: apiUserData.description !== undefined ? apiUserData.description : (updateData.description ?? ''),
-          // Current values - Use API response if property exists (even if null), otherwise use what we SENT (which user intended)
-          address: apiUserData.address !== undefined ? apiUserData.address : (updateData.address ?? ''),
-          website: apiUserData.website !== undefined ? apiUserData.website : (updateData.website ?? ''),
-          category: apiUserData.category !== undefined ? apiUserData.category : (updateData.category ?? ''),
-          description: apiUserData.description !== undefined ? apiUserData.description : (updateData.description ?? ''),
-          alternatePhone: apiUserData.alternatePhone !== undefined ? apiUserData.alternatePhone : (updateData.alternatePhone ?? ''),
+          // CRITICAL: Use what WE SENT as source of truth (backend may return contaminated data)
+          address: updateData.address ?? '',
+          website: updateData.website ?? '',
+          category: updateData.category ?? '',
+          description: updateData.description ?? '',
+          alternatePhone: updateData.alternatePhone ?? '',
           // Logo fields - sync from API response
           logo: updatedLogo,
           companyLogo: updatedLogo,
@@ -1056,11 +1122,11 @@ const ProfileScreen: React.FC = () => {
           profileImage: updatedLogo,
           // Update _original fields with what we SENT (user's intended values)
           _originalCompanyName: updatedCompanyName,
-          _originalAddress: apiUserData.address !== undefined ? apiUserData.address : (updateData.address ?? ''),
-          _originalWebsite: apiUserData.website !== undefined ? apiUserData.website : (updateData.website ?? ''),
-          _originalCategory: apiUserData.category !== undefined ? apiUserData.category : (updateData.category ?? ''),
-          _originalDescription: apiUserData.description !== undefined ? apiUserData.description : (updateData.description ?? ''),
-          _originalAlternatePhone: apiUserData.alternatePhone !== undefined ? apiUserData.alternatePhone : (updateData.alternatePhone ?? ''),
+          _originalAddress: updateData.address ?? '',
+          _originalWebsite: updateData.website ?? '',
+          _originalCategory: updateData.category ?? '',
+          _originalDescription: updateData.description ?? '',
+          _originalAlternatePhone: updateData.alternatePhone ?? '',
         };
         
         console.log('✅ Updated user object (USER FIELDS ONLY):');

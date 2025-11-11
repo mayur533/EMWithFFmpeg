@@ -25,7 +25,6 @@ import { useSafeAreaInsets, SafeAreaView } from 'react-native-safe-area-context'
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
-import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { PanGestureHandler, State, PinchGestureHandler } from 'react-native-gesture-handler';
 import businessProfileService, { BusinessProfile } from '../services/businessProfile';
@@ -43,22 +42,11 @@ import VideoComposer, { OverlayConfig, VideoLayer as ComposerVideoLayer } from '
 import { getVideoAssetSource, getAvailableVideoNames, getRandomVideoFromAssets } from '../utils/videoAssets';
 import { getVideoSource, getVideoComponentSource, getNativeVideoSource, VideoSourceConfig, clearVideoCache, getVideoCacheInfo } from '../utils/videoSourceHelper';
 import { testVideoSourceHelper, debugVideoSource } from '../utils/videoSourceTest';
-import VideoCompositionService, { Overlay } from '../services/CloudVideoCompositionService';
+import VideoCompositionService, { Overlay as CloudOverlay } from '../services/CloudVideoCompositionService';
 import RNFS from 'react-native-fs';
-import responsiveUtils, { 
-  responsiveSpacing as responsiveSpacingUtils, 
-  responsiveFontSize as responsiveFontSizeUtils, 
-  responsiveSize, 
-  responsiveLayout, 
-  responsiveShadow, 
-  responsiveText, 
-  responsiveGrid, 
-  responsiveButton, 
-  responsiveInput, 
-  responsiveCard,
-  isTablet,
-  isLandscape 
-} from '../utils/responsiveUtils';
+import LinearGradient from 'react-native-linear-gradient';
+import { responsiveText } from '../utils/responsiveUtils';
+import VideoOverlayProcessor, { OverlayPayload } from '../services/VideoOverlayProcessor';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -66,7 +54,93 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 const videoCanvasWidth = Math.min(screenWidth - 24, screenWidth * 0.92); // Increased width for better visibility
 const videoCanvasHeight = Math.min(screenHeight - 300, screenHeight * 0.45); // Further reduced height to account for tab bar
 
-// Responsive design helpers - using centralized utilities
+const POSTER_BASE_WIDTH = 720;
+const POSTER_BASE_HEIGHT = 487.2;
+
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
+
+const isUltraSmallScreen = screenWidth < 360;
+const isSmallScreen = screenWidth >= 360 && screenWidth < 375;
+const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
+const isLargeScreen = screenWidth >= 414 && screenWidth < 480;
+const isXLargeScreen = screenWidth >= 480;
+const isPortrait = screenHeight > screenWidth;
+const isLandscape = screenWidth > screenHeight;
+const isTablet = Math.min(screenWidth, screenHeight) >= 768;
+const isPhone = !isTablet;
+
+const responsiveSpacing = {
+  xs: Math.max(1, (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : 10)),
+  sm: Math.max(2, (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12)),
+  md: Math.max(3, (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14)),
+  lg: Math.max(4, (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16)),
+  xl: Math.max(5, (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : 18)),
+  xxl: Math.max(6, (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : 20)),
+  xxxl: Math.max(7, (isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 24)),
+};
+
+const responsiveFontSize = {
+  xs: Math.max(7, (isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12) * 0.85),
+  sm: Math.max(8, (isUltraSmallScreen ? 9 : isSmallScreen ? 10 : isMediumScreen ? 11 : isLargeScreen ? 12 : 13) * 0.85),
+  md: Math.max(9, (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14) * 0.85),
+  lg: Math.max(10, (isUltraSmallScreen ? 11 : isSmallScreen ? 12 : isMediumScreen ? 13 : isLargeScreen ? 14 : 15) * 0.85),
+  xl: Math.max(11, (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16) * 0.85),
+  xxl: Math.max(12, (isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : isLargeScreen ? 16 : 17) * 0.85),
+  xxxl: Math.max(13, (isUltraSmallScreen ? 14 : isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : 18) * 0.85),
+  xxxxl: Math.max(14, (isUltraSmallScreen ? 15 : isSmallScreen ? 16 : isMediumScreen ? 17 : isLargeScreen ? 18 : 20) * 0.85),
+  xxxxxl: Math.max(15, (isUltraSmallScreen ? 16 : isSmallScreen ? 17 : isMediumScreen ? 18 : isLargeScreen ? 19 : 22) * 0.85),
+};
+
+const getHeaderButtonSize = () => {
+  if (isLandscape) {
+    return Math.max(24, (isTablet ? 44 : 32) * 0.7);
+  }
+  return Math.max(20, (isUltraSmallScreen ? 28 : isSmallScreen ? 32 : isMediumScreen ? 36 : isLargeScreen ? 40 : 44) * 0.7);
+};
+
+const getHeaderTitleSize = () => {
+  if (isLandscape) {
+    return Math.max(14, (isTablet ? 20 : 16) * 0.85);
+  }
+  return Math.max(12, (isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 22) * 0.85);
+};
+
+const getHeaderSubtitleSize = () => {
+  if (isLandscape) {
+    return Math.max(10, (isTablet ? 14 : 12) * 0.85);
+  }
+  return Math.max(9, (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14) * 0.85);
+};
+
+const getResponsiveButtonSize = () => {
+  if (isLandscape) {
+    return (isTablet ? 60 : 45) * 0.7;
+  }
+  return (isUltraSmallScreen ? 40 : isSmallScreen ? 50 : isMediumScreen ? 60 : isLargeScreen ? 70 : 80) * 0.7;
+};
+
+const getResponsiveIconSize = (base: number = 16) => {
+  if (isLandscape) {
+    return Math.max(base - 2, (isTablet ? base + 4 : base) * 0.85);
+  }
+  return Math.max(base - 2, (isUltraSmallScreen ? base - 1 : isSmallScreen ? base : isMediumScreen ? base + 1 : base + 2) * 0.85);
+};
+
+const getToolbarButtonTextSize = () => {
+  if (isLandscape) {
+    return Math.max(8, (isTablet ? 12 : 10) * 0.85);
+  }
+  return Math.max(7, (isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12) * 0.85);
+};
+
+interface LanguageOption {
+  id: string;
+  name: string;
+  code: string;
+}
 
 interface VideoEditorScreenProps {
   route: {
@@ -82,10 +156,91 @@ interface VideoEditorScreenProps {
   };
 }
 
+const LANGUAGE_OPTIONS: LanguageOption[] = [
+  { id: 'english', name: 'English', code: 'EN' },
+  { id: 'hindi', name: 'Hindi', code: 'HI' },
+  { id: 'marathi', name: 'Marathi', code: 'MR' },
+];
+
+const DEFAULT_FRAME_PROFILE: BusinessProfile = {
+  id: 'default-profile',
+  name: 'Your Business Name',
+  description: 'Business description goes here',
+  category: 'Business',
+  address: '123 Main Street, City',
+  phone: '+1 234 567 890',
+  alternatePhone: '',
+  email: 'hello@business.com',
+  website: 'www.business.com',
+  logo: 'https://via.placeholder.com/120x120/667eea/ffffff?text=LOGO',
+  companyLogo: 'https://via.placeholder.com/120x120/667eea/ffffff?text=LOGO',
+  banner: '',
+  services: ['Service One', 'Service Two', 'Service Three'],
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+};
+
+const normalizeLanguageId = (value?: string) => {
+  if (!value) return 'english';
+  const lower = value.toLowerCase();
+  if (lower === 'en' || lower === 'english') return 'english';
+  if (lower === 'hi' || lower === 'hindi') return 'hindi';
+  if (lower === 'mr' || lower === 'marathi') return 'marathi';
+  return lower;
+};
+
+const getLanguageCode = (id: string) =>
+  LANGUAGE_OPTIONS.find(option => option.id === id)?.code.toLowerCase() || id;
+
+const toRgba = (color: string, alpha: number): string => {
+  if (!color) return `rgba(0,0,0,${alpha})`;
+  const trimmed = color.trim();
+  if (trimmed.startsWith('rgba')) {
+    const parts = trimmed.replace(/rgba\(|\)/g, '').split(',').map(p => p.trim());
+    const r = Number(parts[0]) || 0;
+    const g = Number(parts[1]) || 0;
+    const b = Number(parts[2]) || 0;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  if (trimmed.startsWith('rgb')) {
+    const parts = trimmed.replace(/rgb\(|\)/g, '').split(',').map(p => p.trim());
+    const r = Number(parts[0]) || 0;
+    const g = Number(parts[1]) || 0;
+    const b = Number(parts[2]) || 0;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  if (trimmed.startsWith('#')) {
+    const hex = trimmed.replace('#', '');
+    const r = parseInt(hex.substring(0, 2), 16) || 0;
+    const g = parseInt(hex.substring(2, 4), 16) || 0;
+    const b = parseInt(hex.substring(4, 6), 16) || 0;
+    return `rgba(${r},${g},${b},${alpha})`;
+  }
+  return `rgba(0,0,0,${alpha})`;
+};
+
+const getOmbreColors = (base: string | undefined) => {
+  const baseColor = base || 'rgba(0,0,0,1)';
+  return [toRgba(baseColor, 0.6), toRgba(baseColor, 0.3), toRgba(baseColor, 0.0)];
+};
+
+const OMBRE_GRADIENTS: Record<string, string[]> = {
+  'ombre-sunset': ['#FF6B6B', '#FFA500', '#FFD700'],
+  'ombre-ocean': ['#667eea', '#06b6d4', '#22c55e'],
+  'ombre-purple': ['#9333ea', '#ec4899', '#f43f5e'],
+  'ombre-forest': ['#065f46', '#059669', '#10b981'],
+  'ombre-fire': ['#dc2626', '#f59e0b', '#fbbf24'],
+  'ombre-night': ['#1e3a8a', '#7c3aed', '#ec4899'],
+  'ombre-tropical': ['#f472b6', '#fb923c', '#06b6d4'],
+  'ombre-autumn': ['#78350f', '#ea580c', '#dc2626'],
+  'ombre-rose': ['#be123c', '#f472b6', '#fda4af'],
+  'ombre-galaxy': ['#6366f1', '#8b5cf6', '#06b6d4'],
+};
+
 const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
   const insets = useSafeAreaInsets();
-  const { selectedLanguage, selectedTemplateId, selectedVideo } = route.params;
+  const { selectedLanguage: initialLanguage, selectedTemplateId, selectedVideo } = route.params;
   
   const { isSubscribed, checkPremiumAccess, refreshSubscription } = useSubscription();
   const { isDarkMode, theme } = useTheme();
@@ -95,8 +250,8 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const visibleVideoRef = useRef<any>(null);
   const canvasRef = useRef<ViewShot>(null);
   const overlaysRef = useRef<ViewShot>(null);
+  const captureOverlayRef = useRef<ViewShot>(null);
   const lastGenerateTimeRef = useRef<number>(0);
-  const [overlayImageUri, setOverlayImageUri] = useState<string | null>(null);
 
   // State for video layers
   const [layers, setLayers] = useState<VideoLayer[]>([]);
@@ -104,12 +259,13 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const [showTextModal, setShowTextModal] = useState(false);
   const [showImageModal, setShowImageModal] = useState(false);
   const [showStyleModal, setShowStyleModal] = useState(false);
-  const [showFontStyleModal, setShowFontStyleModal] = useState(false);
   const [showLogoSelectionModal, setShowLogoSelectionModal] = useState(false);
   const [newText, setNewText] = useState('');
   const [newImageUrl, setNewImageUrl] = useState('');
   const [newLogoUrl, setNewLogoUrl] = useState('');
   const [showLogoModal, setShowLogoModal] = useState(false);
+  const [languageMenuVisible, setLanguageMenuVisible] = useState(false);
+  const [currentLanguage, setCurrentLanguage] = useState(normalizeLanguageId(initialLanguage));
 
   // Video state
   const [isVideoPlaying, setIsVideoPlaying] = useState(false);
@@ -118,7 +274,6 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const [isCapturing, setIsCapturing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [showCloudComposer, setShowCloudComposer] = useState(false);
-  const [showProcessingOptions, setShowProcessingOptions] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [generatedVideoPath, setGeneratedVideoPath] = useState<string | null>(null);
   const [isGeneratingVideo, setIsGeneratingVideo] = useState(false);
@@ -142,7 +297,6 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const [visibleFields, setVisibleFields] = useState<{[key: string]: boolean}>({
     logo: true,
     companyName: true,
-    footerCompanyName: true,
     footerBackground: true,
     phone: true,
     email: true,
@@ -154,8 +308,123 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const [selectedFont, setSelectedFont] = useState('System');
   const [fontSearchQuery, setFontSearchQuery] = useState('');
   const [selectedTemplate, setSelectedTemplate] = useState('business');
+  const [originalLayers, setOriginalLayers] = useState<VideoLayer[]>([]);
+  const [originalTemplate, setOriginalTemplate] = useState<string>('business');
+  const [showRemoveFrameWarningModal, setShowRemoveFrameWarningModal] = useState(false);
+
+  const [canvasDimensions, setCanvasDimensions] = useState({
+    width: videoCanvasWidth,
+    height: videoCanvasHeight,
+  });
+  const currentCanvasWidth = canvasDimensions.width;
+const currentCanvasHeight = canvasDimensions.height;
+const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: number } | null>(null);
 
   const generateId = () => Math.random().toString(36).substr(2, 9);
+
+  useEffect(() => {
+    if (Platform.OS !== 'android') {
+      return;
+    }
+
+    const subscription = VideoOverlayProcessor.addProgressListener?.(event => {
+      if (!event || event.durationMs <= 0) {
+        return;
+      }
+
+      const percent = Math.max(
+        0,
+        Math.min(100, Math.round((event.progressMs / event.durationMs) * 100))
+      );
+
+      setProcessingProgress(percent);
+    });
+
+    return () => {
+      subscription?.remove();
+    };
+  }, []);
+
+  const buildOverlayPayload = useCallback(async (): Promise<{
+    payload: OverlayPayload[];
+    overlayImageUri?: string;
+  }> => {
+    const captureTarget = (captureOverlayRef.current as any) || (overlaysRef.current as any);
+    if (!captureTarget || !captureTarget.capture) {
+      return { payload: [] };
+    }
+
+    try {
+      setIsCapturing(true);
+      // Wait a frame for any last UI updates before capture
+      await new Promise(resolve => requestAnimationFrame(() => resolve(null)));
+      const exportWidth = Math.round(videoDimensions?.width || currentCanvasWidth);
+      const exportHeight = Math.round(videoDimensions?.height || currentCanvasHeight);
+
+      const captureOptions: any = { format: 'png', quality: 1, width: exportWidth, height: exportHeight };
+      if (videoDimensions) {
+        captureOptions.result = 'tmpfile';
+      }
+
+      const captureUri = await captureTarget.capture?.(captureOptions);
+      if (!captureUri) {
+        return { payload: [] };
+      }
+
+      const normalizedUri = captureUri.startsWith('file://')
+        ? captureUri
+        : `file://${captureUri}`;
+
+      return {
+        overlayImageUri: normalizedUri,
+        payload: [
+          {
+            type: 'image',
+            uri: normalizedUri,
+            position: { x: 0.5, y: 0.5 },
+            width: 1,
+            height: 1,
+            opacity: 1,
+          },
+        ],
+      };
+    } catch (error) {
+      console.warn('⚠️ Failed to capture overlay view for export:', error);
+      return { payload: [] };
+    } finally {
+      setIsCapturing(false);
+    }
+  }, [videoDimensions, currentCanvasWidth, currentCanvasHeight]);
+
+  const ensureLocalVideoUri = useCallback(async (uri: string): Promise<string> => {
+    if (!uri) {
+      throw new Error('Video URI is missing.');
+    }
+
+    if (uri.startsWith('file://') || uri.startsWith('/')) {
+      return uri;
+    }
+
+    const cacheDir = RNFS.CachesDirectoryPath || RNFS.TemporaryDirectoryPath;
+    if (!cacheDir) {
+      throw new Error('Cache directory is unavailable for video processing.');
+    }
+
+    const extensionMatch = uri.match(/\.([a-zA-Z0-9]{2,5})(?:\?|$)/);
+    const extension = extensionMatch ? `.${extensionMatch[1]}` : '.mp4';
+    const targetPath = `${cacheDir}/media3-input-${Date.now()}${extension}`;
+
+    const downloadResult = await RNFS.downloadFile({
+      fromUrl: uri,
+      toFile: targetPath,
+    }).promise;
+
+    if (downloadResult.statusCode && downloadResult.statusCode >= 200 && downloadResult.statusCode < 300) {
+      return `file://${targetPath}`;
+    }
+
+    throw new Error(`Failed to download video for processing (status ${downloadResult.statusCode})`);
+  }, []);
 
   // Create theme-aware styles
   const getThemeStyles = () => ({
@@ -248,6 +517,11 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   });
 
   const themeStyles = getThemeStyles();
+
+  const getIconSize = useCallback((baseSize: number) => {
+    const scale = screenWidth / 375;
+    return Math.round(baseSize * scale);
+  }, [screenWidth]);
 
   // Fetch business profiles with optimized loading - now user-specific
   const fetchBusinessProfiles = async () => {
@@ -574,26 +848,86 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const applyFrame = useCallback((frame: Frame) => {
     setSelectedFrame(frame);
     setShowFrameSelector(false);
-    if (selectedProfile) {
-      const content = mapBusinessProfileToFrameContent(selectedProfile);
-      const frameLayers = generateLayersFromFrame(frame, content, screenWidth, screenHeight);
-      // Map to VideoLayer with fieldType preserved
-      const converted = frameLayers.map(fl => ({
-        id: fl.id,
-        type: fl.type as 'text' | 'image' | 'logo',
-        content: fl.content,
-        position: fl.position,
-        size: fl.size,
-        style: fl.style,
-        fieldType: (fl as any).fieldType,
-      })) as VideoLayer[];
-      setLayers(converted);
+
+    if (originalLayers.length === 0) {
+      const clonedLayers = layers.map(layer => ({
+        ...layer,
+        position: { ...layer.position },
+        size: { ...layer.size },
+        style: layer.style ? { ...layer.style } : undefined,
+      }));
+      setOriginalLayers(clonedLayers);
+      setOriginalTemplate(selectedTemplate);
     }
-  }, [selectedProfile]);
+
+    const profileForFrame = selectedProfile || DEFAULT_FRAME_PROFILE;
+    const content = mapBusinessProfileToFrameContent(profileForFrame);
+
+    const frameLayers = generateLayersFromFrame(
+      frame,
+      content,
+      currentCanvasWidth || videoCanvasWidth,
+      currentCanvasHeight || videoCanvasHeight
+    );
+
+    const converted = frameLayers.map(fl => ({
+      id: fl.id,
+      type: fl.type as 'text' | 'image' | 'logo',
+      content: fl.content,
+      position: fl.position,
+      size: fl.size,
+      style: fl.style,
+      fieldType: (fl as any).fieldType,
+    })) as VideoLayer[];
+
+    setLayers(converted);
+
+    const frameFieldTypes = frame.placeholders.map(p => p.key);
+    setVisibleFields(prev => {
+      const updated = { ...prev };
+      frameFieldTypes.forEach(fieldType => {
+        if (fieldType) {
+          updated[fieldType] = true;
+        }
+      });
+      return updated;
+    });
+  }, [selectedProfile, currentCanvasWidth, currentCanvasHeight, layers, originalLayers.length, selectedTemplate]);
 
   const toggleFieldVisibility = useCallback((field: string) => {
     setVisibleFields(prev => ({ ...prev, [field]: !prev[field] }));
   }, []);
+
+  const removeFrame = useCallback(() => {
+    if (!selectedFrame) return;
+
+    setSelectedFrame(null);
+    setShowRemoveFrameWarningModal(false);
+
+    if (originalLayers.length > 0) {
+      setSelectedTemplate(originalTemplate);
+      const restoredLayers = applyTemplateStylesToLayers(
+        originalTemplate,
+        originalLayers,
+        currentCanvasWidth,
+        currentCanvasHeight
+      );
+      setLayers(restoredLayers);
+
+      setVisibleFields(prev => {
+        const updated = { ...prev };
+        originalLayers.forEach(layer => {
+          if (layer.fieldType) {
+            updated[layer.fieldType] = true;
+          }
+        });
+        return updated;
+      });
+
+      setOriginalLayers([]);
+      setOriginalTemplate('business');
+    }
+  }, [selectedFrame, originalLayers, originalTemplate, applyTemplateStylesToLayers, currentCanvasWidth, currentCanvasHeight]);
 
   // Video Processing Functions
   const handleVideoGenerated = useCallback((videoPath: string) => {
@@ -811,14 +1145,14 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
       // Navigate to video preview
     navigation.navigate('VideoPreview', {
         selectedVideo: { uri: currentVideoSource },
-        selectedLanguage: 'en',
+        selectedLanguage: getLanguageCode(currentLanguage),
         selectedTemplateId: 'custom',
       layers: layers,
         selectedProfile: selectedProfile,
         processedVideoPath: processedVideoPath,
         canvasData: {
-          width: videoCanvasWidth,
-          height: videoCanvasHeight,
+          width: currentCanvasWidth,
+          height: currentCanvasHeight,
           layers: layers,
         },
       });
@@ -831,7 +1165,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
       setIsProcessing(false);
       setProcessingProgress(0);
     }
-  }, [layers, isProcessing, videoCanvasWidth, videoCanvasHeight, selectedProfile, navigation]);
+  }, [layers, isProcessing, currentCanvasWidth, currentCanvasHeight, selectedProfile, navigation]);
 
   // Cloud processing function
   const handleCloudProcessing = useCallback(async () => {
@@ -903,7 +1237,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
       });
 
       // Convert CSS layers to Django API overlay format
-      const overlays: Overlay[] = [];
+      const overlays: CloudOverlay[] = [];
       
       console.log('🔍 Converting CSS layers to Django overlays:');
       console.log('- Total layers:', layers.length);
@@ -1020,14 +1354,14 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
         // Navigate to video preview
         navigation.navigate('VideoPreview', {
           selectedVideo: { uri: videoUri }, // Keep original video as selectedVideo
-          selectedLanguage: 'en',
+          selectedLanguage: getLanguageCode(currentLanguage),
           selectedTemplateId: 'custom',
           layers: layers,
           selectedProfile: selectedProfile,
           processedVideoPath: result.videoPath, // Pass processed video as processedVideoPath
           canvasData: {
-            width: videoCanvasWidth,
-            height: videoCanvasHeight,
+            width: currentCanvasWidth,
+            height: currentCanvasHeight,
             layers: layers,
           },
         });
@@ -1045,7 +1379,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
       setIsProcessing(false);
       setProcessingProgress(0);
     }
-  }, [layers, selectedVideo, isProcessing, videoCanvasWidth, videoCanvasHeight, selectedProfile, navigation]);
+  }, [layers, selectedVideo, isProcessing, currentCanvasWidth, currentCanvasHeight, selectedProfile, navigation]);
 
   const createVideoCanvas = useCallback(() => {
     // Convert current layers to video canvas format
@@ -1053,8 +1387,8 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
       id: `canvas_${Date.now()}`,
       name: selectedProfile ? `${selectedProfile.name} Video` : 'My Video',
       duration: videoDuration || 10,
-      width: 1920,
-      height: 1080,
+      width: currentCanvasWidth,
+      height: currentCanvasHeight,
       fps: 30,
       layers: layers.map((layer, index) => ({
         id: layer.id || `layer_${index}`,
@@ -1069,397 +1403,357 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
     };
 
     return videoCanvas;
-  }, [layers, selectedProfile, videoDuration]);
+  }, [layers, selectedProfile, videoDuration, currentCanvasWidth, currentCanvasHeight]);
+
+  const applyTemplateStylesToLayers = useCallback((templateType: string, targetLayers: VideoLayer[], canvasWidth: number, canvasHeight: number): VideoLayer[] => {
+    return targetLayers.map(layer => {
+      if (layer.fieldType === 'footerBackground') {
+        const templateStyles: Record<string, { backgroundColor: string; gradient?: string[] }> = {
+          'business': { backgroundColor: 'rgba(102, 126, 234, 0.9)' },
+          'event': { backgroundColor: 'rgba(239, 68, 68, 0.9)' },
+          'restaurant': { backgroundColor: 'rgba(34, 197, 94, 0.9)' },
+          'fashion': { backgroundColor: 'rgba(236, 72, 153, 0.9)' },
+          'real-estate': { backgroundColor: 'rgba(245, 158, 11, 0.9)' },
+          'education': { backgroundColor: 'rgba(59, 130, 246, 0.9)' },
+          'healthcare': { backgroundColor: 'rgba(6, 182, 212, 0.9)' },
+          'fitness': { backgroundColor: 'rgba(168, 85, 247, 0.9)' },
+          'wedding': { backgroundColor: 'rgba(212, 175, 55, 0.9)' },
+          'birthday': { backgroundColor: 'rgba(251, 146, 60, 0.9)' },
+          'corporate': { backgroundColor: 'rgba(30, 41, 59, 0.95)' },
+          'creative': { backgroundColor: 'rgba(147, 51, 234, 0.9)' },
+          'minimal': { backgroundColor: 'rgba(255, 255, 255, 0.95)' },
+          'luxury': { backgroundColor: 'rgba(212, 175, 55, 0.95)' },
+          'vintage': { backgroundColor: 'rgba(120, 113, 108, 0.9)' },
+          'retro': { backgroundColor: 'rgba(251, 146, 60, 0.9)' },
+          'elegant': { backgroundColor: 'rgba(139, 69, 19, 0.9)' },
+          'tech': { backgroundColor: 'rgba(30, 41, 59, 0.95)' },
+          'ocean': { backgroundColor: 'rgba(6, 182, 212, 0.9)' },
+          'sunset': { backgroundColor: 'rgba(239, 68, 68, 0.9)' },
+          'artistic': { backgroundColor: 'rgba(168, 85, 247, 0.9)' },
+          'ombre-sunset': { backgroundColor: 'rgba(255, 107, 107, 0.9)', gradient: ['#FF6B6B', '#FFA500', '#FFD700'] },
+          'ombre-ocean': { backgroundColor: 'rgba(102, 126, 234, 0.9)', gradient: ['#667eea', '#06b6d4', '#22c55e'] },
+          'ombre-purple': { backgroundColor: 'rgba(147, 51, 234, 0.9)', gradient: ['#9333ea', '#ec4899', '#f43f5e'] },
+          'ombre-forest': { backgroundColor: 'rgba(6, 95, 70, 0.9)', gradient: ['#065f46', '#059669', '#10b981'] },
+          'ombre-fire': { backgroundColor: 'rgba(220, 38, 38, 0.9)', gradient: ['#dc2626', '#f59e0b', '#fbbf24'] },
+          'ombre-night': { backgroundColor: 'rgba(30, 58, 138, 0.9)', gradient: ['#1e3a8a', '#7c3aed', '#ec4899'] },
+          'ombre-tropical': { backgroundColor: 'rgba(244, 114, 182, 0.9)', gradient: ['#f472b6', '#fb923c', '#06b6d4'] },
+          'ombre-autumn': { backgroundColor: 'rgba(120, 53, 15, 0.9)', gradient: ['#78350f', '#ea580c', '#dc2626'] },
+          'ombre-rose': { backgroundColor: 'rgba(190, 18, 60, 0.9)', gradient: ['#be123c', '#f472b6', '#fda4af'] },
+          'ombre-galaxy': { backgroundColor: 'rgba(99, 102, 241, 0.9)', gradient: ['#6366f1', '#8b5cf6', '#06b6d4'] },
+        };
+
+        const style = templateStyles[templateType] || templateStyles['business'];
+
+        return {
+          ...layer,
+          style: {
+            ...layer.style,
+            backgroundColor: style.backgroundColor,
+            gradientColors: style.gradient,
+          },
+        };
+      }
+
+      if (['phone', 'email', 'website', 'category', 'address', 'services'].includes(layer.fieldType || '')) {
+        const textColors: Record<string, string> = {
+          'business': '#ffffff',
+          'event': '#ffffff',
+          'restaurant': '#ffffff',
+          'fashion': '#ffffff',
+          'real-estate': '#ffffff',
+          'education': '#ffffff',
+          'healthcare': '#ffffff',
+          'fitness': '#ffffff',
+          'wedding': '#000000',
+          'birthday': '#ffffff',
+          'corporate': '#ffffff',
+          'creative': '#ffffff',
+          'minimal': '#1f2937',
+          'luxury': '#000000',
+          'vintage': '#ffffff',
+          'retro': '#ffffff',
+          'elegant': '#ffffff',
+          'tech': '#00ff00',
+          'ocean': '#ffffff',
+          'sunset': '#ffffff',
+          'artistic': '#ffffff',
+          'ombre-sunset': '#ffffff',
+          'ombre-ocean': '#ffffff',
+          'ombre-purple': '#ffffff',
+          'ombre-forest': '#ffffff',
+          'ombre-fire': '#ffffff',
+          'ombre-night': '#ffffff',
+          'ombre-tropical': '#ffffff',
+          'ombre-autumn': '#ffffff',
+          'ombre-rose': '#ffffff',
+          'ombre-galaxy': '#ffffff',
+        };
+
+        const color = textColors[templateType] || textColors['business'];
+
+        return {
+          ...layer,
+          style: {
+            ...layer.style,
+            color,
+          },
+        };
+      }
+
+      return layer;
+    });
+  }, []);
 
   // Apply template function
   const applyTemplate = (template: string) => {
+    if (selectedFrame) {
+      setShowRemoveFrameWarningModal(true);
+      return;
+    }
+
     setSelectedTemplate(template);
     console.log('Applying template:', template); // Debug log
     
-    // Apply different styling based on template
+    const canvasWidth = currentCanvasWidth || videoCanvasWidth;
+    const canvasHeight = currentCanvasHeight || videoCanvasHeight;
+    const scaleX = canvasWidth / POSTER_BASE_WIDTH;
+    const scaleY = canvasHeight / POSTER_BASE_HEIGHT;
+
     const newLayers: VideoLayer[] = [];
-    
-    if (selectedProfile) {
-      console.log('Selected profile:', selectedProfile.name); // Debug log
-      
-      // Add company name on top left corner with responsive positioning
-      if (selectedProfile.name) {
-        const companyNameWidth = Math.min(videoCanvasWidth - 120, 300); // Responsive width
-        const companyNameFontSize = template === 'business' ? 18 : template === 'event' ? 22 : 16;
-        
-        newLayers.push({
-          id: generateId(),
-          type: 'text',
-          content: selectedProfile.name,
-          position: { x: 20, y: 20 },
-          size: { width: companyNameWidth, height: 40 },
-          style: {
-            fontSize: companyNameFontSize,
-            color: template === 'business' ? '#ffffff' : template === 'event' ? '#ff6b6b' : '#333333',
-            fontFamily: 'System',
-            fontWeight: 'bold',
-            textShadowColor: 'rgba(0, 0, 0, 0.8)',
-            textShadowOffset: { width: 1, height: 1 },
-            textShadowRadius: 3,
-          },
-          fieldType: 'companyName',
-        });
-      }
 
-      // Add logo on top right corner with responsive positioning
-      if (selectedProfile.logo) {
-        const logoSize = Math.min(60, videoCanvasWidth * 0.15); // Responsive logo size
-        newLayers.push({
-          id: generateId(),
-          type: 'logo',
-          content: selectedProfile.logo,
-          position: { x: videoCanvasWidth - logoSize - 20, y: 20 },
-          size: { width: logoSize, height: logoSize },
-          fieldType: 'logo',
-        });
-      } else {
-        // Add a test logo if no logo is available
-        const logoSize = Math.min(60, videoCanvasWidth * 0.15);
-        newLayers.push({
-          id: generateId(),
-          type: 'logo',
-          content: 'https://picsum.photos/100/100.jpg',
-          position: { x: videoCanvasWidth - logoSize - 20, y: 20 },
-          size: { width: logoSize, height: logoSize },
-          fieldType: 'logo',
-        });
-      }
+    const buildFooterLayers = (
+      companyName: string | undefined,
+      phone?: string,
+      email?: string,
+      website?: string,
+      category?: string,
+      address?: string,
+      services?: string[]
+    ) => {
+      const contactLineHeight = isTablet ? 20 : 16;
+      const footerPadding = 10;
+      const footerHeight = (contactLineHeight * 3) + (footerPadding * 2);
+      const footerY = canvasHeight - footerHeight;
 
-      // Create professional footer with contact information - always at bottom
-      const footerHeight = Math.max(80, videoCanvasHeight * 0.12); // Reduced footer height to reasonable size
-      const footerY = videoCanvasHeight - footerHeight - Math.max(10, videoCanvasHeight * 0.02); // Always at bottom with small margin
-      
-      console.log('Footer positioning debug:', {
-        screenHeight,
-        videoCanvasHeight,
-        footerHeight,
-        footerY,
-        videoCanvasWidth
-      });
-      
+      const getResponsiveFooterFontSize = (baseSize: number) => {
+        const scaleFactor = Math.min(canvasWidth / 400, canvasHeight / 600);
+        return Math.max(baseSize * scaleFactor, baseSize * 0.8);
+      };
 
-      
+      const footerTextSize = getResponsiveFooterFontSize(isTablet ? 14 : 11);
 
-      
-      // Footer background overlay for better readability
       newLayers.push({
         id: generateId(),
         type: 'text',
         content: '',
         position: { x: 0, y: footerY },
-        size: { width: videoCanvasWidth, height: footerHeight },
+        size: { width: canvasWidth, height: footerHeight },
         style: {
           backgroundColor: template === 'business' ? 'rgba(102, 126, 234, 0.9)' : 
                           template === 'event' ? 'rgba(255, 107, 107, 0.9)' : 
                           template === 'restaurant' ? 'rgba(255, 167, 38, 0.9)' : 
-                          'rgba(236, 64, 122, 0.9)',
+                          template === 'fashion' ? 'rgba(236, 72, 153, 0.9)' :
+                          template === 'real-estate' ? 'rgba(139, 92, 246, 0.9)' :
+                          template === 'education' ? 'rgba(59, 130, 246, 0.9)' :
+                          template === 'healthcare' ? 'rgba(16, 185, 129, 0.9)' :
+                          template === 'fitness' ? 'rgba(239, 68, 68, 0.9)' :
+                          template === 'wedding' ? 'rgba(251, 191, 36, 0.9)' :
+                          template === 'corporate' ? 'rgba(55, 65, 81, 0.9)' :
+                          template === 'creative' ? 'rgba(0, 0, 0, 0.9)' :
+                          'rgba(102, 126, 234, 0.9)',
         },
         fieldType: 'footerBackground',
       });
 
-      // Company name in footer
-      if (selectedProfile.name) {
+      const footerBackgroundLayer = layers.find(layer => layer.fieldType === 'footerBackground');
+
+      const leftColumnX = Math.round(20 * scaleX);
+      const rightColumnX = Math.round(370 * scaleX);
+
+      if (phone) {
         newLayers.push({
           id: generateId(),
           type: 'text',
-          content: selectedProfile.name,
-          position: { x: 20, y: footerY + 10 },
-          size: { width: videoCanvasWidth - 40, height: 20 },
+          content: `📞 ${phone}`,
+          position: { x: Math.round(219 * scaleX), y: Math.round(425 * scaleY) },
+          size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
           style: {
-            fontSize: 16,
+            fontSize: footerTextSize,
             color: '#ffffff',
             fontFamily: 'System',
-            fontWeight: '600',
-          },
-          fieldType: 'footerCompanyName',
-        });
-      }
-
-      // Contact information in two columns
-      const leftColumnX = 20;
-      const rightColumnX = videoCanvasWidth / 2 + 10;
-      const contactStartY = footerY + 35;
-      const contactLineHeight = 14;
-
-      // Left column - Phone and Email
-      if (selectedProfile.phone) {
-        newLayers.push({
-          id: generateId(),
-          type: 'text',
-          content: `📞 ${selectedProfile.phone}`,
-          position: { x: leftColumnX, y: contactStartY },
-          size: { width: (videoCanvasWidth - 40) / 2, height: contactLineHeight },
-          style: {
-            fontSize: 12,
-            color: '#ffffff',
-            fontFamily: 'System',
-            fontWeight: '500',
+            fontWeight: '400',
           },
           fieldType: 'phone',
         });
       }
 
-      if (selectedProfile.email) {
+      if (email) {
         newLayers.push({
           id: generateId(),
           type: 'text',
-          content: `✉️ ${selectedProfile.email}`,
-          position: { x: leftColumnX, y: contactStartY + contactLineHeight },
-          size: { width: (videoCanvasWidth - 40) / 2, height: contactLineHeight },
+          content: `✉️ ${email}`,
+          position: { x: leftColumnX, y: Math.round(443 * scaleY) },
+          size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
           style: {
-            fontSize: 12,
+            fontSize: footerTextSize,
             color: '#ffffff',
             fontFamily: 'System',
-            fontWeight: '500',
+            fontWeight: '400',
           },
           fieldType: 'email',
         });
       }
 
-      // Right column - Website and Category
-      if (selectedProfile.website) {
+      if (website) {
         newLayers.push({
           id: generateId(),
           type: 'text',
-          content: `🌐 ${selectedProfile.website}`,
-          position: { x: rightColumnX, y: contactStartY },
-          size: { width: (videoCanvasWidth - 40) / 2, height: contactLineHeight },
+          content: `🌐 ${website}`,
+          position: { x: Math.round(12 * scaleX), y: Math.round(423 * scaleY) },
+          size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
           style: {
-            fontSize: 12,
+            fontSize: footerTextSize,
             color: '#ffffff',
             fontFamily: 'System',
-            fontWeight: '500',
+            fontWeight: '400',
           },
           fieldType: 'website',
         });
       }
 
-      if (selectedProfile.category) {
+      if (category) {
         newLayers.push({
           id: generateId(),
           type: 'text',
-          content: `🏢 ${selectedProfile.category}`,
-          position: { x: rightColumnX, y: contactStartY + contactLineHeight },
-          size: { width: (videoCanvasWidth - 40) / 2, height: contactLineHeight },
+          content: `🏢 ${category}`,
+          position: { x: Math.round(225 * scaleX), y: Math.round(446 * scaleY) },
+          size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
           style: {
-            fontSize: 12,
+            fontSize: footerTextSize,
             color: '#ffffff',
             fontFamily: 'System',
-            fontWeight: '500',
+            fontWeight: '400',
           },
           fieldType: 'category',
         });
       }
 
-      // Address on a separate line (full width)
-      if (selectedProfile.address) {
+      if (address) {
         newLayers.push({
           id: generateId(),
           type: 'text',
-          content: `📍 ${selectedProfile.address}`,
-          position: { x: 20, y: contactStartY + contactLineHeight * 2 + 5 },
-          size: { width: videoCanvasWidth - 40, height: contactLineHeight },
+          content: `📍 ${address}`,
+          position: { x: Math.round(434 * scaleX), y: Math.round(426 * scaleY) },
+          size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
           style: {
-            fontSize: 12,
+            fontSize: footerTextSize,
             color: '#ffffff',
             fontFamily: 'System',
-            fontWeight: '500',
+            fontWeight: '400',
           },
           fieldType: 'address',
         });
       }
 
-      // Services as a tag line
-      if (selectedProfile.services && selectedProfile.services.length > 0) {
-        const servicesText = selectedProfile.services.slice(0, 3).join(' • ');
+      if (services && services.length > 0) {
+        const servicesText = services.slice(0, 3).join(' • ');
         newLayers.push({
           id: generateId(),
           type: 'text',
-          content: `🛠️ ${servicesText}${selectedProfile.services.length > 3 ? '...' : ''}`,
-          position: { x: 20, y: contactStartY + contactLineHeight * 3 + 10 },
-          size: { width: videoCanvasWidth - 40, height: contactLineHeight },
+          content: `🛠️ ${servicesText}${services.length > 3 ? '...' : ''}`,
+          position: { x: leftColumnX, y: Math.round(464 * scaleY) },
+          size: { width: canvasWidth - 40, height: contactLineHeight },
           style: {
-            fontSize: 11,
+            fontSize: Math.max(isTablet ? 12 : 9, footerTextSize),
             color: '#ffffff',
             fontFamily: 'System',
-            fontWeight: '500',
+            fontWeight: '400',
           },
           fieldType: 'services',
         });
       }
+    };
+
+    if (selectedProfile) {
+      console.log('Selected profile:', selectedProfile.name); // Debug log
+
+      if (selectedProfile.logo) {
+        const logoSize = Math.max(40, Math.min(80, canvasWidth * 0.15));
+        newLayers.push({
+          id: generateId(),
+          type: 'logo',
+          content: selectedProfile.logo,
+          position: { x: canvasWidth - Math.round(100 * scaleX), y: Math.round(20 * scaleY) },
+          size: { width: logoSize, height: logoSize },
+          fieldType: 'logo',
+        });
+      }
+
+      if (selectedProfile.name) {
+        const companyNameSize = Math.max(16, Math.min(24, canvasWidth * 0.06));
+        newLayers.push({
+          id: generateId(),
+          type: 'text',
+          content: selectedProfile.name,
+          position: { x: Math.round(20 * scaleX), y: Math.round(30 * scaleY) },
+          size: { width: canvasWidth - Math.round(140 * scaleX), height: Math.round(60 * scaleY) },
+          style: {
+            fontSize: companyNameSize,
+            color: '#ffffff',
+            fontFamily: 'System',
+            fontWeight: '600',
+          },
+          fieldType: 'companyName',
+        });
+      }
+
+      buildFooterLayers(
+        selectedProfile.name,
+        selectedProfile.phone,
+        selectedProfile.email,
+        selectedProfile.website,
+        selectedProfile.category,
+        selectedProfile.address,
+        selectedProfile.services
+      );
     } else {
-      // If no profile is selected, create default layers for the template
       newLayers.push({
         id: generateId(),
         type: 'text',
-        content: 'Company Name',
-        position: { x: 20, y: 20 },
-        size: { width: videoCanvasWidth - 100, height: 40 },
+        content: 'Your Business Name',
+        position: { x: Math.round(20 * scaleX), y: Math.round(30 * scaleY) },
+        size: { width: canvasWidth - Math.round(140 * scaleX), height: Math.round(60 * scaleY) },
         style: {
-          fontSize: template === 'business' ? 20 : template === 'event' ? 24 : 18,
-          color: template === 'business' ? '#ffffff' : template === 'event' ? '#ff6b6b' : '#333333',
-          fontFamily: 'System',
-          fontWeight: 'bold',
-          textShadowColor: 'rgba(0, 0, 0, 0.8)',
-          textShadowOffset: { width: 1, height: 1 },
-          textShadowRadius: 3,
-        },
-        fieldType: 'companyName',
-      });
-
-      // Create professional footer with contact information (default) - always at bottom
-      const footerHeight = Math.max(80, videoCanvasHeight * 0.12); // Reduced footer height to reasonable size
-      const footerY = videoCanvasHeight - footerHeight - Math.max(10, videoCanvasHeight * 0.02); // Always at bottom with small margin
-      
-
-      
-      // Footer background overlay for better readability
-      newLayers.push({
-        id: generateId(),
-        type: 'text',
-        content: '',
-        position: { x: 0, y: footerY },
-        size: { width: videoCanvasWidth, height: footerHeight },
-        style: {
-          backgroundColor: template === 'business' ? 'rgba(102, 126, 234, 0.9)' : 
-                          template === 'event' ? 'rgba(255, 107, 107, 0.9)' : 
-                          template === 'restaurant' ? 'rgba(255, 167, 38, 0.9)' : 
-                          'rgba(236, 64, 122, 0.9)',
-        },
-        fieldType: 'footerBackground',
-      });
-
-      // Company name in footer
-      newLayers.push({
-        id: generateId(),
-        type: 'text',
-        content: 'Company Name',
-        position: { x: 20, y: footerY + 10 },
-        size: { width: videoCanvasWidth - 40, height: 20 },
-        style: {
-          fontSize: 16,
+          fontSize: Math.max(16, Math.min(24, canvasWidth * 0.06)),
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '600',
         },
-        fieldType: 'footerCompanyName',
-      });
-
-      // Contact information in two columns
-      const leftColumnX = 20;
-      const rightColumnX = videoCanvasWidth / 2 + 10;
-      const contactStartY = footerY + 35;
-      const contactLineHeight = 14;
-
-      // Left column - Phone and Email
-      newLayers.push({
-        id: generateId(),
-        type: 'text',
-        content: '📞 +1 (555) 123-4567',
-        position: { x: leftColumnX, y: contactStartY },
-        size: { width: (videoCanvasWidth - 40) / 2, height: contactLineHeight },
-        style: {
-          fontSize: 11,
-          color: '#ffffff',
-          fontFamily: 'System',
-          fontWeight: '400',
-        },
-        fieldType: 'phone',
+        fieldType: 'companyName',
       });
 
       newLayers.push({
         id: generateId(),
-        type: 'text',
-        content: '✉️ info@company.com',
-        position: { x: leftColumnX, y: contactStartY + contactLineHeight },
-        size: { width: (videoCanvasWidth - 40) / 2, height: contactLineHeight },
-        style: {
-          fontSize: 11,
-          color: '#ffffff',
-          fontFamily: 'System',
-          fontWeight: '400',
-        },
-        fieldType: 'email',
+        type: 'logo',
+        content: 'https://via.placeholder.com/80x80/667eea/ffffff?text=LOGO',
+        position: { x: canvasWidth - Math.round(100 * scaleX), y: Math.round(20 * scaleY) },
+        size: { width: Math.max(40, Math.min(80, canvasWidth * 0.15)), height: Math.max(40, Math.min(80, canvasWidth * 0.15)) },
+        fieldType: 'logo',
       });
 
-      // Right column - Website and Category
-      newLayers.push({
-        id: generateId(),
-        type: 'text',
-        content: '🌐 www.company.com',
-        position: { x: rightColumnX, y: contactStartY },
-        size: { width: (videoCanvasWidth - 40) / 2, height: contactLineHeight },
-        style: {
-          fontSize: 11,
-          color: '#ffffff',
-          fontFamily: 'System',
-          fontWeight: '400',
-        },
-        fieldType: 'website',
-      });
-
-      newLayers.push({
-        id: generateId(),
-        type: 'text',
-        content: '🏢 Business Category',
-        position: { x: rightColumnX, y: contactStartY + contactLineHeight },
-        size: { width: (videoCanvasWidth - 40) / 2, height: contactLineHeight },
-        style: {
-          fontSize: 11,
-          color: '#ffffff',
-          fontFamily: 'System',
-          fontWeight: '400',
-        },
-        fieldType: 'category',
-      });
-
-      // Address on a separate line (full width)
-      newLayers.push({
-        id: generateId(),
-        type: 'text',
-        content: '📍 123 Business Street, City, State 12345',
-        position: { x: 20, y: contactStartY + contactLineHeight * 2 + 5 },
-        size: { width: videoCanvasWidth - 40, height: contactLineHeight },
-        style: {
-          fontSize: 11,
-          color: '#ffffff',
-          fontFamily: 'System',
-          fontWeight: '400',
-        },
-        fieldType: 'address',
-      });
-
-      // Services as a tag line
-      newLayers.push({
-        id: generateId(),
-        type: 'text',
-        content: '🛠️ Service 1 • Service 2 • Service 3...',
-        position: { x: 20, y: contactStartY + contactLineHeight * 3 + 10 },
-        size: { width: videoCanvasWidth - 40, height: contactLineHeight },
-        style: {
-          fontSize: 10,
-          color: '#ffffff',
-          fontFamily: 'System',
-          fontWeight: '400',
-        },
-        fieldType: 'services',
-      });
+      buildFooterLayers(
+        'Business Tagline or Description',
+        '+1 234 567 890',
+        'hello@business.com',
+        'www.business.com',
+        'Category',
+        '123 Main Street, City',
+        ['Service One', 'Service Two', 'Service Three']
+      );
     }
-    
-    // Footer positioning issue resolved
-    
-    // Test layers removed - footer is working correctly
-    
-    // Footer is now working correctly - test layer removed
 
-    console.log('New layers:', newLayers.length); // Debug log
-    console.log('Layer details:', newLayers.map(l => ({ id: l.id, type: l.type, fieldType: l.fieldType, content: l.content?.substring(0, 20) })));
-    setLayers(newLayers);
+    const styledLayers = applyTemplateStylesToLayers(template, newLayers, canvasWidth, canvasHeight);
+    setLayers(styledLayers);
   };
 
   const onVideoProgress = (data: any) => {
@@ -1478,6 +1772,55 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const onVideoLoad = (data: any) => {
     console.log('📹 Video loaded successfully:', data);
     setVideoDuration(data.duration);
+
+    try {
+      const naturalSize = data?.naturalSize || {};
+      let naturalWidth = Number(naturalSize.width) || Number(data?.videoWidth) || 0;
+      let naturalHeight = Number(naturalSize.height) || Number(data?.videoHeight) || 0;
+
+      // Handle cases where orientation is portrait/landscape but width/height swapped or zero
+      if (naturalWidth === 0 || naturalHeight === 0) {
+        if (naturalSize?.orientation === 'portrait' && naturalSize?.height && naturalSize?.width) {
+          naturalWidth = Number(naturalSize.height);
+          naturalHeight = Number(naturalSize.width);
+        }
+      }
+
+      if (naturalWidth > 0 && naturalHeight > 0) {
+        const maxWidth = videoCanvasWidth;
+        const maxHeight = videoCanvasHeight;
+
+        const widthScale = maxWidth / naturalWidth;
+        const heightScale = maxHeight / naturalHeight;
+        const scale = Math.min(widthScale, heightScale, 1);
+
+        const displayWidth = Math.round(naturalWidth * scale);
+        const displayHeight = Math.round(naturalHeight * scale);
+
+        setCanvasDimensions({
+          width: displayWidth,
+          height: displayHeight,
+        });
+        setVideoDimensions({
+          width: Math.round(naturalWidth),
+          height: Math.round(naturalHeight),
+        });
+      } else {
+        // Fall back to defaults if natural size unavailable
+        setCanvasDimensions({ width: videoCanvasWidth, height: videoCanvasHeight });
+        setVideoDimensions({
+          width: videoCanvasWidth,
+          height: videoCanvasHeight,
+        });
+      }
+    } catch (error) {
+      console.warn('⚠️ Failed to calculate canvas dimensions from video metadata:', error);
+      setCanvasDimensions({ width: videoCanvasWidth, height: videoCanvasHeight });
+      setVideoDimensions({
+        width: videoCanvasWidth,
+        height: videoCanvasHeight,
+      });
+    }
   };
 
   // Layer management
@@ -1618,75 +1961,225 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
     navigation.goBack();
   };
 
-  const handleNext = async () => {
+  const handleNext = useCallback(async () => {
     if (layers.length === 0) {
       Alert.alert('No Content', 'Please add at least one text, image, or logo layer to your video.');
       return;
     }
 
-    // Capture overlays-only transparent PNG for processing
-    try {
-      if (overlaysRef.current && (overlaysRef.current as any).capture) {
-        const uri = await (overlaysRef.current as any).capture?.();
-        if (uri) {
-          setOverlayImageUri(uri);
-          console.log('Overlay PNG captured at:', uri);
-        }
-      }
-    } catch (e) {
-      console.warn('Overlay capture failed, continuing without overlay PNG', e);
-      setOverlayImageUri(null);
+    if (!selectedVideo?.uri) {
+      Alert.alert('Missing Video', 'Unable to continue because the source video is missing.');
+      return;
     }
 
-    // FFmpeg integration removed - video processing functionality disabled
-  };
+    const { payload: overlayPayload, overlayImageUri } = await buildOverlayPayload();
+
+    if (Platform.OS !== 'android' || overlayPayload.length === 0) {
+      navigation.navigate('VideoPreview', {
+        selectedVideo: { uri: selectedVideo.uri },
+        selectedLanguage: getLanguageCode(currentLanguage),
+        selectedTemplateId: selectedTemplateId || 'custom',
+        layers,
+        selectedProfile,
+        processedVideoPath: undefined,
+        canvasData: {
+          width: currentCanvasWidth,
+          height: currentCanvasHeight,
+          layers,
+        },
+      });
+      return;
+    }
+
+    setIsProcessing(true);
+    setProcessingProgress(0);
+
+    let overlaySnapshotPath: string | undefined;
+
+    try {
+      if (overlayImageUri) {
+        overlaySnapshotPath = overlayImageUri;
+      }
+
+      const inputVideoUri = await ensureLocalVideoUri(selectedVideo.uri);
+
+      const outputPath = await VideoOverlayProcessor.applyOverlays(
+        inputVideoUri,
+        overlayPayload,
+        { fileName: `overlay_${Date.now()}.mp4` }
+      );
+
+      navigation.navigate('VideoPreview', {
+        selectedVideo: { uri: selectedVideo.uri },
+        selectedLanguage: getLanguageCode(currentLanguage),
+        selectedTemplateId: selectedTemplateId || 'custom',
+        layers,
+        selectedProfile,
+        processedVideoPath: outputPath,
+        canvasData: {
+          width: currentCanvasWidth,
+          height: currentCanvasHeight,
+          layers,
+        },
+      });
+    } catch (error) {
+      console.error('Media3 overlay processing failed', error);
+      const message =
+        error instanceof Error ? error.message : 'An unexpected error occurred.';
+      Alert.alert(
+        'Processing Failed',
+        `${message}\n\nThe original video will be used instead.`
+      );
+
+      navigation.navigate('VideoPreview', {
+        selectedVideo: { uri: selectedVideo.uri },
+        selectedLanguage: getLanguageCode(currentLanguage),
+        selectedTemplateId: selectedTemplateId || 'custom',
+        layers,
+        selectedProfile,
+        processedVideoPath: undefined,
+        canvasData: {
+          width: currentCanvasWidth,
+          height: currentCanvasHeight,
+          layers,
+        },
+      });
+    } finally {
+      setIsProcessing(false);
+      setProcessingProgress(0);
+      if (overlaySnapshotPath) {
+        const cleanupPath = overlaySnapshotPath.replace('file://', '');
+        RNFS.unlink(cleanupPath).catch(() => {});
+      }
+    }
+  }, [
+    buildOverlayPayload,
+    currentCanvasHeight,
+    currentCanvasWidth,
+    currentLanguage,
+    ensureLocalVideoUri,
+    layers,
+    navigation,
+    selectedProfile,
+    selectedTemplateId,
+    selectedVideo?.uri,
+  ]);
 
   // Render functions
-  const renderLayer = (layer: VideoLayer) => {
+  const renderLayer = (
+    layer: VideoLayer,
+    index: number,
+    scale: { scaleX?: number; scaleY?: number } = {},
+  ) => {
+    const scaleX = scale.scaleX ?? 1;
+    const scaleY = scale.scaleY ?? scaleX;
     const isSelected = selectedLayer === layer.id;
-    
-    const handleLayerPress = () => {
-      setSelectedLayer(layer.id);
+
+    const left = Math.round((layer.position.x || 0) * scaleX);
+    const top = Math.round((layer.position.y || 0) * scaleY);
+    const width = Math.max(0, Math.round((layer.size.width || 0) * scaleX));
+    const height = Math.max(0, Math.round((layer.size.height || 0) * scaleY));
+    const zIndex = layer.zIndex ?? index + 1;
+
+    const adjustNumeric = (value: any, factor: number) =>
+      typeof value === 'number' ? value * factor : value;
+
+    const getScaledTextStyle = () => {
+      const baseStyle = (layer.style || {}) as Record<string, any>;
+      if (scaleX === 1 && scaleY === 1) {
+        return baseStyle;
+      }
+
+      const scaled = { ...baseStyle };
+      const avgScale = (scaleX + scaleY) / 2;
+
+      scaled.fontSize = adjustNumeric(scaled.fontSize, scaleY);
+      scaled.lineHeight = adjustNumeric(scaled.lineHeight, scaleY);
+      scaled.letterSpacing = adjustNumeric(scaled.letterSpacing, scaleX);
+      scaled.padding = adjustNumeric(scaled.padding, avgScale);
+      scaled.margin = adjustNumeric(scaled.margin, avgScale);
+      scaled.borderWidth = adjustNumeric(scaled.borderWidth, avgScale);
+      scaled.borderRadius = adjustNumeric(scaled.borderRadius, avgScale);
+      scaled.paddingHorizontal = adjustNumeric(scaled.paddingHorizontal, scaleX);
+      scaled.paddingVertical = adjustNumeric(scaled.paddingVertical, scaleY);
+      scaled.paddingTop = adjustNumeric(scaled.paddingTop, scaleY);
+      scaled.paddingBottom = adjustNumeric(scaled.paddingBottom, scaleY);
+      scaled.paddingLeft = adjustNumeric(scaled.paddingLeft, scaleX);
+      scaled.paddingRight = adjustNumeric(scaled.paddingRight, scaleX);
+      scaled.marginHorizontal = adjustNumeric(scaled.marginHorizontal, scaleX);
+      scaled.marginVertical = adjustNumeric(scaled.marginVertical, scaleY);
+      scaled.marginTop = adjustNumeric(scaled.marginTop, scaleY);
+      scaled.marginBottom = adjustNumeric(scaled.marginBottom, scaleY);
+      scaled.marginLeft = adjustNumeric(scaled.marginLeft, scaleX);
+      scaled.marginRight = adjustNumeric(scaled.marginRight, scaleX);
+
+      if (scaled.shadowOffset && typeof scaled.shadowOffset === 'object') {
+        scaled.shadowOffset = {
+          width: adjustNumeric(scaled.shadowOffset.width, scaleX),
+          height: adjustNumeric(scaled.shadowOffset.height, scaleY),
+        };
+      }
+
+      return scaled;
     };
 
-    console.log('Rendering layer:', layer.type, layer.content, layer.style); // Debug log
-
     return (
-      <TouchableOpacity
+      <View
         key={layer.id}
         style={[
           styles.layer,
           {
-            position: 'absolute',
-            left: layer.position.x,
-            top: layer.position.y,
-            width: layer.size.width,
-            height: layer.size.height,
-            zIndex: layers.indexOf(layer) + 1, // Use array index for zIndex
+            left,
+            top,
+            width,
+            height,
+            zIndex,
           },
-          isSelected && styles.selectedLayer,
+          isSelected && scaleX === 1 && scaleY === 1 && styles.selectedLayer,
         ]}
-        onPress={handleLayerPress}
+        onStartShouldSetResponder={() => scaleX === 1 && scaleY === 1}
+        onResponderGrant={() => scaleX === 1 && scaleY === 1 && setSelectedLayer(layer.id)}
       >
         {layer.type === 'text' && (
-          layer.style?.backgroundColor ? (
-            // Background layer (footer background)
-            <View
-              style={[
-                {
-                  width: '100%',
-                  height: '100%',
-                  backgroundColor: layer.style.backgroundColor,
-                },
-              ]}
-            />
+          layer.content === '' && layer.fieldType === 'footerBackground' ? (
+            (() => {
+              const isOmbreTemplate = selectedTemplate?.startsWith('ombre-');
+              const gradientColors = (layer.style as any)?.gradientColors as string[] | undefined;
+              const colors = gradientColors
+                || (isOmbreTemplate ? OMBRE_GRADIENTS[selectedTemplate || ''] : undefined)
+                || getOmbreColors(layer.style?.backgroundColor);
+
+              if (colors && colors.length >= 2) {
+                const gradientStart = isOmbreTemplate ? { x: 0, y: 0 } : { x: 0, y: 1 };
+                const gradientEnd = isOmbreTemplate ? { x: 1, y: 0 } : { x: 0, y: 0 };
+
+                return (
+                  <LinearGradient
+                    colors={colors}
+                    start={gradientStart}
+                    end={gradientEnd}
+                    style={{ width: '100%', height: '100%' }}
+                  />
+                );
+              }
+
+              return (
+                <View
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    backgroundColor: layer.style?.backgroundColor || 'rgba(0,0,0,0.6)',
+                  }}
+                />
+              );
+            })()
           ) : (
-            // Text layer
             <Text
               style={[
                 styles.layerText,
-                layer.style,
+                getScaledTextStyle(),
               ]}
+              allowFontScaling={false}
             >
               {layer.content}
             </Text>
@@ -1706,7 +2199,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
             resizeMode="contain"
           />
         )}
-      </TouchableOpacity>
+      </View>
     );
   };
 
@@ -1735,67 +2228,50 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
     </TouchableOpacity>
   );
 
+  const exportWidth = Math.max(1, Math.round(videoDimensions?.width || currentCanvasWidth));
+  const exportHeight = Math.max(1, Math.round(videoDimensions?.height || currentCanvasHeight));
+  const captureScaleX = currentCanvasWidth > 0 ? exportWidth / currentCanvasWidth : 1;
+  const captureScaleY = currentCanvasHeight > 0 ? exportHeight / currentCanvasHeight : 1;
+
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <StatusBar 
-        barStyle="light-content" 
+        barStyle="dark-content" 
         backgroundColor="transparent" 
         translucent={true}
       />
       
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
-        style={styles.gradientBackground}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-      >
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + responsiveSpacingUtils.sm }]}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBack}>
-            <Icon name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Video Editor</Text>
-          <View style={styles.headerButtons}>
-            <TouchableOpacity 
-              style={styles.profileButton} 
-              onPress={() => setShowProfileModal(true)}
-            >
-              <Icon name="business" size={20} color="#ffffff" />
-              <Text style={styles.profileButtonText}>
-                {selectedProfile ? selectedProfile.name : 'Select Profile'}
-              </Text>
-            </TouchableOpacity>
-        <TouchableOpacity 
-          style={[styles.generateVideoButton, isProcessing && styles.generateVideoButtonDisabled]} 
-          onPress={() => {
-            setShowProcessingOptions(true);
-          }}
-          disabled={layers.length === 0 || isProcessing}
+      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: theme?.colors?.surface || '#ffffff' }]}>
+        <TouchableOpacity
+          onPress={handleBack}
+          style={styles.backButton}
+          activeOpacity={0.7}
         >
-              {isProcessing ? (
-                <ActivityIndicator size="small" color="#ffffff" />
-              ) : (
-              <Icon name="videocam" size={20} color="#ffffff" />
-              )}
-              <Text style={styles.generateVideoButtonText}>
-                {isProcessing ? 'Generating...' : 'Generate Video'}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+          <Text style={styles.backButtonText}>Back</Text>
+        </TouchableOpacity>
 
-        {/* Video Canvas Container */}
-        <View style={styles.videoCanvasContainer}>
-          <ViewShot
-            ref={canvasRef}
-            style={styles.videoCanvas}
-            options={{
-              format: 'jpg',
-              quality: 0.9,
-              width: videoCanvasWidth,
-              height: videoCanvasHeight,
-            }}
-          >
+        <View style={styles.headerContent} />
+
+        <TouchableOpacity
+          onPress={handleNext}
+          style={styles.nextButton}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.nextButtonText}>Next</Text>
+        </TouchableOpacity>
+      </View>
+
+        <View style={styles.canvasContainer}>
+        <ViewShot
+          ref={canvasRef}
+          style={[styles.canvas, { width: currentCanvasWidth, height: currentCanvasHeight }]}
+          options={{
+            format: 'jpg',
+            quality: 0.9,
+            width: currentCanvasWidth,
+            height: currentCanvasHeight,
+          }}
+        >
           <Video
             ref={videoRef}
             source={videoSource}
@@ -1808,57 +2284,143 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
             onError={onVideoError}
             repeat={true}
           />
-          
+
           {/* Video Layers */}
-          {layers.map(l => {
-            console.log('Processing layer:', l.id, l.type, l.fieldType, l.fieldType ? visibleFields[l.fieldType] : 'no fieldType'); // Debug log
-            if (l.fieldType && !visibleFields[l.fieldType]) {
-              console.log('Layer filtered out:', l.id); // Debug log
-              return null;
-            }
-            console.log('Rendering layer:', l.id, l.type, l.position, l.size); // Debug log
-            return renderLayer(l);
-          })}
-          
+          {layers.map((layer, idx) => {
+             console.log('Processing layer:', layer.id, layer.type, layer.fieldType, layer.fieldType ? visibleFields[layer.fieldType] : 'no fieldType'); // Debug log
+             if (layer.fieldType && !visibleFields[layer.fieldType]) {
+               console.log('Layer filtered out:', layer.id); // Debug log
+               return null;
+             }
+             console.log('Rendering layer:', layer.id, layer.type, layer.position, layer.size); // Debug log
+             return renderLayer(layer, idx);
+           })}
+
+          {selectedFrame && (
+            <View pointerEvents="none" style={styles.frameOverlayContainer}>
+              <Image
+                source={getFrameBackgroundSource(selectedFrame)}
+                style={styles.frameOverlayImage}
+                resizeMode="stretch"
+              />
+            </View>
+          )}
+
           {/* Play/Pause Button Overlay */}
-          <TouchableOpacity 
-            style={styles.playButtonOverlay} 
+          <TouchableOpacity
+            style={styles.playButtonOverlay}
             onPress={() => setIsVideoPlaying(!isVideoPlaying)}
             activeOpacity={0.8}
           >
             <View style={styles.playButton}>
-              <Icon 
-                name={isVideoPlaying ? 'pause' : 'play-arrow'} 
-                size={48} 
-                color="#ffffff" 
+              <Icon
+                name={isVideoPlaying ? 'pause' : 'play-arrow'}
+                size={48}
+                color="#ffffff"
               />
             </View>
           </TouchableOpacity>
-          
-          {/* Footer layers are working correctly - test layer removed */}
-          
 
+          {languageMenuVisible && (
+            <View style={styles.languageDropdownMenuSmall}>
+              {LANGUAGE_OPTIONS.map(option => {
+                const isSelected = option.id === currentLanguage;
+                return (
+                  <TouchableOpacity
+                    key={option.id}
+                    style={[
+                      styles.languageDropdownItem,
+                      isSelected && styles.languageDropdownItemSelected,
+                    ]}
+                    onPress={() => {
+                      setCurrentLanguage(option.id);
+                      setLanguageMenuVisible(false);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <Text
+                      style={[
+                        styles.languageDropdownItemText,
+                        isSelected && styles.languageDropdownItemTextSelected,
+                      ]}
+                    >
+                      {option.name}
+                    </Text>
+                    {isSelected && (
+                      <Icon name="check" size={getIconSize(12)} color="#ffffff" />
+                    )}
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
-
-          
-          {/* Overlays-only transparent PNG capture */}
           <View style={{ position: 'absolute', left: 0, top: 0, right: 0, bottom: 0 }} pointerEvents="none">
             <ViewShot
               ref={overlaysRef}
               style={{ flex: 1, backgroundColor: 'transparent' }}
-              options={{ format: 'png', quality: 1, result: 'tmpfile', width: videoCanvasWidth, height: videoCanvasHeight }}
+              options={{ format: 'png', quality: 1, result: 'tmpfile' }}
             >
               <View style={{ flex: 1, backgroundColor: 'transparent' }}>
-                {layers.map(l => {
+                {layers.map((l, idx) => {
                   if (l.fieldType && !visibleFields[l.fieldType]) return null;
-                  return renderLayer(l);
+                  return renderLayer(l, idx);
                 })}
+                {selectedFrame && (
+                  <View pointerEvents="none" style={styles.frameOverlayContainer}>
+                    <Image
+                      source={getFrameBackgroundSource(selectedFrame)}
+                      style={styles.frameOverlayImage}
+                      resizeMode="stretch"
+                    />
+                  </View>
+                )}
                 {isCapturing && <Watermark isSubscribed={checkPremiumAccess('video_export')} />}
               </View>
             </ViewShot>
           </View>
 
-          {/* Processing Overlay */}
+          <View
+            style={{
+              position: 'absolute',
+              left: -exportWidth - 1000,
+              top: -exportHeight - 1000,
+              width: exportWidth,
+              height: exportHeight,
+              opacity: 0,
+            }}
+            pointerEvents="none"
+          >
+            <ViewShot
+              ref={captureOverlayRef}
+              style={{ width: exportWidth, height: exportHeight, backgroundColor: 'transparent' }}
+              options={{
+                format: 'png',
+                quality: 1,
+                result: 'tmpfile',
+                width: exportWidth,
+                height: exportHeight,
+              }}
+            >
+              <View style={{ width: exportWidth, height: exportHeight, backgroundColor: 'transparent' }}>
+                {layers.map((l, idx) => {
+                  if (l.fieldType && !visibleFields[l.fieldType]) return null;
+                  return renderLayer(l, idx, { scaleX: captureScaleX, scaleY: captureScaleY });
+                })}
+                {selectedFrame && (
+                  <View pointerEvents="none" style={styles.frameOverlayContainer}>
+                    <Image
+                      source={getFrameBackgroundSource(selectedFrame)}
+                      style={[styles.frameOverlayImage, { width: exportWidth, height: exportHeight }]}
+                      resizeMode="stretch"
+                    />
+                  </View>
+                )}
+                {isCapturing && <Watermark isSubscribed={checkPremiumAccess('video_export')} />}
+              </View>
+            </ViewShot>
+          </View>
+
           {isProcessing && (
             <View style={styles.processingOverlay}>
               <View style={styles.processingModal}>
@@ -1871,11 +2433,11 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
                   DEBUG: Processing state is TRUE
                 </Text>
                 <View style={styles.progressBar}>
-                  <View 
+                  <View
                     style={[
-                      styles.progressFill, 
+                      styles.progressFill,
                       { width: `${processingProgress}%` }
-                    ]} 
+                    ]}
                   />
                 </View>
                 <Text style={styles.progressText}>{processingProgress}%</Text>
@@ -1883,34 +2445,93 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
             </View>
           )}
         </ViewShot>
+      </View>
+
+      <View style={styles.controlsContainer}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={[
+            styles.controlsContent,
+            {
+              paddingBottom: isUltraSmallScreen
+                ? insets.bottom + 20
+                : isSmallScreen
+                  ? insets.bottom + 16
+                  : Math.max(insets.bottom + responsiveSpacing.md, responsiveSpacing.lg)
+            }
+          ]}
+        >
+
+        <View style={styles.bottomToolbar}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            contentContainerStyle={styles.toolbarScrollContent}
+          >
+            <TouchableOpacity
+              style={styles.toolbarButton}
+              onPress={() => setShowTextModal(true)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.toolbarButtonGradient}
+              >
+                <Icon name="text-fields" size={getResponsiveIconSize(16)} color="#ffffff" />
+                <Text style={styles.toolbarButtonText}>Text</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={styles.toolbarButton}
+              onPress={() => setShowFontModal(true)}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={['#667eea', '#764ba2']}
+                style={styles.toolbarButtonGradient}
+              >
+                <Icon name="format-size" size={getResponsiveIconSize(16)} color="#ffffff" />
+                <Text style={styles.toolbarButtonText}>Font</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            {selectedFrame && (
+              <TouchableOpacity
+                style={styles.toolbarButton}
+                onPress={removeFrame}
+                activeOpacity={0.8}
+              >
+                <LinearGradient
+                  colors={['#dc3545', '#c82333']}
+                  style={styles.toolbarButtonGradient}
+                >
+                  <Icon name="delete" size={getResponsiveIconSize(16)} color="#ffffff" />
+                  <Text style={styles.toolbarButtonText}>Remove Frame</Text>
+                </LinearGradient>
+              </TouchableOpacity>
+            )}
+          </ScrollView>
         </View>
 
-        {/* Controls Container */}
-        <View style={[
-          styles.controlsContainer,
-          { paddingBottom: Math.max(insets.bottom + responsiveSpacingUtils.xxl + 60, responsiveSpacingUtils.xxl + 80) }
-        ]}>
-        <ScrollView 
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={{ paddingBottom: Math.max(insets.bottom + responsiveSpacingUtils.xxl + 40, responsiveSpacingUtils.xxl + 60) }}
-        >
-        
         {/* Field Toggle Buttons */}
         <View style={styles.fieldToggleSection}>
           <View style={styles.fieldToggleHeader}>
-            <Text style={styles.fieldToggleTitle}>Toggle Elements</Text>
-            <Text style={styles.fieldToggleSubtitle}>Show or hide video elements</Text>
+            <Text style={styles.fieldToggleTitle}>Toggle Fields</Text>
+            <Text style={styles.fieldToggleSubtitle}>Click to show/hide elements</Text>
           </View>
-          <ScrollView 
-            horizontal
+          <ScrollView
+            style={styles.fieldToggleContent}
+            horizontal={true}
             showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
             contentContainerStyle={styles.fieldToggleScrollContent}
           >
             <TouchableOpacity
               style={[styles.fieldToggleButton, visibleFields.logo && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('logo')}
             >
-              <Icon name="account-balance" size={20} color={visibleFields.logo ? "#ffffff" : "#667eea"} />
+              <Icon name="account-balance" size={getResponsiveIconSize(16)} color={visibleFields.logo ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.logo && styles.fieldToggleButtonTextActive]}>
                 Logo
               </Text>
@@ -1920,19 +2541,9 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
               style={[styles.fieldToggleButton, visibleFields.companyName && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('companyName')}
             >
-              <Icon name="title" size={20} color={visibleFields.companyName ? "#ffffff" : "#667eea"} />
+              <Icon name="title" size={getResponsiveIconSize(16)} color={visibleFields.companyName ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.companyName && styles.fieldToggleButtonTextActive]}>
                 Company Name
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.fieldToggleButton, visibleFields.footerCompanyName && styles.fieldToggleButtonActive]}
-              onPress={() => toggleFieldVisibility('footerCompanyName')}
-            >
-              <Icon name="subtitles" size={20} color={visibleFields.footerCompanyName ? "#ffffff" : "#667eea"} />
-              <Text style={[styles.fieldToggleButtonText, visibleFields.footerCompanyName && styles.fieldToggleButtonTextActive]}>
-                Footer Name
               </Text>
             </TouchableOpacity>
             
@@ -1940,7 +2551,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
               style={[styles.fieldToggleButton, visibleFields.footerBackground && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('footerBackground')}
             >
-              <Icon name="format-color-fill" size={20} color={visibleFields.footerBackground ? "#ffffff" : "#667eea"} />
+              <Icon name="format-color-fill" size={getResponsiveIconSize(16)} color={visibleFields.footerBackground ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.footerBackground && styles.fieldToggleButtonTextActive]}>
                 Footer BG
               </Text>
@@ -1950,7 +2561,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
               style={[styles.fieldToggleButton, visibleFields.phone && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('phone')}
             >
-              <Icon name="call" size={20} color={visibleFields.phone ? "#ffffff" : "#667eea"} />
+              <Icon name="call" size={getResponsiveIconSize(16)} color={visibleFields.phone ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.phone && styles.fieldToggleButtonTextActive]}>
                 Phone
               </Text>
@@ -1960,7 +2571,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
               style={[styles.fieldToggleButton, visibleFields.email && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('email')}
             >
-              <Icon name="mail" size={20} color={visibleFields.email ? "#ffffff" : "#667eea"} />
+              <Icon name="mail" size={getResponsiveIconSize(16)} color={visibleFields.email ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.email && styles.fieldToggleButtonTextActive]}>
                 Email
               </Text>
@@ -1970,7 +2581,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
               style={[styles.fieldToggleButton, visibleFields.website && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('website')}
             >
-              <Icon name="public" size={20} color={visibleFields.website ? "#ffffff" : "#667eea"} />
+              <Icon name="public" size={getResponsiveIconSize(16)} color={visibleFields.website ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.website && styles.fieldToggleButtonTextActive]}>
                 Website
               </Text>
@@ -1980,7 +2591,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
               style={[styles.fieldToggleButton, visibleFields.category && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('category')}
             >
-              <Icon name="business-center" size={20} color={visibleFields.category ? "#ffffff" : "#667eea"} />
+              <Icon name="business-center" size={getResponsiveIconSize(16)} color={visibleFields.category ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.category && styles.fieldToggleButtonTextActive]}>
                 Category
               </Text>
@@ -1990,7 +2601,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
               style={[styles.fieldToggleButton, visibleFields.address && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('address')}
             >
-              <Icon name="place" size={20} color={visibleFields.address ? "#ffffff" : "#667eea"} />
+              <Icon name="place" size={getResponsiveIconSize(16)} color={visibleFields.address ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.address && styles.fieldToggleButtonTextActive]}>
                 Address
               </Text>
@@ -2000,7 +2611,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
               style={[styles.fieldToggleButton, visibleFields.services && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('services')}
             >
-              <Icon name="handyman" size={20} color={visibleFields.services ? "#ffffff" : "#667eea"} />
+              <Icon name="handyman" size={getResponsiveIconSize(16)} color={visibleFields.services ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.services && styles.fieldToggleButtonTextActive]}>
                 Services
               </Text>
@@ -2011,13 +2622,15 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
         {/* Templates Section */}
         <View style={styles.templatesSection}>
           <View style={styles.templatesHeader}>
-            <Text style={styles.templatesTitle}>Video Templates</Text>
-            <Text style={styles.templatesSubtitle}>Choose a professional template design</Text>
+            <Text style={styles.templatesTitle}>Templates</Text>
           </View>
-          <View 
+          <ScrollView
             style={styles.templatesContent}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.templatesScrollContent}
           >
-            <View style={styles.templatesScrollContent}>
             <TouchableOpacity
               style={[styles.templateButton, selectedTemplate === 'business' && styles.templateButtonActive]}
               onPress={() => applyTemplate('business')}
@@ -2027,9 +2640,6 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.businessTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'business' && styles.templateTextActive]}>
-                Business
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2041,9 +2651,6 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.eventTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'event' && styles.templateTextActive]}>
-                Event
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2055,9 +2662,6 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.restaurantTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'restaurant' && styles.templateTextActive]}>
-                Restaurant
-              </Text>
             </TouchableOpacity>
             
             <TouchableOpacity
@@ -2069,16 +2673,389 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
                   <View style={[styles.templatePreviewFooter, styles.fashionTemplateStyle]} />
                 </View>
               </View>
-              <Text style={[styles.templateText, selectedTemplate === 'fashion' && styles.templateTextActive]}>
-                Fashion
-              </Text>
             </TouchableOpacity>
-            </View>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'real-estate' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('real-estate')}
+            >
+              <View style={[styles.templatePreview, styles.realEstateTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.realEstateTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'education' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('education')}
+            >
+              <View style={[styles.templatePreview, styles.educationTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.educationTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'healthcare' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('healthcare')}
+            >
+              <View style={[styles.templatePreview, styles.healthcareTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.healthcareTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'fitness' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('fitness')}
+            >
+              <View style={[styles.templatePreview, styles.fitnessTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.fitnessTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'wedding' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('wedding')}
+            >
+              <View style={[styles.templatePreview, styles.weddingTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.weddingTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'birthday' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('birthday')}
+            >
+              <View style={[styles.templatePreview, styles.birthdayTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.birthdayTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'corporate' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('corporate')}
+            >
+              <View style={[styles.templatePreview, styles.corporateTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.corporateTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'creative' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('creative')}
+            >
+              <View style={[styles.templatePreview, styles.creativeTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.creativeTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'minimal' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('minimal')}
+            >
+              <View style={[styles.templatePreview, styles.minimalTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.minimalTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'luxury' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('luxury')}
+            >
+              <View style={[styles.templatePreview, styles.luxuryTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.luxuryTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'vintage' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('vintage')}
+            >
+              <View style={[styles.templatePreview, styles.vintageTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.vintageTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'retro' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('retro')}
+            >
+              <View style={[styles.templatePreview, styles.retroTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.retroTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'elegant' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('elegant')}
+            >
+              <View style={[styles.templatePreview, styles.elegantTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.elegantTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'tech' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('tech')}
+            >
+              <View style={[styles.templatePreview, styles.techTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.techTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ocean' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ocean')}
+            >
+              <View style={[styles.templatePreview, styles.oceanTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.oceanTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'sunset' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('sunset')}
+            >
+              <View style={[styles.templatePreview, styles.sunsetTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.sunsetTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'artistic' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('artistic')}
+            >
+              <View style={[styles.templatePreview, styles.artisticTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <View style={[styles.templatePreviewFooter, styles.artisticTemplateStyle]} />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-sunset' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-sunset')}
+            >
+              <View style={[styles.templatePreview, styles.ombreSunsetTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#FF6B6B', '#FFA500', '#FFD700']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-ocean' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-ocean')}
+            >
+              <View style={[styles.templatePreview, styles.ombreOceanTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#667eea', '#06b6d4', '#22c55e']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-purple' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-purple')}
+            >
+              <View style={[styles.templatePreview, styles.ombrePurpleTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#9333ea', '#ec4899', '#f43f5e']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-forest' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-forest')}
+            >
+              <View style={[styles.templatePreview, styles.ombreForestTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#065f46', '#059669', '#10b981']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-fire' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-fire')}
+            >
+              <View style={[styles.templatePreview, styles.ombreFireTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#dc2626', '#f59e0b', '#fbbf24']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-night' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-night')}
+            >
+              <View style={[styles.templatePreview, styles.ombreNightTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#1e3a8a', '#7c3aed', '#ec4899']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-tropical' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-tropical')}
+            >
+              <View style={[styles.templatePreview, styles.ombreTropicalTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#f472b6', '#fb923c', '#06b6d4']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-autumn' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-autumn')}
+            >
+              <View style={[styles.templatePreview, styles.ombreAutumnTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#78350f', '#ea580c', '#dc2626']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-rose' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-rose')}
+            >
+              <View style={[styles.templatePreview, styles.ombreRoseTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#be123c', '#f472b6', '#fda4af']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+            
+            <TouchableOpacity
+              style={[styles.templateButton, selectedTemplate === 'ombre-galaxy' && styles.templateButtonActive]}
+              onPress={() => applyTemplate('ombre-galaxy')}
+            >
+              <View style={[styles.templatePreview, styles.ombreGalaxyTemplatePreview]}>
+                <View style={styles.templatePreviewContent}>
+                  <LinearGradient
+                    colors={['#6366f1', '#8b5cf6', '#06b6d4']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                    style={[styles.templatePreviewFooter, { backgroundColor: 'transparent' }]}
+                  />
+                </View>
+              </View>
+            </TouchableOpacity>
+          </ScrollView>
+        </View>
+
+        {/* Frames Section */}
+        <View style={styles.templatesSection}>
+          <View style={styles.templatesHeader}>
+            <Text style={styles.templatesTitle}>Frames</Text>
           </View>
+          <ScrollView
+            style={styles.templatesContent}
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.templatesScrollContent}
+          >
+            {frames.map(frame => (
+              <TouchableOpacity
+                key={frame.id}
+                style={[styles.templateButton, selectedFrame?.id === frame.id && styles.templateButtonActive]}
+                onPress={() => applyFrame(frame)}
+                activeOpacity={0.85}
+              >
+                <View style={styles.templatePreview}>
+                  <Image
+                    source={frame.background}
+                    style={{ width: '100%', height: '100%' }}
+                    resizeMode="cover"
+                  />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
         </View>
         </ScrollView>
-        </View>
-      </LinearGradient>
+      </View>
       {/* Frame Selector */}
       {showFrameSelector && (
         <FrameSelector
@@ -2302,79 +3279,47 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
 
       {/* Video Processing Modal - Removed, using direct generation */}
 
-      {/* Processing Options Modal */}
-      {showProcessingOptions && (
+      {/* Frame Selector */}
+      <Modal
+        visible={showRemoveFrameWarningModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowRemoveFrameWarningModal(false)}
+      >
         <View style={styles.modalOverlay}>
           <View style={styles.modalContent}>
-            <View style={styles.modalHeader}>
-              <Text style={styles.modalTitle}>🎬 Choose Processing Method</Text>
-              <TouchableOpacity
-                style={styles.closeButton}
-                onPress={() => setShowProcessingOptions(false)}
-              >
-                <Icon name="close" size={24} color="#ffffff" />
-              </TouchableOpacity>
+            <View style={{ alignItems: 'center', marginBottom: 12 }}>
+              <View style={{
+                width: moderateScale(50),
+                height: moderateScale(50),
+                borderRadius: moderateScale(25),
+                backgroundColor: '#fff8f0',
+                justifyContent: 'center',
+                alignItems: 'center',
+                marginBottom: 12,
+              }}>
+                <Icon name="warning" size={moderateScale(24)} color="#ff9800" />
+              </View>
+              <Text style={[styles.modalTitle, { textAlign: 'center', marginBottom: 6 }]}>Remove Frame First</Text>
+              <Text style={[styles.modalSubtitle, { textAlign: 'center' }]}>Please remove the current frame before applying a new template.</Text>
             </View>
-            <View style={styles.processingOptionsContainer}>
-              <Text style={styles.processingOptionsSubtitle}>
-                Select how you want to process your video:
-              </Text>
-              
-        <TouchableOpacity
-          style={styles.processingOptionButton}
-          onPress={() => {
-            setShowProcessingOptions(false);
-            handleGenerateVideo(); // Local processing
-          }}
-        >
-                <Icon name="phone-android" size={24} color="#ffffff" />
-                <View style={styles.processingOptionText}>
-                  <Text style={styles.processingOptionTitle}>Local Processing</Text>
-                  <Text style={styles.processingOptionDescription}>
-                    Process video on your device using native modules
-                  </Text>
-                </View>
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.modalButton}
+                onPress={() => setShowRemoveFrameWarningModal(false)}
+              >
+                <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
-
-        <TouchableOpacity
-          style={styles.processingOptionButton}
-          onPress={async () => {
-            try {
-              console.log('🎯 Cloud Processing button clicked!');
-              console.log('🔍 DEBUG: Closing modal and starting processing...');
-              
-              // Close modal first
-              setShowProcessingOptions(false);
-              
-              // Set processing state immediately
-              setIsProcessing(true);
-              setProcessingProgress(0);
-              
-              console.log('🔍 DEBUG: Modal closed, processing state set to true');
-              
-              // Start cloud processing directly
-              await handleCloudProcessing();
-            } catch (error) {
-              console.error('❌ Error in cloud processing button:', error);
-              Alert.alert('Error', `Cloud processing failed: ${(error as Error).message}`);
-              // Reset processing state on error
-              setIsProcessing(false);
-              setProcessingProgress(0);
-            }
-          }}
-        >
-                <Icon name="cloud-upload" size={24} color="#ffffff" />
-                <View style={styles.processingOptionText}>
-                  <Text style={styles.processingOptionTitle}>Cloud Processing</Text>
-                  <Text style={styles.processingOptionDescription}>
-                    Upload and process video on cloud servers
-                  </Text>
-                </View>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
+                onPress={removeFrame}
+              >
+                <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>Remove Frame</Text>
               </TouchableOpacity>
             </View>
           </View>
         </View>
-      )}
+      </Modal>
     </SafeAreaView>
   );
 };
@@ -2382,74 +3327,229 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: '#f8f9fa',
   },
   gradientBackground: {
     flex: 1,
   },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: Math.max(16, screenWidth * 0.04),
-    paddingTop: Math.max(40, screenHeight * 0.05),
-    paddingBottom: Math.max(16, screenHeight * 0.02),
-    marginBottom: Math.max(8, screenHeight * 0.01),
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    borderRadius: Math.max(12, screenWidth * 0.03),
-    marginHorizontal: Math.max(8, screenWidth * 0.02),
+    justifyContent: 'space-between',
+    paddingHorizontal: moderateScale(8),
+    paddingBottom: moderateScale(6),
+    borderBottomWidth: 0,
   },
   backButton: {
-    padding: Math.max(12, screenWidth * 0.03),
-    marginRight: Math.max(8, screenWidth * 0.02),
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  headerTitle: {
-    fontSize: responsiveText.subheading,
-    fontWeight: 'bold',
-    color: '#ffffff',
+  backButtonText: {
+    color: '#000000',
+    fontSize: moderateScale(11),
+    fontWeight: '600',
   },
-  videoCanvasContainer: {
+  headerContent: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: Math.max(8, screenHeight * 0.01),
-    flex: 0,
-    marginBottom: Math.max(12, screenHeight * 0.015), // Added margin to push controls down
+    paddingHorizontal: isLandscape
+      ? (isTablet ? 16 : 8)
+      : (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 12 : 16),
   },
-  videoCanvas: {
-    width: videoCanvasWidth,
-    height: videoCanvasHeight,
+  headerTitle: {
+    fontSize: getHeaderTitleSize(),
+    fontWeight: '700',
+    color: '#333333',
+    textAlign: 'center',
+    marginBottom: isLandscape
+      ? (isTablet ? 2 : 1)
+      : (isUltraSmallScreen ? 0 : isSmallScreen ? 1 : 2),
+  },
+  headerSubtitle: {
+    fontSize: getHeaderSubtitleSize(),
+    color: 'rgba(102, 102, 102, 0.8)',
+    marginTop: isLandscape
+      ? (isTablet ? 2 : 1)
+      : (isUltraSmallScreen ? 0 : isSmallScreen ? 1 : 2),
+    textAlign: 'center',
+    lineHeight: isLandscape
+      ? (isTablet ? 16 : 14)
+      : (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16),
+    includeFontPadding: false,
+  },
+  nextButton: {
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  nextButtonText: {
+    color: '#000000',
+    fontSize: moderateScale(11),
+    fontWeight: '600',
+  },
+  topHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: moderateScale(8),
+    paddingBottom: moderateScale(6),
+  },
+  headerTextButton: {
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.12)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerButtonText: {
+    color: '#000000',
+    fontSize: moderateScale(11),
+    fontWeight: '600',
+  },
+  languageDropdownButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(6),
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.18)',
+  },
+  languageDropdownText: {
+    color: '#000000',
+    fontSize: moderateScale(10),
+    fontWeight: '600',
+  },
+  languageDropdownMenuSmall: {
     alignSelf: 'center',
-    marginVertical: Math.max(8, screenHeight * 0.01), // Increased vertical margins
-    marginHorizontal: Math.max(8, screenWidth * 0.02), // Reduced horizontal margins for more width
-    borderRadius: Math.max(16, screenWidth * 0.04),
+    marginHorizontal: moderateScale(8),
+    marginBottom: moderateScale(6),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    paddingVertical: moderateScale(4),
+    paddingHorizontal: moderateScale(4),
     overflow: 'hidden',
-    backgroundColor: '#000000',
-    borderWidth: Math.max(2, screenWidth * 0.005),
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    ...responsiveShadow.large,
+  },
+  languageDropdownItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+  },
+  languageDropdownItemSelected: {
+    backgroundColor: 'rgba(102, 126, 234, 0.35)',
+  },
+  languageDropdownItemText: {
+    color: '#ffffff',
+    fontSize: moderateScale(10),
+    fontWeight: '600',
+  },
+  languageDropdownItemTextSelected: {
+    fontWeight: '700',
+  },
+  canvasContainer: {
+    justifyContent: 'flex-start',
+    alignItems: 'center',
+    padding: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : responsiveSpacing.xs),
+    paddingBottom: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : responsiveSpacing.xs),
+    marginBottom: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md,
+    maxHeight: isLandscape
+      ? screenHeight * 0.65
+      : isTablet
+        ? screenHeight * 0.50
+        : isUltraSmallScreen
+          ? screenHeight * 0.42
+          : isSmallScreen
+            ? screenHeight * 0.44
+            : screenHeight * 0.45,
+  },
+  canvas: {
+    borderRadius: 0,
+    shadowColor: '#000',
+    borderWidth: 1,
+    shadowOffset: {
+      width: 0,
+      height: 8,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 16,
+    elevation: 12,
+    position: 'relative',
+    overflow: 'hidden',
+    marginBottom: 0,
   },
   video: {
     width: '100%',
     height: '100%',
   },
+  bottomToolbar: {
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
+    paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
+    marginTop: isTablet ? 40 : isLandscape ? 35 : isUltraSmallScreen ? 25 : isSmallScreen ? 30 : 35,
+    marginBottom: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 5 : 10,
+    marginHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+  },
+  toolbarScrollContent: {
+    paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.sm : responsiveSpacing.xs) : (isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm),
+    alignItems: 'center',
+  },
+  toolbarButton: {
+    marginHorizontal: isLandscape ? (isTablet ? 6 : 4) : (isUltraSmallScreen ? 2 : isSmallScreen ? 3 : isMediumScreen ? 4 : isLargeScreen ? 5 : 6),
+    marginVertical: isLandscape ? (isTablet ? 2 : 1) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : isMediumScreen ? 3 : isLargeScreen ? 4 : 5),
+  },
+  toolbarButtonGradient: {
+    alignItems: 'center',
+    paddingVertical: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14),
+    paddingHorizontal: isLandscape ? (isTablet ? 16 : 12) : (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16),
+    borderRadius: isLandscape ? (isTablet ? 12 : 10) : (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14),
+    minWidth: isLandscape ? (isTablet ? 80 : 70) : (isUltraSmallScreen ? 55 : isSmallScreen ? 60 : isMediumScreen ? 65 : isLargeScreen ? 70 : 75),
+    minHeight: isLandscape ? (isTablet ? 50 : 45) : (isUltraSmallScreen ? 36 : isSmallScreen ? 38 : isMediumScreen ? 42 : isLargeScreen ? 45 : 48),
+  },
+  toolbarButtonText: {
+    fontSize: getToolbarButtonTextSize(),
+    color: '#ffffff',
+    marginTop: isLandscape ? (isTablet ? 2 : 1) : (isUltraSmallScreen ? 1 : isSmallScreen ? 2 : isMediumScreen ? 3 : isLargeScreen ? 4 : 5),
+    fontWeight: '600',
+    textAlign: 'center',
+    includeFontPadding: false,
+  },
   playButtonOverlay: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.1)',
+    bottom: moderateScale(12),
+    right: moderateScale(12),
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    borderRadius: moderateScale(30),
+    padding: moderateScale(10),
   },
   playButton: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
+    width: moderateScale(60),
+    height: moderateScale(60),
+    borderRadius: moderateScale(30),
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255, 255, 255, 0.3)',
   },
   toolbar: {
     flexDirection: 'row',
@@ -2457,14 +3557,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: Math.max(20, screenWidth * 0.05),
     paddingVertical: Math.max(15, screenHeight * 0.018),
     backgroundColor: 'rgba(255,255,255,0.1)',
-  },
-  toolbarButton: {
-    alignItems: 'center',
-  },
-  toolbarButtonText: {
-    color: '#ffffff',
-    fontSize: responsiveText.caption,
-    marginTop: Math.max(5, screenHeight * 0.006),
   },
   layer: {
     position: 'absolute',
@@ -2603,73 +3695,69 @@ const styles = StyleSheet.create({
   },
   // Controls Container
   controlsContainer: {
-    backgroundColor: 'rgba(255, 255, 255, 0.98)',
-    borderTopLeftRadius: Math.max(20, screenWidth * 0.05),
-    borderTopRightRadius: Math.max(20, screenWidth * 0.05),
-    paddingTop: Math.max(16, screenHeight * 0.02), // Increased top padding
-    paddingHorizontal: Math.max(8, screenWidth * 0.02),
-    paddingBottom: Math.max(8, screenHeight * 0.01),
-    borderTopWidth: Math.max(1, screenWidth * 0.002),
-    borderTopColor: 'rgba(0, 0, 0, 0.1)',
-    ...responsiveShadow.large,
-    marginTop: Math.max(8, screenHeight * 0.01), // Added top margin to push controls down
+    flex: 0,
+    paddingTop: 0,
   },
   // Field Toggle Section
   fieldToggleSection: {
-    width: '100%',
-    backgroundColor: '#ffffff',
-    borderRadius: Math.max(12, screenWidth * 0.03),
-    padding: Math.max(8, screenWidth * 0.02),
-    ...responsiveShadow.medium,
-    borderWidth: Math.max(1, screenWidth * 0.002),
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    marginBottom: Math.max(12, screenHeight * 0.015), // Increased margin to push templates down
-    marginHorizontal: Math.max(2, screenWidth * 0.005),
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
+    paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    marginBottom: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 5 : 10,
+    marginHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
   },
   fieldToggleHeader: {
     alignItems: 'center',
-    marginBottom: Math.max(4, screenHeight * 0.005),
+    marginBottom: isLandscape ? (isTablet ? responsiveSpacing.xs : 0) : (isUltraSmallScreen ? 0 : isSmallScreen ? 0 : 1),
   },
   fieldToggleTitle: {
-    fontSize: Math.max(10, screenWidth * 0.025),
+    fontSize: isLandscape ? (isTablet ? responsiveFontSize.lg : responsiveFontSize.md) : (isUltraSmallScreen ? responsiveFontSize.sm : isSmallScreen ? responsiveFontSize.md : responsiveFontSize.lg),
     fontWeight: '700',
     color: '#333333',
+    marginBottom: 0,
+    lineHeight: isUltraSmallScreen ? 10 : isSmallScreen ? 11 : 14,
   },
   fieldToggleSubtitle: {
-    fontSize: Math.max(8, screenWidth * 0.02),
+    fontSize: isLandscape ? (isTablet ? responsiveFontSize.sm : responsiveFontSize.xs) : (isUltraSmallScreen ? responsiveFontSize.xs : isSmallScreen ? responsiveFontSize.sm : responsiveFontSize.md),
     color: '#666666',
-    marginTop: Math.max(1, screenHeight * 0.001),
+    marginTop: isLandscape ? (isTablet ? responsiveSpacing.xs : 0) : (isUltraSmallScreen ? 0 : isSmallScreen ? 0 : 1),
   },
   fieldToggleContent: {
-    // Removed maxHeight and flexWrap for horizontal scrolling
+    height: isTablet ? 60 : isLandscape ? 55 : isUltraSmallScreen ? 45 : isSmallScreen ? 50 : 55,
   },
   fieldToggleScrollContent: {
-    paddingHorizontal: Math.max(8, screenWidth * 0.02),
+    paddingHorizontal: 5,
     alignItems: 'center',
-    gap: Math.max(8, screenWidth * 0.02),
-    flexDirection: 'row',
   },
   fieldToggleButton: {
     alignItems: 'center',
-    paddingVertical: Math.max(4, screenHeight * 0.005),
-    paddingHorizontal: Math.max(6, screenWidth * 0.015),
-    borderRadius: Math.max(8, screenWidth * 0.02),
-    backgroundColor: '#f8f9fa',
-    marginHorizontal: Math.max(1, screenWidth * 0.002),
-    marginVertical: Math.max(1, screenHeight * 0.001),
+    paddingVertical: isSmallScreen ? 6 : 10,
+    paddingHorizontal: isSmallScreen ? 8 : 14,
+    borderRadius: isSmallScreen ? 8 : 16,
+    backgroundColor: '#e9ecef',
+    marginHorizontal: isSmallScreen ? 2 : 4,
     flexDirection: 'row',
-    minWidth: Math.max(50, screenWidth * 0.1),
+    minWidth: isSmallScreen ? 60 : 85,
     justifyContent: 'center',
-    borderWidth: Math.max(1, screenWidth * 0.002),
-    borderColor: 'rgba(0, 0, 0, 0.05)',
   },
   fieldToggleButtonActive: {
     backgroundColor: '#667eea',
   },
   fieldToggleButtonText: {
-    fontSize: Math.max(8, screenWidth * 0.02),
+    fontSize: isSmallScreen ? 9 : 12,
     color: '#666666',
-    marginLeft: Math.max(2, screenWidth * 0.005),
+    marginLeft: isSmallScreen ? 3 : 6,
     fontWeight: '500',
   },
   fieldToggleButtonTextActive: {
@@ -2677,64 +3765,67 @@ const styles = StyleSheet.create({
   },
   // Templates Section
   templatesSection: {
-    width: '100%',
-    backgroundColor: '#ffffff',
-    borderRadius: Math.max(12, screenWidth * 0.03),
-    padding: Math.max(8, screenWidth * 0.02),
-    ...responsiveShadow.medium,
-    borderWidth: Math.max(1, screenWidth * 0.002),
-    borderColor: 'rgba(0, 0, 0, 0.08)',
-    marginBottom: Math.max(8, screenHeight * 0.01), // Increased margin for better spacing
-    marginHorizontal: Math.max(2, screenWidth * 0.005),
+    backgroundColor: 'rgba(255, 255, 255, 0.95)',
+    borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
+    paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#e9ecef',
+    marginBottom: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 5 : 10,
+    marginHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
   },
   templatesHeader: {
     alignItems: 'center',
-    marginBottom: Math.max(4, screenHeight * 0.005),
+    marginBottom: isUltraSmallScreen ? 0 : isSmallScreen ? 0 : 1,
   },
   templatesTitle: {
-    fontSize: Math.max(10, screenWidth * 0.025),
+    fontSize: isSmallScreen ? 11 : 14,
     fontWeight: '700',
     color: '#333333',
+    marginBottom: 0,
+    lineHeight: isUltraSmallScreen ? 12 : isSmallScreen ? 13 : 16,
   },
   templatesSubtitle: {
-    fontSize: Math.max(8, screenWidth * 0.02),
+    fontSize: isSmallScreen ? 8 : 10,
     color: '#666666',
-    marginTop: Math.max(1, screenHeight * 0.001),
+    marginTop: 1,
   },
   templatesContent: {
-    maxHeight: Math.max(80, screenHeight * 0.1),
-    flexWrap: 'wrap',
+    height: isTablet ? 70 : isLandscape ? 65 : isUltraSmallScreen ? 55 : isSmallScreen ? 60 : 65,
   },
   templatesScrollContent: {
-    paddingHorizontal: Math.max(8, screenWidth * 0.02),
+    paddingHorizontal: 5,
     alignItems: 'center',
-    gap: Math.max(8, screenWidth * 0.02),
-    flexWrap: 'wrap',
-    justifyContent: 'center',
   },
   templateButton: {
     alignItems: 'center',
-    marginHorizontal: Math.max(2, screenWidth * 0.005),
-    marginVertical: Math.max(1, screenHeight * 0.001),
-    minWidth: Math.max(60, screenWidth * 0.12),
+    marginHorizontal: isUltraSmallScreen ? 2 : isSmallScreen ? 4 : 8,
+    minWidth: isUltraSmallScreen ? 50 : isSmallScreen ? 55 : 80,
   },
   templateButtonActive: {
     backgroundColor: 'rgba(102, 126, 234, 0.1)',
-    borderRadius: Math.max(12, screenWidth * 0.03),
-    padding: Math.max(8, screenWidth * 0.02),
+    borderRadius: isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 12,
+    padding: isUltraSmallScreen ? 2 : isSmallScreen ? 4 : 8,
   },
   templatePreview: {
-    width: Math.max(50, screenWidth * 0.12),
-    height: Math.max(50, screenWidth * 0.12),
-    borderRadius: Math.max(8, screenWidth * 0.02),
+    width: isUltraSmallScreen ? 36 : getResponsiveButtonSize(),
+    height: isUltraSmallScreen ? 36 : getResponsiveButtonSize(),
+    borderRadius: isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
     backgroundColor: '#f8f9fa',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: Math.max(4, screenHeight * 0.005),
-    borderWidth: Math.max(2, screenWidth * 0.005),
-    borderColor: 'rgba(0, 0, 0, 0.1)',
+    marginBottom: isUltraSmallScreen ? 2 : isSmallScreen ? 4 : 8,
+    borderWidth: 0,
+    borderColor: 'transparent',
     overflow: 'hidden',
-    ...responsiveShadow.small,
   },
   templatePreviewContent: {
     width: '100%',
@@ -2746,50 +3837,20 @@ const styles = StyleSheet.create({
     bottom: 0,
     left: 0,
     right: 0,
-    height: 15,
+    height: 20,
     backgroundColor: 'rgba(0, 0, 0, 0.6)',
   },
   templateText: {
-    fontSize: Math.max(8, screenWidth * 0.02),
+    fontSize: isUltraSmallScreen ? 7 : isSmallScreen ? 8 : 10,
     color: '#666666',
     fontWeight: '600',
     textAlign: 'center',
-    lineHeight: Math.max(8, screenHeight * 0.01),
+    lineHeight: isUltraSmallScreen ? 8 : isSmallScreen ? 9 : 12,
   },
   templateTextActive: {
     color: '#667eea',
     fontWeight: '700',
   },
-  // Template Preview Styles
-  businessTemplatePreview: {
-    borderWidth: 2,
-    borderColor: '#667eea',
-  },
-  businessTemplateStyle: {
-    backgroundColor: 'rgba(102, 126, 234, 0.8)',
-  },
-  eventTemplatePreview: {
-    borderWidth: 2,
-    borderColor: '#ff6b6b',
-  },
-  eventTemplateStyle: {
-    backgroundColor: 'rgba(255, 107, 107, 0.8)',
-  },
-  restaurantTemplatePreview: {
-    borderWidth: 2,
-    borderColor: '#ffa726',
-  },
-  restaurantTemplateStyle: {
-    backgroundColor: 'rgba(255, 167, 38, 0.8)',
-  },
-  fashionTemplatePreview: {
-    borderWidth: 2,
-    borderColor: '#ec407a',
-  },
-  fashionTemplateStyle: {
-    backgroundColor: 'rgba(236, 64, 122, 0.8)',
-  },
-
 
   // Header Button Styles
   headerButtons: {
@@ -2798,44 +3859,6 @@ const styles = StyleSheet.create({
     gap: Math.max(8, screenWidth * 0.02),
     flexWrap: 'wrap',
     justifyContent: 'flex-end',
-  },
-  profileButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: Math.max(14, screenWidth * 0.035),
-    paddingVertical: Math.max(8, screenHeight * 0.01),
-    borderRadius: Math.max(18, screenWidth * 0.045),
-    gap: Math.max(6, screenWidth * 0.015),
-    borderWidth: Math.max(1, screenWidth * 0.002),
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-  },
-  profileButtonText: {
-    color: '#ffffff',
-    fontSize: responsiveText.caption,
-    fontWeight: '500',
-  },
-  generateVideoButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    paddingHorizontal: Math.max(10, screenWidth * 0.025),
-    paddingVertical: Math.max(6, screenHeight * 0.008),
-    borderRadius: Math.max(15, screenWidth * 0.035),
-    gap: Math.max(4, screenWidth * 0.01),
-    borderWidth: Math.max(1, screenWidth * 0.002),
-    borderColor: 'rgba(255, 255, 255, 0.2)',
-    opacity: 1,
-    minWidth: 60,
-  },
-  generateVideoButtonText: {
-    color: '#ffffff',
-    fontSize: responsiveText.caption,
-    fontWeight: '500',
-  },
-  generateVideoButtonDisabled: {
-    opacity: 0.5,
-    backgroundColor: 'rgba(255, 255, 255, 0.05)',
   },
   // Modal styles
   modalOverlay: {
@@ -2942,6 +3965,206 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
 
+  frameOverlayContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+  },
+  frameOverlayImage: {
+    width: '100%',
+    height: '100%',
+  },
+  // Template Preview Styles
+  businessTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  businessTemplateStyle: {
+    backgroundColor: 'rgba(102, 126, 234, 0.8)',
+  },
+  eventTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  eventTemplateStyle: {
+    backgroundColor: 'rgba(249, 115, 22, 0.8)',
+  },
+  restaurantTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  restaurantTemplateStyle: {
+    backgroundColor: 'rgba(34, 197, 94, 0.8)',
+  },
+  fashionTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  fashionTemplateStyle: {
+    backgroundColor: 'rgba(236, 72, 153, 0.8)',
+  },
+  realEstateTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  realEstateTemplateStyle: {
+    backgroundColor: 'rgba(139, 92, 246, 0.8)',
+  },
+  educationTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  educationTemplateStyle: {
+    backgroundColor: 'rgba(59, 130, 246, 0.8)',
+  },
+  healthcareTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  healthcareTemplateStyle: {
+    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+  },
+  fitnessTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  fitnessTemplateStyle: {
+    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+  },
+  weddingTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  weddingTemplateStyle: {
+    backgroundColor: 'rgba(251, 191, 36, 0.8)',
+  },
+  birthdayTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  birthdayTemplateStyle: {
+    backgroundColor: 'rgba(244, 114, 182, 0.8)',
+  },
+  corporateTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  corporateTemplateStyle: {
+    backgroundColor: 'rgba(55, 65, 81, 0.8)',
+  },
+  creativeTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  creativeTemplateStyle: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+  },
+  luxuryTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  luxuryTemplateStyle: {
+    backgroundColor: 'rgba(212, 175, 55, 0.8)',
+  },
+  vintageTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  vintageTemplateStyle: {
+    backgroundColor: 'rgba(120, 113, 108, 0.8)',
+  },
+  retroTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  retroTemplateStyle: {
+    backgroundColor: 'rgba(251, 146, 60, 0.8)',
+  },
+  techTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  techTemplateStyle: {
+    backgroundColor: 'rgba(0, 255, 0, 0.8)',
+  },
+  oceanTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  oceanTemplateStyle: {
+    backgroundColor: 'rgba(6, 182, 212, 0.8)',
+  },
+  sunsetTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  sunsetTemplateStyle: {
+    backgroundColor: 'rgba(245, 158, 11, 0.8)',
+  },
+  artisticTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  artisticTemplateStyle: {
+    backgroundColor: 'rgba(168, 85, 247, 0.8)',
+  },
+  ombreSunsetTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreOceanTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombrePurpleTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreForestTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreFireTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreNightTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreTropicalTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreAutumnTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreRoseTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  ombreGalaxyTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  minimalTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  minimalTemplateStyle: {
+    backgroundColor: 'rgba(204, 204, 204, 0.8)',
+  },
+  elegantTemplatePreview: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  elegantTemplateStyle: {
+    backgroundColor: 'rgba(212, 175, 55, 0.8)',
+  },
 });
 
 export default VideoEditorScreen;

@@ -11,6 +11,7 @@ import com.facebook.react.ReactPackage
 import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
 import com.facebook.react.defaults.DefaultReactNativeHost
 import com.marketbrand.VideoComposerPackage
+import com.marketbrand.media.Media3VideoProcessorPackage
 
 class MainApplication : Application(), ReactApplication {
 
@@ -20,6 +21,7 @@ class MainApplication : Application(), ReactApplication {
             PackageList(this).packages.apply {
               // Packages that cannot be autolinked yet can be added manually here
               add(VideoComposerPackage())
+              add(Media3VideoProcessorPackage())
             }
 
         override fun getJSMainModuleName(): String = "index"

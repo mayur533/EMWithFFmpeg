@@ -1,324 +1,322 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
   StyleSheet,
   TouchableOpacity,
-  Image,
   Dimensions,
   StatusBar,
   FlatList,
-  ScrollView,
+  Image,
 } from 'react-native';
 import Video from 'react-native-video';
-import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { MainStackParamList } from '../navigation/AppNavigator';
-import { Template } from '../services/dashboard';
+import { VideoContent } from '../services/homeApi';
 import { useTheme } from '../context/ThemeContext';
-
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
-
-// Enhanced responsive design helpers
-const isSmallScreen = screenWidth < 375;
-const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
-
-// Responsive spacing and sizing
-const responsiveSpacing = {
-  xs: isSmallScreen ? 6 : isMediumScreen ? 8 : 12,
-  sm: isSmallScreen ? 8 : isMediumScreen ? 12 : 16,
-  md: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
-  lg: isSmallScreen ? 16 : isMediumScreen ? 20 : 24,
-  xl: isSmallScreen ? 20 : isMediumScreen ? 24 : 32,
-  xxl: isSmallScreen ? 24 : isMediumScreen ? 32 : 40,
-};
-
-const responsiveFontSize = {
-  xs: isSmallScreen ? 8 : isMediumScreen ? 10 : 12,
-  sm: isSmallScreen ? 10 : isMediumScreen ? 12 : 14,
-  md: isSmallScreen ? 12 : isMediumScreen ? 14 : 16,
-  lg: isSmallScreen ? 14 : isMediumScreen ? 16 : 18,
-  xl: isSmallScreen ? 16 : isMediumScreen ? 18 : 20,
-  xxl: isSmallScreen ? 18 : isMediumScreen ? 20 : 22,
-  xxxl: isSmallScreen ? 20 : isMediumScreen ? 22 : 24,
-};
-
-// Responsive video container height
-const getVideoContainerHeight = () => {
-  if (isSmallScreen) return screenHeight * 0.3;
-  if (isMediumScreen) return screenHeight * 0.32;
-  return screenHeight * 0.35;
-};
 
 type VideoPlayerScreenRouteProp = RouteProp<MainStackParamList, 'VideoPlayer'>;
 type VideoPlayerScreenNavigationProp = StackNavigationProp<MainStackParamList, 'VideoPlayer'>;
+
+interface LanguageOption {
+  id: string;
+  name: string;
+  code: string;
+}
+
+const LANGUAGE_OPTIONS: LanguageOption[] = [
+  { id: 'en', name: 'English', code: 'EN' },
+  { id: 'hi', name: 'Hindi', code: 'HI' },
+  { id: 'mr', name: 'Marathi', code: 'MR' },
+];
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
+const verticalScale = (size: number) => (SCREEN_HEIGHT / 667) * size;
+const responsiveFont = (size: number) => moderateScale(size);
+const getIconSize = (baseSize: number) => Math.round(baseSize * (SCREEN_WIDTH / 375));
+const NUM_COLUMNS = SCREEN_WIDTH >= 768 ? 4 : 3;
+const CARD_GAP = moderateScale(3);
+const CARD_PADDING = moderateScale(16);
+const CARD_WIDTH =
+  (SCREEN_WIDTH - CARD_PADDING - CARD_GAP * (NUM_COLUMNS - 1)) / NUM_COLUMNS;
+const CARD_HEIGHT = verticalScale(80);
+
+const getVideoContainerHeight = () => {
+  if (SCREEN_WIDTH < 360) return SCREEN_HEIGHT * 0.3;
+  if (SCREEN_WIDTH < 414) return SCREEN_HEIGHT * 0.33;
+  return SCREEN_HEIGHT * 0.35;
+};
+
+const normalizeLanguageId = (value?: string) => {
+  if (!value) return 'en';
+  const lower = value.toLowerCase();
+  if (lower === 'english' || lower === 'en') return 'en';
+  if (lower === 'hindi' || lower === 'hi') return 'hi';
+  if (lower === 'marathi' || lower === 'mr') return 'mr';
+  return lower;
+};
 
 const VideoPlayerScreen: React.FC = () => {
   const { theme, isDarkMode } = useTheme();
   const navigation = useNavigation<VideoPlayerScreenNavigationProp>();
   const route = useRoute<VideoPlayerScreenRouteProp>();
   const insets = useSafeAreaInsets();
-  
+
   const { selectedVideo, relatedVideos } = route.params;
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
-  const [isVideoPlaying, setIsVideoPlaying] = useState<boolean>(true);
+  const textColor = theme.colors?.text ?? '#000000';
+  const secondaryTextColor = theme.colors?.textSecondary ?? '#666666';
 
-  // Language options
-  const languages = useMemo(() => [
-    { id: 'english', name: 'English', code: 'EN' },
-    { id: 'marathi', name: 'Marathi', code: 'MR' },
-    { id: 'hindi', name: 'Hindi', code: 'HI' },
-  ], []);
+  const availableLanguages = useMemo(() => {
+    const languages = (selectedVideo as any).languages;
+    if (Array.isArray(languages) && languages.length > 0) {
+      return languages.map((lang: string) => normalizeLanguageId(lang));
+    }
+    return [normalizeLanguageId(selectedVideo.language)];
+  }, [selectedVideo]);
 
-  // Filter videos by selected language
-  const filteredVideos = useMemo(() => {
+  const [selectedLanguage, setSelectedLanguage] = useState<string>(availableLanguages[0] || 'en');
+  const [isPlaying, setIsPlaying] = useState<boolean>(true);
+  const [languageMenuVisible, setLanguageMenuVisible] = useState(false);
+
+  useEffect(() => {
+    if (!availableLanguages.includes(selectedLanguage)) {
+      setSelectedLanguage(availableLanguages[0] || 'en');
+    }
+  }, [availableLanguages, selectedLanguage]);
+
+  const filteredRelatedVideos = useMemo(() => {
     return relatedVideos.filter(video => {
-      // For demo purposes, we'll simulate language filtering
-      // In real app, this would be based on actual video language metadata
-      const videoLanguages = video.languages || ['english'];
-      return videoLanguages.includes(selectedLanguage);
+      const langs = (video as any).languages;
+      if (Array.isArray(langs) && langs.length > 0) {
+        return langs.map((lang: string) => lang.toLowerCase()).includes(selectedLanguage);
+      }
+      return video.language?.toLowerCase() === selectedLanguage;
     });
   }, [relatedVideos, selectedLanguage]);
 
-  const handleBackPress = useCallback(() => {
-    navigation.goBack();
-  }, [navigation]);
+  const handleBack = useCallback(() => navigation.goBack(), [navigation]);
 
-  const handleVideoSelect = useCallback((video: Template) => {
+  const handleLanguageChange = useCallback((languageId: string) => {
+    setSelectedLanguage(languageId);
+    setLanguageMenuVisible(false);
+  }, []);
+
+  const handleVideoSelect = useCallback((video: VideoContent) => {
     navigation.replace('VideoPlayer', {
       selectedVideo: video,
       relatedVideos: relatedVideos.filter(v => v.id !== video.id),
     });
   }, [navigation, relatedVideos]);
 
-  const handleLanguageChange = useCallback((languageId: string) => {
-    setSelectedLanguage(languageId);
-    setIsVideoPlaying(true); // Restart video when language changes
-  }, []);
-
-  const toggleVideoPlayback = useCallback(() => {
-    setIsVideoPlaying(!isVideoPlaying);
-  }, [isVideoPlaying]);
-
-  const handleNextPress = useCallback(() => {
+  const handleContinue = useCallback(() => {
+    setLanguageMenuVisible(false);
     navigation.navigate('VideoEditor', {
       selectedVideo: {
-        uri: selectedVideo.videoUrl || '',
-        title: selectedVideo.name,
-        description: selectedVideo.category,
+        uri: selectedVideo.videoUrl,
+        title: selectedVideo.title,
+        description: selectedVideo.description,
       },
-      selectedLanguage: selectedLanguage,
+      selectedLanguage,
       selectedTemplateId: selectedVideo.id,
     });
   }, [navigation, selectedVideo, selectedLanguage]);
 
-  const renderRelatedVideo = useCallback(({ item }: { item: Template }) => (
-    <TouchableOpacity
-      style={styles.relatedVideoCard}
-      onPress={() => handleVideoSelect(item)}
-      activeOpacity={0.8}
-    >
-      <Image
-        source={{ uri: item.thumbnail }}
-        style={styles.relatedVideoImage}
-        resizeMode="cover"
-      />
-      <View style={styles.relatedVideoOverlay}>
-        <View style={styles.relatedVideoPlayIcon}>
-          <Icon name="play-arrow" size={isSmallScreen ? 18 : 22} color="#333333" />
-        </View>
-      </View>
-      <View style={styles.relatedVideoTitleContainer}>
-        <Text style={styles.relatedVideoTitle} numberOfLines={1}>
-          {item.name}
-        </Text>
-      </View>
-      <View style={styles.relatedVideoLanguageBadge}>
-        <Text style={styles.relatedVideoLanguageText}>
-          {languages.find(lang => lang.id === selectedLanguage)?.code || 'EN'}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  ), [handleVideoSelect, selectedLanguage, languages]);
+  const togglePlayback = useCallback(() => setIsPlaying(prev => !prev), []);
 
-  const renderLanguageButton = useCallback((language: typeof languages[0]) => (
-    <TouchableOpacity
-      key={language.id}
-      style={[
-        styles.languageButton,
-        selectedLanguage === language.id && styles.languageButtonSelected
-      ]}
-      onPress={() => handleLanguageChange(language.id)}
-      activeOpacity={0.7}
-    >
-      <View style={styles.languageButtonContent}>
-        <Text style={[
-          styles.languageButtonText,
-          selectedLanguage === language.id && styles.languageButtonTextSelected
-        ]}>
-          {language.name}
-        </Text>
-        {selectedLanguage === language.id && (
-          <Icon name="check-circle" size={isSmallScreen ? 14 : 16} color="#ffffff" />
-        )}
-      </View>
-    </TouchableOpacity>
-  ), [selectedLanguage, handleLanguageChange]);
+  const renderRelatedVideo = useCallback(
+    ({ item }: { item: VideoContent }) => (
+      <TouchableOpacity
+        style={[styles.relatedCard, { width: CARD_WIDTH, height: CARD_HEIGHT }]}
+        activeOpacity={0.85}
+        onPress={() => handleVideoSelect(item)}
+      >
+        <Image
+          source={{ uri: item.thumbnail }}
+          style={styles.relatedThumbnail}
+          resizeMode="cover"
+        />
+        <View style={styles.relatedOverlay}>
+          <Icon name="play-arrow" size={28} color="#333" />
+        </View>
+        <View style={styles.relatedMeta}>
+          <Text style={[styles.relatedTitle, { color: textColor }]} numberOfLines={1}>
+            {item.title}
+          </Text>
+          <View style={styles.relatedBadge}>
+            <Text style={[styles.relatedBadgeText, { color: secondaryTextColor }]}>
+              {item.language?.toUpperCase() || 'EN'}
+            </Text>
+          </View>
+        </View>
+      </TouchableOpacity>
+    ),
+    [handleVideoSelect, textColor, secondaryTextColor],
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <StatusBar 
+      <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor="transparent" 
-        translucent={true}
+        backgroundColor="transparent"
+        translucent
       />
-      
+
       <LinearGradient
         colors={theme.colors.gradient}
-        style={styles.gradientBackground}
+        style={styles.gradient}
         start={{ x: 0, y: 0 }}
         end={{ x: 1, y: 1 }}
       >
-        {/* Safe Area Top Spacing */}
-        <View style={{ height: insets.top }} />
-        
-        {/* Enhanced Header */}
-        <View style={styles.header}>
+        <View style={{ height: insets.top + moderateScale(12) }} />
+
+        <View style={styles.topHeader}>
           <TouchableOpacity
-            style={styles.backButton}
-            onPress={handleBackPress}
+            onPress={handleBack}
+            style={styles.headerTextButton}
             activeOpacity={0.7}
           >
-            <Icon name="arrow-back" size={isSmallScreen ? 20 : 24} color="#ffffff" />
+            <Text style={styles.headerButtonText}>Back</Text>
           </TouchableOpacity>
-          <View style={styles.headerContent}>
-            <Text style={styles.headerTitle}>{selectedVideo.name}</Text>
-            <Text style={styles.headerSubtitle}>{selectedVideo.category}</Text>
-            <View style={styles.headerMeta}>
-              <View style={styles.headerMetaItem}>
-                <Icon name="visibility" size={isSmallScreen ? 12 : 14} color="rgba(255,255,255,0.7)" />
-                <Text style={styles.headerMetaText}>High Definition</Text>
-              </View>
-              <View style={styles.headerMetaItem}>
-                <Icon name="schedule" size={isSmallScreen ? 12 : 14} color="rgba(255,255,255,0.7)" />
-                <Text style={styles.headerMetaText}>Auto-Play</Text>
-              </View>
-            </View>
-          </View>
+
+          <TouchableOpacity
+            style={styles.headerLanguageButton}
+            activeOpacity={0.8}
+            onPress={() => setLanguageMenuVisible(prev => !prev)}
+          >
+            <Text style={[styles.headerLanguageText, { color: textColor }]}>
+              {LANGUAGE_OPTIONS.find(option => option.id === selectedLanguage)?.name || selectedLanguage.toUpperCase()}
+            </Text>
+            <Icon
+              name={languageMenuVisible ? 'expand-less' : 'expand-more'}
+              size={getIconSize(14)}
+              color="#000000"
+            />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleContinue}
+            style={styles.headerTextButton}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.headerButtonText}>Next</Text>
+          </TouchableOpacity>
         </View>
 
-        {/* Enhanced Video Section */}
         <View style={styles.videoContainer}>
-          {selectedVideo.videoUrl && (
+          {selectedVideo.videoUrl ? (
             <>
               <Video
                 source={{ uri: selectedVideo.videoUrl }}
                 style={styles.videoPlayer}
                 resizeMode="contain"
-                repeat={true}
-                paused={!isVideoPlaying}
-                muted={true}
+                repeat
+                muted
+                paused={!isPlaying}
               />
-              <View style={styles.videoOverlay}>
-                <View style={styles.videoControls}>
-                  <TouchableOpacity
-                    style={styles.playPauseButton}
-                    onPress={toggleVideoPlayback}
-                    activeOpacity={0.8}
-                  >
-                    <Icon 
-                      name={isVideoPlaying ? "pause" : "play-arrow"} 
-                      size={isSmallScreen ? 24 : 28} 
-                      color="#ffffff" 
-                    />
-                  </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.playPause}
+                activeOpacity={0.8}
+                onPress={togglePlayback}
+              >
+                <Icon
+                  name={isPlaying ? 'pause-circle-filled' : 'play-circle-filled'}
+                  size={60}
+                  color="#ffffff"
+                />
+              </TouchableOpacity>
+
+              {languageMenuVisible && (
+                <View style={styles.languageDropdownMenuSmall}>
+                  {LANGUAGE_OPTIONS.map(option => {
+                    const isAvailable = availableLanguages.includes(option.id);
+                    const isSelected = option.id === selectedLanguage;
+                    return (
+                      <TouchableOpacity
+                        key={option.id}
+                        style={[
+                          styles.languageDropdownItem,
+                          isSelected && styles.languageDropdownItemSelected,
+                          !isAvailable && styles.languageDropdownItemDisabled,
+                        ]}
+                        onPress={() => isAvailable && handleLanguageChange(option.id)}
+                        activeOpacity={isAvailable ? 0.8 : 1}
+                        disabled={!isAvailable}
+                      >
+                        <Text
+                          style={[
+                            styles.languageDropdownItemText,
+                            isSelected && styles.languageDropdownItemTextSelected,
+                            !isAvailable && styles.languageDropdownItemTextDisabled,
+                          ]}
+                        >
+                          {option.name}
+                        </Text>
+                        {isSelected && (
+                          <Icon name="check" size={getIconSize(12)} color="#ffffff" />
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
-                <View style={styles.languageBadge}>
-                  <Text style={styles.languageBadgeText}>
-                    {selectedLanguage.toUpperCase()}
-                  </Text>
-                </View>
-              </View>
+              )}
             </>
+          ) : (
+            <View style={styles.videoPlaceholder}>
+              <Icon name="videocam-off" size={36} color="#ffffffaa" />
+              <Text style={[styles.videoPlaceholderText, { color: secondaryTextColor }]}>
+                Video unavailable
+              </Text>
+            </View>
           )}
         </View>
 
-        {/* Enhanced Language Selection Section */}
-        <View style={styles.languageSection}>
-          <View style={styles.languageSectionHeader}>
-            <Text style={styles.languageTitle}>
-              Select Language
-            </Text>
-            <Text style={styles.languageSubtitle}>
-              Select language variant for content
-            </Text>
-          </View>
-          <ScrollView 
-            horizontal 
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.languageButtonsContainer}
-          >
-            {languages.map(renderLanguageButton)}
-          </ScrollView>
-        </View>
-
-        {/* Next Button Section */}
-        <View style={styles.nextButtonSection}>
-          <TouchableOpacity
-            style={styles.nextButton}
-            onPress={handleNextPress}
-            activeOpacity={0.8}
-          >
-            <View style={styles.nextButtonContent}>
-              <Text style={styles.nextButtonText}>Continue to Editor</Text>
-              <Icon name="arrow-forward" size={isSmallScreen ? 18 : 20} color="#ffffff" />
-            </View>
-          </TouchableOpacity>
-        </View>
-
-        {/* Enhanced Related Videos Section */}
         <View style={styles.relatedSection}>
           <View style={styles.relatedHeader}>
-            <View style={styles.relatedHeaderLeft}>
-              <Text style={styles.relatedTitle}>
-                Related Content
-              </Text>
-              <Text style={styles.relatedSubtitle}>
-                In {languages.find(lang => lang.id === selectedLanguage)?.name}
+            <View>
+              <Text style={[styles.sectionTitle, { color: textColor }]}>Related Videos</Text>
+              <Text style={[styles.sectionSubtitle, { color: secondaryTextColor }]}>
+                In {selectedLanguage.toUpperCase()}
               </Text>
             </View>
             <View style={styles.relatedCountBadge}>
-              <Text style={styles.relatedCountText}>
-                {filteredVideos.length} ITEMS
+              <Text style={[styles.relatedCountText, { color: secondaryTextColor }]}>
+                {filteredRelatedVideos.length} ITEMS
               </Text>
             </View>
           </View>
-          
-          {filteredVideos.length > 0 ? (
+
+          {filteredRelatedVideos.length > 0 ? (
             <FlatList
-              data={filteredVideos.slice(0, isSmallScreen ? 4 : 6)}
+              data={filteredRelatedVideos}
+              keyExtractor={item => item.id}
               renderItem={renderRelatedVideo}
-              keyExtractor={(item) => item.id}
-              numColumns={isSmallScreen ? 2 : 2}
-              columnWrapperStyle={styles.relatedGrid}
+              numColumns={NUM_COLUMNS}
+              columnWrapperStyle={styles.relatedColumns}
               showsVerticalScrollIndicator={false}
-              contentContainerStyle={[styles.relatedList, { paddingBottom: insets.bottom + responsiveSpacing.xl }]}
+              contentContainerStyle={styles.relatedList}
             />
           ) : (
-            <View style={styles.noVideosContainer}>
-              <Icon name="video-library" size={isSmallScreen ? 40 : 48} color="rgba(255,255,255,0.5)" />
-              <Text style={styles.noVideosText}>
-                No content available in {languages.find(lang => lang.id === selectedLanguage)?.name}
+            <View style={styles.emptyState}>
+              <Icon name="video-library" size={48} color="#ffffff55" />
+              <Text style={[styles.emptyTitle, { color: textColor }]}>
+                No videos found in {selectedLanguage.toUpperCase()}
               </Text>
-              <Text style={styles.noVideosSubtext}>
-                Try selecting a different language
+              <Text style={[styles.emptySubtitle, { color: secondaryTextColor }]}>
+                Try a different language.
               </Text>
             </View>
           )}
         </View>
+
+        <View style={{ height: insets.bottom }} />
       </LinearGradient>
     </View>
   );
@@ -328,370 +326,250 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  gradientBackground: {
+  gradient: {
     flex: 1,
   },
-  header: {
+  topHeader: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingHorizontal: responsiveSpacing.md,
-    paddingTop: responsiveSpacing.sm,
-    paddingBottom: responsiveSpacing.md,
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: moderateScale(8),
+    paddingBottom: moderateScale(6),
   },
-  backButton: {
-    width: isSmallScreen ? 40 : 44,
-    height: isSmallScreen ? 40 : 44,
-    borderRadius: isSmallScreen ? 20 : 22,
-    backgroundColor: 'rgba(255,255,255,0.15)',
+  headerTextButton: {
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.12)',
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: responsiveSpacing.sm,
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
   },
-  headerContent: {
-    flex: 1,
+  headerButtonText: {
+    color: '#000000',
+    fontSize: moderateScale(11),
+    fontWeight: '600',
   },
-  headerTitle: {
-    fontSize: responsiveFontSize.xl,
-    fontWeight: '700',
-    color: '#ffffff',
-    marginBottom: 4,
-    letterSpacing: 0.5,
-    lineHeight: responsiveFontSize.xl * 1.2,
-  },
-  headerSubtitle: {
-    fontSize: responsiveFontSize.md,
-    color: 'rgba(255,255,255,0.8)',
-    fontWeight: '500',
-    marginBottom: responsiveSpacing.xs,
-  },
-  headerMeta: {
-    flexDirection: 'row',
-    gap: responsiveSpacing.md,
-  },
-  headerMetaItem: {
+  headerLanguageButton: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: moderateScale(6),
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.18)',
   },
-  headerMetaText: {
-    fontSize: responsiveFontSize.xs,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
+  headerLanguageText: {
+    color: '#000000',
+    fontSize: moderateScale(10),
+    fontWeight: '600',
   },
   videoContainer: {
-    position: 'relative',
     height: getVideoContainerHeight(),
-    backgroundColor: '#000000',
+    marginHorizontal: moderateScale(8),
+    borderRadius: moderateScale(18),
+    overflow: 'hidden',
+    backgroundColor: '#000',
     justifyContent: 'center',
     alignItems: 'center',
-    marginHorizontal: responsiveSpacing.md,
-    borderRadius: isSmallScreen ? 16 : 20,
-    overflow: 'hidden',
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 8,
-    },
-    shadowOpacity: 0.3,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.25,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 6 },
+    elevation: 8,
   },
   videoPlayer: {
     width: '100%',
     height: '100%',
   },
-  videoOverlay: {
+  playPause: {
     position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.2)',
+    alignSelf: 'center',
+  },
+  videoPlaceholder: {
+    flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
   },
-  videoControls: {
-    position: 'absolute',
-    top: '50%',
-    left: '50%',
-    transform: [{ translateX: isSmallScreen ? -20 : -25 }, { translateY: isSmallScreen ? -20 : -25 }],
-  },
-  playPauseButton: {
-    width: isSmallScreen ? 40 : 50,
-    height: isSmallScreen ? 40 : 50,
-    borderRadius: isSmallScreen ? 20 : 25,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.3)',
-  },
-  languageBadge: {
-    position: 'absolute',
-    top: responsiveSpacing.md,
-    right: responsiveSpacing.md,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: responsiveSpacing.sm,
-    paddingVertical: 6,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
-  },
-  languageBadgeText: {
-    color: '#ffffff',
-    fontSize: responsiveFontSize.xs,
-    fontWeight: '600',
-    letterSpacing: 0.5,
+  videoPlaceholderText: {
+    marginTop: moderateScale(6),
+    color: '#ffffffaa',
+    fontSize: moderateScale(10),
   },
   languageSection: {
-    paddingHorizontal: responsiveSpacing.md,
-    paddingVertical: responsiveSpacing.lg,
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: moderateScale(6),
   },
-  languageSectionHeader: {
-    marginBottom: responsiveSpacing.md,
-  },
-  languageTitle: {
-    fontSize: responsiveFontSize.lg,
+  sectionTitle: {
+    fontSize: moderateScale(13),
     fontWeight: '700',
     color: '#ffffff',
-    marginBottom: 4,
-    textAlign: 'center',
-    letterSpacing: 0.5,
+    marginBottom: moderateScale(4),
   },
-  languageSubtitle: {
-    fontSize: responsiveFontSize.sm,
-    color: 'rgba(255,255,255,0.7)',
-    textAlign: 'center',
-    fontWeight: '500',
+  sectionSubtitle: {
+    fontSize: moderateScale(10),
+    color: 'rgba(255,255,255,0.65)',
   },
-  languageButtonsContainer: {
-    paddingHorizontal: responsiveSpacing.sm,
+  languageScroll: {
+    paddingVertical: moderateScale(4),
   },
-  languageButtons: {
+  languageChip: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
-    gap: responsiveSpacing.sm,
-  },
-  languageButton: {
-    paddingVertical: responsiveSpacing.md,
-    paddingHorizontal: responsiveSpacing.lg,
-    borderRadius: 18,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-    borderWidth: 2,
-    borderColor: 'rgba(255,255,255,0.2)',
     alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 2,
-    marginHorizontal: responsiveSpacing.xs,
+    gap: moderateScale(4),
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.2)',
+    borderRadius: moderateScale(18),
+    marginRight: moderateScale(6),
   },
-  languageButtonSelected: {
+  languageChipActive: {
     backgroundColor: '#667eea',
-    borderColor: '#667eea',
-    shadowOpacity: 0.2,
-    shadowRadius: 6,
-    elevation: 4,
   },
-  languageButtonContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+  languageChipDisabled: {
+    opacity: 0.4,
   },
-  languageButtonText: {
-    fontSize: responsiveFontSize.md,
+  languageChipText: {
+    color: '#ffffff',
+    fontSize: moderateScale(9),
     fontWeight: '600',
+  },
+  languageChipTextActive: {
     color: '#ffffff',
-    letterSpacing: 0.3,
   },
-  languageButtonTextSelected: {
-    fontWeight: '700',
+  languageChipTextDisabled: {
+    color: 'rgba(255,255,255,0.6)',
   },
-  nextButtonSection: {
-    paddingHorizontal: responsiveSpacing.md,
-    paddingVertical: responsiveSpacing.md,
-  },
-  nextButton: {
-    backgroundColor: '#667eea',
-    borderRadius: isSmallScreen ? 16 : 20,
-    paddingVertical: responsiveSpacing.md,
-    paddingHorizontal: responsiveSpacing.lg,
+  languageDropdownMenuSmall: {
+    position: 'absolute',
+    top: moderateScale(8),
+    alignSelf: 'center',
+    minWidth: moderateScale(140),
+    maxWidth: '80%',
+    borderRadius: moderateScale(12),
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    paddingVertical: moderateScale(4),
     shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
     elevation: 6,
   },
-  nextButtonContent: {
+  languageDropdownItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: responsiveSpacing.sm,
+    justifyContent: 'space-between',
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
   },
-  nextButtonText: {
-    fontSize: responsiveFontSize.lg,
-    fontWeight: '700',
+  languageDropdownItemSelected: {
+    backgroundColor: 'rgba(102, 126, 234, 0.35)',
+  },
+  languageDropdownItemDisabled: {
+    opacity: 0.4,
+  },
+  languageDropdownItemText: {
     color: '#ffffff',
-    letterSpacing: 0.5,
+    fontSize: moderateScale(10),
+    fontWeight: '600',
+  },
+  languageDropdownItemTextSelected: {
+    fontWeight: '700',
+  },
+  languageDropdownItemTextDisabled: {
+    color: 'rgba(255,255,255,0.6)',
   },
   relatedSection: {
     flex: 1,
-    paddingHorizontal: responsiveSpacing.md,
-    paddingTop: responsiveSpacing.sm,
+    paddingHorizontal: moderateScale(8),
   },
   relatedHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: responsiveSpacing.md,
-  },
-  relatedHeaderLeft: {
-    flex: 1,
-  },
-  relatedTitle: {
-    fontSize: responsiveFontSize.lg,
-    fontWeight: '700',
-    color: '#ffffff',
-    letterSpacing: 0.5,
-    marginBottom: 2,
-  },
-  relatedSubtitle: {
-    fontSize: responsiveFontSize.sm,
-    color: 'rgba(255,255,255,0.7)',
-    fontWeight: '500',
+    marginBottom: moderateScale(6),
   },
   relatedCountBadge: {
-    backgroundColor: '#667eea',
-    paddingHorizontal: responsiveSpacing.sm,
-    paddingVertical: 6,
-    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: moderateScale(3),
+    borderRadius: moderateScale(10),
   },
   relatedCountText: {
     color: '#ffffff',
-    fontSize: responsiveFontSize.xs,
+    fontSize: moderateScale(8),
     fontWeight: '600',
-    letterSpacing: 0.5,
   },
   relatedList: {
-    paddingBottom: responsiveSpacing.xl,
+    paddingBottom: moderateScale(20),
+    paddingTop: moderateScale(4),
   },
-  relatedGrid: {
-    justifyContent: 'space-between',
-    gap: responsiveSpacing.sm,
+  relatedColumns: {
+    justifyContent: 'flex-start',
+    marginBottom: moderateScale(6),
+    gap: CARD_GAP,
   },
-  relatedVideoCard: {
-    width: (screenWidth - responsiveSpacing.md * 3) / 2,
-    height: (screenWidth - responsiveSpacing.md * 3) / 2 * 0.7,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: isSmallScreen ? 14 : 18,
+  relatedCard: {
+    borderRadius: moderateScale(8),
     overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 4,
-    },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 6,
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: moderateScale(0.5),
+    borderColor: 'rgba(255,255,255,0.15)',
+    marginBottom: moderateScale(6),
   },
-  relatedVideoImage: {
+  relatedThumbnail: {
     width: '100%',
     height: '100%',
   },
-  relatedVideoOverlay: {
+  relatedOverlay: {
     position: 'absolute',
     top: 0,
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
   },
-  relatedVideoPlayIcon: {
-    width: isSmallScreen ? 40 : 48,
-    height: isSmallScreen ? 40 : 48,
-    borderRadius: isSmallScreen ? 20 : 24,
-    backgroundColor: 'rgba(255,255,255,0.95)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 3,
+  relatedMeta: {
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: moderateScale(10),
   },
-  relatedVideoTitleContainer: {
-    position: 'absolute',
-    bottom: 8,
-    left: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: 8,
-    paddingVertical: 6,
-    borderRadius: 10,
-  },
-  relatedVideoTitle: {
+  relatedTitle: {
     color: '#ffffff',
-    fontSize: responsiveFontSize.xs,
-    fontWeight: '600',
-    textAlign: 'center',
-  },
-  relatedVideoLanguageBadge: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: 'rgba(0,0,0,0.8)',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 8,
-  },
-  relatedVideoLanguageText: {
-    color: '#ffffff',
-    fontSize: responsiveFontSize.xs - 2,
+    fontSize: moderateScale(9),
     fontWeight: '600',
   },
-  noVideosContainer: {
+  relatedBadge: {
+    marginTop: 6,
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    paddingVertical: moderateScale(3),
+    paddingHorizontal: moderateScale(6),
+    borderRadius: moderateScale(8),
+  },
+  relatedBadgeText: {
+    color: '#ffffff',
+    fontSize: moderateScale(8),
+    fontWeight: '600',
+  },
+  emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: responsiveSpacing.xl,
+    paddingVertical: moderateScale(24),
   },
-  noVideosText: {
-    fontSize: responsiveFontSize.md,
-    color: 'rgba(255,255,255,0.7)',
+  emptyTitle: {
+    color: '#ffffff',
+    fontSize: moderateScale(12),
     fontWeight: '600',
-    textAlign: 'center',
-    marginTop: responsiveSpacing.md,
-    marginBottom: responsiveSpacing.xs,
+    marginTop: 12,
   },
-  noVideosSubtext: {
-    fontSize: responsiveFontSize.sm,
-    color: 'rgba(255,255,255,0.5)',
-    textAlign: 'center',
+  emptySubtitle: {
+    color: 'rgba(255,255,255,0.7)',
+    fontSize: moderateScale(10),
+    marginTop: 6,
   },
 });
 
 export default VideoPlayerScreen;
+

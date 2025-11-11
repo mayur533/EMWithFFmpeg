@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,6 @@ import {
   PermissionsAndroid,
 } from 'react-native';
 import Video from 'react-native-video';
-import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute } from '@react-navigation/native';
@@ -25,32 +24,84 @@ import { useSubscription } from '../contexts/SubscriptionContext';
 import VideoComposer from '../services/VideoComposer';
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
 import RNFS from 'react-native-fs';
+import LinearGradient from 'react-native-linear-gradient';
 // import videoProcessingService from '../services/videoProcessingService'; // Removed - service deleted
 
-const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+const { width: initialScreenWidth, height: initialScreenHeight } = Dimensions.get('window');
 
-// Responsive design helpers
-const isSmallScreen = screenWidth < 375;
-const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
-const isLargeScreen = screenWidth >= 414;
+const COMPACT_MULTIPLIER = 0.5;
 
-// Responsive spacing and sizing
+const scale = (size: number) => (initialScreenWidth / 375) * size;
+const verticalScale = (size: number) => (initialScreenHeight / 667) * size;
+const moderateScale = (size: number, factor = 0.5) =>
+  size + (scale(size) - size) * factor;
+
+const isUltraSmallScreen = initialScreenWidth < 360;
+const isSmallScreen = initialScreenWidth >= 360 && initialScreenWidth < 375;
+const isMediumScreen = initialScreenWidth >= 375 && initialScreenWidth < 414;
+const isLargeScreen = initialScreenWidth >= 414 && initialScreenWidth < 480;
+const isXLargeScreen = initialScreenWidth >= 480;
+const isTablet = Math.min(initialScreenWidth, initialScreenHeight) >= 768;
+
 const responsiveSpacing = {
-  xs: isSmallScreen ? 8 : isMediumScreen ? 12 : 16,
-  sm: isSmallScreen ? 12 : isMediumScreen ? 16 : 20,
-  md: isSmallScreen ? 16 : isMediumScreen ? 20 : 24,
-  lg: isSmallScreen ? 20 : isMediumScreen ? 24 : 32,
-  xl: isSmallScreen ? 24 : isMediumScreen ? 32 : 40,
+  xs: Math.max(1, (isUltraSmallScreen ? 2 : isSmallScreen ? 4 : isMediumScreen ? 6 : isLargeScreen ? 8 : 10) * COMPACT_MULTIPLIER),
+  sm: Math.max(2, (isUltraSmallScreen ? 4 : isSmallScreen ? 6 : isMediumScreen ? 8 : isLargeScreen ? 10 : 12) * COMPACT_MULTIPLIER),
+  md: Math.max(3, (isUltraSmallScreen ? 6 : isSmallScreen ? 8 : isMediumScreen ? 10 : isLargeScreen ? 12 : 14) * COMPACT_MULTIPLIER),
+  lg: Math.max(4, (isUltraSmallScreen ? 8 : isSmallScreen ? 10 : isMediumScreen ? 12 : isLargeScreen ? 14 : 16) * COMPACT_MULTIPLIER),
+  xl: Math.max(5, (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : 18) * COMPACT_MULTIPLIER),
+  xxl: Math.max(6, (isUltraSmallScreen ? 12 : isSmallScreen ? 14 : isMediumScreen ? 16 : isLargeScreen ? 18 : 20) * COMPACT_MULTIPLIER),
+  xxxl: Math.max(7, (isUltraSmallScreen ? 14 : isSmallScreen ? 16 : isMediumScreen ? 18 : isLargeScreen ? 20 : 24) * COMPACT_MULTIPLIER),
 };
 
 const responsiveFontSize = {
-  xs: isSmallScreen ? 10 : isMediumScreen ? 12 : 14,
-  sm: isSmallScreen ? 12 : isMediumScreen ? 14 : 16,
-  md: isSmallScreen ? 14 : isMediumScreen ? 16 : 18,
-  lg: isSmallScreen ? 16 : isMediumScreen ? 18 : 20,
-  xl: isSmallScreen ? 18 : isMediumScreen ? 20 : 22,
-  xxl: isSmallScreen ? 20 : isMediumScreen ? 22 : 24,
-  xxxl: isSmallScreen ? 24 : isMediumScreen ? 28 : 32,
+  xs: Math.max(7, (isUltraSmallScreen ? 8 : isSmallScreen ? 9 : isMediumScreen ? 10 : isLargeScreen ? 11 : 12) * 0.85),
+  sm: Math.max(8, (isUltraSmallScreen ? 9 : isSmallScreen ? 10 : isMediumScreen ? 11 : isLargeScreen ? 12 : 13) * 0.85),
+  md: Math.max(9, (isUltraSmallScreen ? 10 : isSmallScreen ? 11 : isMediumScreen ? 12 : isLargeScreen ? 13 : 14) * 0.85),
+  lg: Math.max(10, (isUltraSmallScreen ? 11 : isSmallScreen ? 12 : isMediumScreen ? 13 : isLargeScreen ? 14 : 15) * 0.85),
+  xl: Math.max(11, (isUltraSmallScreen ? 12 : isSmallScreen ? 13 : isMediumScreen ? 14 : isLargeScreen ? 15 : 16) * 0.85),
+  xxl: Math.max(12, (isUltraSmallScreen ? 13 : isSmallScreen ? 14 : isMediumScreen ? 15 : isLargeScreen ? 16 : 17) * 0.85),
+  xxxl: Math.max(13, (isUltraSmallScreen ? 14 : isSmallScreen ? 15 : isMediumScreen ? 16 : isLargeScreen ? 17 : 18) * 0.85),
+};
+
+const getIconSize = (baseSize: number) => {
+  return Math.max(10, Math.round(baseSize * (initialScreenWidth / 375) * 0.6));
+};
+
+const getResponsiveDimensions = (insets: any) => {
+  const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+  const isLandscape = screenWidth > screenHeight;
+
+  const availableWidth = screenWidth - (insets.left + insets.right);
+  const availableHeight = screenHeight - (insets.top + insets.bottom);
+
+  let videoWidthRatio = isLandscape ? (isTablet ? 0.6 : 0.7) : 0.85;
+  let videoHeightRatio = isLandscape ? (isTablet ? 0.8 : 0.6) : 0.55;
+
+  if (!isLandscape) {
+    if (isUltraSmallScreen) {
+      videoWidthRatio = 0.95;
+      videoHeightRatio = 0.75;
+    } else if (isSmallScreen) {
+      videoWidthRatio = 0.92;
+      videoHeightRatio = 0.7;
+    } else if (isMediumScreen) {
+      videoWidthRatio = 0.9;
+      videoHeightRatio = 0.65;
+    } else if (isLargeScreen) {
+      videoWidthRatio = 0.88;
+      videoHeightRatio = 0.6;
+    }
+  }
+
+  const videoWidth = Math.min(availableWidth * videoWidthRatio, screenWidth * videoWidthRatio);
+  const videoHeight = Math.min(availableHeight * videoHeightRatio, screenHeight * videoHeightRatio);
+
+  return {
+    videoWidth,
+    videoHeight,
+    availableWidth,
+    availableHeight,
+  };
 };
 
 interface VideoPreviewScreenProps {
@@ -78,6 +129,19 @@ interface VideoPreviewScreenProps {
 const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
   const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
   const insets = useSafeAreaInsets();
+  const [dimensions, setDimensions] = useState(() => {
+    const { width, height } = Dimensions.get('window');
+    return { width, height };
+  });
+
+  useEffect(() => {
+    const subscription = Dimensions.addEventListener('change', ({ window }) => {
+      setDimensions({ width: window.width, height: window.height });
+    });
+    return () => subscription?.remove();
+  }, []);
+
+  const { videoWidth, videoHeight } = getResponsiveDimensions(insets);
   const { selectedVideo, selectedLanguage, selectedTemplateId, layers, selectedProfile, processedVideoPath: initialProcessedVideoPath, canvasData } = route.params;
   const { isSubscribed } = useSubscription();
 
@@ -476,19 +540,14 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
 
   // Render video layers
   const renderLayer = (layer: any) => {
-    // Calculate scaling factors if canvasData is available
     let scaleX = 1;
     let scaleY = 1;
-    
-    if (canvasData) {
-      // Get the actual video container dimensions
-      const videoContainerWidth = screenWidth - 40; // Same as videoCanvasWidth in editor
-      const videoContainerHeight = screenHeight - 200; // Approximate video container height (accounting for header and controls)
-      
-      scaleX = videoContainerWidth / canvasData.width;
-      scaleY = videoContainerHeight / canvasData.height;
+
+    if (canvasData && canvasData.width && canvasData.height) {
+      scaleX = videoWidth / canvasData.width;
+      scaleY = videoHeight / canvasData.height;
     }
-    
+
     return (
       <View
         key={layer.id}
@@ -519,7 +578,7 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
             />
           ) : (
             // Text layer
-            <Text style={[styles.layerText, layer.style]}>
+            <Text style={[styles.layerText, { ...layer.style, fontSize: (layer.style?.fontSize || 16) * scaleY }]}>
               {layer.content}
             </Text>
           )
@@ -543,90 +602,104 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
   };
 
   return (
-    <SafeAreaView 
-      style={[styles.container, { backgroundColor: '#000000' }]}
-      edges={['top', 'left', 'right']}
-    >
-      <StatusBar 
-        barStyle="light-content"
-        backgroundColor="transparent" 
-        translucent={true}
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <StatusBar
+        barStyle="dark-content"
+        backgroundColor="transparent"
+        translucent
       />
-      
-      <LinearGradient
-        colors={['#667eea', '#764ba2']}
-        style={styles.gradientBackground}
+
+      <View
+        style={[
+          styles.header,
+          {
+            paddingTop: insets.top + responsiveSpacing.xs,
+          },
+        ]}
       >
-        {/* Header */}
-        <View style={[styles.header, { paddingTop: insets.top + responsiveSpacing.sm }]}>
-          <TouchableOpacity style={styles.backButton} onPress={handleBackToEditor}>
-            <Icon name="arrow-back" size={24} color="#ffffff" />
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Video Preview</Text>
-          <View style={styles.headerSpacer} />
+        <TouchableOpacity style={styles.backButton} onPress={handleBackToEditor}>
+          <Icon name="arrow-back" size={getIconSize(24)} color="#333333" />
+        </TouchableOpacity>
+        <View style={styles.headerContent} />
+        <View style={styles.headerSpacer} />
+      </View>
+
+      <View style={styles.previewContainer}>
+        <View style={styles.previewHeader}>
+          <Text style={styles.previewTitle}>Your Video</Text>
         </View>
 
-                 {/* Video Player */}
-         <View style={styles.videoContainer}>
-           <Video
-             ref={videoRef}
-             source={{ uri: getSafeVideoUri() }}
-             style={styles.video}
-             resizeMode="contain"
-             paused={!isVideoPlaying}
-             onLoad={onVideoLoad}
-             onProgress={onVideoProgress}
-             onError={onVideoError}
-             repeat={true}
-             controls={true}
-           />
-           
-           {/* Success message for processed videos */}
-           {isDemoVideo && (
-             <View style={styles.demoVideoContainer}>
-               <View style={styles.demoVideoContent}>
-                 <Icon name="check-circle" size={60} color="#4CAF50" />
-                 <Text style={styles.demoVideoTitle}>Video Generated Successfully!</Text>
-                 <Text style={styles.demoVideoSubtitle}>
-                   Your video has been processed with {layers.length} overlay{layers.length !== 1 ? 's' : ''}.
-                 </Text>
-                 <Text style={styles.demoVideoNote}>
-                   ✅ Real MP4 video file created with embedded overlays!
-                 </Text>
-                 <TouchableOpacity 
-                   style={styles.demoVideoButton}
-                   onPress={() => {
-                     setIsDemoVideo(false);
-                     setUseProcessedVideo(false);
-                   }}
-                 >
-                   <Text style={styles.demoVideoButtonText}>View Original Video</Text>
-                 </TouchableOpacity>
-               </View>
-             </View>
-           )}
-           
-                        {/* Video Layers - Only show when using original video (processed video should have overlays already applied) */}
-             {!useProcessedVideo && layers && layers.length > 0 && layers.map(renderLayer)}
-        </View>
+        <View
+          style={[
+            styles.videoWrapper,
+            { width: videoWidth, height: videoHeight },
+          ]}
+        >
+          <Video
+            ref={videoRef}
+            source={{ uri: getSafeVideoUri() }}
+            style={styles.video}
+            resizeMode="contain"
+            paused={!isVideoPlaying}
+            onLoad={onVideoLoad}
+            onProgress={onVideoProgress}
+            onError={onVideoError}
+            repeat
+            controls
+          />
 
-        {/* Download Success Message */}
-        {showDownloadSuccess && (
-          <View style={styles.successMessageContainer}>
-            <View style={styles.successMessage}>
-              <Icon name="check-circle" size={24} color="#4CAF50" />
-              <Text style={styles.successMessageText}>Downloaded successfully</Text>
+          {!useProcessedVideo && layers && layers.length > 0 && (
+            <View style={styles.overlayContainer}>
+              {layers.map(renderLayer)}
             </View>
+          )}
+
+          {isDemoVideo && (
+            <View style={styles.demoVideoContainer}>
+              <View style={styles.demoVideoContent}>
+                <Icon name="check-circle" size={getIconSize(40)} color="#4CAF50" />
+                <Text style={styles.demoVideoTitle}>Video Generated Successfully!</Text>
+                <Text style={styles.demoVideoSubtitle}>
+                  Your video has been processed with {layers.length} overlay{layers.length !== 1 ? 's' : ''}.
+                </Text>
+                <Text style={styles.demoVideoNote}>
+                  ✅ Real MP4 video file created with embedded overlays!
+                </Text>
+                <TouchableOpacity
+                  style={styles.demoVideoButton}
+                  onPress={() => {
+                    setIsDemoVideo(false);
+                    setUseProcessedVideo(false);
+                  }}
+                >
+                  <Text style={styles.demoVideoButtonText}>View Original Video</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+        </View>
+      </View>
+
+      {showDownloadSuccess && (
+        <View style={styles.successMessageContainer}>
+          <View style={styles.successMessage}>
+            <Icon name="check-circle" size={getIconSize(20)} color="#4CAF50" />
+            <Text style={styles.successMessageText}>Downloaded successfully</Text>
           </View>
-        )}
+        </View>
+      )}
 
-      </LinearGradient>
-
-      {/* Action Buttons - Outside LinearGradient */}
-      <View style={styles.actionContainer}>
+      <View
+        style={[
+          styles.actionContainer,
+          {
+            paddingBottom: Math.max(insets.bottom + responsiveSpacing.xs, responsiveSpacing.md),
+          },
+        ]}
+      >
         <View style={styles.actionButtons}>
-          <TouchableOpacity 
-            style={styles.actionButton} 
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={handleShare}
             disabled={isDownloading}
           >
@@ -634,15 +707,15 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
               colors={isDownloading ? ['#cccccc', '#999999'] : ['#667eea', '#764ba2']}
               style={styles.shareButtonGradient}
             >
-              <Icon name="share" size={24} color="#ffffff" />
+              <Icon name="share" size={getIconSize(24)} color="#ffffff" />
               <Text style={styles.shareButtonText}>
                 {isDownloading ? 'Processing...' : 'Share'}
               </Text>
             </LinearGradient>
           </TouchableOpacity>
-          
-          <TouchableOpacity 
-            style={styles.actionButton} 
+
+          <TouchableOpacity
+            style={styles.actionButton}
             onPress={handleQuickDownload}
             disabled={isDownloading}
           >
@@ -659,25 +732,22 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
                 </View>
               ) : (
                 <>
-                  <Icon name="download" size={24} color="#ffffff" />
+                  <Icon name="download" size={getIconSize(24)} color="#ffffff" />
                   <Text style={styles.saveButtonText}>Save to Gallery</Text>
                 </>
               )}
             </LinearGradient>
           </TouchableOpacity>
-          
         </View>
 
-        {/* Edit Button */}
         <TouchableOpacity
-          style={[styles.editButton, { marginBottom: Math.max(insets.bottom + responsiveSpacing.md, responsiveSpacing.lg) }]}
+          style={styles.editButton}
           onPress={handleBackToEditor}
         >
           <Text style={styles.editButtonText}>Back to Editor</Text>
         </TouchableOpacity>
       </View>
 
-      {/* Confirmation Modal */}
       <Modal
         visible={showConfirmationModal}
         transparent
@@ -690,20 +760,19 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
               {actionType === 'share' ? 'Share Video' : 'Save to Gallery'}
             </Text>
             <Text style={styles.modalMessage}>
-              {actionType === 'share' 
-                ? 'Share this video with your friends and followers?' 
-                : 'Save this video to your device gallery?'
-              }
+              {actionType === 'share'
+                ? 'Share this video with your friends and followers?'
+                : 'Save this video to your device gallery?'}
             </Text>
             <View style={styles.modalButtons}>
-              <TouchableOpacity 
-                style={styles.modalButton} 
+              <TouchableOpacity
+                style={styles.modalButton}
                 onPress={handleCancelAction}
               >
                 <Text style={styles.modalButtonText}>Cancel</Text>
               </TouchableOpacity>
-              <TouchableOpacity 
-                style={[styles.modalButton, styles.modalButtonPrimary]} 
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonPrimary]}
                 onPress={handleConfirmAction}
               >
                 <Text style={[styles.modalButtonText, styles.modalButtonTextPrimary]}>
@@ -723,44 +792,75 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8f9fa',
   },
-  gradientBackground: {
-    flex: 1,
-  },
   header: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 20,
-    paddingTop: 10,
-    paddingBottom: 20,
+    paddingHorizontal: moderateScale(4),
+    paddingVertical: moderateScale(3),
+    borderBottomWidth: 0,
+    backgroundColor: '#ffffff',
+    zIndex: 1000,
+    elevation: moderateScale(4),
   },
   backButton: {
-    padding: 10,
+    padding: moderateScale(6),
+    borderRadius: moderateScale(8),
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
-  headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#ffffff',
+  headerContent: {
+    flex: 1,
+    alignItems: 'center',
+    paddingHorizontal: moderateScale(4),
   },
   headerSpacer: {
-    width: 44,
+    width: moderateScale(26),
   },
-  videoContainer: {
+  previewContainer: {
     flex: 1,
-    margin: 20,
-    borderRadius: 15,
-    overflow: 'hidden',
+    padding: moderateScale(4),
+  },
+  previewHeader: {
+    alignItems: 'center',
+    marginBottom: moderateScale(3),
+  },
+  previewTitle: {
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+    color: '#333333',
+    marginBottom: moderateScale(1.5),
+  },
+  videoWrapper: {
     backgroundColor: '#000000',
+    borderRadius: moderateScale(10),
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: moderateScale(2),
+    },
+    shadowOpacity: 0.08,
+    shadowRadius: moderateScale(6),
+    elevation: moderateScale(4),
+    alignSelf: 'center',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
     position: 'relative',
   },
   video: {
-    flex: 1,
+    width: '100%',
+    height: '100%',
+  },
+  overlayContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
   },
   layer: {
     position: 'absolute',
   },
   layerText: {
-    fontSize: 20,
     color: '#ffffff',
   },
   layerImage: {
@@ -771,7 +871,6 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-
   successMessageContainer: {
     position: 'absolute',
     top: '50%',
@@ -795,85 +894,72 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginLeft: 8,
   },
-
   actionContainer: {
-    paddingHorizontal: Math.max(responsiveSpacing.md, screenWidth * 0.05),
-    paddingTop: Math.max(responsiveSpacing.md, screenHeight * 0.02),
+    paddingHorizontal: moderateScale(4),
+    paddingTop: moderateScale(4),
     backgroundColor: '#ffffff',
-    borderTopWidth: 1,
+    borderTopWidth: 0.5,
     borderTopColor: '#e9ecef',
   },
   actionButtons: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: Math.max(responsiveSpacing.md, screenHeight * 0.02),
-    gap: Math.max(responsiveSpacing.sm, screenWidth * 0.03),
+    marginBottom: moderateScale(4),
   },
   actionButton: {
     flex: 1,
-    marginHorizontal: Math.max(4, screenWidth * 0.01),
-    borderRadius: Math.max(12, screenWidth * 0.03),
+    marginHorizontal: moderateScale(2),
+    borderRadius: moderateScale(6),
     overflow: 'hidden',
-    minHeight: Math.max(56, screenHeight * 0.07),
   },
   shareButtonGradient: {
-    paddingVertical: Math.max(16, screenHeight * 0.02),
-    paddingHorizontal: Math.max(20, screenWidth * 0.05),
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: moderateScale(8),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: Math.max(56, screenHeight * 0.07),
   },
   shareButtonText: {
     color: '#ffffff',
-    fontSize: Math.max(responsiveFontSize.md, Math.min(18, screenWidth * 0.045)),
+    fontSize: moderateScale(9.5),
     fontWeight: '600',
-    marginLeft: Math.max(responsiveSpacing.xs, screenWidth * 0.01),
+    marginLeft: moderateScale(2.5),
   },
   saveButtonGradient: {
-    paddingVertical: Math.max(16, screenHeight * 0.02),
-    paddingHorizontal: Math.max(20, screenWidth * 0.05),
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: moderateScale(8),
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    minHeight: Math.max(56, screenHeight * 0.07),
   },
   saveButtonText: {
     color: '#ffffff',
-    fontSize: Math.max(responsiveFontSize.md, Math.min(18, screenWidth * 0.045)),
+    fontSize: moderateScale(9.5),
     fontWeight: '600',
-    marginLeft: Math.max(responsiveSpacing.xs, screenWidth * 0.01),
-  },
-
-  actionButtonDisabled: {
-    opacity: 0.6,
-  },
-  actionButtonPressed: {
-    backgroundColor: 'rgba(255,255,255,0.3)',
-    transform: [{ scale: 0.95 }],
+    marginLeft: moderateScale(2.5),
   },
   downloadingContainer: {
     alignItems: 'center',
   },
   downloadingText: {
     color: '#ffffff',
-    fontSize: Math.max(14, Math.min(16, screenWidth * 0.04)),
+    fontSize: moderateScale(8.5),
     fontWeight: '600',
-    marginTop: Math.max(5, screenHeight * 0.006),
+    marginTop: moderateScale(2),
   },
   editButton: {
-    paddingVertical: Math.max(responsiveSpacing.sm, screenHeight * 0.015),
-    paddingHorizontal: Math.max(responsiveSpacing.md, screenWidth * 0.05),
-    borderRadius: Math.max(responsiveSpacing.sm, screenWidth * 0.025),
+    paddingVertical: moderateScale(8),
+    paddingHorizontal: moderateScale(8),
+    borderRadius: moderateScale(6),
     backgroundColor: '#f8f9fa',
-    borderWidth: 2,
+    borderWidth: 1,
     borderColor: '#e9ecef',
     alignItems: 'center',
-    minHeight: Math.max(48, screenHeight * 0.06),
+    minHeight: moderateScale(40),
   },
   editButtonText: {
     color: '#666666',
-    fontSize: Math.max(responsiveFontSize.sm, Math.min(16, screenWidth * 0.04)),
+    fontSize: moderateScale(10),
     fontWeight: '600',
   },
   modalOverlay: {

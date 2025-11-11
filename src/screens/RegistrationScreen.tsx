@@ -20,7 +20,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { launchImageLibrary, launchCamera, ImagePickerResponse, MediaType } from 'react-native-image-picker';
 import { useTheme } from '../context/ThemeContext';
-import { loginAPIs } from '../services';
+import loginAPIs from '../services/loginAPIs';
 import ImagePickerModal from '../components/ImagePickerModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');

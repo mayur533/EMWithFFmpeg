@@ -142,7 +142,8 @@ const BusinessProfilesScreen: React.FC = () => {
         const userAlternatePhone = currentUser?._originalAlternatePhone || currentUser?.alternatePhone || '';
         const userLogo = currentUser?.logo || currentUser?.companyLogo || '';
         
-        // Check if sync is needed
+        // CRITICAL: Sync ALL user fields to MAIN profile (registered profile)
+        // This is the user's primary profile created during registration
         const needsSync = 
           mainProfile.name !== userName ||
           mainProfile.phone !== userPhone ||
@@ -155,17 +156,22 @@ const BusinessProfilesScreen: React.FC = () => {
           (mainProfile.logo || mainProfile.companyLogo || '') !== userLogo;
         
         if (needsSync) {
-          console.log('🔄 Auto-syncing user profile data to MAIN business profile...');
+          console.log('🔄 Auto-syncing ALL user data to MAIN business profile (registered profile)...');
           console.log('📍 Target profile:', mainProfile.name, '(created:', mainProfile.createdAt, ')');
-          console.log('📋 Syncing fields:');
+          console.log('📋 Syncing ALL user fields:');
           console.log('   - Name:', userName);
           console.log('   - Phone:', userPhone);
           console.log('   - Email:', userEmail);
+          console.log('   - Address:', userAddress);
+          console.log('   - Website:', userWebsite);
           console.log('   - Category:', userCategory);
+          console.log('   - Description:', userDescription);
+          console.log('   - Alternate Phone:', userAlternatePhone);
           console.log('   - Logo:', userLogo ? 'Yes' : 'No');
+          console.log('🔒 ONLY syncing to MAIN profile - other profiles remain independent');
           
           try {
-            // Sync ALL user fields to main business profile
+            // Sync ALL user fields to MAIN business profile (this is the registered profile)
             await businessProfileService.updateBusinessProfile(mainProfile.id, {
               name: userName,
               phone: userPhone,
@@ -178,7 +184,7 @@ const BusinessProfilesScreen: React.FC = () => {
               companyLogo: userLogo,
             });
             
-            // Update the profile in the array
+            // Update the profile in the array (ALL synced fields)
             mainProfile.name = userName;
             mainProfile.phone = userPhone;
             mainProfile.email = userEmail;
@@ -190,7 +196,7 @@ const BusinessProfilesScreen: React.FC = () => {
             mainProfile.logo = userLogo;
             mainProfile.companyLogo = userLogo;
             
-            console.log(`✅ All user fields synced to MAIN profile: ${userName}`);
+            console.log(`✅ ALL user fields synced to MAIN profile: ${userName}`);
             
             // Clear cache after sync
             businessProfileService.clearCache();
@@ -381,12 +387,79 @@ const BusinessProfilesScreen: React.FC = () => {
     setFormLoading(true);
     try {
       if (editingProfile) {
+        // CRITICAL: Snapshot user profile BEFORE updating business profile
+        // This protects against any accidental contamination from business profile updates
+        const authService = require('../services/auth').default;
+        const userBeforeUpdate = authService.getCurrentUser();
+        const userSnapshot = {
+          id: userBeforeUpdate?.id,
+          email: userBeforeUpdate?.email,
+          companyName: userBeforeUpdate?.companyName,
+          name: userBeforeUpdate?.name,
+          address: userBeforeUpdate?.address,
+          phone: userBeforeUpdate?.phone,
+          phoneNumber: userBeforeUpdate?.phoneNumber,
+          alternatePhone: userBeforeUpdate?.alternatePhone,
+          website: userBeforeUpdate?.website,
+          category: userBeforeUpdate?.category,
+          description: userBeforeUpdate?.description,
+          logo: userBeforeUpdate?.logo,
+          companyLogo: userBeforeUpdate?.companyLogo,
+          _originalCompanyName: userBeforeUpdate?._originalCompanyName,
+          _originalAddress: userBeforeUpdate?._originalAddress,
+          _originalWebsite: userBeforeUpdate?._originalWebsite,
+          _originalCategory: userBeforeUpdate?._originalCategory,
+          _originalDescription: userBeforeUpdate?._originalDescription,
+          _originalAlternatePhone: userBeforeUpdate?._originalAlternatePhone,
+        };
+        
+        console.log('🔒 USER PROFILE SNAPSHOT (before business profile update):');
+        console.log('   - address:', userSnapshot.address);
+        console.log('   - website:', userSnapshot.website);
+        console.log('   - category:', userSnapshot.category);
+        console.log('   - description:', userSnapshot.description);
+        
         // Update existing profile
         console.log('🔄 Updating profile with ID:', editingProfile.id);
         console.log('📤 Form data being sent:', formData);
         
         const updatedProfile = await businessProfileService.updateBusinessProfile(editingProfile.id, formData);
         console.log('✅ Updated profile received:', updatedProfile);
+        
+        // CRITICAL: Verify and restore user profile if it was contaminated
+        const userAfterUpdate = authService.getCurrentUser();
+        const addressChanged = userAfterUpdate?.address !== userSnapshot.address;
+        const websiteChanged = userAfterUpdate?.website !== userSnapshot.website;
+        const categoryChanged = userAfterUpdate?.category !== userSnapshot.category;
+        const descriptionChanged = userAfterUpdate?.description !== userSnapshot.description;
+        
+        if (addressChanged || websiteChanged || categoryChanged || descriptionChanged) {
+          console.warn('⚠️ USER PROFILE CONTAMINATION DETECTED! Restoring from snapshot...');
+          console.warn('   - address changed:', addressChanged, userAfterUpdate?.address, '→', userSnapshot.address);
+          console.warn('   - website changed:', websiteChanged, userAfterUpdate?.website, '→', userSnapshot.website);
+          console.warn('   - category changed:', categoryChanged, userAfterUpdate?.category, '→', userSnapshot.category);
+          console.warn('   - description changed:', descriptionChanged, userAfterUpdate?.description, '→', userSnapshot.description);
+          
+          // Restore user profile from snapshot
+          const restoredUser = {
+            ...userAfterUpdate,
+            address: userSnapshot.address,
+            website: userSnapshot.website,
+            category: userSnapshot.category,
+            description: userSnapshot.description,
+            alternatePhone: userSnapshot.alternatePhone,
+            _originalAddress: userSnapshot._originalAddress,
+            _originalWebsite: userSnapshot._originalWebsite,
+            _originalCategory: userSnapshot._originalCategory,
+            _originalDescription: userSnapshot._originalDescription,
+            _originalAlternatePhone: userSnapshot._originalAlternatePhone,
+          };
+          
+          authService.setCurrentUser(restoredUser);
+          console.log('✅ User profile restored from snapshot');
+        } else {
+          console.log('✅ User profile protected - no contamination detected');
+        }
         
         // Update both displayed profiles and cached profiles
         const updateFn = (prev: any[]) => prev.map(p => p.id === editingProfile.id ? updatedProfile : p);

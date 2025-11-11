@@ -60,6 +60,26 @@ class BusinessProfileService {
         const profiles = response.data.data.profiles;
         
         if (profiles && profiles.length > 0) {
+          console.log('═══════════════════════════════════════════════════════════');
+          console.log('📡 BACKEND RESPONSE - RAW BUSINESS PROFILES DATA');
+          console.log('═══════════════════════════════════════════════════════════');
+          profiles.forEach((profile: any, index: number) => {
+            console.log(`\n📋 Profile ${index + 1}:`);
+            console.log(`   🆔 ID: ${profile.id}`);
+            console.log(`   🏢 Name: ${profile.name || profile.businessName}`);
+            console.log(`   📍 Address: ${profile.address || '(empty)'}`);
+            console.log(`   🌐 Website: ${profile.website || '(empty)'}`);
+            console.log(`   🏷️ Category: ${profile.category || '(empty)'}`);
+            console.log(`   📝 Description: ${profile.description || '(empty)'}`);
+            console.log(`   📱 Phone: ${profile.phone || '(empty)'}`);
+            console.log(`   📱 Alt Phone: ${profile.alternatePhone || '(empty)'}`);
+            console.log(`   📧 Email: ${profile.email || '(empty)'}`);
+            console.log(`   🖼️ Logo: ${profile.logo || '(empty)'}`);
+            console.log(`   📅 Created: ${profile.createdAt}`);
+            console.log(`   📅 Updated: ${profile.updatedAt}`);
+          });
+          console.log('\n═══════════════════════════════════════════════════════════');
+          
           // Convert backend profiles to frontend format (optimized - no per-item logging)
           const businessProfiles: BusinessProfile[] = profiles.map((profile: any) => ({
             id: profile.id,
@@ -287,6 +307,14 @@ class BusinessProfileService {
       
       const response = await api.put(`/api/mobile/business-profile/${id}`, backendData);
       
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('📡 UPDATE BUSINESS PROFILE - BACKEND RESPONSE');
+      console.log('═══════════════════════════════════════════════════════════');
+      console.log('🆔 Profile ID:', id);
+      console.log('📤 Data we sent:', JSON.stringify(backendData, null, 2));
+      console.log('📥 Backend response:', JSON.stringify(response.data, null, 2));
+      console.log('═══════════════════════════════════════════════════════════');
+      
       if (response.data.success) {
         console.log('✅ Business profile updated via API:', response.data.data.businessName);
         // Clear cache to force refresh
@@ -294,6 +322,18 @@ class BusinessProfileService {
         
         // Map backend response to frontend format
         const backendProfile = response.data.data;
+        
+        console.log('📋 Backend returned profile fields:');
+        console.log('   🏢 businessName:', backendProfile.businessName);
+        console.log('   📍 address:', backendProfile.address || '(empty)');
+        console.log('   🌐 website:', backendProfile.website || '(empty)');
+        console.log('   🏷️ category:', backendProfile.category || '(empty)');
+        console.log('   📝 description:', backendProfile.description || '(empty)');
+        console.log('   📱 phone:', backendProfile.phone || '(empty)');
+        console.log('   📱 alternatePhone:', backendProfile.alternatePhone || '(empty)');
+        console.log('   📧 email:', backendProfile.email || '(empty)');
+        console.log('   🖼️ logo:', backendProfile.logo || '(empty)');
+        
         const updatedProfile: BusinessProfile = {
           id: backendProfile.id,
           name: backendProfile.businessName,

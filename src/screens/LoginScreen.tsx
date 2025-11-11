@@ -17,7 +17,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { useTheme } from '../context/ThemeContext';
-import { loginAPIs } from '../services';
+import loginAPIs from '../services/loginAPIs';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import responsiveUtils, { 
   responsiveSpacing, 
