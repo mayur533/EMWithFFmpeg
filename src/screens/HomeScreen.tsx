@@ -146,6 +146,7 @@ const HomeScreen: React.FC = React.memo(() => {
   // Greeting sections data states
   const [motivationTemplates, setMotivationTemplates] = useState<any[]>([]);
   const [goodMorningTemplates, setGoodMorningTemplates] = useState<any[]>([]);
+  const [goodMorningTemplatesRaw, setGoodMorningTemplatesRaw] = useState<any[]>([]);
   const [businessEthicsTemplates, setBusinessEthicsTemplates] = useState<any[]>([]);
   const [devotionalTemplates, setDevotionalTemplates] = useState<any[]>([]);
   const [leaderQuotesTemplates, setLeaderQuotesTemplates] = useState<any[]>([]);
@@ -254,9 +255,11 @@ const HomeScreen: React.FC = React.memo(() => {
       if (goodMorningResponse.status === 'fulfilled' && goodMorningResponse.value.length > 0) {
         console.log('✅ [GOOD MORNING] Setting templates:', goodMorningResponse.value.length);
         setGoodMorningTemplates(goodMorningResponse.value.slice(0, 10));
+        setGoodMorningTemplatesRaw(goodMorningResponse.value);
       } else {
         console.log('⚠️ [GOOD MORNING] No data available or API failed');
         setGoodMorningTemplates([]);
+        setGoodMorningTemplatesRaw([]);
       }
       if (businessEthicsResponse.status === 'fulfilled' && businessEthicsResponse.value.length > 0) {
         setBusinessEthicsTemplates(businessEthicsResponse.value.slice(0, 10));
@@ -850,7 +853,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
   const keyExtractor = useCallback((item: any) => item.id, []);
 
   // Factory function to create category-specific render functions for greeting cards
-  const createGreetingCardRenderer = useCallback((categoryTemplates: any[], searchQuery?: string) => {
+  const createGreetingCardRenderer = useCallback((categoryTemplates: any[], searchQuery?: string, onCardPress?: (template: any) => void) => {
     return ({ item }: { item: any }) => {
       if (!item || !item.thumbnail) {
         console.error('❌ [RENDER GREETING CARD] Invalid item:', item);
@@ -860,7 +863,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
       return (
         <TouchableOpacity
           activeOpacity={0.7}
-          onPress={() => {
+        onPress={() => {
+          if (onCardPress) {
+            onCardPress(item);
+          }
             // Navigate to PosterPlayer with category-specific templates
             const relatedTemplates = categoryTemplates.filter(template => template.id !== item.id);
             navigation.navigate('PosterPlayer', {
@@ -1188,7 +1194,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={goodMorningTemplates}
-                renderItem={createGreetingCardRenderer(goodMorningTemplates, 'good morning')}
+                renderItem={createGreetingCardRenderer(
+                  goodMorningTemplates,
+                  'good morning',
+                  () => {
+                    console.log(
+                      '📦 [GOOD MORNING] API Response:',
+                      JSON.stringify(goodMorningTemplatesRaw, null, 2)
+                    );
+                  }
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}

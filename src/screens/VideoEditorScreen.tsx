@@ -18,6 +18,7 @@ import {
   Platform,
   ActivityIndicator,
   NativeModules,
+  Easing,
 } from 'react-native';
 import Video from 'react-native-video';
 import { launchCamera, launchImageLibrary } from 'react-native-image-picker';
@@ -251,6 +252,13 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const overlaysRef = useRef<ViewShot>(null);
   const captureOverlayRef = useRef<ViewShot>(null);
   const lastGenerateTimeRef = useRef<number>(0);
+  const processingOverlayAnim = useRef(new Animated.Value(0)).current;
+  const processingCardScale = useRef(new Animated.Value(0.92)).current;
+  const processingPulseAnim = useRef(new Animated.Value(0)).current;
+  const pulseLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const processingProgressAnim = useRef(new Animated.Value(0)).current;
+  const progressLoopRef = useRef<Animated.CompositeAnimation | null>(null);
+  const [progressBarWidth, setProgressBarWidth] = useState(0);
 
   // State for video layers
   const [layers, setLayers] = useState<VideoLayer[]>([]);
@@ -272,6 +280,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const [currentTime, setCurrentTime] = useState(0);
   const [isCapturing, setIsCapturing] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showProcessingOverlay, setShowProcessingOverlay] = useState(false);
   const [showCloudComposer, setShowCloudComposer] = useState(false);
   const [processingProgress, setProcessingProgress] = useState(0);
   const [generatedVideoPath, setGeneratedVideoPath] = useState<string | null>(null);
@@ -343,6 +352,118 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
       subscription?.remove();
     };
   }, []);
+
+  useEffect(() => {
+    return () => {
+      pulseLoopRef.current?.stop();
+      progressLoopRef.current?.stop();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (isProcessing) {
+      setShowProcessingOverlay(true);
+      processingOverlayAnim.stopAnimation();
+      processingCardScale.stopAnimation();
+      processingPulseAnim.setValue(0);
+
+      Animated.parallel([
+        Animated.timing(processingOverlayAnim, {
+          toValue: 1,
+          duration: 220,
+          easing: Easing.out(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.spring(processingCardScale, {
+          toValue: 1,
+          damping: 12,
+          stiffness: 120,
+          mass: 0.9,
+          useNativeDriver: true,
+        }),
+      ]).start();
+
+      pulseLoopRef.current?.stop();
+      pulseLoopRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(processingPulseAnim, {
+            toValue: 1,
+            duration: 1400,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+          Animated.timing(processingPulseAnim, {
+            toValue: 0,
+            duration: 1400,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+        ])
+      );
+      pulseLoopRef.current.start();
+    } else {
+      pulseLoopRef.current?.stop();
+      pulseLoopRef.current = null;
+      progressLoopRef.current?.stop();
+      progressLoopRef.current = null;
+
+      Animated.parallel([
+        Animated.timing(processingOverlayAnim, {
+          toValue: 0,
+          duration: 180,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+        Animated.timing(processingCardScale, {
+          toValue: 0.92,
+          duration: 180,
+          easing: Easing.in(Easing.ease),
+          useNativeDriver: true,
+        }),
+      ]).start(({ finished }) => {
+        if (finished) {
+          setShowProcessingOverlay(false);
+          processingProgressAnim.setValue(0);
+        }
+      });
+    }
+  }, [isProcessing, processingOverlayAnim, processingCardScale, processingPulseAnim, processingProgressAnim]);
+
+  useEffect(() => {
+    if (!isProcessing || progressBarWidth <= 0) {
+      return;
+    }
+
+    if (processingProgress > 0) {
+      progressLoopRef.current?.stop();
+      progressLoopRef.current = null;
+      Animated.timing(processingProgressAnim, {
+        toValue: (progressBarWidth * Math.min(100, Math.max(processingProgress, 0))) / 100,
+        duration: 320,
+        easing: Easing.out(Easing.ease),
+        useNativeDriver: false,
+      }).start();
+    } else if (!progressLoopRef.current) {
+      processingProgressAnim.setValue(0);
+      progressLoopRef.current = Animated.loop(
+        Animated.sequence([
+          Animated.timing(processingProgressAnim, {
+            toValue: progressBarWidth * 0.75,
+            duration: 1200,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+          Animated.timing(processingProgressAnim, {
+            toValue: progressBarWidth * 0.25,
+            duration: 1200,
+            easing: Easing.inOut(Easing.ease),
+            useNativeDriver: false,
+          }),
+        ]),
+      );
+      progressLoopRef.current.start();
+    }
+  }, [isProcessing, processingProgress, progressBarWidth, processingProgressAnim]);
 
   const buildOverlayPayload = useCallback(async (): Promise<{
     payload: OverlayPayload[];
@@ -1529,8 +1650,22 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
       address?: string,
       services?: string[]
     ) => {
-      const contactLineHeight = isTablet ? 20 : 16;
-      const footerPadding = 10;
+      const contactLineHeight = isTablet
+        ? 20
+        : isUltraSmallScreen
+          ? 12
+          : isSmallScreen
+            ? 13
+            : isMediumScreen
+              ? 14
+              : 15;
+      const footerPadding = isTablet
+        ? 10
+        : isUltraSmallScreen
+          ? 6
+          : isSmallScreen
+            ? 7
+            : 8;
       const footerHeight = (contactLineHeight * 3) + (footerPadding * 2);
       const footerY = canvasHeight - footerHeight;
 
@@ -1539,7 +1674,15 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
         return Math.max(baseSize * scaleFactor, baseSize * 0.8);
       };
 
-      const footerTextSize = getResponsiveFooterFontSize(isTablet ? 14 : 11);
+      const footerTextSize = getResponsiveFooterFontSize(
+        isTablet
+          ? 14
+          : isUltraSmallScreen
+            ? 9
+            : isSmallScreen
+              ? 10
+              : 11
+      );
 
       newLayers.push({
         id: generateId(),
@@ -2227,10 +2370,35 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
     </TouchableOpacity>
   );
 
+  const rippleScalePrimary = processingPulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [1, 1.35],
+  });
+  const rippleOpacityPrimary = processingPulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.25, 0],
+  });
+  const rippleScaleSecondary = processingPulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.85, 1.6],
+  });
+  const rippleOpacitySecondary = processingPulseAnim.interpolate({
+    inputRange: [0, 1],
+    outputRange: [0.18, 0],
+  });
+
   const exportWidth = Math.max(1, Math.round(videoDimensions?.width || currentCanvasWidth));
   const exportHeight = Math.max(1, Math.round(videoDimensions?.height || currentCanvasHeight));
   const captureScaleX = currentCanvasWidth > 0 ? exportWidth / currentCanvasWidth : 1;
   const captureScaleY = currentCanvasHeight > 0 ? exportHeight / currentCanvasHeight : 1;
+
+  const headerTopPadding = isTablet
+    ? Math.max(insets.top - moderateScale(4), 0)
+    : 4;
+  const processingBottomPadding = Math.max(
+    insets.bottom + (isTablet ? 0 : moderateScale(12)),
+    moderateScale(isTablet ? 20 : 28),
+  );
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -2240,7 +2408,7 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
         translucent={true}
       />
       
-      <View style={[styles.header, { paddingTop: insets.top, backgroundColor: theme?.colors?.surface || '#ffffff' }]}>
+      <View style={[styles.header, { paddingTop: headerTopPadding, backgroundColor: theme?.colors?.surface || '#ffffff' }]}>
         <TouchableOpacity
           onPress={handleBack}
           style={styles.backButton}
@@ -2418,28 +2586,70 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
             </ViewShot>
           </View>
 
-          {isProcessing && (
-            <View style={styles.processingOverlay}>
-              <View style={styles.processingModal}>
-                <ActivityIndicator size="large" color="#667eea" />
-                <Text style={styles.processingTitle}>Processing Video</Text>
-                <Text style={styles.processingSubtitle}>
-                  Adding overlays and effects...
+          {showProcessingOverlay && (
+            <Animated.View
+              pointerEvents="auto"
+              style={[styles.processingOverlay, { opacity: processingOverlayAnim }]}
+            >
+              <Animated.View
+                style={[
+                  styles.processingContentWrapper,
+                  {
+                    transform: [{ scale: processingCardScale }],
+                    paddingBottom: processingBottomPadding,
+                  },
+                ]}
+              >
+                <View style={styles.processingAnimationContainer}>
+                  <Animated.View
+                    style={[
+                      styles.processingRipple,
+                      {
+                        opacity: rippleOpacitySecondary,
+                        transform: [{ scale: rippleScaleSecondary }],
+                      },
+                    ]}
+                  />
+                  <Animated.View
+                    style={[
+                      styles.processingRipple,
+                      {
+                        opacity: rippleOpacityPrimary,
+                        transform: [{ scale: rippleScalePrimary }],
+                      },
+                    ]}
+                  />
+                  <View style={styles.processingIndicator}>
+                    <ActivityIndicator size="large" color="#ffffff" />
+                  </View>
+                </View>
+                <Text style={styles.processingHeadline}>Processing</Text>
+                <Text style={styles.processingCaption}>
+                  Adding overlays and finishing touches
                 </Text>
-                <Text style={styles.processingSubtitle}>
-                  DEBUG: Processing state is TRUE
-                </Text>
-                <View style={styles.progressBar}>
-                  <View
+                <View
+                  style={styles.progressBar}
+                  onLayout={event => {
+                    const width = event.nativeEvent.layout.width;
+                    if (Math.abs(width - progressBarWidth) > 1) {
+                      setProgressBarWidth(width);
+                    }
+                  }}
+                >
+                  <Animated.View
                     style={[
                       styles.progressFill,
-                      { width: `${processingProgress}%` }
+                      { width: progressBarWidth > 0 ? processingProgressAnim : 0 },
                     ]}
                   />
                 </View>
-                <Text style={styles.progressText}>{processingProgress}%</Text>
-              </View>
-            </View>
+                <Text style={styles.progressValue}>
+                  {processingProgress > 0
+                    ? `${Math.min(100, Math.max(1, Math.round(processingProgress)))}%`
+                    : 'Processing...'}
+                </Text>
+              </Animated.View>
+            </Animated.View>
           )}
         </ViewShot>
       </View>
@@ -3334,12 +3544,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: moderateScale(8),
-    paddingBottom: moderateScale(6),
+    paddingBottom: moderateScale(4),
     borderBottomWidth: 0,
   },
   backButton: {
     paddingHorizontal: moderateScale(12),
-    paddingVertical: moderateScale(8),
+    paddingVertical: moderateScale(6),
     borderRadius: moderateScale(12),
     backgroundColor: 'rgba(0, 0, 0, 0.12)',
     justifyContent: 'center',
@@ -3381,7 +3591,7 @@ const styles = StyleSheet.create({
   },
   nextButton: {
     paddingHorizontal: moderateScale(12),
-    paddingVertical: moderateScale(8),
+    paddingVertical: moderateScale(6),
     borderRadius: moderateScale(12),
     backgroundColor: 'rgba(0, 0, 0, 0.12)',
     justifyContent: 'center',
@@ -3604,43 +3814,68 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1000,
   },
-  processingModal: {
-    backgroundColor: '#ffffff',
-    borderRadius: 15,
-    padding: 30,
+  processingContentWrapper: {
+    flex: 1,
+    justifyContent: 'center',
     alignItems: 'center',
-    minWidth: 250,
+    paddingHorizontal: moderateScale(18),
   },
-  processingTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#333333',
-    marginTop: 15,
-    marginBottom: 5,
+  processingHeadline: {
+    fontSize: isTablet ? 20 : responsiveFontSize.lg,
+    fontWeight: '700',
+    color: '#f5f6ff',
+    marginTop: moderateScale(12),
+    marginBottom: moderateScale(4),
+    letterSpacing: 0.3,
   },
-  processingSubtitle: {
-    fontSize: 14,
-    color: '#666666',
+  processingCaption: {
+    fontSize: isTablet ? 15 : responsiveFontSize.md,
+    color: 'rgba(245, 246, 255, 0.85)',
     textAlign: 'center',
-    marginBottom: 20,
+    marginBottom: moderateScale(10),
+    paddingHorizontal: moderateScale(22),
+  },
+  processingAnimationContainer: {
+    width: moderateScale(isTablet ? 138 : 100),
+    height: moderateScale(isTablet ? 138 : 100),
+    marginBottom: moderateScale(10),
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  processingRipple: {
+    position: 'absolute',
+    width: '100%',
+    height: '100%',
+    borderRadius: moderateScale(isTablet ? 70 : 55),
+    backgroundColor: 'rgba(102, 126, 234, 0.45)',
+  },
+  processingIndicator: {
+    width: moderateScale(isTablet ? 86 : 68),
+    height: moderateScale(isTablet ? 86 : 68),
+    borderRadius: moderateScale(isTablet ? 43 : 34),
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(102, 126, 234, 0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   progressBar: {
-    width: 200,
-    height: 6,
-    backgroundColor: '#e0e0e0',
-    borderRadius: 3,
+    alignSelf: 'stretch',
+    height: moderateScale(isTablet ? 8 : 5),
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    borderRadius: moderateScale(3),
     overflow: 'hidden',
-    marginBottom: 10,
+    marginBottom: moderateScale(6),
   },
   progressFill: {
     height: '100%',
     backgroundColor: '#667eea',
-    borderRadius: 3,
   },
-  progressText: {
-    fontSize: 12,
-    color: '#666666',
+  progressValue: {
+    fontSize: isTablet ? 16 : responsiveFontSize.sm,
+    color: '#f5f6ff',
     fontWeight: '600',
+    marginTop: moderateScale(4),
   },
   // Image and logo modal styles
   imageOptions: {

@@ -27,8 +27,37 @@ declare module 'react-native-razorpay' {
       paylater?: boolean;
     };
     config?: {
+      upi?: {
+        flow?: string;
+        apps?: string[];
+        timeout?: number;
+      };
       display?: {
-        hide?: Array<{ method: string }>;
+        hide?: Array<{
+          method: string;
+          type?: string;
+          apps?: string[];
+          flows?: string[];
+          issuers?: string[];
+          modes?: string[];
+        }>;
+        blocks?: {
+          [key: string]: {
+            name?: string;
+            instruments: Array<{
+              method: string;
+              type?: string;
+              apps?: string[];
+              flows?: string[];
+              issuers?: string[];
+              modes?: string[];
+            }>;
+          };
+        };
+        sequence?: string[];
+        preferences?: {
+          show_default_blocks?: boolean;
+        };
       };
     };
     modal?: {

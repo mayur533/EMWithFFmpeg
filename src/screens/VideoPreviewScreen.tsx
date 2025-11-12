@@ -141,7 +141,7 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
     return () => subscription?.remove();
   }, []);
 
-  const { videoWidth, videoHeight } = getResponsiveDimensions(insets);
+  const { videoWidth, videoHeight, availableWidth, availableHeight } = getResponsiveDimensions(insets);
   const { selectedVideo, selectedLanguage, selectedTemplateId, layers, selectedProfile, processedVideoPath: initialProcessedVideoPath, canvasData } = route.params;
   const { isSubscribed } = useSubscription();
 
@@ -158,8 +158,13 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
   const [useProcessedVideo, setUseProcessedVideo] = useState(true);
   const [processedVideoPath, setProcessedVideoPath] = useState(initialProcessedVideoPath);
   const [showDownloadSuccess, setShowDownloadSuccess] = useState(false);
+  const [renderedVideoSize, setRenderedVideoSize] = useState<{ width: number; height: number }>({
+    width: videoWidth,
+    height: videoHeight,
+  });
 
   const videoRef = useRef<any>(null);
+  const naturalVideoSizeRef = useRef<{ width: number; height: number }>({ width: 0, height: 0 });
 
   // Request storage permission for Android
   const requestStoragePermission = async (): Promise<boolean> => {
@@ -257,10 +262,52 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
   }, [selectedVideo.uri, processedVideoPath, useProcessedVideo, videoError, layers]);
 
   // Video controls
+  const updateRenderedVideoSize = useCallback(
+    (naturalWidth?: number, naturalHeight?: number) => {
+      if (naturalWidth && naturalHeight) {
+        naturalVideoSizeRef.current = { width: naturalWidth, height: naturalHeight };
+      }
+
+      const sourceSize =
+        naturalVideoSizeRef.current.width > 0 && naturalVideoSizeRef.current.height > 0
+          ? naturalVideoSizeRef.current
+          : { width: videoWidth, height: videoHeight };
+
+      const ratio =
+        sourceSize.height === 0 ? 1 : sourceSize.width / sourceSize.height;
+
+      const maxWidth = Math.min(videoWidth, availableWidth);
+      const maxHeight = Math.min(videoHeight, availableHeight);
+
+      let targetWidth = maxWidth;
+      let targetHeight = targetWidth / ratio;
+
+      if (targetHeight > maxHeight) {
+        targetHeight = maxHeight;
+        targetWidth = targetHeight * ratio;
+      }
+
+      setRenderedVideoSize({
+        width: targetWidth,
+        height: targetHeight,
+      });
+    },
+    [availableHeight, availableWidth, videoHeight, videoWidth],
+  );
+
+  useEffect(() => {
+    updateRenderedVideoSize();
+  }, [updateRenderedVideoSize]);
+
   const onVideoLoad = (data: any) => {
     setVideoDuration(data.duration);
     setVideoError(false);
     console.log('✅ Video loaded successfully:', data);
+    const naturalWidth = Number(data?.naturalSize?.width) || 0;
+    const naturalHeight = Number(data?.naturalSize?.height) || 0;
+    if (naturalWidth > 0 && naturalHeight > 0) {
+      updateRenderedVideoSize(naturalWidth, naturalHeight);
+    }
     
     // Log success for processed video
     if (useProcessedVideo && processedVideoPath) {
@@ -609,23 +656,19 @@ const VideoPreviewScreen: React.FC<VideoPreviewScreenProps> = ({ route }) => {
         translucent
       />
 
-      <View style={[styles.header, { paddingTop: insets.top }]}>
+      <View style={[styles.header, { paddingTop: Math.max(insets.top - moderateScale(6), 0) }]}>
         <TouchableOpacity style={styles.backButton} onPress={handleBackToEditor}>
-          <Icon name="arrow-back" size={getIconSize(24)} color="#333333" />
+          <Icon name="arrow-back" size={getIconSize(20)} color="#333333" />
         </TouchableOpacity>
         <View style={styles.headerContent} />
         <View style={styles.headerSpacer} />
       </View>
 
-      <View style={styles.previewContainer}>
-        <View style={styles.previewHeader}>
-          <Text style={styles.previewTitle}>Your Video</Text>
-        </View>
-
+      <View style={styles.videoContainer}>
         <View
           style={[
-            styles.videoWrapper,
-            { width: videoWidth, height: videoHeight },
+            styles.videoSurface,
+            { width: renderedVideoSize.width, height: renderedVideoSize.height },
           ]}
         >
           <Video
@@ -788,17 +831,17 @@ const styles = StyleSheet.create({
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: moderateScale(4),
+    paddingHorizontal: moderateScale(2),
     paddingTop: 0,
-    paddingBottom: moderateScale(3),
+    paddingBottom: moderateScale(1),
     borderBottomWidth: 0,
     backgroundColor: '#ffffff',
     zIndex: 1000,
     elevation: moderateScale(4),
   },
   backButton: {
-    padding: moderateScale(6),
-    borderRadius: moderateScale(8),
+    padding: moderateScale(4),
+    borderRadius: moderateScale(6),
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
   },
   headerContent: {
@@ -807,36 +850,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(4),
   },
   headerSpacer: {
-    width: moderateScale(26),
+    width: moderateScale(18),
   },
-  previewContainer: {
+  videoContainer: {
     flex: 1,
-    padding: moderateScale(4),
-  },
-  previewHeader: {
-    alignItems: 'center',
-    marginBottom: moderateScale(3),
-  },
-  previewTitle: {
-    fontSize: moderateScale(11),
-    fontWeight: '700',
-    color: '#333333',
-    marginBottom: moderateScale(1.5),
-  },
-  videoWrapper: {
-    backgroundColor: '#000000',
-    borderRadius: moderateScale(10),
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: moderateScale(2),
-    },
-    shadowOpacity: 0.08,
-    shadowRadius: moderateScale(6),
-    elevation: moderateScale(4),
-    alignSelf: 'center',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  videoSurface: {
     overflow: 'hidden',
     position: 'relative',
   },

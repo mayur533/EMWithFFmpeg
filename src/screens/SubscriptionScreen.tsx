@@ -247,22 +247,45 @@ const SubscriptionScreen: React.FC = () => {
           name: currentUser?.name || 'User Name',
         },
         theme: { color: '#667eea' },
-        // Restrict payment methods to UPI, Cards, and NetBanking only
+        // Restrict payment methods to GPay and PhonePe (UPI intent apps only)
         method: {
           upi: true,
-          card: true,
-          netbanking: true,
+          card: false,
+          netbanking: false,
           wallet: false,
           emi: false,
           paylater: false,
         },
         config: {
+          upi: {
+            flow: 'intent',
+            apps: ['google_pay', 'phonepe'],
+          },
           display: {
             hide: [
+              { method: 'card' },
+              { method: 'netbanking' },
               { method: 'wallet' },
               { method: 'emi' },
               { method: 'paylater' },
+              { method: 'upi', flows: ['collect'] },
             ],
+            blocks: {
+              upi: {
+                name: 'Pay using UPI Apps',
+                instruments: [
+                  {
+                    method: 'upi',
+                    apps: ['google_pay', 'phonepe'],
+                    flows: ['intent'],
+                  },
+                ],
+              },
+            },
+            sequence: ['block.upi'],
+            preferences: {
+              show_default_blocks: false,
+            },
           },
         },
         handler: async (response: any) => {

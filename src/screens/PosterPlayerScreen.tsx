@@ -19,14 +19,84 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import { Template } from '../services/dashboard';
 import { useTheme } from '../context/ThemeContext';
 import OptimizedImage from '../components/OptimizedImage';
-import greetingTemplatesService from '../services/greetingTemplates';
-import homeApi from '../services/homeApi';
+
+const LANGUAGE_KEYWORDS: Record<string, string[]> = {
+  english: ['english', 'en'],
+  marathi: ['marathi', 'mr'],
+  hindi: ['hindi', 'hi'],
+};
+
+const extractLanguagesFromTags = (tags: unknown): string[] => {
+  if (!Array.isArray(tags)) {
+    return [];
+  }
+
+  const normalizedTags = tags
+    .filter((tag): tag is string => typeof tag === 'string')
+    .map(tag => tag.toLowerCase());
+
+  const matchedLanguages = Object.entries(LANGUAGE_KEYWORDS).reduce<string[]>((acc, [language, keywords]) => {
+    if (keywords.some(keyword => normalizedTags.some(tag => tag.includes(keyword)))) {
+      acc.push(language);
+    }
+    return acc;
+  }, []);
+
+  return Array.from(new Set(matchedLanguages));
+};
+
+const mergeTemplateLanguages = (template: Template, fallbackLanguage: string): Template => {
+  const existingLanguages = Array.isArray(template.languages)
+    ? template.languages
+        .filter((language): language is string => typeof language === 'string' && language.trim().length > 0)
+        .map(language => language.toLowerCase())
+    : [];
+
+  const tags = (template as any).tags;
+  const languagesFromTags = extractLanguagesFromTags(tags);
+  const mergedLanguages = Array.from(new Set([...existingLanguages, ...languagesFromTags]));
+
+  if (!mergedLanguages.length && fallbackLanguage) {
+    mergedLanguages.push(fallbackLanguage.toLowerCase());
+  }
+
+  return {
+    ...template,
+    languages: mergedLanguages,
+  };
+};
+
+const templateContainsLanguage = (template: Template, languageId: string): boolean => {
+  if (!languageId) {
+    return true;
+  }
+
+  const normalizedLanguage = languageId.toLowerCase();
+  const templateLanguages = Array.isArray(template.languages)
+    ? template.languages.map(language => language.toLowerCase())
+    : [];
+
+  if (templateLanguages.includes(normalizedLanguage)) {
+    return true;
+  }
+
+  const tags = (template as any).tags;
+  if (Array.isArray(tags)) {
+    const normalizedTags = tags
+      .filter((tag): tag is string => typeof tag === 'string')
+      .map(tag => tag.toLowerCase());
+    const keywords = LANGUAGE_KEYWORDS[normalizedLanguage] || [normalizedLanguage];
+    return keywords.some(keyword => normalizedTags.some(tag => tag.includes(keyword)));
+  }
+
+  return false;
+};
 
 type PosterPlayerScreenRouteProp = RouteProp<MainStackParamList, 'PosterPlayer'>;
 type PosterPlayerScreenNavigationProp = StackNavigationProp<MainStackParamList, 'PosterPlayer'>;
 
 const PosterPlayerScreen: React.FC = () => {
-  const { theme, isDarkMode } = useTheme();
+  const { theme } = useTheme();
   const navigation = useNavigation<PosterPlayerScreenNavigationProp>();
   const route = useRoute<PosterPlayerScreenRouteProp>();
   const insets = useSafeAreaInsets();
@@ -57,15 +127,12 @@ const PosterPlayerScreen: React.FC = () => {
   const { 
     selectedPoster: initialPoster, 
     relatedPosters: initialRelatedPosters,
-    searchQuery,
-    templateSource = 'professional'
   } = route.params;
   const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
-  const [currentRelatedPosters, setCurrentRelatedPosters] = useState<Template[]>(initialRelatedPosters);
+  const [allTemplates, setAllTemplates] = useState<Template[]>([]);
   const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
   const [languageMenuVisible, setLanguageMenuVisible] = useState<boolean>(false);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
-  const [isLoadingLanguage, setIsLoadingLanguage] = useState<boolean>(false);
 
   // Get high quality image URL for preview (replace thumbnail params with high quality)
   const getHighQualityImageUrl = (poster: Template): string => {
@@ -107,34 +174,51 @@ const PosterPlayerScreen: React.FC = () => {
 
   // Sync state when route params change
   useEffect(() => {
-    // Ensure templates have languages property - if missing, set based on initial selectedLanguage
-    const ensureLanguages = (template: Template): Template => {
-      if (!template.languages || !Array.isArray(template.languages) || template.languages.length === 0) {
-        const fallbackLanguage =
-          (template as any).language ||
-          (Array.isArray(template.languages) && template.languages.length > 0
-            ? template.languages[0]
-            : selectedLanguage);
-        return {
-          ...template,
-          languages: [fallbackLanguage || 'english'], // Set to best available language
-        };
-      }
-      return template;
-    };
+    const ensureLanguages = (template: Template): Template => mergeTemplateLanguages(template, 'english');
 
-    const posterWithLanguages = ensureLanguages(initialPoster);
-    setCurrentPoster(posterWithLanguages);
-    
-    // Add initialPoster to initialRelatedPosters if not already included
-    const allTemplates = initialRelatedPosters.find(p => p.id === initialPoster.id) 
-      ? initialRelatedPosters 
+    const templatesToMerge = initialRelatedPosters.find(p => p.id === initialPoster.id)
+      ? initialRelatedPosters
       : [initialPoster, ...initialRelatedPosters];
-    
-    // Ensure all templates have languages property
-    const templatesWithLanguages = allTemplates.map(ensureLanguages);
-    setCurrentRelatedPosters(templatesWithLanguages);
+
+    const templatesWithLanguages = templatesToMerge.map(ensureLanguages);
+    const templatesMap = new Map<string, Template>();
+
+    templatesWithLanguages.forEach(template => {
+      templatesMap.set(template.id, template);
+    });
+
+    // Always include the initial poster (ensuring languages too)
+    templatesMap.set(initialPoster.id, ensureLanguages(initialPoster));
+
+    setAllTemplates(Array.from(templatesMap.values()));
   }, [initialPoster, initialRelatedPosters]);
+
+  // Ensure poster selection respects the active language filter
+  useEffect(() => {
+    if (!allTemplates.length) {
+      return;
+    }
+
+    setCurrentPoster(previousPoster => {
+      const resolvedPrevious = previousPoster
+        ? allTemplates.find(template => template.id === previousPoster.id) || previousPoster
+        : null;
+
+      if (resolvedPrevious && templateContainsLanguage(resolvedPrevious, selectedLanguage)) {
+        return resolvedPrevious;
+      }
+
+      const firstMatchingTemplate = allTemplates.find(template =>
+        templateContainsLanguage(template, selectedLanguage),
+      );
+
+      if (firstMatchingTemplate) {
+        return firstMatchingTemplate;
+      }
+
+      return resolvedPrevious || allTemplates[0];
+    });
+  }, [allTemplates, selectedLanguage]);
 
   // Language options
   const languages = useMemo(() => [
@@ -143,105 +227,33 @@ const PosterPlayerScreen: React.FC = () => {
     { id: 'hindi', name: 'Hindi', code: 'HI' },
   ], []);
 
-  // Display ALL posters (filtered by language) - currentRelatedPosters now contains ALL templates
+  // Display ALL posters (filtered by language)
   const filteredPosters = useMemo(() => {
-    // Filter posters by selected language
-    const filtered = currentRelatedPosters.filter(poster => {
-      // Check if poster has languages array
-      if (poster.languages && Array.isArray(poster.languages) && poster.languages.length > 0) {
-        return poster.languages.includes(selectedLanguage);
-      }
-      // If no languages array, don't show it (only show templates with explicit language)
-      return false;
-    });
-    return filtered;
-  }, [currentRelatedPosters, selectedLanguage]);
+    return allTemplates.filter(template => templateContainsLanguage(template, selectedLanguage));
+  }, [allTemplates, selectedLanguage]);
 
   const handlePosterSelect = useCallback((poster: Template) => {
     // Simply update the preview - don't modify the grid at all
     setCurrentPoster(poster);
   }, []);
 
-  const handleLanguageChange = useCallback(async (languageId: string) => {
+  const handleLanguageChange = useCallback((languageId: string) => {
     setSelectedLanguage(languageId);
     setLanguageMenuVisible(false);
-    
-    // If we have a search query (greeting templates), refetch with language filter
-    if (searchQuery && templateSource === 'greeting') {
-      setIsLoadingLanguage(true);
-      try {
-        const languageParam = languageId === 'english' ? 'english' : languageId === 'hindi' ? 'hindi' : 'marathi';
-        const templates = await greetingTemplatesService.searchTemplates(searchQuery, languageParam);
-        
-        if (templates.length > 0) {
-          // Convert GreetingTemplate to Template format with languages property
-          const convertedTemplates: Template[] = templates.map(t => ({
-            id: t.id,
-            name: t.name,
-            thumbnail: t.thumbnail,
-            category: t.category,
-            downloads: t.downloads,
-            isDownloaded: t.isDownloaded,
-            languages: [languageId], // Set the language property based on the fetched language
-            previewUrl: (t as any).previewUrl,
-            content: (t as any).content, // Preserve content for high-quality image
-          }));
-          
-          // Set the first template as current poster (for preview)
-          setCurrentPoster(convertedTemplates[0]);
-          // Set ALL templates as related posters (for grid) - including the first one
-          setCurrentRelatedPosters(convertedTemplates);
-          console.log(
-            '[PosterPlayer] Greeting templates response:',
-            JSON.stringify(convertedTemplates, null, 2),
-          );
-        } else {
-          console.warn('⚠️ [POSTER PLAYER] No templates found for this language');
-          // Keep existing data but show empty related posters
-          setCurrentRelatedPosters([]);
-        }
-      } catch (error) {
-        console.error('❌ [POSTER PLAYER] Error fetching templates by language:', error);
-      } finally {
-        setIsLoadingLanguage(false);
-      }
-    } else if (templateSource === 'professional') {
-      // For professional templates from homeApi
-      setIsLoadingLanguage(true);
-      try {
-        const languageParam = languageId === 'english' ? 'english' : languageId === 'hindi' ? 'hindi' : 'marathi';
-        const response = await homeApi.getProfessionalTemplates({ language: languageParam });
-        
-        if (response.success && response.data.length > 0) {
-          // Convert ProfessionalTemplate to Template format, preserving previewUrl for high quality
-          const convertedTemplates: Template[] = response.data.map(t => ({
-            id: t.id,
-            name: t.name,
-            thumbnail: t.thumbnail,
-            category: t.category,
-            downloads: t.downloads,
-            isDownloaded: t.isDownloaded,
-            languages: [languageId], // Set the language property based on the fetched language
-            previewUrl: t.previewUrl, // Preserve previewUrl for high-quality display
-          }));
-          setCurrentPoster(convertedTemplates[0]);
-          // Set ALL templates as related posters (for grid) - including the first one
-          setCurrentRelatedPosters(convertedTemplates);
-          console.log(
-            '[PosterPlayer] Professional templates response:',
-            JSON.stringify(convertedTemplates, null, 2),
-          );
-        } else {
-          console.warn('⚠️ [POSTER PLAYER] No professional templates found for this language');
-          setCurrentRelatedPosters([]);
-        }
-      } catch (error) {
-        console.error('❌ [POSTER PLAYER] Error fetching professional templates by language:', error);
-      } finally {
-        setIsLoadingLanguage(false);
-      }
+
+    /*
+     * API-based language filtering has been disabled.
+     * Previously, we fetched templates via:
+     *   - greetingTemplatesService.searchTemplates(...)
+     *   - homeApi.getProfessionalTemplates({ language: ... })
+     * Language filtering is now handled locally using template tags (see templateContainsLanguage).
+     */
+
+    const firstMatchingTemplate = allTemplates.find(template => templateContainsLanguage(template, languageId));
+    if (firstMatchingTemplate) {
+      setCurrentPoster(firstMatchingTemplate);
     }
-  }, [selectedLanguage, searchQuery, templateSource]);
+  }, [allTemplates]);
 
   // Responsive icon sizes
   const getIconSize = useCallback((baseSize: number) => {
