@@ -17,6 +17,7 @@ import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { launchImageLibrary, ImageLibraryOptions } from 'react-native-image-picker';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useTheme } from '../context/ThemeContext';
 import ImagePickerModal from '../components/ImagePickerModal';
@@ -142,6 +143,47 @@ const TemplateGalleryScreen: React.FC = () => {
       selectedLanguage: 'English',
     } as any);
   };
+
+  const handleVideoUpload = useCallback(() => {
+    const options: ImageLibraryOptions = {
+      mediaType: 'video',
+      selectionLimit: 1,
+      includeBase64: false,
+      videoQuality: 'high',
+    };
+
+    launchImageLibrary(options, response => {
+      if (response.didCancel) {
+        console.log('Video selection cancelled');
+        return;
+      }
+
+      if (response.errorCode) {
+        console.error('Video selection error:', response.errorCode, response.errorMessage);
+        Alert.alert(
+          'Video Selection Failed',
+          response.errorMessage || 'Unable to select video. Please try again.'
+        );
+        return;
+      }
+
+      const asset = response.assets?.[0];
+      if (!asset?.uri) {
+        Alert.alert('Video Selection Failed', 'No video URI found. Please try again.');
+        return;
+      }
+
+      navigation.navigate('VideoEditor', {
+        selectedVideo: {
+          uri: asset.uri,
+          title: asset.fileName || 'Uploaded Video',
+          description: asset.type || 'Video from gallery',
+        },
+        selectedLanguage: 'English',
+        selectedTemplateId: 'custom',
+      } as any);
+    });
+  }, [navigation]);
 
   // Handle photo press from gallery
   const handlePhotoPress = (photo: UploadedPhoto) => {
@@ -305,6 +347,29 @@ const TemplateGalleryScreen: React.FC = () => {
               >
                 <Icon name="add-photo-alternate" size={isCurrentTablet ? 16 : 14} color="#ffffff" style={[styles.uploadButtonIcon, { marginRight: 6 }]} />
                 <Text style={styles.uploadButtonText}>Choose Photo</Text>
+              </LinearGradient>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.uploadButton, {
+                borderRadius: isCurrentTablet ? 12 : 10,
+                maxWidth: isCurrentTablet ? 280 : 240,
+                marginTop: 12,
+              }]}
+              onPress={handleVideoUpload}
+              activeOpacity={0.8}
+            >
+              <LinearGradient
+                colors={[theme.colors.secondary, theme.colors.primary]}
+                style={[styles.uploadButtonGradient, {
+                  paddingVertical: isCurrentTablet ? 12 : 10,
+                  paddingHorizontal: isCurrentTablet ? 20 : 16,
+                }]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 0 }}
+              >
+                <Icon name="movie" size={isCurrentTablet ? 16 : 14} color="#ffffff" style={[styles.uploadButtonIcon, { marginRight: 6 }]} />
+                <Text style={styles.uploadButtonText}>Choose Video</Text>
               </LinearGradient>
             </TouchableOpacity>
           </View>
