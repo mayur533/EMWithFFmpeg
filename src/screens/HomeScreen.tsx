@@ -145,17 +145,27 @@ const HomeScreen: React.FC = React.memo(() => {
 
   // Greeting sections data states
   const [motivationTemplates, setMotivationTemplates] = useState<any[]>([]);
+  const [motivationTemplatesRaw, setMotivationTemplatesRaw] = useState<any[]>([]);
   const [goodMorningTemplates, setGoodMorningTemplates] = useState<any[]>([]);
   const [goodMorningTemplatesRaw, setGoodMorningTemplatesRaw] = useState<any[]>([]);
   const [businessEthicsTemplates, setBusinessEthicsTemplates] = useState<any[]>([]);
+  const [businessEthicsTemplatesRaw, setBusinessEthicsTemplatesRaw] = useState<any[]>([]);
   const [devotionalTemplates, setDevotionalTemplates] = useState<any[]>([]);
+  const [devotionalTemplatesRaw, setDevotionalTemplatesRaw] = useState<any[]>([]);
   const [leaderQuotesTemplates, setLeaderQuotesTemplates] = useState<any[]>([]);
+  const [leaderQuotesTemplatesRaw, setLeaderQuotesTemplatesRaw] = useState<any[]>([]);
   const [atmanirbharBharatTemplates, setAtmanirbharBharatTemplates] = useState<any[]>([]);
+  const [atmanirbharBharatTemplatesRaw, setAtmanirbharBharatTemplatesRaw] = useState<any[]>([]);
   const [goodThoughtsTemplates, setGoodThoughtsTemplates] = useState<any[]>([]);
+  const [goodThoughtsTemplatesRaw, setGoodThoughtsTemplatesRaw] = useState<any[]>([]);
   const [trendingTemplates, setTrendingTemplates] = useState<any[]>([]);
+  const [trendingTemplatesRaw, setTrendingTemplatesRaw] = useState<any[]>([]);
   const [bhagvatGitaTemplates, setBhagvatGitaTemplates] = useState<any[]>([]);
+  const [bhagvatGitaTemplatesRaw, setBhagvatGitaTemplatesRaw] = useState<any[]>([]);
   const [booksTemplates, setBooksTemplates] = useState<any[]>([]);
+  const [booksTemplatesRaw, setBooksTemplatesRaw] = useState<any[]>([]);
   const [celebratesMomentsTemplates, setCelebratesMomentsTemplates] = useState<any[]>([]);
+  const [celebratesMomentsTemplatesRaw, setCelebratesMomentsTemplatesRaw] = useState<any[]>([]);
   
   // Load data from APIs with caching for instant loads
   const loadApiData = useCallback(async (isRefresh: boolean = false) => {
@@ -248,9 +258,11 @@ const HomeScreen: React.FC = React.memo(() => {
       if (motivationResponse.status === 'fulfilled' && motivationResponse.value.length > 0) {
         console.log('✅ [MOTIVATION] Setting templates:', motivationResponse.value.length);
         setMotivationTemplates(motivationResponse.value.slice(0, 10));
+        setMotivationTemplatesRaw(motivationResponse.value);
       } else {
         console.log('⚠️ [MOTIVATION] No data available or API failed');
         setMotivationTemplates([]);
+        setMotivationTemplatesRaw([]);
       }
       if (goodMorningResponse.status === 'fulfilled' && goodMorningResponse.value.length > 0) {
         console.log('✅ [GOOD MORNING] Setting templates:', goodMorningResponse.value.length);
@@ -263,48 +275,66 @@ const HomeScreen: React.FC = React.memo(() => {
       }
       if (businessEthicsResponse.status === 'fulfilled' && businessEthicsResponse.value.length > 0) {
         setBusinessEthicsTemplates(businessEthicsResponse.value.slice(0, 10));
+        setBusinessEthicsTemplatesRaw(businessEthicsResponse.value);
       } else {
         setBusinessEthicsTemplates([]);
+        setBusinessEthicsTemplatesRaw([]);
       }
       if (devotionalResponse.status === 'fulfilled' && devotionalResponse.value.length > 0) {
         setDevotionalTemplates(devotionalResponse.value.slice(0, 10));
+        setDevotionalTemplatesRaw(devotionalResponse.value);
       } else {
         setDevotionalTemplates([]);
+        setDevotionalTemplatesRaw([]);
       }
       if (leaderQuotesResponse.status === 'fulfilled' && leaderQuotesResponse.value.length > 0) {
         setLeaderQuotesTemplates(leaderQuotesResponse.value.slice(0, 10));
+        setLeaderQuotesTemplatesRaw(leaderQuotesResponse.value);
       } else {
         setLeaderQuotesTemplates([]);
+        setLeaderQuotesTemplatesRaw([]);
       }
       if (atmanirbharResponse.status === 'fulfilled' && atmanirbharResponse.value.length > 0) {
         setAtmanirbharBharatTemplates(atmanirbharResponse.value.slice(0, 10));
+        setAtmanirbharBharatTemplatesRaw(atmanirbharResponse.value);
       } else {
         setAtmanirbharBharatTemplates([]);
+        setAtmanirbharBharatTemplatesRaw([]);
       }
       if (goodThoughtsResponse.status === 'fulfilled' && goodThoughtsResponse.value.length > 0) {
         setGoodThoughtsTemplates(goodThoughtsResponse.value.slice(0, 10));
+        setGoodThoughtsTemplatesRaw(goodThoughtsResponse.value);
       } else {
         setGoodThoughtsTemplates([]);
+        setGoodThoughtsTemplatesRaw([]);
       }
       if (trendingResponse.status === 'fulfilled' && trendingResponse.value.length > 0) {
         setTrendingTemplates(trendingResponse.value.slice(0, 10));
+        setTrendingTemplatesRaw(trendingResponse.value);
       } else {
         setTrendingTemplates([]);
+        setTrendingTemplatesRaw([]);
       }
       if (bhagvatGitaResponse.status === 'fulfilled' && bhagvatGitaResponse.value.length > 0) {
         setBhagvatGitaTemplates(bhagvatGitaResponse.value.slice(0, 10));
+        setBhagvatGitaTemplatesRaw(bhagvatGitaResponse.value);
       } else {
         setBhagvatGitaTemplates([]);
+        setBhagvatGitaTemplatesRaw([]);
       }
       if (booksResponse.status === 'fulfilled' && booksResponse.value.length > 0) {
         setBooksTemplates(booksResponse.value.slice(0, 10));
+        setBooksTemplatesRaw(booksResponse.value);
       } else {
         setBooksTemplates([]);
+        setBooksTemplatesRaw([]);
       }
       if (celebratesResponse.status === 'fulfilled' && celebratesResponse.value.length > 0) {
         setCelebratesMomentsTemplates(celebratesResponse.value.slice(0, 10));
+        setCelebratesMomentsTemplatesRaw(celebratesResponse.value);
       } else {
         setCelebratesMomentsTemplates([]);
+        setCelebratesMomentsTemplatesRaw([]);
       }
 
     } catch (error) {
@@ -1173,7 +1203,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={motivationTemplates}
-                renderItem={createGreetingCardRenderer(motivationTemplates, 'motivational')}
+                renderItem={createGreetingCardRenderer(
+                  motivationTemplatesRaw.length > 0 ? motivationTemplatesRaw : motivationTemplates,
+                  'motivational'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1195,7 +1228,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               <FlatList
                 data={goodMorningTemplates}
                 renderItem={createGreetingCardRenderer(
-                  goodMorningTemplates,
+                  goodMorningTemplatesRaw.length > 0 ? goodMorningTemplatesRaw : goodMorningTemplates,
                   'good morning',
                   () => {
                     console.log(
@@ -1224,7 +1257,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={businessEthicsTemplates}
-                renderItem={createGreetingCardRenderer(businessEthicsTemplates, 'business ethics')}
+                renderItem={createGreetingCardRenderer(
+                  businessEthicsTemplatesRaw.length > 0 ? businessEthicsTemplatesRaw : businessEthicsTemplates,
+                  'business ethics'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1245,7 +1281,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={devotionalTemplates}
-                renderItem={createGreetingCardRenderer(devotionalTemplates, 'devotional')}
+                renderItem={createGreetingCardRenderer(
+                  devotionalTemplatesRaw.length > 0 ? devotionalTemplatesRaw : devotionalTemplates,
+                  'devotional'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1266,7 +1305,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={leaderQuotesTemplates}
-                renderItem={createGreetingCardRenderer(leaderQuotesTemplates, 'leader quotes')}
+                renderItem={createGreetingCardRenderer(
+                  leaderQuotesTemplatesRaw.length > 0 ? leaderQuotesTemplatesRaw : leaderQuotesTemplates,
+                  'leader quotes'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1287,7 +1329,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={atmanirbharBharatTemplates}
-                renderItem={createGreetingCardRenderer(atmanirbharBharatTemplates, 'atmanirbhar bharat')}
+                renderItem={createGreetingCardRenderer(
+                  atmanirbharBharatTemplatesRaw.length > 0 ? atmanirbharBharatTemplatesRaw : atmanirbharBharatTemplates,
+                  'atmanirbhar bharat'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1308,7 +1353,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={goodThoughtsTemplates}
-                renderItem={createGreetingCardRenderer(goodThoughtsTemplates, 'good thoughts')}
+                renderItem={createGreetingCardRenderer(
+                  goodThoughtsTemplatesRaw.length > 0 ? goodThoughtsTemplatesRaw : goodThoughtsTemplates,
+                  'good thoughts'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1329,7 +1377,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={trendingTemplates}
-                renderItem={createGreetingCardRenderer(trendingTemplates, 'trending')}
+                renderItem={createGreetingCardRenderer(
+                  trendingTemplatesRaw.length > 0 ? trendingTemplatesRaw : trendingTemplates,
+                  'trending'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1350,7 +1401,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={bhagvatGitaTemplates}
-                renderItem={createGreetingCardRenderer(bhagvatGitaTemplates, 'bhagvat gita')}
+                renderItem={createGreetingCardRenderer(
+                  bhagvatGitaTemplatesRaw.length > 0 ? bhagvatGitaTemplatesRaw : bhagvatGitaTemplates,
+                  'bhagvat gita'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1371,7 +1425,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={booksTemplates}
-                renderItem={createGreetingCardRenderer(booksTemplates, 'books')}
+                renderItem={createGreetingCardRenderer(
+                  booksTemplatesRaw.length > 0 ? booksTemplatesRaw : booksTemplates,
+                  'books'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1392,7 +1449,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </View>
               <FlatList
                 data={celebratesMomentsTemplates}
-                renderItem={createGreetingCardRenderer(celebratesMomentsTemplates, 'celebrates the moments')}
+                renderItem={createGreetingCardRenderer(
+                  celebratesMomentsTemplatesRaw.length > 0 ? celebratesMomentsTemplatesRaw : celebratesMomentsTemplates,
+                  'celebrates the moments'
+                )}
                 keyExtractor={keyExtractor}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
@@ -1758,7 +1818,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         closeMotivationModal();
                         navigation.navigate('PosterPlayer', {
                           selectedPoster: template,
-                          relatedPosters: motivationTemplates.filter(t => t.id !== template.id),
+                          relatedPosters: (motivationTemplatesRaw.length > 0 ? motivationTemplatesRaw : motivationTemplates).filter(
+                            t => t.id !== template.id
+                          ),
                         });
                       }}
                     >
@@ -1828,7 +1890,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         closeGoodMorningModal();
                         navigation.navigate('PosterPlayer', {
                           selectedPoster: template,
-                          relatedPosters: goodMorningTemplates.filter(t => t.id !== template.id),
+                          relatedPosters: (goodMorningTemplatesRaw.length > 0 ? goodMorningTemplatesRaw : goodMorningTemplates).filter(
+                            t => t.id !== template.id
+                          ),
                         });
                       }}
                     >
@@ -1898,7 +1962,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         closeBusinessEthicsModal();
                         navigation.navigate('PosterPlayer', {
                           selectedPoster: template,
-                          relatedPosters: businessEthicsTemplates.filter(t => t.id !== template.id),
+                          relatedPosters: (businessEthicsTemplatesRaw.length > 0 ? businessEthicsTemplatesRaw : businessEthicsTemplates).filter(
+                            t => t.id !== template.id
+                          ),
                         });
                       }}
                     >
@@ -1968,7 +2034,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         closeDevotionalModal();
                         navigation.navigate('PosterPlayer', {
                           selectedPoster: template,
-                          relatedPosters: devotionalTemplates.filter(t => t.id !== template.id),
+                          relatedPosters: (devotionalTemplatesRaw.length > 0 ? devotionalTemplatesRaw : devotionalTemplates).filter(
+                            t => t.id !== template.id
+                          ),
                         });
                       }}
                     >
@@ -2038,7 +2106,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         closeLeaderQuotesModal();
                         navigation.navigate('PosterPlayer', {
                           selectedPoster: template,
-                          relatedPosters: leaderQuotesTemplates.filter(t => t.id !== template.id),
+                          relatedPosters: (leaderQuotesTemplatesRaw.length > 0 ? leaderQuotesTemplatesRaw : leaderQuotesTemplates).filter(
+                            t => t.id !== template.id
+                          ),
                         });
                       }}
                     >
@@ -2092,7 +2162,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeAtmanirbharBharatModal();
-                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: atmanirbharBharatTemplates.filter(t => t.id !== template.id) });
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (atmanirbharBharatTemplatesRaw.length > 0 ? atmanirbharBharatTemplatesRaw : atmanirbharBharatTemplates).filter(t => t.id !== template.id) });
                     }}>
                       <View style={styles.upcomingEventModalImageContainer}>
                         <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
@@ -2136,7 +2206,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeGoodThoughtsModal();
-                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: goodThoughtsTemplates.filter(t => t.id !== template.id) });
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (goodThoughtsTemplatesRaw.length > 0 ? goodThoughtsTemplatesRaw : goodThoughtsTemplates).filter(t => t.id !== template.id) });
                     }}>
                       <View style={styles.upcomingEventModalImageContainer}>
                         <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
@@ -2180,7 +2250,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeTrendingModal();
-                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: trendingTemplates.filter(t => t.id !== template.id) });
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (trendingTemplatesRaw.length > 0 ? trendingTemplatesRaw : trendingTemplates).filter(t => t.id !== template.id) });
                     }}>
                       <View style={styles.upcomingEventModalImageContainer}>
                         <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
@@ -2224,7 +2294,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeBhagvatGitaModal();
-                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: bhagvatGitaTemplates.filter(t => t.id !== template.id) });
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (bhagvatGitaTemplatesRaw.length > 0 ? bhagvatGitaTemplatesRaw : bhagvatGitaTemplates).filter(t => t.id !== template.id) });
                     }}>
                       <View style={styles.upcomingEventModalImageContainer}>
                         <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
@@ -2268,7 +2338,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeBooksModal();
-                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: booksTemplates.filter(t => t.id !== template.id) });
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (booksTemplatesRaw.length > 0 ? booksTemplatesRaw : booksTemplates).filter(t => t.id !== template.id) });
                     }}>
                       <View style={styles.upcomingEventModalImageContainer}>
                         <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
@@ -2312,7 +2382,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeCelebratesMomentsModal();
-                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: celebratesMomentsTemplates.filter(t => t.id !== template.id) });
+                      navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (celebratesMomentsTemplatesRaw.length > 0 ? celebratesMomentsTemplatesRaw : celebratesMomentsTemplates).filter(t => t.id !== template.id) });
                     }}>
                       <View style={styles.upcomingEventModalImageContainer}>
                         <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />

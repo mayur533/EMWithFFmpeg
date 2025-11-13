@@ -171,7 +171,8 @@ class GreetingTemplatesService {
             },
             downloads: backendTemplate.downloads || 0,
             isDownloaded: false,
-            isPremium: backendTemplate.isPremium || false
+            isPremium: backendTemplate.isPremium || false,
+            tags: Array.isArray(backendTemplate.tags) ? backendTemplate.tags : [],
           };
         });
         
@@ -239,7 +240,8 @@ class GreetingTemplatesService {
             },
             downloads: backendTemplate.downloads || 0,
             isDownloaded: false,
-            isPremium: backendTemplate.isPremium || false
+            isPremium: backendTemplate.isPremium || false,
+            tags: Array.isArray(backendTemplate.tags) ? backendTemplate.tags : [],
           };
         });
         
@@ -317,7 +319,8 @@ class GreetingTemplatesService {
             },
             downloads: backendTemplate.downloads || 0,
             isDownloaded: false,
-            isPremium: backendTemplate.isPremium || false
+            isPremium: backendTemplate.isPremium || false,
+            tags: Array.isArray(backendTemplate.tags) ? backendTemplate.tags : [],
           };
         });
         

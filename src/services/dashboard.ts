@@ -16,6 +16,7 @@ export interface Template {
   downloads: number;
   isDownloaded: boolean;
   languages?: string[];
+  tags?: string[];
 }
 
 export interface Category {

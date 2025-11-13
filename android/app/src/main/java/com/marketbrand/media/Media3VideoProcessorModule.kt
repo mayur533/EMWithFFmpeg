@@ -348,9 +348,45 @@ class Media3VideoProcessorModule(private val reactContext: ReactApplicationConte
     }
   }
 
-  private fun parseColor(colorString: String): Int {
+  private fun parseColor(colorString: String?): Int {
+    if (colorString.isNullOrBlank()) {
+      return Color.WHITE
+    }
+
+    val trimmed = colorString.trim()
+
     return try {
-      Color.parseColor(colorString)
+      when {
+        trimmed.startsWith("rgba", ignoreCase = true) -> {
+          val parts = trimmed
+            .removePrefix("rgba")
+            .removePrefix("(")
+            .removeSuffix(")")
+            .split(",")
+            .map { it.trim() }
+          val r = parts.getOrNull(0)?.toFloatOrNull()?.coerceIn(0f, 255f) ?: 0f
+          val g = parts.getOrNull(1)?.toFloatOrNull()?.coerceIn(0f, 255f) ?: 0f
+          val b = parts.getOrNull(2)?.toFloatOrNull()?.coerceIn(0f, 255f) ?: 0f
+          val a = parts.getOrNull(3)?.toFloatOrNull()?.coerceIn(0f, 1f) ?: 1f
+          Color.argb((a * 255).toInt(), r.toInt(), g.toInt(), b.toInt())
+        }
+
+        trimmed.startsWith("rgb", ignoreCase = true) -> {
+          val parts = trimmed
+            .removePrefix("rgb")
+            .removePrefix("(")
+            .removeSuffix(")")
+            .split(",")
+            .map { it.trim() }
+          val r = parts.getOrNull(0)?.toFloatOrNull()?.coerceIn(0f, 255f) ?: 0f
+          val g = parts.getOrNull(1)?.toFloatOrNull()?.coerceIn(0f, 255f) ?: 0f
+          val b = parts.getOrNull(2)?.toFloatOrNull()?.coerceIn(0f, 255f) ?: 0f
+          Color.rgb(r.toInt(), g.toInt(), b.toInt())
+        }
+
+        trimmed.equals("transparent", ignoreCase = true) -> Color.TRANSPARENT
+        else -> Color.parseColor(trimmed)
+      }
     } catch (error: IllegalArgumentException) {
       Log.w(TAG, "Invalid color string $colorString, defaulting to white", error)
       Color.WHITE

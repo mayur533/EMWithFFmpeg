@@ -1,5 +1,5 @@
 // VideoEditorScreen - Metro cache fix - VideoProcessor import commented out
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -219,11 +219,6 @@ const toRgba = (color: string, alpha: number): string => {
   return `rgba(0,0,0,${alpha})`;
 };
 
-const getOmbreColors = (base: string | undefined) => {
-  const baseColor = base || 'rgba(0,0,0,1)';
-  return [toRgba(baseColor, 0.6), toRgba(baseColor, 0.3), toRgba(baseColor, 0.0)];
-};
-
 const OMBRE_GRADIENTS: Record<string, string[]> = {
   'ombre-sunset': ['#FF6B6B', '#FFA500', '#FFD700'],
   'ombre-ocean': ['#667eea', '#06b6d4', '#22c55e'],
@@ -235,6 +230,48 @@ const OMBRE_GRADIENTS: Record<string, string[]> = {
   'ombre-autumn': ['#78350f', '#ea580c', '#dc2626'],
   'ombre-rose': ['#be123c', '#f472b6', '#fda4af'],
   'ombre-galaxy': ['#6366f1', '#8b5cf6', '#06b6d4'],
+};
+
+const ensureOpaqueColor = (color?: string) => {
+  if (!color) return color;
+  const trimmed = color.trim();
+  if (trimmed.startsWith('rgba')) {
+    return trimmed;
+  }
+  if (trimmed.startsWith('rgb(')) {
+    return trimmed.replace(/^rgb\((.*)\)$/i, 'rgba($1,1)');
+  }
+  return trimmed;
+};
+
+const ensureOpaqueGradient = (colors?: string[]) =>
+  colors?.map(color => ensureOpaqueColor(color)).filter(Boolean) as string[] | undefined;
+
+const getColorAlpha = (color?: string) => {
+  if (!color) return 1;
+  const trimmed = color.trim().toLowerCase();
+  if (trimmed.startsWith('rgba')) {
+    const match = trimmed.match(/rgba\(\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*,\s*([0-9.]+)\s*\)/i);
+    if (match) {
+      const alpha = Number(match[4]);
+      if (!Number.isNaN(alpha)) {
+        return alpha;
+      }
+    }
+  }
+  return 1;
+};
+
+const gradientHasTransparency = (colors?: string[]) =>
+  colors?.some(color => getColorAlpha(color) < 0.999) ?? false;
+
+const getOmbreColors = (base: string | undefined) => {
+  const color = base || '#000000';
+  return [
+    toRgba(color, 0.9),
+    toRgba(color, 0.45),
+    toRgba(color, 0),
+  ];
 };
 
 const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
@@ -1550,16 +1587,16 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
           'ocean': { backgroundColor: 'rgba(6, 182, 212, 0.9)' },
           'sunset': { backgroundColor: 'rgba(239, 68, 68, 0.9)' },
           'artistic': { backgroundColor: 'rgba(168, 85, 247, 0.9)' },
-          'ombre-sunset': { backgroundColor: 'rgba(255, 107, 107, 0.9)', gradient: ['#FF6B6B', '#FFA500', '#FFD700'] },
-          'ombre-ocean': { backgroundColor: 'rgba(102, 126, 234, 0.9)', gradient: ['#667eea', '#06b6d4', '#22c55e'] },
-          'ombre-purple': { backgroundColor: 'rgba(147, 51, 234, 0.9)', gradient: ['#9333ea', '#ec4899', '#f43f5e'] },
-          'ombre-forest': { backgroundColor: 'rgba(6, 95, 70, 0.9)', gradient: ['#065f46', '#059669', '#10b981'] },
-          'ombre-fire': { backgroundColor: 'rgba(220, 38, 38, 0.9)', gradient: ['#dc2626', '#f59e0b', '#fbbf24'] },
-          'ombre-night': { backgroundColor: 'rgba(30, 58, 138, 0.9)', gradient: ['#1e3a8a', '#7c3aed', '#ec4899'] },
-          'ombre-tropical': { backgroundColor: 'rgba(244, 114, 182, 0.9)', gradient: ['#f472b6', '#fb923c', '#06b6d4'] },
-          'ombre-autumn': { backgroundColor: 'rgba(120, 53, 15, 0.9)', gradient: ['#78350f', '#ea580c', '#dc2626'] },
-          'ombre-rose': { backgroundColor: 'rgba(190, 18, 60, 0.9)', gradient: ['#be123c', '#f472b6', '#fda4af'] },
-          'ombre-galaxy': { backgroundColor: 'rgba(99, 102, 241, 0.9)', gradient: ['#6366f1', '#8b5cf6', '#06b6d4'] },
+          'ombre-sunset': { backgroundColor: 'rgba(255, 107, 107, 0.9)', gradient: OMBRE_GRADIENTS['ombre-sunset'] },
+          'ombre-ocean': { backgroundColor: 'rgba(102, 126, 234, 0.9)', gradient: OMBRE_GRADIENTS['ombre-ocean'] },
+          'ombre-purple': { backgroundColor: 'rgba(147, 51, 234, 0.9)', gradient: OMBRE_GRADIENTS['ombre-purple'] },
+          'ombre-forest': { backgroundColor: 'rgba(6, 95, 70, 0.9)', gradient: OMBRE_GRADIENTS['ombre-forest'] },
+          'ombre-fire': { backgroundColor: 'rgba(220, 38, 38, 0.9)', gradient: OMBRE_GRADIENTS['ombre-fire'] },
+          'ombre-night': { backgroundColor: 'rgba(30, 58, 138, 0.9)', gradient: OMBRE_GRADIENTS['ombre-night'] },
+          'ombre-tropical': { backgroundColor: 'rgba(244, 114, 182, 0.9)', gradient: OMBRE_GRADIENTS['ombre-tropical'] },
+          'ombre-autumn': { backgroundColor: 'rgba(120, 53, 15, 0.9)', gradient: OMBRE_GRADIENTS['ombre-autumn'] },
+          'ombre-rose': { backgroundColor: 'rgba(190, 18, 60, 0.9)', gradient: OMBRE_GRADIENTS['ombre-rose'] },
+          'ombre-galaxy': { backgroundColor: 'rgba(99, 102, 241, 0.9)', gradient: OMBRE_GRADIENTS['ombre-galaxy'] },
         };
 
         const style = templateStyles[templateType] || templateStyles['business'];
@@ -2208,14 +2245,15 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
   ]);
 
   // Render functions
-  const renderLayer = (
-    layer: VideoLayer,
-    index: number,
-    scale: { scaleX?: number; scaleY?: number } = {},
-  ) => {
-    const scaleX = scale.scaleX ?? 1;
-    const scaleY = scale.scaleY ?? scaleX;
-    const isSelected = selectedLayer === layer.id;
+const renderLayer = (
+  layer: VideoLayer,
+  index: number,
+  options: { scaleX?: number; scaleY?: number; forceOpaqueBackground?: boolean } = {},
+) => {
+  const scaleX = options.scaleX ?? 1;
+  const scaleY = options.scaleY ?? scaleX;
+  const forceOpaqueBackground = options.forceOpaqueBackground ?? false;
+  const isSelected = selectedLayer === layer.id;
 
     const left = Math.round((layer.position.x || 0) * scaleX);
     const top = Math.round((layer.position.y || 0) * scaleY);
@@ -2226,8 +2264,13 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
     const adjustNumeric = (value: any, factor: number) =>
       typeof value === 'number' ? value * factor : value;
 
-    const getScaledTextStyle = () => {
-      const baseStyle = (layer.style || {}) as Record<string, any>;
+  const getScaledTextStyle = () => {
+    const baseStyle = { ...(layer.style || {}) } as Record<string, any>;
+
+    if (forceOpaqueBackground && baseStyle.backgroundColor) {
+      baseStyle.backgroundColor = ensureOpaqueColor(String(baseStyle.backgroundColor));
+    }
+
       if (scaleX === 1 && scaleY === 1) {
         return baseStyle;
       }
@@ -2287,9 +2330,14 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
             (() => {
               const isOmbreTemplate = selectedTemplate?.startsWith('ombre-');
               const gradientColors = (layer.style as any)?.gradientColors as string[] | undefined;
-              const colors = gradientColors
+              const baseColors = gradientColors
                 || (isOmbreTemplate ? OMBRE_GRADIENTS[selectedTemplate || ''] : undefined)
                 || getOmbreColors(layer.style?.backgroundColor);
+              const hasTransparency = gradientHasTransparency(baseColors);
+              const shouldForceOpacity = forceOpaqueBackground && !hasTransparency;
+              const colors = shouldForceOpacity
+                ? ensureOpaqueGradient(baseColors)
+                : baseColors;
 
               if (colors && colors.length >= 2) {
                 const gradientStart = isOmbreTemplate ? { x: 0, y: 0 } : { x: 0, y: 1 };
@@ -2310,7 +2358,9 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
                   style={{
                     width: '100%',
                     height: '100%',
-                    backgroundColor: layer.style?.backgroundColor || 'rgba(0,0,0,0.6)',
+                    backgroundColor: shouldForceOpacity
+                      ? ensureOpaqueColor(layer.style?.backgroundColor) || 'rgba(0,0,0,1)'
+                      : layer.style?.backgroundColor || 'rgba(0,0,0,0.6)',
                   }}
                 />
               );
@@ -2399,6 +2449,17 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
     insets.bottom + (isTablet ? 0 : moderateScale(12)),
     moderateScale(isTablet ? 20 : 28),
   );
+  const processingContentScale = useMemo(() => {
+    if (isTablet) {
+      return 1;
+    }
+    if (currentCanvasHeight <= 0) {
+      return 1;
+    }
+    const baseHeight = 360;
+    const ratio = currentCanvasHeight / baseHeight;
+    return Math.min(1, Math.max(0.78, ratio));
+  }, [currentCanvasHeight, isTablet]);
 
   return (
     <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
@@ -2571,7 +2632,11 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
               <View style={{ width: exportWidth, height: exportHeight, backgroundColor: 'transparent' }}>
                 {layers.map((l, idx) => {
                   if (l.fieldType && !visibleFields[l.fieldType]) return null;
-                  return renderLayer(l, idx, { scaleX: captureScaleX, scaleY: captureScaleY });
+                  return renderLayer(l, idx, {
+                    scaleX: captureScaleX,
+                    scaleY: captureScaleY,
+                    forceOpaqueBackground: true,
+                  });
                 })}
                 {selectedFrame && (
                   <View pointerEvents="none" style={styles.frameOverlayContainer}>
@@ -2591,64 +2656,67 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
               pointerEvents="auto"
               style={[styles.processingOverlay, { opacity: processingOverlayAnim }]}
             >
-              <Animated.View
-                style={[
-                  styles.processingContentWrapper,
-                  {
-                    transform: [{ scale: processingCardScale }],
-                    paddingBottom: processingBottomPadding,
-                  },
-                ]}
-              >
-                <View style={styles.processingAnimationContainer}>
+              <View style={[styles.processingContentOuter, { paddingBottom: processingBottomPadding }]}>
+                <View style={{ transform: [{ scale: processingContentScale }] }}>
                   <Animated.View
                     style={[
-                      styles.processingRipple,
+                      styles.processingContentWrapper,
                       {
-                        opacity: rippleOpacitySecondary,
-                        transform: [{ scale: rippleScaleSecondary }],
+                        transform: [{ scale: processingCardScale }],
                       },
                     ]}
-                  />
-                  <Animated.View
-                    style={[
-                      styles.processingRipple,
-                      {
-                        opacity: rippleOpacityPrimary,
-                        transform: [{ scale: rippleScalePrimary }],
-                      },
-                    ]}
-                  />
-                  <View style={styles.processingIndicator}>
-                    <ActivityIndicator size="large" color="#ffffff" />
-                  </View>
+                  >
+                    <View style={styles.processingAnimationContainer}>
+                      <Animated.View
+                        style={[
+                          styles.processingRipple,
+                          {
+                            opacity: rippleOpacitySecondary,
+                            transform: [{ scale: rippleScaleSecondary }],
+                          },
+                        ]}
+                      />
+                      <Animated.View
+                        style={[
+                          styles.processingRipple,
+                          {
+                            opacity: rippleOpacityPrimary,
+                            transform: [{ scale: rippleScalePrimary }],
+                          },
+                        ]}
+                      />
+                      <View style={styles.processingIndicator}>
+                        <ActivityIndicator size="large" color="#ffffff" />
+                      </View>
+                    </View>
+                    <Text style={styles.processingHeadline}>Processing</Text>
+                    <Text style={styles.processingCaption}>
+                      Adding overlays and finishing touches
+                    </Text>
+                    <View
+                      style={styles.progressBar}
+                      onLayout={event => {
+                        const width = event.nativeEvent.layout.width;
+                        if (Math.abs(width - progressBarWidth) > 1) {
+                          setProgressBarWidth(width);
+                        }
+                      }}
+                    >
+                      <Animated.View
+                        style={[
+                          styles.progressFill,
+                          { width: progressBarWidth > 0 ? processingProgressAnim : 0 },
+                        ]}
+                      />
+                    </View>
+                    <Text style={styles.progressValue}>
+                      {processingProgress > 0
+                        ? `${Math.min(100, Math.max(1, Math.round(processingProgress)))}%`
+                        : 'Processing...'}
+                    </Text>
+                  </Animated.View>
                 </View>
-                <Text style={styles.processingHeadline}>Processing</Text>
-                <Text style={styles.processingCaption}>
-                  Adding overlays and finishing touches
-                </Text>
-                <View
-                  style={styles.progressBar}
-                  onLayout={event => {
-                    const width = event.nativeEvent.layout.width;
-                    if (Math.abs(width - progressBarWidth) > 1) {
-                      setProgressBarWidth(width);
-                    }
-                  }}
-                >
-                  <Animated.View
-                    style={[
-                      styles.progressFill,
-                      { width: progressBarWidth > 0 ? processingProgressAnim : 0 },
-                    ]}
-                  />
-                </View>
-                <Text style={styles.progressValue}>
-                  {processingProgress > 0
-                    ? `${Math.min(100, Math.max(1, Math.round(processingProgress)))}%`
-                    : 'Processing...'}
-                </Text>
-              </Animated.View>
+              </View>
             </Animated.View>
           )}
         </ViewShot>
@@ -3814,9 +3882,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     zIndex: 1000,
   },
-  processingContentWrapper: {
-    flex: 1,
+  processingContentOuter: {
+    alignItems: 'center',
     justifyContent: 'center',
+    width: '100%',
+  },
+  processingContentWrapper: {
     alignItems: 'center',
     paddingHorizontal: moderateScale(18),
   },

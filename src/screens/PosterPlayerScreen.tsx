@@ -45,20 +45,16 @@ const extractLanguagesFromTags = (tags: unknown): string[] => {
   return Array.from(new Set(matchedLanguages));
 };
 
-const mergeTemplateLanguages = (template: Template, fallbackLanguage: string): Template => {
+const mergeTemplateLanguages = (template: Template): Template => {
   const existingLanguages = Array.isArray(template.languages)
     ? template.languages
         .filter((language): language is string => typeof language === 'string' && language.trim().length > 0)
         .map(language => language.toLowerCase())
     : [];
 
-  const tags = (template as any).tags;
+  const tags = Array.isArray(template.tags) ? template.tags : [];
   const languagesFromTags = extractLanguagesFromTags(tags);
   const mergedLanguages = Array.from(new Set([...existingLanguages, ...languagesFromTags]));
-
-  if (!mergedLanguages.length && fallbackLanguage) {
-    mergedLanguages.push(fallbackLanguage.toLowerCase());
-  }
 
   return {
     ...template,
@@ -80,7 +76,7 @@ const templateContainsLanguage = (template: Template, languageId: string): boole
     return true;
   }
 
-  const tags = (template as any).tags;
+  const tags = Array.isArray(template.tags) ? template.tags : [];
   if (Array.isArray(tags)) {
     const normalizedTags = tags
       .filter((tag): tag is string => typeof tag === 'string')
@@ -174,7 +170,7 @@ const PosterPlayerScreen: React.FC = () => {
 
   // Sync state when route params change
   useEffect(() => {
-    const ensureLanguages = (template: Template): Template => mergeTemplateLanguages(template, 'english');
+    const ensureLanguages = (template: Template): Template => mergeTemplateLanguages(template);
 
     const templatesToMerge = initialRelatedPosters.find(p => p.id === initialPoster.id)
       ? initialRelatedPosters
@@ -191,7 +187,7 @@ const PosterPlayerScreen: React.FC = () => {
     templatesMap.set(initialPoster.id, ensureLanguages(initialPoster));
 
     setAllTemplates(Array.from(templatesMap.values()));
-  }, [initialPoster, initialRelatedPosters]);
+  }, [initialPoster, initialRelatedPosters, selectedLanguage]);
 
   // Ensure poster selection respects the active language filter
   useEffect(() => {
@@ -234,7 +230,7 @@ const PosterPlayerScreen: React.FC = () => {
 
   const handlePosterSelect = useCallback((poster: Template) => {
     // Simply update the preview - don't modify the grid at all
-    setCurrentPoster(poster);
+    setCurrentPoster(mergeTemplateLanguages(poster));
   }, []);
 
   const handleLanguageChange = useCallback((languageId: string) => {
@@ -249,7 +245,9 @@ const PosterPlayerScreen: React.FC = () => {
      * Language filtering is now handled locally using template tags (see templateContainsLanguage).
      */
 
-    const firstMatchingTemplate = allTemplates.find(template => templateContainsLanguage(template, languageId));
+    const firstMatchingTemplate = allTemplates
+      .map(template => mergeTemplateLanguages(template))
+      .find(template => templateContainsLanguage(template, languageId));
     if (firstMatchingTemplate) {
       setCurrentPoster(firstMatchingTemplate);
     }
