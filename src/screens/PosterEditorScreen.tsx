@@ -1504,6 +1504,23 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   };
 
   // Handle pan gesture for dragging layers
+  const getLayerEffectiveSize = useCallback((layer: Layer) => {
+    if (layer.type === 'text') {
+      const fontSize = layer.style?.fontSize ?? 16;
+      const contentLength = layer.content?.length ?? 1;
+      const estimatedWidth = Math.min(canvasWidth, Math.max(fontSize, contentLength * fontSize * 0.55));
+      const estimatedHeight = Math.min(canvasHeight, fontSize * 1.3);
+      return {
+        width: estimatedWidth,
+        height: estimatedHeight
+      };
+    }
+    return {
+      width: layer.size?.width ?? 0,
+      height: layer.size?.height ?? 0,
+    };
+  }, [canvasWidth, canvasHeight]);
+
   const onPanGestureEvent = useCallback((layerId: string) => {
     // Ensure translation values exist for this layer
     if (!translationValues[layerId]) {
@@ -1520,17 +1537,48 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         useNativeDriver: true,
         listener: (event: any) => {
           const { translationX, translationY } = event.nativeEvent;
+          
+          // Get current layer
+          const currentLayer = layers.find(layer => layer.id === layerId);
+          if (!currentLayer) return;
+          
+          // Get element dimensions
+          const { width: elementWidth, height: elementHeight } = getLayerEffectiveSize(currentLayer);
+          const effectiveWidth = elementWidth || 0;
+          const effectiveHeight = elementHeight || 0;
+          
+          // Calculate new position (current position + translation)
+          let newX = currentLayer.position.x + translationX;
+          let newY = currentLayer.position.y + translationY;
+          
+          // Clamp positions so the entire element remains inside the canvas
+          const maxX = Math.max(0, canvasWidth - effectiveWidth);
+          const maxY = Math.max(0, canvasHeight - effectiveHeight);
+          newX = Math.max(0, Math.min(newX, maxX));
+          newY = Math.max(0, Math.min(newY, maxY));
+          newX = Number.isFinite(newX) ? newX : 0;
+          newY = Number.isFinite(newY) ? newY : 0;
+          
+          // Calculate clamped translation (new position - original position)
+          const clampedTranslationX = newX - currentLayer.position.x;
+          const clampedTranslationY = newY - currentLayer.position.y;
+          
+          // Update animated values with clamped translations
+          translationValues[layerId].x.setValue(clampedTranslationX);
+          translationValues[layerId].y.setValue(clampedTranslationY);
+          
+          // Update alignment guides with clamped values
           if (alignmentFrameRef.current) {
             cancelAnimationFrame(alignmentFrameRef.current);
           }
           alignmentFrameRef.current = requestAnimationFrame(() => {
             alignmentFrameRef.current = null;
-            updateAlignmentGuides(layerId, translationX, translationY);
+            updateAlignmentGuides(layerId, clampedTranslationX, clampedTranslationY);
           });
         }
       }
     );
-  }, [alignmentFrameRef, ensureSnapOffsets, translationValues, updateAlignmentGuides]);
+  }, [alignmentFrameRef, canvasHeight, canvasWidth, ensureSnapOffsets, getLayerEffectiveSize, layers, translationValues, updateAlignmentGuides]);
 
   // Handle pan gesture state changes
   const onHandlerStateChange = useCallback((layerId: string) => {
@@ -1547,25 +1595,31 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           translationValues[layerId].y.setValue(0);
         }
       } else if (event.nativeEvent.state === State.END) {
-        const { translationX, translationY } = event.nativeEvent;
-        
         // Get current layer
         const currentLayer = layers.find(layer => layer.id === layerId);
         if (!currentLayer) return;
+        
+        // Get clamped translation values (already clamped during drag)
+        const clampedTranslationX = (translationValues[layerId]?.x as any)?._value ?? 0;
+        const clampedTranslationY = (translationValues[layerId]?.y as any)?._value ?? 0;
         const snapOffset = snapOffsetsLatest.current[layerId] || { x: 0, y: 0 };
         
-        // Calculate new position with boundaries
-        // For text layers, don't constrain based on size since they shrink-wrap
-        let newX, newY;
-        if (currentLayer.type === 'text') {
-          // Text layers can move freely within canvas
-          newX = Math.max(0, Math.min(canvasWidth, currentLayer.position.x + translationX + snapOffset.x));
-          newY = Math.max(0, Math.min(canvasHeight, currentLayer.position.y + translationY + snapOffset.y));
-        } else {
-          // Image layers need size-based constraints
-          newX = Math.max(0, Math.min(canvasWidth - currentLayer.size.width, currentLayer.position.x + translationX + snapOffset.x));
-          newY = Math.max(0, Math.min(canvasHeight - currentLayer.size.height, currentLayer.position.y + translationY + snapOffset.y));
-        }
+        // Get element dimensions
+        const { width: elementWidth, height: elementHeight } = getLayerEffectiveSize(currentLayer);
+        const effectiveWidth = elementWidth || 0;
+        const effectiveHeight = elementHeight || 0;
+        
+        // Calculate new position (current position + clamped translation + snap offset)
+        let newX = currentLayer.position.x + clampedTranslationX + snapOffset.x;
+        let newY = currentLayer.position.y + clampedTranslationY + snapOffset.y;
+        
+        // Final clamp to ensure element stays within canvas bounds
+        const maxX = Math.max(0, canvasWidth - effectiveWidth);
+        const maxY = Math.max(0, canvasHeight - effectiveHeight);
+        newX = Math.max(0, Math.min(newX, maxX));
+        newY = Math.max(0, Math.min(newY, maxY));
+        newX = Number.isFinite(newX) ? newX : 0;
+        newY = Number.isFinite(newY) ? newY : 0;
         
         // Debug: Log the current position and field type
         const frameFileName = selectedFrame?.background ? 
@@ -1605,7 +1659,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         setDraggedLayer(null);
       }
     };
-  }, [canvasHeight, canvasWidth, clearAlignmentGuides, ensureSnapOffsets, layerAnimations, layers, selectedFrame, translationValues]);
+  }, [canvasHeight, canvasWidth, clearAlignmentGuides, ensureSnapOffsets, getLayerEffectiveSize, layerAnimations, layers, selectedFrame, translationValues]);
 
   // Handle pinch gesture for zooming
   const onPinchGestureEvent = useCallback((layerId: string) => {
