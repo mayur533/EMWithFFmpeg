@@ -90,6 +90,8 @@ const getOmbreColors = (base: string | undefined) => {
 // Compact spacing multiplier to reduce all spacing (50% reduction)
 const COMPACT_MULTIPLIER = 0.5;
 const ALIGNMENT_THRESHOLD = 8;
+const clamp = (value: number, min: number, max: number) =>
+  Math.min(Math.max(value, min), max);
 const TEMPLATE_FOOTER_STYLES: Record<string, { backgroundColor: string; gradient?: string[] }> = {
   business: { backgroundColor: 'rgba(102, 126, 234, 0.9)' },
   event: { backgroundColor: 'rgba(239, 68, 68, 0.9)' },
@@ -414,6 +416,22 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   
   // Get responsive dimensions
   const { canvasWidth, canvasHeight, availableWidth, availableHeight } = getResponsiveDimensions(insets);
+  const canvasTopOffset = insets.top + moderateScale(12);
+  const canvasBottomY = canvasTopOffset + canvasHeight;
+  const fontModalSpacing = moderateScale(12);
+  const bottomSafeArea = Math.max(insets.bottom, responsiveSpacing.lg);
+  const desiredTop = canvasBottomY + fontModalSpacing;
+  const availableBelowCanvas = screenHeight - desiredTop - bottomSafeArea;
+  const minFontModalHeight = screenHeight * 0.25;
+  const maxFontModalHeight = screenHeight * 0.55;
+  const fontModalMaxHeight = availableBelowCanvas >= minFontModalHeight
+    ? Math.min(availableBelowCanvas, maxFontModalHeight)
+    : maxFontModalHeight;
+  const fallbackTop = screenHeight - fontModalMaxHeight - bottomSafeArea;
+  const fontModalTopOffset = availableBelowCanvas >= minFontModalHeight
+    ? desiredTop
+    : Math.max(canvasBottomY - canvasHeight / 2, fallbackTop);
+  const fontModalWidth = Math.min(canvasWidth, screenWidth * 0.92);
 
   // Create theme-aware styles (with dynamic responsive scaling)
   const getThemeStyles = () => ({
@@ -2107,7 +2125,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       }
       return layer;
     }));
-    setShowFontStyleModal(false);
+    // Modal stays open so user can continue trying different fonts
   }, [selectedLayer, selectedFontSize]);
   
   // Apply font size to selected layer
@@ -3167,11 +3185,27 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       <Modal
         visible={showFontStyleModal}
         transparent
-        animationType="slide"
+        animationType="fade"
         onRequestClose={() => setShowFontStyleModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={styles.fontModalContent}>
+        <View style={styles.fontModalRoot}>
+          <TouchableWithoutFeedback onPress={() => setShowFontStyleModal(false)}>
+            <View style={[
+              styles.fontModalBackdrop,
+              { top: fontModalTopOffset }
+            ]} />
+          </TouchableWithoutFeedback>
+          <View style={[
+            styles.fontModalWrapper,
+            { top: fontModalTopOffset }
+          ]}>
+            <View style={[
+              styles.fontModalContent,
+              {
+                width: fontModalWidth,
+                height: fontModalMaxHeight
+              }
+            ]}>
             {/* Modal Header */}
             <View style={styles.fontModalHeader}>
               <View>
@@ -3362,6 +3396,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 </View>
               </View>
             </ScrollView>
+            </View>
           </View>
         </View>
       </Modal>
@@ -4044,39 +4079,47 @@ const styles = StyleSheet.create({
     shadowRadius: 16,
     elevation: 12,
   },
+  fontModalRoot: {
+    flex: 1,
+    backgroundColor: 'transparent',
+  },
+  fontModalBackdrop: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  fontModalWrapper: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    paddingHorizontal: moderateScale(6),
+  },
   fontModalContent: {
     backgroundColor: '#ffffff',
-    borderRadius: isLandscape 
-      ? (isTablet ? 20 : 16) 
-      : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : isTablet ? 20 : 16),
-    padding: isLandscape 
-      ? (isTablet ? 18 : 14) 
-      : (isUltraSmallScreen ? 10 : isSmallScreen ? 12 : isMediumScreen ? 14 : isLargeScreen ? 16 : isTablet ? 18 : 16),
-    width: isLandscape 
-      ? (isTablet ? screenWidth * 0.65 : screenWidth * 0.75) 
-      : (isUltraSmallScreen ? screenWidth * 0.95 : isSmallScreen ? screenWidth * 0.92 : isMediumScreen ? screenWidth * 0.88 : isLargeScreen ? screenWidth * 0.85 : isTablet ? screenWidth * 0.8 : screenWidth * 0.85),
-    height: isLandscape 
-      ? (isTablet ? screenHeight * 0.82 : screenHeight * 0.80) 
-      : (isUltraSmallScreen ? screenHeight * 0.78 : isSmallScreen ? screenHeight * 0.80 : isMediumScreen ? screenHeight * 0.81 : isLargeScreen ? screenHeight * 0.82 : isTablet ? screenHeight * 0.84 : screenHeight * 0.81),
-    maxHeight: screenHeight * 0.85,
+    borderRadius: moderateScale(14),
+    padding: moderateScale(12),
     flexDirection: 'column',
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 8,
+      height: 6,
     },
-    shadowOpacity: 0.25,
-    shadowRadius: 16,
-    elevation: 12,
+    shadowOpacity: 0.18,
+    shadowRadius: 12,
+    elevation: 10,
+    overflow: 'hidden',
   },
   fontModalScrollView: {
     flex: 1,
     marginTop: moderateScale(3),
+    minHeight: 0,
   },
   fontModalScrollContent: {
     paddingBottom: moderateScale(12),
     paddingHorizontal: moderateScale(2),
-    flexGrow: 1,
   },
   modalTitle: {
     fontSize: isLandscape 
