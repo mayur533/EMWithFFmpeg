@@ -154,10 +154,10 @@ const HelpSupportScreen: React.FC = () => {
     {
       id: 'phone',
       title: 'Call Us',
-      description: '+91 93709 30007',
+      description: '9941041415',
       icon: 'phone',
       action: () => {
-        Linking.openURL('tel:+919370930007');
+        Linking.openURL('tel:9941041415');
       },
     },
     {
