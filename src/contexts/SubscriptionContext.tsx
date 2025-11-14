@@ -18,7 +18,7 @@ interface SubscriptionContextType {
     quarterlySubscriptions: number;
     yearlySubscriptions: number;
   };
-  refreshSubscription: () => Promise<void>;
+  refreshSubscription: (force?: boolean) => Promise<void>;
   refreshTransactions: () => Promise<void>;
   addTransaction: (transaction: Omit<Transaction, 'id' | 'timestamp'>) => Promise<Transaction>;
   clearTransactions: () => Promise<void>;
@@ -125,7 +125,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
   }, []);
 
   // Refresh subscription status from backend
-  const refreshSubscription = useCallback(async () => {
+  const refreshSubscription = useCallback(async (force = false) => {
     try {
       // Prevent duplicate API calls - use cached data if refreshed within last 5 seconds
       const now = Date.now();
@@ -136,7 +136,7 @@ export const SubscriptionProvider: React.FC<SubscriptionProviderProps> = ({ chil
         return;
       }
       
-      if (now - lastRefreshTimeRef.current < cacheValidityMs) {
+      if (!force && now - lastRefreshTimeRef.current < cacheValidityMs) {
         console.log('📦 Using cached subscription data (refreshed', Math.round((now - lastRefreshTimeRef.current) / 1000), 'seconds ago)');
         return;
       }

@@ -122,9 +122,9 @@ const SubscriptionScreen: React.FC = () => {
   const plans = {
     quarterly: {
       name: 'Quarterly Pro',
-      price: '₹499',
-      originalPrice: '₹1,497',
-      savings: '67% OFF',
+      price: '₹1',
+      originalPrice: '₹499',
+      savings: 'Special Offer',
       period: '3 months',
       features: [
         'Unlimited poster creation',
@@ -150,6 +150,19 @@ const SubscriptionScreen: React.FC = () => {
         features: apiPlans[0].features || plans[selectedPlan].features,
       }
     : plans[selectedPlan];
+
+  const isStatusActive = (status: SubscriptionStatus | null) => {
+    if (!status) {
+      return false;
+    }
+
+    const normalizedStatus = status.status?.toLowerCase();
+    const hasValidPlan = Boolean(status.planId || status.plan || status.planName);
+    const expiryDate = status.expiryDate || status.endDate;
+    const isNotExpired = expiryDate ? new Date(expiryDate) > new Date() : true;
+
+    return (status.isActive || normalizedStatus === 'active') && hasValidPlan && isNotExpired;
+  };
 
   // Load subscription data from API
   const loadSubscriptionData = useCallback(async () => {
@@ -178,7 +191,7 @@ const SubscriptionScreen: React.FC = () => {
       if (statusResponse.status === 'fulfilled') {
         console.log('✅ Subscription status loaded from API:', statusResponse.value.data);
         setSubscriptionStatus(statusResponse.value.data);
-        setIsSubscribed(statusResponse.value.data.isActive);
+        setIsSubscribed(isStatusActive(statusResponse.value.data));
       } else {
         console.log('❌ Failed to load status from API, using local state');
         setApiError('Failed to load subscription status');
@@ -212,8 +225,9 @@ const SubscriptionScreen: React.FC = () => {
 
     setIsProcessing(true);
 
-    // Get current user for payment details
     const currentUser = authService.getCurrentUser();
+    let amountInPaise = 100;
+    let amountInRupees = 1;
 
     try {
       // Validate Razorpay configuration
@@ -225,12 +239,88 @@ const SubscriptionScreen: React.FC = () => {
       console.log('📋 Current plan:', currentPlan);
       console.log('👤 Current user:', currentUser);
       
+      const preferredPlan =
+        apiPlans.find(plan => plan.id === 'quarterly_pro') ||
+        apiPlans.find(plan => plan.name === currentPlan.name) ||
+        apiPlans[0];
+
+      const backendPlanId = preferredPlan?.id || 'quarterly_pro';
+      const planPriceFromApiRaw = preferredPlan?.price;
+      const planPriceFromApi =
+        typeof planPriceFromApiRaw === 'number'
+          ? planPriceFromApiRaw
+          : Number(planPriceFromApiRaw);
+      const uiPriceCandidateRaw = Number(String(currentPlan.price).replace(/[^\d.]/g, ''));
+      const uiPriceCandidate =
+        Number.isFinite(uiPriceCandidateRaw) && uiPriceCandidateRaw > 0 ? uiPriceCandidateRaw : NaN;
+
+      const normalizedPlanAmountRupees =
+        Number.isFinite(planPriceFromApi) && (planPriceFromApi as number) > 0
+          ? (planPriceFromApi as number)
+          : Number.isFinite(uiPriceCandidate) && (uiPriceCandidate as number) > 0
+            ? uiPriceCandidate
+            : 1;
+
+      // Create payment order with backend to obtain order ID and amount
+      const orderDetails = await subscriptionApi.createPaymentOrder({
+        planId: backendPlanId,
+        amount: normalizedPlanAmountRupees,
+        currency: 'INR',
+      });
+
+      if (!orderDetails?.orderId) {
+        throw new Error('Failed to create payment order. Please try again.');
+      }
+
+      console.log('📦 Order details from backend:', {
+        orderId: orderDetails.orderId,
+        amount: orderDetails.amount,
+        amountInPaise: orderDetails.amountInPaise,
+        currency: orderDetails.currency,
+        razorpayKey: orderDetails.razorpayKey,
+        fallbackKey: RAZORPAY_KEY_ID,
+      });
+
+      const backendAmountInPaise =
+        typeof orderDetails.amountInPaise === 'number'
+          ? orderDetails.amountInPaise
+          : typeof orderDetails.amountInPaise === 'string'
+            ? Number(orderDetails.amountInPaise)
+            : NaN;
+
+      if (Number.isFinite(backendAmountInPaise) && backendAmountInPaise > 0) {
+        amountInPaise = Math.round(backendAmountInPaise);
+        amountInRupees = amountInPaise / 100;
+      } else {
+        const orderAmountRaw =
+          typeof orderDetails.amount === 'number'
+            ? orderDetails.amount
+            : typeof orderDetails.amount === 'string'
+              ? Number(orderDetails.amount)
+              : NaN;
+
+        const normalizedOrderAmount =
+          Number.isFinite(orderAmountRaw) && orderAmountRaw > 0
+            ? orderAmountRaw
+            : normalizedPlanAmountRupees;
+
+        amountInRupees = normalizedOrderAmount;
+        amountInPaise = Math.round(amountInRupees * 100);
+      }
+
+      const resolvedKey = orderDetails.razorpayKey || RAZORPAY_KEY_ID; // || 'rzp_test_RQ5lTAzm7AyNN9';
+
+      if (!orderDetails.razorpayKey && !RAZORPAY_KEY_ID) {
+        console.warn('⚠️ RAZORPAY_KEY_ID missing from environment. Using fallback test key.');
+      }
+
       // Real Razorpay integration
       const options = {
         description: `${currentPlan.name} Subscription`,
         currency: 'INR',
-        key: RAZORPAY_KEY_ID || 'rzp_test_RQ5lTAzm7AyNN9',
-        amount: 49900, // Amount in paise (₹499)
+        key: resolvedKey,
+        amount: amountInPaise,
+        order_id: orderDetails.orderId,
         name: 'Market Brand',
         // TO DISPLAY LOGO: Razorpay requires a publicly accessible URL
         // Option 1: Upload MB.png to your website/server and use:
@@ -250,7 +340,7 @@ const SubscriptionScreen: React.FC = () => {
         // Restrict payment methods to GPay and PhonePe (UPI intent apps only)
         method: {
           upi: true,
-          card: false,
+          card: true,
           netbanking: false,
           wallet: false,
           emi: false,
@@ -271,6 +361,14 @@ const SubscriptionScreen: React.FC = () => {
               { method: 'upi', flows: ['collect'] },
             ],
             blocks: {
+              card: {
+                name: 'Pay using Card',
+                instruments: [
+                  {
+                    method: 'card',
+                  },
+                ],
+              },
               upi: {
                 name: 'Pay using UPI Apps',
                 instruments: [
@@ -282,7 +380,7 @@ const SubscriptionScreen: React.FC = () => {
                 ],
               },
             },
-            sequence: ['block.upi'],
+            sequence: ['block.card', 'block.upi'],
             preferences: {
               show_default_blocks: false,
             },
@@ -297,7 +395,7 @@ const SubscriptionScreen: React.FC = () => {
             await addTransaction({
               paymentId: response.razorpay_payment_id || 'pay_' + Date.now(),
               orderId: response.razorpay_order_id || 'order_' + Date.now(),
-              amount: 499,
+              amount: amountInRupees,
               currency: 'INR',
               status: 'success',
               plan: selectedPlan,
@@ -314,26 +412,18 @@ const SubscriptionScreen: React.FC = () => {
             
             // Verify payment with backend and activate subscription
             console.log('🔄 Activating subscription...');
-            await verifyPaymentAndActivateSubscription(response);
+            const latestStatus = await verifyPaymentAndActivateSubscription(response, {
+              planId: backendPlanId,
+              amount: amountInRupees,
+              amountPaise: amountInPaise,
+              currency: 'INR',
+              user: currentUser,
+            });
             console.log('✅ Subscription activated with backend');
-            
-            // Give backend a moment to process the subscription
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            
-            // Refresh subscription status from backend to get the actual state
-            console.log('🔄 Refreshing subscription status (attempt 1)...');
-            await refreshSubscription();
-            
-            // Try again after a short delay if not subscribed yet
-            await new Promise(resolve => setTimeout(resolve, 1500));
-            console.log('🔄 Refreshing subscription status (attempt 2)...');
-            await refreshSubscription();
-            
-            // Force reload the subscription data from the screen
-            await loadSubscriptionData();
-            
-            // Only show success if subscription is actually active
-            if (isSubscribed) {
+
+            const active = isStatusActive(latestStatus);
+
+            if (active) {
               if (Platform.OS === 'android') {
                 ToastAndroid.show('🎉 Payment successful! Welcome to Pro!', ToastAndroid.LONG);
               } else {
@@ -359,6 +449,7 @@ const SubscriptionScreen: React.FC = () => {
       };
 
       console.log('💳 Opening Razorpay with options:', options);
+      console.log('🧾 Razorpay checkout payload:', JSON.stringify(options, null, 2));
       const data = await RazorpayCheckout.open(options);
       console.log('📦 Payment data received:', JSON.stringify(data, null, 2));
       
@@ -367,14 +458,22 @@ const SubscriptionScreen: React.FC = () => {
       if (data && data.razorpay_payment_id && data.razorpay_order_id && !isSubscribed) {
         console.log('⚠️ Payment succeeded but handler not called, activating manually...');
         try {
-          await options.handler(data);
+          await options.handler?.(data);
         } catch (handlerError) {
           console.error('❌ Handler error:', handlerError);
           throw handlerError; // Re-throw to ensure error is handled properly
         }
       }
     } catch (error: any) {
-      console.error('Payment error:', error);
+      console.error('Payment error object (raw):', error);
+      try {
+        const parsed = typeof error.description === 'string' ? JSON.parse(error.description) : null;
+        if (parsed?.error) {
+          console.error('🔍 Parsed Razorpay error:', parsed.error);
+        }
+      } catch (parseErr) {
+        console.warn('Unable to parse Razorpay error description:', parseErr);
+      }
       console.error('Error details:', {
         code: error.code,
         description: error.description,
@@ -388,7 +487,7 @@ const SubscriptionScreen: React.FC = () => {
         await addTransaction({
           paymentId: 'pay_failed_' + Date.now(),
           orderId: 'order_failed_' + Date.now(),
-          amount: 499,
+          amount: amountInRupees,
           currency: 'INR',
           status: 'failed',
           plan: selectedPlan,
@@ -420,7 +519,22 @@ const SubscriptionScreen: React.FC = () => {
   };
 
   // Verify payment with backend and activate subscription
-  const verifyPaymentAndActivateSubscription = async (paymentResponse: any) => {
+  const verifyPaymentAndActivateSubscription = async (
+    paymentResponse: any,
+    {
+      planId,
+      amount,
+      amountPaise,
+      currency,
+      user,
+    }: {
+      planId: string;
+      amount: number;
+      amountPaise?: number;
+      currency: string;
+      user?: any;
+    }
+  ): Promise<SubscriptionStatus> => {
     try {
       console.log('🔍 Verifying payment and activating subscription:', paymentResponse);
       
@@ -434,6 +548,12 @@ const SubscriptionScreen: React.FC = () => {
           orderId: paymentResponse.razorpay_order_id,
           paymentId: paymentResponse.razorpay_payment_id,
           signature: paymentResponse.razorpay_signature,
+          amount,
+          amountPaise,
+          currency,
+          planId,
+          email: user?.email,
+          contact: user?.phoneNumber,
         });
         
         console.log('✅ Payment verified with backend:', verifyData);
@@ -451,7 +571,7 @@ const SubscriptionScreen: React.FC = () => {
       // Call subscription API to activate subscription
       // Note: Backend uses 'quarterly_pro', frontend displays as "Quarterly Pro" (promotional 3-month plan)
       const subscriptionResponse = await subscriptionApi.subscribe({
-        planId: 'quarterly_pro',  // Backend expects quarterly_pro for Quarterly Pro plan
+        planId,  // Backend expects quarterly_pro for Quarterly Pro plan
         paymentMethod: 'razorpay',
         autoRenew: true,
       });
@@ -459,17 +579,21 @@ const SubscriptionScreen: React.FC = () => {
       console.log('✅ Subscription activated via API:', subscriptionResponse.data);
       
       // Refresh subscription status from backend
-      await loadSubscriptionData();
+      const statusResponse = await subscriptionApi.getStatus();
+      const latestStatus = statusResponse.data;
+      setSubscriptionStatus(latestStatus);
+      const active = isStatusActive(latestStatus);
+      setIsSubscribed(active);
+
+      // Ensure shared context is refreshed without cache
+      await refreshSubscription(true);
+
+      return latestStatus;
       
     } catch (error) {
       console.error('❌ Error verifying payment and activating subscription:', error);
       throw error; // Re-throw to handle in payment handler
     }
-  };
-
-  // Update subscription status via API (legacy function, kept for compatibility)
-  const updateSubscriptionStatus = async (paymentId: string) => {
-    return verifyPaymentAndActivateSubscription({ razorpay_payment_id: paymentId });
   };
 
   const FeatureItem = ({ text, included = true }: { text: string; included?: boolean }) => (

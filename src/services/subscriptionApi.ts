@@ -54,6 +54,23 @@ export interface SubscriptionResponse {
   message: string;
 }
 
+export interface CreatePaymentOrderParams {
+  planId: string;
+  amount?: number;
+  currency?: string;
+}
+
+export interface PaymentOrderDetails {
+  orderId: string;
+  amount: number;
+  amountInPaise?: number;
+  currency: string;
+  receipt?: string;
+  key?: string;
+  razorpayKey?: string;
+  raw?: any;
+}
+
 export interface HistoryResponse {
   success: boolean;
   data: SubscriptionHistory[];
@@ -99,6 +116,96 @@ class SubscriptionApiService {
     } catch (error) {
       console.error('Get plans error:', error);
       throw error;
+    }
+  }
+
+  // Create Razorpay order before initiating payment
+  async createPaymentOrder(params: CreatePaymentOrderParams): Promise<PaymentOrderDetails> {
+    try {
+      const currentUser = authService.getCurrentUser();
+      const userId = currentUser?.id;
+
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const payload: Record<string, any> = {
+        planId: params.planId,
+        userId,
+      };
+
+      if (typeof params.amount === 'number') {
+        payload.amount = params.amount;
+      }
+
+      if (params.currency) {
+        payload.currency = params.currency;
+      }
+
+      console.log('🧾 Creating Razorpay order with payload:', payload);
+
+      const response = await api.post('/api/mobile/subscriptions/create-order', payload);
+      const responseData = response.data?.data ?? response.data;
+      const data =
+        responseData?.order ??
+        responseData?.orderDetails ??
+        responseData?.razorpayOrder ??
+        responseData;
+      console.log('✅ Create payment order response:', data);
+
+      const orderId = data?.orderId || data?.order_id || data?.id;
+      if (!orderId) {
+        throw new Error('Order ID missing from create-order response');
+      }
+
+      const amount =
+        typeof data?.amount === 'number'
+          ? data.amount
+          : typeof data?.amount === 'string'
+            ? Number(data.amount)
+            : params.amount ?? 0;
+
+      const rawAmountInPaise =
+        typeof data?.amountInPaise === 'number'
+          ? data.amountInPaise
+          : typeof data?.amountInPaise === 'string'
+            ? Number(data.amountInPaise)
+            : typeof data?.amount_paise === 'number'
+              ? data.amount_paise
+              : typeof data?.amount_paise === 'string'
+                ? Number(data.amount_paise)
+                : undefined;
+
+      const amountInPaise =
+        typeof rawAmountInPaise === 'number' && !Number.isNaN(rawAmountInPaise)
+          ? rawAmountInPaise
+          : typeof amount === 'number' && amount > 0
+            ? Math.round(amount * 100)
+            : undefined;
+
+      const currency = data?.currency || params.currency || 'INR';
+
+      const razorpayKey =
+        data?.key ||
+        data?.key_id ||
+        data?.razorpayKey ||
+        data?.razorpayKeyId ||
+        response.data?.key ||
+        response.data?.key_id;
+
+      return {
+        orderId,
+        amount,
+        amountInPaise,
+        currency,
+        receipt: data?.receipt,
+        razorpayKey,
+        raw: data,
+      };
+    } catch (error: any) {
+      console.error('❌ Create payment order error:', error);
+      const message = error.response?.data?.message || error.message || 'Failed to create payment order';
+      throw new Error(message);
     }
   }
 
@@ -187,7 +294,7 @@ class SubscriptionApiService {
                 id: subscriptionData.plan === 'quarterly_pro' ? 'quarterly_pro' : 'yearly_pro',
                 name: subscriptionData.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro',
                 description: 'Premium subscription',
-                price: subscriptionData.plan === 'quarterly_pro' ? 499 : 1999,
+                price: subscriptionData.plan === 'quarterly_pro' ? 1 : 1999,
                 currency: 'INR',
                 duration: subscriptionData.plan === 'quarterly_pro' ? 'quarterly' : 'yearly',
                 features: [],
@@ -352,6 +459,12 @@ class SubscriptionApiService {
     orderId: string;
     paymentId: string;
     signature: string;
+    amount?: number;
+    amountPaise?: number;
+    currency?: string;
+    planId?: string;
+    email?: string;
+    contact?: string;
   }): Promise<{ success: boolean; message: string; data?: any }> {
     try {
       const currentUser = authService.getCurrentUser();
@@ -366,11 +479,39 @@ class SubscriptionApiService {
         paymentId: paymentData.paymentId,
       });
       
-      const response = await api.post('/api/mobile/subscriptions/verify-payment', {
+      const payload: Record<string, any> = {
         orderId: paymentData.orderId,
         paymentId: paymentData.paymentId,
         signature: paymentData.signature,
-      });
+      };
+
+      if (typeof paymentData.amount === 'number') {
+        payload.amount = paymentData.amount;
+      }
+
+      if (typeof paymentData.amountPaise === 'number') {
+        payload.amountPaise = paymentData.amountPaise;
+      }
+
+      if (paymentData.currency) {
+        payload.currency = paymentData.currency;
+      }
+
+      if (paymentData.planId) {
+        payload.planId = paymentData.planId;
+      }
+
+      if (paymentData.email) {
+        payload.email = paymentData.email;
+      }
+
+      if (paymentData.contact) {
+        payload.contact = paymentData.contact;
+      }
+
+      console.log('📨 Sending verify-payment payload:', payload);
+
+      const response = await api.post('/api/mobile/subscriptions/verify-payment', payload);
       
       console.log('✅ Payment verified successfully:', response.data);
       return response.data;
