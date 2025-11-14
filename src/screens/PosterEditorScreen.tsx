@@ -979,10 +979,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const snapOffsets = useRef<{ [key: string]: { x: Animated.Value; y: Animated.Value } }>({}).current;
   const snapOffsetsLatest = useRef<{ [key: string]: { x: number; y: number } }>({});
   const alignmentFrameRef = useRef<number | null>(null);
+  const dragTranslationRef = useRef<{ [key: string]: { x: number; y: number } }>({});
 
   // State for templates
   const [selectedTemplate, setSelectedTemplate] = useState<string>('business');
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
+  const [initialTemplateApplied, setInitialTemplateApplied] = useState(false);
 
   // State for business profiles
   const [businessProfiles, setBusinessProfiles] = useState<BusinessProfile[]>([]);
@@ -1566,6 +1568,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           // Update animated values with clamped translations
           translationValues[layerId].x.setValue(clampedTranslationX);
           translationValues[layerId].y.setValue(clampedTranslationY);
+          dragTranslationRef.current[layerId] = { x: clampedTranslationX, y: clampedTranslationY };
           
           // Update alignment guides with clamped values
           if (alignmentFrameRef.current) {
@@ -1600,8 +1603,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         if (!currentLayer) return;
         
         // Get clamped translation values (already clamped during drag)
-        const clampedTranslationX = (translationValues[layerId]?.x as any)?._value ?? 0;
-        const clampedTranslationY = (translationValues[layerId]?.y as any)?._value ?? 0;
+        const clampedTranslation = dragTranslationRef.current[layerId] || { x: 0, y: 0 };
+        const clampedTranslationX = clampedTranslation.x;
+        const clampedTranslationY = clampedTranslation.y;
         const snapOffset = snapOffsetsLatest.current[layerId] || { x: 0, y: 0 };
         
         // Get element dimensions
@@ -1637,6 +1641,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           layerAnimations[layerId].x.setValue(newX);
           layerAnimations[layerId].y.setValue(newY);
         }
+        dragTranslationRef.current[layerId] = { x: 0, y: 0 };
         
         // Update layer position in state
         setLayers(prev => prev.map(layer => {
@@ -1659,7 +1664,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         setDraggedLayer(null);
       }
     };
-  }, [canvasHeight, canvasWidth, clearAlignmentGuides, ensureSnapOffsets, getLayerEffectiveSize, layerAnimations, layers, selectedFrame, translationValues]);
+  }, [canvasHeight, canvasWidth, clearAlignmentGuides, dragTranslationRef, ensureSnapOffsets, getLayerEffectiveSize, layerAnimations, layers, selectedFrame, translationValues]);
 
   // Handle pinch gesture for zooming
   const onPinchGestureEvent = useCallback((layerId: string) => {
@@ -2049,6 +2054,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     // Apply different poster layouts and styles based on template
     setLayers(prev => applyTemplateStylesToLayers(templateType, prev));
   }, [selectedFrame, applyTemplateStylesToLayers]);
+
+  useEffect(() => {
+    if (!initialTemplateApplied && layers.length > 0 && !selectedFrame) {
+      const defaultTemplate = TEMPLATE_OPTIONS[0]?.id || 'business';
+      setInitialTemplateApplied(true);
+      applyTemplate(defaultTemplate);
+    }
+  }, [applyTemplate, initialTemplateApplied, layers.length, selectedFrame]);
 
   // Update layer position
   const updateLayerPosition = useCallback((layerId: string, position: { x: number; y: number }) => {
@@ -2673,24 +2686,33 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           )}
           
           {/* Layers - rendered AFTER frame so they appear on top */}
-          {layers.map((layer) => (
-            <PinchGestureHandler
-              key={layer.id}
-              onGestureEvent={onPinchGestureEvent(layer.id)}
-              onHandlerStateChange={onPinchHandlerStateChange(layer.id)}
-            >
-              <Animated.View>
-                <PanGestureHandler
-                  onGestureEvent={onPanGestureEvent(layer.id)}
-                  onHandlerStateChange={onHandlerStateChange(layer.id)}
-                >
-                  <Animated.View>
-                    {renderLayer(layer)}
-                  </Animated.View>
-                </PanGestureHandler>
-              </Animated.View>
-            </PinchGestureHandler>
-          ))}
+          {layers.map((layer) => {
+            if (layer.fieldType === 'footerBackground') {
+              return (
+                <View key={layer.id} pointerEvents="none">
+                  {renderLayer(layer)}
+                </View>
+              );
+            }
+            return (
+              <PinchGestureHandler
+                key={layer.id}
+                onGestureEvent={onPinchGestureEvent(layer.id)}
+                onHandlerStateChange={onPinchHandlerStateChange(layer.id)}
+              >
+                <Animated.View>
+                  <PanGestureHandler
+                    onGestureEvent={onPanGestureEvent(layer.id)}
+                    onHandlerStateChange={onHandlerStateChange(layer.id)}
+                  >
+                    <Animated.View>
+                      {renderLayer(layer)}
+                    </Animated.View>
+                  </PanGestureHandler>
+                </Animated.View>
+              </PinchGestureHandler>
+            );
+          })}
 
           {alignmentGuides.vertical.map((xPos, index) => (
             <View
