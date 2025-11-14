@@ -159,6 +159,7 @@ const MyBusinessScreen: React.FC = () => {
     try {
       // Cache will make this instant on subsequent loads
       const response = await businessCategoryPostersApi.getUserCategoryPosters();
+      console.log('📦 [MY BUSINESS] Business poster endpoint response:', JSON.stringify(response, null, 2));
       
       if (response.success) {
         setBusinessCategoryPosters(response.data.posters);
@@ -209,6 +210,7 @@ const MyBusinessScreen: React.FC = () => {
       category: poster.category,
       downloads: poster.downloads || 0,
       isDownloaded: false,
+      tags: poster.tags || [],
     };
 
     // Get other posters as related posters (exclude the selected one)
@@ -221,6 +223,7 @@ const MyBusinessScreen: React.FC = () => {
         category: p.category,
         downloads: p.downloads || 0,
         isDownloaded: false,
+        tags: p.tags || [],
       }));
 
     console.log('📱 [MY BUSINESS] Navigating to PosterPlayer');

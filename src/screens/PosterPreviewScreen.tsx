@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -276,6 +276,45 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
      return true;
    };
 
+  const getShareablePosterUri = useCallback(async () => {
+    if (!capturedImageUri) {
+      return null;
+    }
+
+    const normalizedUri = (() => {
+      if (capturedImageUri.startsWith('file://') || capturedImageUri.startsWith('content://') || capturedImageUri.startsWith('ph://')) {
+        return capturedImageUri;
+      }
+
+      if (capturedImageUri.startsWith('/')) {
+        return `file://${capturedImageUri}`;
+      }
+
+      return capturedImageUri;
+    })();
+
+    if (normalizedUri.startsWith('file://') || normalizedUri.startsWith('content://') || normalizedUri.startsWith('ph://')) {
+      return normalizedUri;
+    }
+
+    if (normalizedUri.startsWith('data:image') || normalizedUri.startsWith('http')) {
+      try {
+        const savedUri = await CameraRoll.save(normalizedUri, {
+          type: 'photo',
+          album: 'EventMarketers',
+        });
+        console.log('Poster persisted for sharing:', savedUri);
+        return savedUri;
+      } catch (persistError) {
+        console.warn('Unable to persist poster for sharing:', persistError);
+        return null;
+      }
+    }
+
+    console.warn('Unsupported poster URI format for sharing:', normalizedUri);
+    return null;
+  }, [capturedImageUri]);
+
   // Share poster
   const sharePoster = async () => {
     if (!capturedImageUri) {
@@ -285,22 +324,27 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
 
     try {
       setIsProcessing(true);
+      const shareableUri = await getShareablePosterUri();
+
+      if (!shareableUri) {
+        Alert.alert('Error', 'Unable to prepare poster for sharing. Please try downloading it first.');
+        return;
+      }
+
       const result = await Share.share({
-        url: capturedImageUri,
-        title: selectedImage.title || 'My Event Poster',
-        message: `Check out my event poster: ${selectedImage.title || 'Custom Poster'}`,
+        url: shareableUri,
+        title: 'Share Poster',
+        message: 'Sharing my latest EventMarketers poster.',
+        subject: 'Poster',
       });
 
       if (result.action === Share.sharedAction) {
         if (result.activityType) {
-          // shared with activity type of result.activityType
           console.log('Shared with activity type:', result.activityType);
         } else {
-          // shared
           console.log('Shared successfully');
         }
       } else if (result.action === Share.dismissedAction) {
-        // dismissed
         console.log('Share dismissed');
       }
     } catch (error) {

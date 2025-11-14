@@ -72,12 +72,19 @@ const templateContainsLanguage = (template: Template, languageId: string): boole
     ? template.languages.map(language => language.toLowerCase())
     : [];
 
+  // Extract tags once so we can reuse them
+  const tags = Array.isArray(template.tags) ? template.tags : [];
+
+  // If the template doesn't specify languages or tags, treat it as language agnostic
+  if (templateLanguages.length === 0 && tags.length === 0) {
+    return true;
+  }
+
   if (templateLanguages.includes(normalizedLanguage)) {
     return true;
   }
 
-  const tags = Array.isArray(template.tags) ? template.tags : [];
-  if (Array.isArray(tags)) {
+  if (tags.length > 0) {
     const normalizedTags = tags
       .filter((tag): tag is string => typeof tag === 'string')
       .map(tag => tag.toLowerCase());

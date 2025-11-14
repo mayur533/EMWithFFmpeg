@@ -254,12 +254,8 @@ const SubscriptionScreen: React.FC = () => {
       const uiPriceCandidate =
         Number.isFinite(uiPriceCandidateRaw) && uiPriceCandidateRaw > 0 ? uiPriceCandidateRaw : NaN;
 
-      const normalizedPlanAmountRupees =
-        Number.isFinite(planPriceFromApi) && (planPriceFromApi as number) > 0
-          ? (planPriceFromApi as number)
-          : Number.isFinite(uiPriceCandidate) && (uiPriceCandidate as number) > 0
-            ? uiPriceCandidate
-            : 1;
+      // Temporary override: force ₹1 test payment regardless of plan price
+      const normalizedPlanAmountRupees = 1;
 
       // Create payment order with backend to obtain order ID and amount
       const orderDetails = await subscriptionApi.createPaymentOrder({

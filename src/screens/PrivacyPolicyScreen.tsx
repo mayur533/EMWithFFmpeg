@@ -7,6 +7,7 @@ import {
   Dimensions,
   TouchableOpacity,
   Animated,
+  Linking,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -103,6 +104,21 @@ const PrivacyPolicyScreen = () => {
 
   const goBack = () => {
     navigation.goBack();
+  };
+
+  const handleEmailPress = async () => {
+    const email = 'support@marketbrand.ai';
+    const subject = 'Privacy Policy Inquiry';
+    const mailtoUrl = `mailto:${email}?subject=${encodeURIComponent(subject)}`;
+
+    try {
+      const canOpen = await Linking.canOpenURL(mailtoUrl);
+      if (canOpen) {
+        await Linking.openURL(mailtoUrl);
+      }
+    } catch (error) {
+      console.warn('Unable to open email client', error);
+    }
   };
 
   // Helper function for consistent dynamic styles
@@ -836,9 +852,14 @@ const PrivacyPolicyScreen = () => {
               If you have any questions about this Privacy Policy or our data practices, 
               please contact us at:
             </Text>
-            <Text style={[styles.contactText, styles.emailLink, {
-              marginBottom: dynamicModerateScale(4),
-            }]}>
+            <Text
+              style={[styles.contactText, styles.emailLink, {
+                marginBottom: dynamicModerateScale(4),
+              }]}
+              onPress={handleEmailPress}
+              accessibilityRole="link"
+              accessibilityLabel="Email support at support@marketbrand.ai"
+            >
               support@marketbrand.ai
             </Text>
             <Text style={[styles.contactText, {
