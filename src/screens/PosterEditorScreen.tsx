@@ -125,6 +125,7 @@ const TEMPLATE_FOOTER_STYLES: Record<string, { backgroundColor: string; gradient
   'ombre-rose': { backgroundColor: 'rgba(190, 18, 60, 0.9)', gradient: ['#be123c', '#f472b6', '#fda4af'] },
   'ombre-galaxy': { backgroundColor: 'rgba(99, 102, 241, 0.9)', gradient: ['#6366f1', '#8b5cf6', '#06b6d4'] },
 };
+const TEXT_FIELD_KEYS = ['companyName','phone','email','website','category','address','services'];
 const TEMPLATE_OPTIONS = [
   { id: 'business', label: 'Business' },
   { id: 'event', label: 'Event' },
@@ -1000,6 +1001,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [frameContent, setFrameContent] = useState<{[key: string]: string}>({});
   const [applyingFrame, setApplyingFrame] = useState(false);
   const [isCapturing, setIsCapturing] = useState(false);
+  const [forceWatermarkCapture, setForceWatermarkCapture] = useState(false);
   const [showRemoveFrameWarningModal, setShowRemoveFrameWarningModal] = useState(false);
   const [currentPositions, setCurrentPositions] = useState<{ [key: string]: { x: number; y: number } }>({});
   const currentPositionsRef = useRef<{ [key: string]: { x: number; y: number } }>({});
@@ -2509,6 +2511,23 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             console.log('Poster ref capture method available:', !!posterRef.current?.capture);
             console.log('Current layers state:', layers.length);
             console.log('Visible fields:', visibleFields);
+            const hasVisibleCustomLayers = layers.some(layer => {
+              if (layer.fieldType === 'footerBackground') return false;
+              if (layer.fieldType && visibleFields[layer.fieldType] === false) return false;
+              return true;
+            });
+            const visibleTextFields = TEXT_FIELD_KEYS.filter(key => visibleFields[key] !== false);
+            const missingTextForVisibleFields = visibleTextFields.length > 0 && visibleTextFields.every(fieldKey => {
+              const textLayer = layers.find(layer => 
+                layer.type === 'text' &&
+                layer.fieldType === fieldKey &&
+                visibleFields[fieldKey] !== false &&
+                !!layer.content?.trim()
+              );
+              return !textLayer;
+            });
+            const shouldForceWatermark = !hasVisibleCustomLayers || missingTextForVisibleFields;
+            setForceWatermarkCapture(shouldForceWatermark);
             
             // Capture current animated positions before taking ViewShot
             const newCurrentPositions: { [key: string]: { x: number; y: number } } = {};
@@ -2553,6 +2572,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 
                 // Set capturing state back to false
                 setIsCapturing(false);
+                setForceWatermarkCapture(false);
                 
                 // Navigate to preview with the captured image and subscription status
                 (navigation as any).navigate('PosterPreview', {
@@ -2567,6 +2587,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 console.log('Poster ref not available, using fallback');
                 // Set capturing state back to false
                 setIsCapturing(false);
+                setForceWatermarkCapture(false);
                 // Fallback to original image if capture fails
                 (navigation as any).navigate('PosterPreview', {
                   capturedImageUri: selectedImage.uri,
@@ -2582,6 +2603,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               console.error('Error details:', error instanceof Error ? error.message : 'Unknown error');
               // Set capturing state back to false
               setIsCapturing(false);
+              setForceWatermarkCapture(false);
               // Fallback to original image if capture fails
               (navigation as any).navigate('PosterPreview', {
                 capturedImageUri: selectedImage.uri,
@@ -2742,8 +2764,16 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             />
           ))}
           
-          {/* Watermark - Only shown during capture if user is not subscribed */}
-          {isCapturing && <Watermark isSubscribed={checkPremiumAccess('poster_export')} />}
+          {/* Watermark Overlay - full screen transparent logo */}
+          {isCapturing && (!checkPremiumAccess('poster_export') || forceWatermarkCapture) && (
+            <View style={styles.fullscreenWatermarkOverlay}>
+              <Image
+                source={require('../assets/MainLogo/MB.png')}
+                style={styles.fullscreenWatermarkImage}
+                resizeMode="contain"
+              />
+            </View>
+          )}
         </View>
               </TouchableWithoutFeedback>
             </ViewShot>
@@ -2931,6 +2961,15 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             contentContainerStyle={styles.fieldToggleScrollContent}
           >
             <TouchableOpacity
+              style={[styles.fieldToggleButton, visibleFields.footerBackground && styles.fieldToggleButtonActive]}
+              onPress={() => toggleFieldVisibility('footerBackground')}
+            >
+              <Icon name="format-color-fill" size={getResponsiveIconSize()} color={visibleFields.footerBackground ? "#ffffff" : "#667eea"} />
+              <Text style={[styles.fieldToggleButtonText, visibleFields.footerBackground && styles.fieldToggleButtonTextActive]}>
+                Footer BG
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
               style={[styles.fieldToggleButton, visibleFields.logo && styles.fieldToggleButtonActive]}
               onPress={() => toggleFieldVisibility('logo')}
             >
@@ -2947,16 +2986,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               <Icon name="title" size={getResponsiveIconSize()} color={visibleFields.companyName ? "#ffffff" : "#667eea"} />
               <Text style={[styles.fieldToggleButtonText, visibleFields.companyName && styles.fieldToggleButtonTextActive]}>
                 Company Name
-              </Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={[styles.fieldToggleButton, visibleFields.footerBackground && styles.fieldToggleButtonActive]}
-              onPress={() => toggleFieldVisibility('footerBackground')}
-            >
-              <Icon name="format-color-fill" size={getResponsiveIconSize()} color={visibleFields.footerBackground ? "#ffffff" : "#667eea"} />
-              <Text style={[styles.fieldToggleButtonText, visibleFields.footerBackground && styles.fieldToggleButtonTextActive]}>
-                Footer BG
               </Text>
             </TouchableOpacity>
             
@@ -6114,6 +6143,21 @@ const styles = StyleSheet.create({
     lineHeight: isLandscape 
       ? (isTablet ? moderateScale(9) : moderateScale(8)) 
       : (isUltraSmallScreen ? moderateScale(8) : isSmallScreen ? moderateScale(8) : isTablet ? moderateScale(9.5) : moderateScale(9)),
+  },
+  fullscreenWatermarkOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    pointerEvents: 'none',
+  },
+  fullscreenWatermarkImage: {
+    width: '95%',
+    height: '95%',
+    tintColor: 'rgba(255, 255, 255, 0.3)',
   },
 
 });

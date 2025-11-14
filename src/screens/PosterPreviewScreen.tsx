@@ -563,20 +563,13 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
       />
       
              {/* Professional Header */}
-       <View
-         style={[styles.header, { 
-           paddingTop: insets.top + responsiveSpacing.xs,
-           backgroundColor: theme?.colors?.surface || '#ffffff'
-         }]}
-       >
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-        >
-          <Icon name="arrow-back" size={getIconSize(24)} color="#333333" />
-        </TouchableOpacity>
-        <View style={styles.headerContent}>
-        </View>
+      <View
+        style={[styles.header, { 
+          paddingTop: insets.top + responsiveSpacing.xs,
+          backgroundColor: theme?.colors?.surface || '#ffffff'
+        }]}
+      >
+        <View style={styles.headerContent} />
         <View style={styles.headerSpacer} />
       </View>
 
