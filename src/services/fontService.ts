@@ -11,12 +11,6 @@ export interface GoogleFont {
 export const GOOGLE_FONTS: GoogleFont[] = [
   // Sans-serif fonts
   {
-    name: 'Roboto',
-    displayName: 'Roboto',
-    webFont: 'Roboto',
-    category: 'sans-serif'
-  },
-  {
     name: 'OpenSans',
     displayName: 'Open Sans',
     webFont: 'Open Sans',
@@ -41,12 +35,6 @@ export const GOOGLE_FONTS: GoogleFont[] = [
     category: 'sans-serif'
   },
   {
-    name: 'Inter',
-    displayName: 'Inter',
-    webFont: 'Inter',
-    category: 'sans-serif'
-  },
-  {
     name: 'Nunito',
     displayName: 'Nunito',
     webFont: 'Nunito',
@@ -64,24 +52,6 @@ export const GOOGLE_FONTS: GoogleFont[] = [
     name: 'PlayfairDisplay',
     displayName: 'Playfair Display',
     webFont: 'Playfair Display',
-    category: 'serif'
-  },
-  {
-    name: 'Merriweather',
-    displayName: 'Merriweather',
-    webFont: 'Merriweather',
-    category: 'serif'
-  },
-  {
-    name: 'Lora',
-    displayName: 'Lora',
-    webFont: 'Lora',
-    category: 'serif'
-  },
-  {
-    name: 'SourceSerifPro',
-    displayName: 'Source Serif Pro',
-    webFont: 'Source Serif Pro',
     category: 'serif'
   },
   
@@ -116,18 +86,6 @@ export const GOOGLE_FONTS: GoogleFont[] = [
     name: 'DancingScript',
     displayName: 'Dancing Script',
     webFont: 'Dancing Script',
-    category: 'handwriting'
-  },
-  {
-    name: 'Pacifico',
-    displayName: 'Pacifico',
-    webFont: 'Pacifico',
-    category: 'handwriting'
-  },
-  {
-    name: 'GreatVibes',
-    displayName: 'Great Vibes',
-    webFont: 'Great Vibes',
     category: 'handwriting'
   },
   {
@@ -173,6 +131,30 @@ export const SYSTEM_FONTS = {
   fantasy: 'fantasy'
 };
 
+// Map each Google font to a platform-native fallback that is guaranteed to exist
+const PLATFORM_FONT_MAP: Record<string, { android: string; ios: string }> = {
+  OpenSans: { android: 'sans-serif-medium', ios: 'HelveticaNeue-Medium' },
+  Lato: { android: 'sans-serif-light', ios: 'HelveticaNeue-Light' },
+  Poppins: { android: 'sans-serif-condensed', ios: 'AvenirNext-DemiBold' },
+  Montserrat: { android: 'sans-serif-black', ios: 'Avenir-Black' },
+  Nunito: { android: 'sans-serif-smallcaps', ios: 'GillSans' },
+  Ubuntu: { android: 'sans-serif-medium', ios: 'HelveticaNeue-Medium' },
+  PlayfairDisplay: { android: 'serif', ios: 'Times New Roman' },
+  Merriweather: { android: 'serif', ios: 'Georgia' },
+  Lora: { android: 'serif', ios: 'Palatino' },
+  SourceSerifPro: { android: 'serif', ios: 'Didot' },
+  Oswald: { android: 'sans-serif-condensed', ios: 'AvenirNext-CondensedBold' },
+  BebasNeue: { android: 'sans-serif-condensed', ios: 'Impact' },
+  Anton: { android: 'sans-serif-black', ios: 'AvenirNext-Heavy' },
+  Righteous: { android: 'sans-serif-medium', ios: 'GillSans-Bold' },
+  DancingScript: { android: 'cursive', ios: 'SnellRoundhand' },
+  Satisfy: { android: 'casual', ios: 'ChalkboardSE-Regular' },
+  RobotoMono: { android: 'monospace', ios: 'Courier' },
+  SourceCodePro: { android: 'monospace', ios: 'CourierNewPSMT' },
+  FiraCode: { android: 'monospace', ios: 'Menlo-Regular' },
+  JetBrainsMono: { android: 'monospace', ios: 'Courier' },
+};
+
 // Get font family name for React Native
 export const getFontFamily = (fontName: string): string => {
   // Check if it's a system font
@@ -183,9 +165,21 @@ export const getFontFamily = (fontName: string): string => {
   // Check if it's a Google Font
   const googleFont = GOOGLE_FONTS.find(font => font.name === fontName);
   if (googleFont) {
-    // For React Native, we'll use the web font name
-    // In a real implementation, you'd need to link the actual font files
-    return googleFont.webFont;
+    const mappedFont = PLATFORM_FONT_MAP[googleFont.name];
+    if (mappedFont) {
+      return Platform.select(mappedFont) || SYSTEM_FONTS.default;
+    }
+    // Fallback to category defaults
+    switch (googleFont.category) {
+      case 'serif':
+        return Platform.select({ android: 'serif', ios: 'Times New Roman' }) || SYSTEM_FONTS.serif;
+      case 'monospace':
+        return Platform.select({ android: 'monospace', ios: 'Courier' }) || SYSTEM_FONTS.monospace;
+      case 'handwriting':
+        return Platform.select({ android: 'cursive', ios: 'SnellRoundhand' }) || SYSTEM_FONTS.cursive;
+      default:
+        return Platform.select({ android: 'sans-serif', ios: 'Helvetica Neue' }) || SYSTEM_FONTS.default;
+    }
   }
   
   // Fallback to system font

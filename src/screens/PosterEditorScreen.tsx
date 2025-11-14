@@ -418,12 +418,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const { canvasWidth, canvasHeight, availableWidth, availableHeight } = getResponsiveDimensions(insets);
   const canvasTopOffset = insets.top + moderateScale(12);
   const canvasBottomY = canvasTopOffset + canvasHeight;
-  const fontModalSpacing = moderateScale(12);
+  const fontModalSpacing = moderateScale(24);
   const bottomSafeArea = Math.max(insets.bottom, responsiveSpacing.lg);
   const desiredTop = canvasBottomY + fontModalSpacing;
   const availableBelowCanvas = screenHeight - desiredTop - bottomSafeArea;
-  const minFontModalHeight = screenHeight * 0.25;
-  const maxFontModalHeight = screenHeight * 0.55;
+  const minFontModalHeight = screenHeight * 0.18;
+  const maxFontModalHeight = screenHeight * 0.4;
   const fontModalMaxHeight = availableBelowCanvas >= minFontModalHeight
     ? Math.min(availableBelowCanvas, maxFontModalHeight)
     : maxFontModalHeight;
@@ -431,7 +431,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const fontModalTopOffset = availableBelowCanvas >= minFontModalHeight
     ? desiredTop
     : Math.max(canvasBottomY - canvasHeight / 2, fallbackTop);
-  const fontModalWidth = Math.min(canvasWidth, screenWidth * 0.92);
+  const fontModalWidth = Math.min(canvasWidth * 0.88, screenWidth * 0.9);
 
   // Create theme-aware styles (with dynamic responsive scaling)
   const getThemeStyles = () => ({
@@ -1074,8 +1074,10 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       horizontalReferences.push(layer.position.y, layer.position.y + layerHeight / 2, layer.position.y + layerHeight);
     });
 
-    let bestVertical: { position: number; diff: number } | null = null;
-    let bestHorizontal: { position: number; diff: number } | null = null;
+    let bestVerticalPosition: number | null = null;
+    let bestVerticalDiff: number | null = null;
+    let bestHorizontalPosition: number | null = null;
+    let bestHorizontalDiff: number | null = null;
 
     const movingVerticalEdges = [movingBounds.left, movingBounds.centerX, movingBounds.right];
     const movingHorizontalEdges = [movingBounds.top, movingBounds.centerY, movingBounds.bottom];
@@ -1083,8 +1085,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     verticalReferences.forEach(ref => {
       movingVerticalEdges.forEach(edge => {
         const diff = ref - edge;
-        if (Math.abs(diff) <= ALIGNMENT_THRESHOLD && (!bestVertical || Math.abs(diff) < Math.abs(bestVertical.diff))) {
-          bestVertical = { position: ref, diff };
+        if (Math.abs(diff) <= ALIGNMENT_THRESHOLD && (bestVerticalDiff === null || Math.abs(diff) < Math.abs(bestVerticalDiff))) {
+          bestVerticalPosition = ref;
+          bestVerticalDiff = diff;
         }
       });
     });
@@ -1092,15 +1095,24 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     horizontalReferences.forEach(ref => {
       movingHorizontalEdges.forEach(edge => {
         const diff = ref - edge;
-        if (Math.abs(diff) <= ALIGNMENT_THRESHOLD && (!bestHorizontal || Math.abs(diff) < Math.abs(bestHorizontal.diff))) {
-          bestHorizontal = { position: ref, diff };
+        if (Math.abs(diff) <= ALIGNMENT_THRESHOLD && (bestHorizontalDiff === null || Math.abs(diff) < Math.abs(bestHorizontalDiff))) {
+          bestHorizontalPosition = ref;
+          bestHorizontalDiff = diff;
         }
       });
     });
 
-    const nextGuides = {
-      vertical: bestVertical ? [bestVertical.position] : [],
-      horizontal: bestHorizontal ? [bestHorizontal.position] : []
+    const verticalGuidePositions: number[] = [];
+    const horizontalGuidePositions: number[] = [];
+    if (bestVerticalPosition !== null) {
+      verticalGuidePositions.push(bestVerticalPosition);
+    }
+    if (bestHorizontalPosition !== null) {
+      horizontalGuidePositions.push(bestHorizontalPosition);
+    }
+    const nextGuides: { vertical: number[]; horizontal: number[] } = {
+      vertical: verticalGuidePositions,
+      horizontal: horizontalGuidePositions
     };
 
     setAlignmentGuides(prev => {
@@ -1113,8 +1125,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     });
 
     ensureSnapOffsets(layerId);
-    const snapX = bestVertical ? bestVertical.diff : 0;
-    const snapY = bestHorizontal ? bestHorizontal.diff : 0;
+    const snapX = bestVerticalDiff ?? 0;
+    const snapY = bestHorizontalDiff ?? 0;
     snapOffsets[layerId].x.setValue(snapX);
     snapOffsets[layerId].y.setValue(snapY);
     snapOffsetsLatest.current[layerId] = { x: snapX, y: snapY };
@@ -2128,16 +2140,20 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     // Modal stays open so user can continue trying different fonts
   }, [selectedLayer, selectedFontSize]);
   
-  // Apply font size to selected layer
+  // Apply font size (selected layer or all text when none selected)
   const applyFontSize = useCallback((fontSize: number) => {
     setSelectedFontSize(fontSize);
-    if (selectedLayer) {
-      setLayers(prev => prev.map(layer => 
-        layer.id === selectedLayer && layer.type === 'text'
+    setLayers(prev => prev.map(layer => {
+      if (layer.type !== 'text') {
+        return layer;
+      }
+      if (selectedLayer) {
+        return layer.id === selectedLayer
           ? { ...layer, style: { ...layer.style, fontSize } }
-          : layer
-      ));
-    }
+          : layer;
+      }
+      return { ...layer, style: { ...layer.style, fontSize } };
+    }));
   }, [selectedLayer]);
   
   // Update selectedFontSize when a layer is selected
@@ -3230,33 +3246,36 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               nestedScrollEnabled={true}
             >
               {/* Font Size Controls */}
-              {selectedLayer && (
-                <View style={styles.fontSizeControlsContainer}>
-                  <View style={styles.fontSizeHeader}>
-                    <Icon name="format-size" size={getResponsiveIconSize()} color="#667eea" />
+              <View style={styles.fontSizeControlsContainer}>
+                <View style={styles.fontSizeHeader}>
+                  <Icon name="format-size" size={getResponsiveIconSize()} color="#667eea" />
+                  <View style={styles.fontSizeHeaderTextGroup}>
                     <Text style={styles.fontSizeLabel}>Font Size</Text>
-                  </View>
-                  <View style={styles.fontSizeButtons}>
-                    {[10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48].map(size => (
-                      <TouchableOpacity
-                        key={size}
-                        style={[
-                          styles.fontSizeButton,
-                          selectedFontSize === size && styles.fontSizeButtonActive
-                        ]}
-                        onPress={() => applyFontSize(size)}
-                      >
-                        <Text style={[
-                          styles.fontSizeButtonText,
-                          selectedFontSize === size && styles.fontSizeButtonTextActive
-                        ]}>
-                          {size}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
+                    {!selectedLayer && (
+                      <Text style={styles.fontSizeHelperText}>No layer selected — applies to all text</Text>
+                    )}
                   </View>
                 </View>
-              )}
+                <View style={styles.fontSizeButtons}>
+                  {[10, 12, 14, 16, 18, 20, 24, 28, 32, 36, 40, 48].map(size => (
+                    <TouchableOpacity
+                      key={size}
+                      style={[
+                        styles.fontSizeButton,
+                        selectedFontSize === size && styles.fontSizeButtonActive
+                      ]}
+                      onPress={() => applyFontSize(size)}
+                    >
+                      <Text style={[
+                        styles.fontSizeButtonText,
+                        selectedFontSize === size && styles.fontSizeButtonTextActive
+                      ]}>
+                        {size}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
               
               {/* Font Family Section */}
               <View style={styles.fontFamilySection}>
@@ -5876,12 +5895,19 @@ const styles = StyleSheet.create({
     marginBottom: moderateScale(6),
     gap: moderateScale(4),
   },
+  fontSizeHeaderTextGroup: {
+    flexDirection: 'column',
+  },
   fontSizeLabel: {
     fontSize: isLandscape 
       ? (isTablet ? moderateScale(12) : moderateScale(11)) 
       : (isUltraSmallScreen ? moderateScale(10) : isSmallScreen ? moderateScale(10.5) : isTablet ? moderateScale(12) : moderateScale(11)),
     fontWeight: '700',
     color: '#333333',
+  },
+  fontSizeHelperText: {
+    fontSize: moderateScale(8.5),
+    color: '#888888',
   },
   fontSizeButtons: {
     flexDirection: 'row',
