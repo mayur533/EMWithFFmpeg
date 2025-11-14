@@ -10,13 +10,13 @@ import {
   Image,
   Platform,
   ToastAndroid,
-  Share,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import axios from 'axios';
+import Share from 'react-native-share';
 import authService from '../services/auth';
 // import RNFS from 'react-native-fs'; // Removed - package uninstalled
 import { CameraRoll } from '@react-native-camera-roll/camera-roll';
@@ -331,23 +331,18 @@ const PosterPreviewScreen: React.FC<PosterPreviewScreenProps> = ({ route }) => {
         return;
       }
 
-      const result = await Share.share({
+      await Share.open({
         url: shareableUri,
         title: 'Share Poster',
         message: 'Sharing my latest EventMarketers poster.',
         subject: 'Poster',
       });
-
-      if (result.action === Share.sharedAction) {
-        if (result.activityType) {
-          console.log('Shared with activity type:', result.activityType);
-        } else {
-          console.log('Shared successfully');
-        }
-      } else if (result.action === Share.dismissedAction) {
-        console.log('Share dismissed');
+      console.log('Poster shared via react-native-share');
+    } catch (error: any) {
+      if (error?.message?.includes('User did not share')) {
+        console.log('Share dismissed by user');
+        return;
       }
-    } catch (error) {
       console.error('Error sharing poster:', error);
       Alert.alert('Error', 'Failed to share poster. Please try again.');
     } finally {
