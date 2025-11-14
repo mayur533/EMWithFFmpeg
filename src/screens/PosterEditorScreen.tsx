@@ -89,6 +89,7 @@ const getOmbreColors = (base: string | undefined) => {
 
 // Compact spacing multiplier to reduce all spacing (50% reduction)
 const COMPACT_MULTIPLIER = 0.5;
+const ALIGNMENT_THRESHOLD = 8;
 
 // Responsive scaling functions for static styles
 const scale = (size: number) => (screenWidth / 375) * size;
@@ -887,6 +888,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [originalLayers, setOriginalLayers] = useState<Layer[]>([]);
   const [originalTemplate, setOriginalTemplate] = useState<string>('business');
 
+  const [alignmentGuides, setAlignmentGuides] = useState<{ vertical: number[]; horizontal: number[] }>({
+    vertical: [],
+    horizontal: []
+  });
+  const snapOffsets = useRef<{ [key: string]: { x: Animated.Value; y: Animated.Value } }>({}).current;
+  const snapOffsetsLatest = useRef<{ [key: string]: { x: number; y: number } }>({});
+  const alignmentFrameRef = useRef<number | null>(null);
+
   // State for templates
   const [selectedTemplate, setSelectedTemplate] = useState<string>('business');
   const [showTemplatesModal, setShowTemplatesModal] = useState(false);
@@ -912,6 +921,120 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const [showDeleteElementModal, setShowDeleteElementModal] = useState(false);
   const [showPremiumModal, setShowPremiumModal] = useState(false);
   const [showConnectionErrorModal, setShowConnectionErrorModal] = useState(false);
+
+  const ensureSnapOffsets = useCallback((layerId: string) => {
+    if (!snapOffsets[layerId]) {
+      snapOffsets[layerId] = {
+        x: new Animated.Value(0),
+        y: new Animated.Value(0)
+      };
+    }
+    if (!snapOffsetsLatest.current[layerId]) {
+      snapOffsetsLatest.current[layerId] = { x: 0, y: 0 };
+    }
+  }, [snapOffsets]);
+
+  const clearAlignmentGuides = useCallback((layerId?: string) => {
+    if (alignmentFrameRef.current) {
+      cancelAnimationFrame(alignmentFrameRef.current);
+      alignmentFrameRef.current = null;
+    }
+    setAlignmentGuides(prev => {
+      if (prev.vertical.length === 0 && prev.horizontal.length === 0) {
+        return prev;
+      }
+      return { vertical: [], horizontal: [] };
+    });
+    if (layerId) {
+      ensureSnapOffsets(layerId);
+      snapOffsets[layerId].x.setValue(0);
+      snapOffsets[layerId].y.setValue(0);
+      snapOffsetsLatest.current[layerId] = { x: 0, y: 0 };
+    }
+  }, [alignmentFrameRef, ensureSnapOffsets, snapOffsets]);
+
+  const updateAlignmentGuides = useCallback((layerId: string, translationX: number, translationY: number) => {
+    const currentLayer = layers.find(layer => layer.id === layerId);
+    if (!currentLayer) {
+      return;
+    }
+
+    const isLayerVisible = (layer: Layer) => {
+      if (!layer.fieldType) return true;
+      return visibleFields[layer.fieldType] !== false;
+    };
+
+    const width = currentLayer.size?.width || 0;
+    const height = currentLayer.size?.height || 0;
+    const proposedLeft = currentLayer.position.x + translationX;
+    const proposedTop = currentLayer.position.y + translationY;
+
+    const movingBounds = {
+      left: proposedLeft,
+      centerX: proposedLeft + width / 2,
+      right: proposedLeft + width,
+      top: proposedTop,
+      centerY: proposedTop + height / 2,
+      bottom: proposedTop + height
+    };
+
+    const otherLayers = layers.filter(layer => layer.id !== layerId && isLayerVisible(layer));
+
+    const verticalReferences: number[] = [0, canvasWidth / 2, canvasWidth];
+    const horizontalReferences: number[] = [0, canvasHeight / 2, canvasHeight];
+
+    otherLayers.forEach(layer => {
+      const layerWidth = layer.size?.width || 0;
+      const layerHeight = layer.size?.height || 0;
+      verticalReferences.push(layer.position.x, layer.position.x + layerWidth / 2, layer.position.x + layerWidth);
+      horizontalReferences.push(layer.position.y, layer.position.y + layerHeight / 2, layer.position.y + layerHeight);
+    });
+
+    let bestVertical: { position: number; diff: number } | null = null;
+    let bestHorizontal: { position: number; diff: number } | null = null;
+
+    const movingVerticalEdges = [movingBounds.left, movingBounds.centerX, movingBounds.right];
+    const movingHorizontalEdges = [movingBounds.top, movingBounds.centerY, movingBounds.bottom];
+
+    verticalReferences.forEach(ref => {
+      movingVerticalEdges.forEach(edge => {
+        const diff = ref - edge;
+        if (Math.abs(diff) <= ALIGNMENT_THRESHOLD && (!bestVertical || Math.abs(diff) < Math.abs(bestVertical.diff))) {
+          bestVertical = { position: ref, diff };
+        }
+      });
+    });
+
+    horizontalReferences.forEach(ref => {
+      movingHorizontalEdges.forEach(edge => {
+        const diff = ref - edge;
+        if (Math.abs(diff) <= ALIGNMENT_THRESHOLD && (!bestHorizontal || Math.abs(diff) < Math.abs(bestHorizontal.diff))) {
+          bestHorizontal = { position: ref, diff };
+        }
+      });
+    });
+
+    const nextGuides = {
+      vertical: bestVertical ? [bestVertical.position] : [],
+      horizontal: bestHorizontal ? [bestHorizontal.position] : []
+    };
+
+    setAlignmentGuides(prev => {
+      const verticalChanged = prev.vertical.length !== nextGuides.vertical.length || prev.vertical[0] !== nextGuides.vertical[0];
+      const horizontalChanged = prev.horizontal.length !== nextGuides.horizontal.length || prev.horizontal[0] !== nextGuides.horizontal[0];
+      if (verticalChanged || horizontalChanged) {
+        return nextGuides;
+      }
+      return prev;
+    });
+
+    ensureSnapOffsets(layerId);
+    const snapX = bestVertical ? bestVertical.diff : 0;
+    const snapY = bestHorizontal ? bestHorizontal.diff : 0;
+    snapOffsets[layerId].x.setValue(snapX);
+    snapOffsets[layerId].y.setValue(snapY);
+    snapOffsetsLatest.current[layerId] = { x: snapX, y: snapY };
+  }, [canvasHeight, canvasWidth, ensureSnapOffsets, layers, snapOffsets, visibleFields]);
 
   // Animation values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -1293,17 +1416,33 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         y: new Animated.Value(0)
       };
     }
+    ensureSnapOffsets(layerId);
     
     return Animated.event(
       [{ nativeEvent: { translationX: translationValues[layerId].x, translationY: translationValues[layerId].y } }],
-      { useNativeDriver: true }
+      { 
+        useNativeDriver: true,
+        listener: (event: any) => {
+          const { translationX, translationY } = event.nativeEvent;
+          if (alignmentFrameRef.current) {
+            cancelAnimationFrame(alignmentFrameRef.current);
+          }
+          alignmentFrameRef.current = requestAnimationFrame(() => {
+            alignmentFrameRef.current = null;
+            updateAlignmentGuides(layerId, translationX, translationY);
+          });
+        }
+      }
     );
-  }, [translationValues]);
+  }, [alignmentFrameRef, ensureSnapOffsets, translationValues, updateAlignmentGuides]);
 
   // Handle pan gesture state changes
   const onHandlerStateChange = useCallback((layerId: string) => {
     return (event: any) => {
       if (event.nativeEvent.state === State.BEGAN) {
+        ensureSnapOffsets(layerId);
+        snapOffsetsLatest.current[layerId] = { x: 0, y: 0 };
+        clearAlignmentGuides(layerId);
         setDraggedLayer(layerId);
         setSelectedLayer(layerId);
         // Reset translation values when drag begins
@@ -1317,18 +1456,19 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         // Get current layer
         const currentLayer = layers.find(layer => layer.id === layerId);
         if (!currentLayer) return;
+        const snapOffset = snapOffsetsLatest.current[layerId] || { x: 0, y: 0 };
         
         // Calculate new position with boundaries
         // For text layers, don't constrain based on size since they shrink-wrap
         let newX, newY;
         if (currentLayer.type === 'text') {
           // Text layers can move freely within canvas
-          newX = Math.max(0, Math.min(canvasWidth, currentLayer.position.x + translationX));
-          newY = Math.max(0, Math.min(canvasHeight, currentLayer.position.y + translationY));
+          newX = Math.max(0, Math.min(canvasWidth, currentLayer.position.x + translationX + snapOffset.x));
+          newY = Math.max(0, Math.min(canvasHeight, currentLayer.position.y + translationY + snapOffset.y));
         } else {
           // Image layers need size-based constraints
-          newX = Math.max(0, Math.min(canvasWidth - currentLayer.size.width, currentLayer.position.x + translationX));
-          newY = Math.max(0, Math.min(canvasHeight - currentLayer.size.height, currentLayer.position.y + translationY));
+          newX = Math.max(0, Math.min(canvasWidth - currentLayer.size.width, currentLayer.position.x + translationX + snapOffset.x));
+          newY = Math.max(0, Math.min(canvasHeight - currentLayer.size.height, currentLayer.position.y + translationY + snapOffset.y));
         }
         
         // Debug: Log the current position and field type
@@ -1364,11 +1504,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           translationValues[layerId].x.setValue(0);
           translationValues[layerId].y.setValue(0);
         }
+        clearAlignmentGuides(layerId);
         
         setDraggedLayer(null);
       }
     };
-  }, [layers, canvasWidth, canvasHeight, layerAnimations, translationValues]);
+  }, [canvasHeight, canvasWidth, clearAlignmentGuides, ensureSnapOffsets, layerAnimations, layers, selectedFrame, translationValues]);
 
   // Handle pinch gesture for zooming
   const onPinchGestureEvent = useCallback((layerId: string) => {
@@ -1810,8 +1951,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   // Delete layer
   const deleteLayer = useCallback((layerId: string) => {
     setLayers(prev => prev.filter(layer => layer.id !== layerId));
+    if (snapOffsets[layerId]) {
+      delete snapOffsets[layerId];
+    }
+    if (snapOffsetsLatest.current[layerId]) {
+      delete snapOffsetsLatest.current[layerId];
+    }
     setSelectedLayer(null);
-  }, []);
+  }, [snapOffsets]);
 
   // Confirm delete element
   const confirmDeleteElement = useCallback(() => {
@@ -1977,28 +2124,27 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         y: new Animated.Value(0)
       };
     }
+    ensureSnapOffsets(layer.id);
+
+    const baseTransforms = [
+      { translateX: Animated.add(Animated.add(layerAnimations[layer.id].x, translationValues[layer.id].x), snapOffsets[layer.id].x) },
+      { translateY: Animated.add(Animated.add(layerAnimations[layer.id].y, translationValues[layer.id].y), snapOffsets[layer.id].y) },
+      { rotate: `${layer.rotation}deg` }
+    ];
 
     const layerStyle = {
       position: 'absolute' as const,
       width: layer.size.width,
       height: layer.size.height,
       zIndex: layer.zIndex,
-      transform: [
-        { translateX: layerAnimations[layer.id].x },
-        { translateY: layerAnimations[layer.id].y },
-        { rotate: `${layer.rotation}deg` }
-      ],
+      transform: baseTransforms,
     };
-
+    
     // Text layer style without fixed dimensions
     const textLayerStyle = {
       position: 'absolute' as const,
       zIndex: layer.zIndex,
-      transform: [
-        { translateX: layerAnimations[layer.id].x },
-        { translateY: layerAnimations[layer.id].y },
-        { rotate: `${layer.rotation}deg` }
-      ],
+      transform: baseTransforms,
     };
 
     const handleLayerPress = () => {
@@ -2075,14 +2221,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             style={[
               textLayerStyle,
               isSelected && styles.selectedLayer,
-              draggedLayer === layer.id && styles.draggedLayer,
-              draggedLayer === layer.id && {
-                transform: [
-                  { translateX: Animated.add(layerAnimations[layer.id].x, translationValues[layer.id].x) },
-                  { translateY: Animated.add(layerAnimations[layer.id].y, translationValues[layer.id].y) },
-                  { rotate: `${layer.rotation}deg` }
-                ]
-              }
+              draggedLayer === layer.id && styles.draggedLayer
             ]}
           >
             <TouchableOpacity
@@ -2112,14 +2251,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               layerStyle,
               isSelected && styles.selectedLayer,
               isSelected && layer.type === 'logo' && styles.selectedLayerImage,
-              draggedLayer === layer.id && styles.draggedLayer,
-              draggedLayer === layer.id && {
-                transform: [
-                  { translateX: Animated.add(layerAnimations[layer.id].x, translationValues[layer.id].x) },
-                  { translateY: Animated.add(layerAnimations[layer.id].y, translationValues[layer.id].y) },
-                  { rotate: `${layer.rotation}deg` }
-                ]
-              }
+              draggedLayer === layer.id && styles.draggedLayer
             ]}
           >
             <TouchableOpacity
@@ -2137,7 +2269,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       default:
         return null;
     }
-  }, [selectedLayer, visibleFields, draggedLayer, layerAnimations, translationValues, selectedTemplate]);
+  }, [selectedLayer, visibleFields, draggedLayer, layerAnimations, translationValues, selectedTemplate, ensureSnapOffsets, snapOffsets]);
 
   // Render business profile selection item
   const renderProfileItem = ({ item }: { item: BusinessProfile }) => (
@@ -2438,6 +2570,34 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 </PanGestureHandler>
               </Animated.View>
             </PinchGestureHandler>
+          ))}
+
+          {alignmentGuides.vertical.map((xPos, index) => (
+            <View
+              key={`alignment-vertical-${index}`}
+              pointerEvents="none"
+              style={[
+                styles.alignmentGuideVertical,
+                {
+                  left: xPos - 0.5,
+                  height: canvasHeight
+                }
+              ]}
+            />
+          ))}
+          
+          {alignmentGuides.horizontal.map((yPos, index) => (
+            <View
+              key={`alignment-horizontal-${index}`}
+              pointerEvents="none"
+              style={[
+                styles.alignmentGuideHorizontal,
+                {
+                  top: yPos - 0.5,
+                  width: canvasWidth
+                }
+              ]}
+            />
           ))}
           
           {/* Watermark - Only shown during capture if user is not subscribed */}
@@ -4120,6 +4280,20 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
     borderRadius: 0,
+  },
+  alignmentGuideVertical: {
+    position: 'absolute',
+    top: 0,
+    width: StyleSheet.hairlineWidth || 1,
+    backgroundColor: 'rgba(102, 126, 234, 0.85)',
+    zIndex: 1000,
+  },
+  alignmentGuideHorizontal: {
+    position: 'absolute',
+    left: 0,
+    height: StyleSheet.hairlineWidth || 1,
+    backgroundColor: 'rgba(102, 126, 234, 0.85)',
+    zIndex: 1000,
   },
   selectedLayerImage: {
     borderWidth: 3,
