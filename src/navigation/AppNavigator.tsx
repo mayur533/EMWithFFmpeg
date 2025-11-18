@@ -8,7 +8,7 @@ import { getTabBarStyle, getTabBarItemStyle, getTabBarLabelStyle } from '../util
 import authService from '../services/auth';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
-import { navigationRef } from './NavigationService';
+import { navigationRef, navigate as navigateService } from './NavigationService';
 import { Image, View, Text, TouchableOpacity, Dimensions } from 'react-native';
 
 // Responsive scaling functions
@@ -131,6 +131,7 @@ import GreetingTemplatesScreen from '../screens/GreetingTemplatesScreen';
 import GreetingEditorScreen from '../screens/GreetingEditorScreen';
 import MyPostersScreen from '../screens/MyPostersScreen';
 import MyBusinessScreen from '../screens/MyBusinessScreen';
+import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
 import AboutUsScreen from '../screens/AboutUsScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
@@ -269,6 +270,86 @@ const CustomTabBar = (props: any) => {
   const fontSize = currentModerateScale(isCurrentlySmall ? 7 : 8);
   const borderWidth = currentModerateScale(0.8); // Further reduced from 1
   
+  const handleMyBusinessShortcut = async () => {
+    console.log('🖱️ [NAVBAR] Logo button clicked - fetching business posters');
+    try {
+      let response = await businessCategoryPostersApi.getUserCategoryPosters();
+      console.log('📦 [NAVBAR] User category response:', {
+        success: response.success,
+        count: response.data?.posters?.length || 0,
+        category: response.data?.category,
+      });
+
+      if (!response.success || !response.data?.posters?.length) {
+        console.warn('⚠️ [NAVBAR] No posters found for user category, trying General');
+        try {
+          response = await businessCategoryPostersApi.getPostersByCategory('General');
+          console.log('📦 [NAVBAR] General category response:', {
+            success: response.success,
+            count: response.data?.posters?.length || 0,
+          });
+        } catch (generalError) {
+          console.error('❌ [NAVBAR] General category fallback failed:', generalError);
+        }
+      }
+
+      if (response.success && response.data) {
+        const templates = (response.data.posters || []).map((poster) => ({
+          id: poster.id,
+          name: poster.title,
+          thumbnail: poster.imageUrl || poster.thumbnail,
+          category: poster.category,
+          downloads: poster.downloads || 0,
+          isDownloaded: false,
+          tags: poster.tags || [],
+        }));
+
+        const selectedPoster =
+          templates[0] ||
+          ({
+            id: 'empty',
+            name: 'No Posters Available',
+            thumbnail: '',
+            category: response.data.category || 'General',
+            downloads: 0,
+            isDownloaded: false,
+            tags: [],
+          } as any);
+
+        const relatedPosters = templates.slice(1);
+        const navigationParams = {
+          selectedPoster,
+          relatedPosters,
+          searchQuery: '',
+          templateSource: 'professional' as const,
+        };
+
+        if (navigationRef.isReady()) {
+          console.log('🚀 [NAVBAR] Navigating via navigationRef');
+          navigateService('PosterPlayer', navigationParams);
+          return;
+        }
+
+        const parentNavigator = props.navigation.getParent();
+        if (parentNavigator) {
+          console.log('🚀 [NAVBAR] Navigating via parent navigator');
+          parentNavigator.navigate('PosterPlayer', navigationParams);
+          return;
+        }
+
+        console.warn('⚠️ [NAVBAR] Parent navigator unavailable, attempting direct navigation');
+        props.navigation.navigate('PosterPlayer', navigationParams);
+        return;
+      }
+
+      console.warn('⚠️ [NAVBAR] API failed - falling back to MyBusiness tab');
+      props.navigation.navigate('MyBusiness');
+    } catch (error) {
+      console.error('❌ [NAVBAR] Error handling business posters:', error);
+      props.navigation.navigate('MyBusiness');
+    }
+  };
+
   return (
     <View style={{
       backgroundColor: theme.colors.surface,
@@ -298,10 +379,7 @@ const CustomTabBar = (props: any) => {
       
       {/* Logo positioned to overlap with screen content - Clickable to navigate to My Business */}
       <TouchableOpacity
-        onPress={() => {
-          // Navigate to My Business tab
-          props.navigation.navigate('MyBusiness');
-        }}
+        onPress={handleMyBusinessShortcut}
         activeOpacity={0.7}
         style={{
           position: 'absolute',
