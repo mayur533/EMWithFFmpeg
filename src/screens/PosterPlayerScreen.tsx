@@ -286,8 +286,9 @@ const PosterPlayerScreen: React.FC = () => {
   }), []);
 
   const isEventPlannerCategory = useMemo(() => {
-    const category = currentPoster?.category || initialPoster?.category || '';
-    return category.trim().toLowerCase() === 'event planners';
+    const category = (currentPoster?.category || initialPoster?.category || '').trim().toLowerCase();
+    if (!category) return false;
+    return category.includes('event planner');
   }, [currentPoster, initialPoster]);
 
   useEffect(() => {
@@ -596,14 +597,24 @@ const PosterPlayerScreen: React.FC = () => {
                      isActive && styles.serviceFilterButtonActive
                    ]}
                    onPress={() => setSelectedServiceFilter(prev => prev === filterKey ? null : filterKey)}
-                   activeOpacity={0.8}
+                   activeOpacity={0.9}
                  >
-                   <Text style={[
-                     styles.serviceFilterButtonText,
-                     isActive && styles.serviceFilterButtonTextActive
-                   ]}>
-                     {labelMap[filterKey]}
-                   </Text>
+                   <LinearGradient
+                     colors={[theme.colors.secondary, theme.colors.primary]}
+                     start={{ x: 0, y: 0 }}
+                     end={{ x: 1, y: 0 }}
+                     style={[
+                       styles.serviceFilterButtonGradient,
+                       !isActive && styles.serviceFilterButtonGradientInactive
+                     ]}
+                   >
+                     <Text style={[
+                       styles.serviceFilterButtonText,
+                       isActive && styles.serviceFilterButtonTextActive
+                     ]}>
+                       {labelMap[filterKey]}
+                     </Text>
+                   </LinearGradient>
                  </TouchableOpacity>
                );
              })}
@@ -1014,15 +1025,24 @@ const styles = StyleSheet.create({
   },
   serviceFilterButton: {
     flex: 1,
-    paddingVertical: moderateScale(6),
     borderRadius: moderateScale(8),
-    borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.4)',
-    backgroundColor: 'rgba(255,255,255,0.12)',
+    overflow: 'hidden',
   },
   serviceFilterButtonActive: {
-    borderColor: '#667eea',
-    backgroundColor: 'rgba(102, 126, 234, 0.25)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 3,
+  },
+  serviceFilterButtonGradient: {
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  serviceFilterButtonGradientInactive: {
+    opacity: 0.75,
   },
   serviceFilterButtonText: {
     textAlign: 'center',
