@@ -624,12 +624,14 @@ const PosterPlayerScreen: React.FC = () => {
          {/* Language selection moved to header */}
 
          {/* Compact Related Posters Section */}
-         <View style={styles.relatedSection}>
-           <View style={styles.relatedHeader}>
-             <Text style={styles.relatedTitle}>
-               Related Templates
-             </Text>
-           </View>
+        <View style={styles.relatedSection}>
+          <View style={styles.relatedHeader}>
+            {!isEventPlannerCategory && (
+              <Text style={styles.relatedTitle}>
+                Related Templates
+              </Text>
+            )}
+          </View>
            
            {filteredPosters.length > 0 ? (
              <FlatList
