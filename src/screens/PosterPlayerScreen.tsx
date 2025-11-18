@@ -497,7 +497,7 @@ const PosterPlayerScreen: React.FC = () => {
             <Text style={styles.languageDropdownText}>
               {languages.find(l => l.id === selectedLanguage)?.name || 'Select Language'}
             </Text>
-            <Icon name={languageMenuVisible ? 'expand-less' : 'expand-more'} size={getIconSize(14)} color="#000000" />
+            <Icon name={languageMenuVisible ? 'expand-less' : 'expand-more'} size={getIconSize(14)} color="#ffffff" />
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -630,13 +630,13 @@ const styles = StyleSheet.create({
   headerTextButton: {
     paddingHorizontal: moderateScale(12),
     paddingVertical: moderateScale(8),
-    borderRadius: moderateScale(12),
-    backgroundColor: 'rgba(0,0,0,0.12)',
+    borderRadius: moderateScale(8),
+    backgroundColor: '#667eea',
     justifyContent: 'center',
     alignItems: 'center',
   },
   headerButtonText: {
-    color: '#000000',
+    color: '#ffffff',
     fontSize: moderateScale(11),
     fontWeight: '600',
   },
@@ -651,11 +651,11 @@ const styles = StyleSheet.create({
     gap: moderateScale(6),
     paddingHorizontal: moderateScale(10),
     paddingVertical: moderateScale(6),
-    borderRadius: moderateScale(12),
-    backgroundColor: 'rgba(0,0,0,0.18)',
+    borderRadius: moderateScale(8),
+    backgroundColor: '#667eea',
   },
   languageDropdownText: {
-    color: '#000000',
+    color: '#ffffff',
     fontSize: moderateScale(10),
     fontWeight: '600',
   },

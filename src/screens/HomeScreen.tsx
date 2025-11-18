@@ -955,6 +955,23 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
 
 
 
+  const renderBrowseAllButton = useCallback((onPress: () => void) => (
+    <TouchableOpacity
+      style={styles.viewAllButton}
+      onPress={onPress}
+      activeOpacity={0.85}
+    >
+      <LinearGradient
+        colors={[theme.colors.secondary, theme.colors.primary]}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 0 }}
+        style={styles.viewAllButtonGradient}
+      >
+        <Text style={styles.viewAllButtonText}>Browse All</Text>
+      </LinearGradient>
+    </TouchableOpacity>
+  ), [theme.colors.primary, theme.colors.secondary]);
+
   if (loading) {
     return (
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#e8e8e8' }]}>
@@ -1100,11 +1117,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
           <View style={styles.bannerSection}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Featured Content</Text>
-              {featuredContent.length > 0 && (
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllFeaturedContent}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
-              )}
+              {featuredContent.length > 0 && renderBrowseAllButton(handleViewAllFeaturedContent)}
             </View>
             <FlatList
               data={banners}
@@ -1126,9 +1139,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.upcomingEventsSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Upcoming Festivals</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllUpcomingEvents}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllUpcomingEvents)}
               </View>
 
               <ScrollView
@@ -1183,9 +1194,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
           <View style={styles.templatesSection}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Events</Text>
-              <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllTemplates}>
-                <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-              </TouchableOpacity>
+              {renderBrowseAllButton(handleViewAllTemplates)}
             </View>
             <FlatList
               key={`templates-${templates.length}-${selectedCategory}`}
@@ -1207,9 +1216,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.videoSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Video Content</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllVideos}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllVideos)}
               </View>
               <FlatList
                 key={`video-content-${videoContent.length}`}
@@ -1230,12 +1237,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
           {/* Motivation Section */}
           {motivationTemplates.length > 0 && (
             <View style={styles.templatesSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Motivation</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllMotivation}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
-              </View>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Motivation</Text>
+              {renderBrowseAllButton(handleViewAllMotivation)}
+            </View>
               <FlatList
                 data={motivationTemplates}
                 renderItem={createGreetingCardRenderer(
@@ -1254,12 +1259,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
           {/* Good Morning Section */}
           {goodMorningTemplates.length > 0 && (
             <View style={styles.templatesSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Good Morning</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllGoodMorning}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
-              </View>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Good Morning</Text>
+              {renderBrowseAllButton(handleViewAllGoodMorning)}
+            </View>
               <FlatList
                 data={goodMorningTemplates}
                 renderItem={createGreetingCardRenderer(
@@ -1284,12 +1287,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
           {/* Business Ethics Section */}
           {businessEthicsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Ethics</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllBusinessEthics}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
-              </View>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Ethics</Text>
+              {renderBrowseAllButton(handleViewAllBusinessEthics)}
+            </View>
               <FlatList
                 data={businessEthicsTemplates}
                 renderItem={createGreetingCardRenderer(
@@ -1310,9 +1311,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Devotional</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllDevotional}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllDevotional)}
               </View>
               <FlatList
                 data={devotionalTemplates}
@@ -1334,9 +1333,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Leader Quotes</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllLeaderQuotes}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllLeaderQuotes)}
               </View>
               <FlatList
                 data={leaderQuotesTemplates}
@@ -1358,9 +1355,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Atmanirbhar Bharat</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllAtmanirbharBharat}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllAtmanirbharBharat)}
               </View>
               <FlatList
                 data={atmanirbharBharatTemplates}
@@ -1382,9 +1377,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Good Thoughts</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllGoodThoughts}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllGoodThoughts)}
               </View>
               <FlatList
                 data={goodThoughtsTemplates}
@@ -1406,9 +1399,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Trending</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllTrending}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllTrending)}
               </View>
               <FlatList
                 data={trendingTemplates}
@@ -1430,9 +1421,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Bhagvat Gita</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllBhagvatGita}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllBhagvatGita)}
               </View>
               <FlatList
                 data={bhagvatGitaTemplates}
@@ -1454,9 +1443,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Books</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllBooks}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllBooks)}
               </View>
               <FlatList
                 data={booksTemplates}
@@ -1478,9 +1465,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Celebrates the Moments</Text>
-                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllCelebratesMoments}>
-                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
-                </TouchableOpacity>
+                {renderBrowseAllButton(handleViewAllCelebratesMoments)}
               </View>
               <FlatList
                 data={celebratesMomentsTemplates}
@@ -2730,16 +2715,26 @@ const styles = StyleSheet.create({
      paddingHorizontal: moderateScale(10),
      marginBottom: verticalScale(4),
    },
-   viewAllButton: {
-     paddingHorizontal: moderateScale(5),
-     paddingVertical: moderateScale(2),
-     backgroundColor: 'rgba(0,0,0,0.08)',
-     borderRadius: moderateScale(8),
-   },
-  viewAllButtonText: {
-    fontSize: moderateScale(8),
-    fontWeight: '600',
-  },
+ viewAllButton: {
+   paddingHorizontal: moderateScale(1),
+   paddingVertical: moderateScale(1),
+   borderRadius: moderateScale(6),
+   overflow: 'hidden',
+ },
+ viewAllButtonGradient: {
+   paddingHorizontal: moderateScale(6),
+   paddingVertical: moderateScale(3),
+   borderRadius: moderateScale(6),
+   justifyContent: 'center',
+   alignItems: 'center',
+   flexDirection: 'row',
+   gap: moderateScale(2),
+ },
+ viewAllButtonText: {
+   fontSize: moderateScale(8),
+   fontWeight: '600',
+   color: '#ffffff',
+ },
        upcomingEventsList: {
       paddingHorizontal: moderateScale(3),
     },

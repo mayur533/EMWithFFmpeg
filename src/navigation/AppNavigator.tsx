@@ -432,6 +432,12 @@ const CustomTabBar = (props: any) => {
           const isFocused = props.state.index === index;
 
           const onPress = () => {
+            // Intercept MyBusiness tab to navigate to PosterPlayerScreen instead
+            if (route.name === 'MyBusiness') {
+              handleMyBusinessShortcut();
+              return;
+            }
+
             const event = props.navigation.emit({
               type: 'tabPress',
               target: route.key,
