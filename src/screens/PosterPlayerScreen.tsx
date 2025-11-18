@@ -142,6 +142,7 @@ const PosterPlayerScreen: React.FC = () => {
   const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
   const [languageMenuVisible, setLanguageMenuVisible] = useState<boolean>(false);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
+  const [selectedServiceFilter, setSelectedServiceFilter] = useState<string | null>(null);
 
   // Get high quality image URL for preview (replace thumbnail params with high quality)
   const getHighQualityImageUrl = (poster: Template): string => {
@@ -277,9 +278,40 @@ const PosterPlayerScreen: React.FC = () => {
   ], []);
 
   // Display ALL posters (filtered by language)
+  const serviceFilterKeywords: Record<string, string[]> = useMemo(() => ({
+    generator: ['generator'],
+    decorators: ['decor', 'decorator', 'stage'],
+    sound: ['sound', 'audio', 'dj'],
+    mandap: ['mandap']
+  }), []);
+
+  const isEventPlannerCategory = useMemo(() => {
+    const category = currentPoster?.category || initialPoster?.category || '';
+    return category.trim().toLowerCase() === 'event planners';
+  }, [currentPoster, initialPoster]);
+
+  useEffect(() => {
+    if (!isEventPlannerCategory && selectedServiceFilter) {
+      setSelectedServiceFilter(null);
+    }
+  }, [isEventPlannerCategory, selectedServiceFilter]);
+
+  const templateMatchesServiceFilter = useCallback((template: Template) => {
+    if (!isEventPlannerCategory || !selectedServiceFilter) return true;
+    const keywords = serviceFilterKeywords[selectedServiceFilter] || [];
+    const templateTags = Array.isArray(template.tags)
+      ? template.tags
+          .filter((tag): tag is string => typeof tag === 'string')
+          .map(tag => tag.toLowerCase())
+      : [];
+    return keywords.some(keyword => templateTags.some(tag => tag.includes(keyword)));
+  }, [isEventPlannerCategory, selectedServiceFilter, serviceFilterKeywords]);
+
   const filteredPosters = useMemo(() => {
-    return allTemplates.filter(template => templateContainsLanguage(template, selectedLanguage));
-  }, [allTemplates, selectedLanguage]);
+    return allTemplates
+      .filter(template => templateContainsLanguage(template, selectedLanguage))
+      .filter(templateMatchesServiceFilter);
+  }, [allTemplates, selectedLanguage, templateMatchesServiceFilter]);
 
   const handlePosterSelect = useCallback((poster: Template) => {
     // Merge template languages to ensure we have all language info
@@ -544,6 +576,39 @@ const PosterPlayerScreen: React.FC = () => {
            )}
          </View>
          </View>
+
+         {/* Service filter buttons for Event Planners */}
+         {isEventPlannerCategory && (
+           <View style={styles.serviceFilterContainer}>
+             {['generator', 'decorators', 'sound', 'mandap'].map(filterKey => {
+               const isActive = selectedServiceFilter === filterKey;
+               const labelMap: Record<string, string> = {
+                 generator: 'Generator',
+                 decorators: 'Decorators',
+                 sound: 'Sound',
+                 mandap: 'Mandap'
+               };
+               return (
+                 <TouchableOpacity
+                   key={filterKey}
+                   style={[
+                     styles.serviceFilterButton,
+                     isActive && styles.serviceFilterButtonActive
+                   ]}
+                   onPress={() => setSelectedServiceFilter(prev => prev === filterKey ? null : filterKey)}
+                   activeOpacity={0.8}
+                 >
+                   <Text style={[
+                     styles.serviceFilterButtonText,
+                     isActive && styles.serviceFilterButtonTextActive
+                   ]}>
+                     {labelMap[filterKey]}
+                   </Text>
+                 </TouchableOpacity>
+               );
+             })}
+           </View>
+         )}
 
          {/* Language selection moved to header */}
 
@@ -939,6 +1004,34 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: moderateScale(6), // Compact
     fontWeight: '600',
+  },
+  serviceFilterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: moderateScale(8),
+    marginBottom: moderateScale(12),
+    gap: moderateScale(6),
+  },
+  serviceFilterButton: {
+    flex: 1,
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(8),
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.4)',
+    backgroundColor: 'rgba(255,255,255,0.12)',
+  },
+  serviceFilterButtonActive: {
+    borderColor: '#667eea',
+    backgroundColor: 'rgba(102, 126, 234, 0.25)',
+  },
+  serviceFilterButtonText: {
+    textAlign: 'center',
+    color: '#ffffff',
+    fontSize: moderateScale(9),
+    fontWeight: '600',
+  },
+  serviceFilterButtonTextActive: {
+    color: '#ffffff',
   },
   noPostersContainer: {
     justifyContent: 'center',
