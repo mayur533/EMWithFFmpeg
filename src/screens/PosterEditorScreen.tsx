@@ -2355,7 +2355,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             key={layer.id}
             style={[
               textLayerStyle,
-              isSelected && styles.selectedLayer,
               draggedLayer === layer.id && styles.draggedLayer
             ]}
           >
@@ -2375,6 +2374,21 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 {layer.content}
               </Text>
             </TouchableOpacity>
+            {isSelected && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: -3,
+                  left: -3,
+                  right: -3,
+                  bottom: -3,
+                  borderWidth: 3,
+                  borderColor: '#667eea',
+                  borderRadius: 8,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
           </Animated.View>
         );
       case 'image':
@@ -2384,8 +2398,6 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             style={[
               styles.layer,
               layerStyle,
-              isSelected && styles.selectedLayer,
-              isSelected && layer.type === 'logo' && styles.selectedLayerImage,
               draggedLayer === layer.id && styles.draggedLayer
             ]}
           >
@@ -2399,6 +2411,21 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 resizeMode="contain"
               />
             </TouchableOpacity>
+            {isSelected && (
+              <View
+                style={{
+                  position: 'absolute',
+                  top: -3,
+                  left: -3,
+                  right: -3,
+                  bottom: -3,
+                  borderWidth: 3,
+                  borderColor: '#667eea',
+                  borderRadius: layer.type === 'logo' ? 12 : 8,
+                  pointerEvents: 'none',
+                }}
+              />
+            )}
           </Animated.View>
         );
       default:

@@ -36,6 +36,7 @@ import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 // import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
 import OptimizedImage from '../components/OptimizedImage';
+import ComingSoonModal from '../components/ComingSoonModal';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -121,6 +122,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const [isUpcomingEventsModalVisible, setIsUpcomingEventsModalVisible] = useState(false);
   const [isTemplatesModalVisible, setIsTemplatesModalVisible] = useState(false);
   const [isVideosModalVisible, setIsVideosModalVisible] = useState(false);
+  const [showVideoComingSoonModal, setShowVideoComingSoonModal] = useState(false);
   
   // Greeting section modal states
   const [isMotivationModalVisible, setIsMotivationModalVisible] = useState(false);
@@ -134,6 +136,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const [isBhagvatGitaModalVisible, setIsBhagvatGitaModalVisible] = useState(false);
   const [isBooksModalVisible, setIsBooksModalVisible] = useState(false);
   const [isCelebratesMomentsModalVisible, setIsCelebratesMomentsModalVisible] = useState(false);
+  const [isFeaturedContentModalVisible, setIsFeaturedContentModalVisible] = useState(false);
 
   // New API data states
   const [featuredContent, setFeaturedContent] = useState<FeaturedContent[]>([]);
@@ -714,28 +717,67 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
     setIsCelebratesMomentsModalVisible(false);
   }, []);
 
+  const handleViewAllFeaturedContent = useCallback(() => {
+    setIsFeaturedContentModalVisible(true);
+  }, []);
+
+  const closeFeaturedContentModal = useCallback(() => {
+    setIsFeaturedContentModalVisible(false);
+  }, []);
 
   // Memoized render functions to prevent unnecessary re-renders
   const renderBanner = useCallback(({ item }: { item: Banner }) => {
+    // Convert featured content to Template format for navigation
+    const convertFeaturedContentToTemplate = (featured: FeaturedContent): Template => ({
+      id: featured.id,
+      name: featured.title,
+      thumbnail: featured.imageUrl,
+      category: featured.type || 'Featured Content',
+      downloads: 0,
+      isDownloaded: false,
+      tags: [],
+    });
+
+    const handleBannerPress = () => {
+      // Find the clicked featured content item
+      const clickedFeaturedContent = featuredContent.find(fc => fc.id === item.id);
+      
+      if (!clickedFeaturedContent) {
+        // Fallback if featured content not found
+        const bannerTemplate: Template = {
+          id: item.id || 'banner-template',
+          name: item.title,
+          thumbnail: item.imageUrl,
+          category: 'Featured Content',
+          downloads: 0,
+          isDownloaded: false,
+        };
+        navigation.navigate('PosterPlayer', {
+          selectedPoster: bannerTemplate,
+          relatedPosters: [], // No related if featured content not found
+        });
+        return;
+      }
+
+      // Convert clicked item to template
+      const selectedTemplate = convertFeaturedContentToTemplate(clickedFeaturedContent);
+      
+      // Get other featured content items (excluding the clicked one) and convert to templates
+      const relatedTemplates = featuredContent
+        .filter(fc => fc.id !== item.id)
+        .map(convertFeaturedContentToTemplate);
+
+      navigation.navigate('PosterPlayer', {
+        selectedPoster: selectedTemplate,
+        relatedPosters: relatedTemplates, // Show other featured content items
+      });
+    };
+
     return (
       <TouchableOpacity
         activeOpacity={0.8}
         style={styles.bannerContainerWrapper}
-        onPress={() => {
-          // Create a mock template for the banner
-          const bannerTemplate: Template = {
-            id: 'banner-template',
-            name: item.title,
-            thumbnail: item.imageUrl,
-            category: 'Featured Banner',
-            downloads: 0,
-            isDownloaded: false,
-          };
-          navigation.navigate('PosterPlayer', {
-            selectedPoster: bannerTemplate,
-            relatedPosters: professionalTemplates.slice(0, 6), // Show first 6 templates as related
-          });
-        }}
+        onPress={handleBannerPress}
       >
                  <View style={styles.bannerContainer}>
           <OptimizedImage 
@@ -751,21 +793,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
              {/* Banner title removed as per user request */}
              <TouchableOpacity 
                style={[styles.bannerButton, { backgroundColor: theme.colors.cardBackground }]}
-               onPress={() => {
-                 // Create a mock template for the banner
-                 const bannerTemplate: Template = {
-                   id: 'banner-template',
-                   name: item.title,
-                   thumbnail: item.imageUrl,
-                   category: 'Featured Banner',
-                   downloads: 0,
-                   isDownloaded: false,
-                 };
-                 navigation.navigate('PosterPlayer', {
-                   selectedPoster: bannerTemplate,
-                   relatedPosters: professionalTemplates.slice(0, 6), // Show first 6 templates as related
-                 });
-               }}
+               onPress={handleBannerPress}
              >
                <Text style={[styles.bannerButtonText, { color: theme.colors.primary }]}>VIEW</Text>
              </TouchableOpacity>
@@ -773,7 +801,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
          </View>
       </TouchableOpacity>
     );
-  }, [theme, navigation, professionalTemplates]);
+  }, [theme, navigation, featuredContent]);
 
                                        
 
@@ -846,7 +874,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
     };
 
     const handleCardPress = () => {
-      handleTemplatePress(item);
+      setShowVideoComingSoonModal(true);
     };
 
 
@@ -877,7 +905,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
         </Animated.View>
       </TouchableOpacity>
     );
-  }, [handleTemplatePress, theme, playIconSize]);
+  }, [theme, playIconSize]);
 
   // Memoized key extractors
   const keyExtractor = useCallback((item: any) => item.id, []);
@@ -1070,7 +1098,14 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
 
           {/* Banner Carousel */}
           <View style={styles.bannerSection}>
-            <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>Featured Content</Text>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Featured Content</Text>
+              {featuredContent.length > 0 && (
+                <TouchableOpacity style={styles.viewAllButton} onPress={handleViewAllFeaturedContent}>
+                  <Text style={[styles.viewAllButtonText, { color: theme.colors.text }]}>Browse All</Text>
+                </TouchableOpacity>
+              )}
+            </View>
             <FlatList
               data={banners}
               renderItem={renderBanner}
@@ -1776,6 +1811,13 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
           </View>
         </Modal>
 
+        <ComingSoonModal
+          visible={showVideoComingSoonModal}
+          onClose={() => setShowVideoComingSoonModal(false)}
+          title="Video Editor Coming Soon"
+          subtitle="We are polishing the video creation experience. Stay tuned for the next update!"
+        />
+
         {/* Motivation Modal */}
         <Modal
           visible={isMotivationModalVisible}
@@ -1803,8 +1845,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`motivation-modal-${motivationTemplates.length}`}
-                  data={motivationTemplates}
+                  key={`motivation-modal-${motivationTemplatesRaw.length > 0 ? motivationTemplatesRaw.length : motivationTemplates.length}`}
+                  data={motivationTemplatesRaw.length > 0 ? motivationTemplatesRaw : motivationTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -1875,8 +1917,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`goodmorning-modal-${goodMorningTemplates.length}`}
-                  data={goodMorningTemplates}
+                  key={`goodmorning-modal-${goodMorningTemplatesRaw.length > 0 ? goodMorningTemplatesRaw.length : goodMorningTemplates.length}`}
+                  data={goodMorningTemplatesRaw.length > 0 ? goodMorningTemplatesRaw : goodMorningTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -1947,8 +1989,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`businessethics-modal-${businessEthicsTemplates.length}`}
-                  data={businessEthicsTemplates}
+                  key={`businessethics-modal-${businessEthicsTemplatesRaw.length > 0 ? businessEthicsTemplatesRaw.length : businessEthicsTemplates.length}`}
+                  data={businessEthicsTemplatesRaw.length > 0 ? businessEthicsTemplatesRaw : businessEthicsTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -2019,8 +2061,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`devotional-modal-${devotionalTemplates.length}`}
-                  data={devotionalTemplates}
+                  key={`devotional-modal-${devotionalTemplatesRaw.length > 0 ? devotionalTemplatesRaw.length : devotionalTemplates.length}`}
+                  data={devotionalTemplatesRaw.length > 0 ? devotionalTemplatesRaw : devotionalTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -2091,8 +2133,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`leaderquotes-modal-${leaderQuotesTemplates.length}`}
-                  data={leaderQuotesTemplates}
+                  key={`leaderquotes-modal-${leaderQuotesTemplatesRaw.length > 0 ? leaderQuotesTemplatesRaw.length : leaderQuotesTemplates.length}`}
+                  data={leaderQuotesTemplatesRaw.length > 0 ? leaderQuotesTemplatesRaw : leaderQuotesTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -2152,8 +2194,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`atmanirbhar-modal-${atmanirbharBharatTemplates.length}`}
-                  data={atmanirbharBharatTemplates}
+                  key={`atmanirbhar-modal-${atmanirbharBharatTemplatesRaw.length > 0 ? atmanirbharBharatTemplatesRaw.length : atmanirbharBharatTemplates.length}`}
+                  data={atmanirbharBharatTemplatesRaw.length > 0 ? atmanirbharBharatTemplatesRaw : atmanirbharBharatTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -2196,8 +2238,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`goodthoughts-modal-${goodThoughtsTemplates.length}`}
-                  data={goodThoughtsTemplates}
+                  key={`goodthoughts-modal-${goodThoughtsTemplatesRaw.length > 0 ? goodThoughtsTemplatesRaw.length : goodThoughtsTemplates.length}`}
+                  data={goodThoughtsTemplatesRaw.length > 0 ? goodThoughtsTemplatesRaw : goodThoughtsTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -2240,8 +2282,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`trending-modal-${trendingTemplates.length}`}
-                  data={trendingTemplates}
+                  key={`trending-modal-${trendingTemplatesRaw.length > 0 ? trendingTemplatesRaw.length : trendingTemplates.length}`}
+                  data={trendingTemplatesRaw.length > 0 ? trendingTemplatesRaw : trendingTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -2284,8 +2326,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`bhagvatgita-modal-${bhagvatGitaTemplates.length}`}
-                  data={bhagvatGitaTemplates}
+                  key={`bhagvatgita-modal-${bhagvatGitaTemplatesRaw.length > 0 ? bhagvatGitaTemplatesRaw.length : bhagvatGitaTemplates.length}`}
+                  data={bhagvatGitaTemplatesRaw.length > 0 ? bhagvatGitaTemplatesRaw : bhagvatGitaTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -2328,8 +2370,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`books-modal-${booksTemplates.length}`}
-                  data={booksTemplates}
+                  key={`books-modal-${booksTemplatesRaw.length > 0 ? booksTemplatesRaw.length : booksTemplates.length}`}
+                  data={booksTemplatesRaw.length > 0 ? booksTemplatesRaw : booksTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -2372,8 +2414,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               </LinearGradient>
               <View style={styles.upcomingEventsModalBody}>
                 <FlatList
-                  key={`celebrates-modal-${celebratesMomentsTemplates.length}`}
-                  data={celebratesMomentsTemplates}
+                  key={`celebrates-modal-${celebratesMomentsTemplatesRaw.length > 0 ? celebratesMomentsTemplatesRaw.length : celebratesMomentsTemplates.length}`}
+                  data={celebratesMomentsTemplatesRaw.length > 0 ? celebratesMomentsTemplatesRaw : celebratesMomentsTemplates}
                   keyExtractor={(item) => item.id.toString()}
                   numColumns={4}
                   columnWrapperStyle={styles.upcomingEventModalRow}
@@ -2394,6 +2436,75 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                       </View>
                     </TouchableOpacity>
                   )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Featured Content Modal */}
+        <Modal visible={isFeaturedContentModalVisible} transparent={true} animationType="slide" onRequestClose={closeFeaturedContentModal}>
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient colors={['#f5f5f5', '#ffffff']} style={styles.upcomingEventsModalGradient}>
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Featured Content</Text>
+                  </View>
+                  <TouchableOpacity style={styles.upcomingEventsCloseButton} onPress={closeFeaturedContentModal}>
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`featured-content-modal-${featuredContent.length}`}
+                  data={featuredContent}
+                  keyExtractor={(item) => item.id.toString()}
+                  numColumns={4}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  renderItem={({ item: featured }) => {
+                    // Convert featured content to Template format for navigation
+                    const convertFeaturedContentToTemplate = (fc: FeaturedContent): Template => ({
+                      id: fc.id,
+                      name: fc.title,
+                      thumbnail: fc.imageUrl,
+                      category: fc.type || 'Featured Content',
+                      downloads: 0,
+                      isDownloaded: false,
+                      tags: [],
+                    });
+
+                    const selectedTemplate = convertFeaturedContentToTemplate(featured);
+                    const relatedTemplates = featuredContent
+                      .filter(fc => fc.id !== featured.id)
+                      .map(convertFeaturedContentToTemplate);
+
+                    return (
+                      <TouchableOpacity 
+                        activeOpacity={0.8} 
+                        style={styles.upcomingEventModalCard} 
+                        onPress={() => {
+                          closeFeaturedContentModal();
+                          navigation.navigate('PosterPlayer', {
+                            selectedPoster: selectedTemplate,
+                            relatedPosters: relatedTemplates,
+                          });
+                        }}
+                      >
+                        <View style={styles.upcomingEventModalImageContainer}>
+                          <OptimizedImage uri={featured.imageUrl} style={styles.upcomingEventModalImage} resizeMode="cover" />
+                          <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.upcomingEventModalOverlay} />
+                          <LinearGradient colors={['#4ecdc4', '#44a08d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.upcomingEventModalBadge}>
+                            <Icon name="star" size={12} color="#ffffff" />
+                            <Text style={styles.upcomingEventModalBadgeText}>Featured</Text>
+                          </LinearGradient>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -2948,14 +3059,15 @@ const styles = StyleSheet.create({
       paddingBottom: moderateScale(12),
     },
     upcomingEventModalRow: {
-      justifyContent: 'space-between', // Changed from flex-start for equal spacing
+      justifyContent: 'flex-start', // Changed from space-between to align items from left
       marginBottom: moderateScale(6),
       paddingHorizontal: 0,
     },
     upcomingEventModalCard: {
       width: isTablet 
-        ? (SCREEN_WIDTH * 0.90 - moderateScale(16)) / 4 - moderateScale(3)
-        : (SCREEN_WIDTH * 0.96 - moderateScale(16)) / 4 - moderateScale(3), // Equal spacing calculation
+        ? (SCREEN_WIDTH * 0.90 - moderateScale(16) - moderateScale(9)) / 4 // Account for spacing between items (3 gaps * 3 = 9)
+        : (SCREEN_WIDTH * 0.96 - moderateScale(16) - moderateScale(9)) / 4, // Account for spacing between items (3 gaps * 3 = 9)
+      marginRight: moderateScale(3), // Add spacing between items
       backgroundColor: '#ffffff',
       borderRadius: moderateScale(8),
       ...responsiveShadow.small,

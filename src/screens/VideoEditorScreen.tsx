@@ -162,6 +162,8 @@ const LANGUAGE_OPTIONS: LanguageOption[] = [
   { id: 'marathi', name: 'Marathi', code: 'MR' },
 ];
 
+const TEXT_FIELD_KEYS = ['companyName', 'phone', 'email', 'website', 'category', 'address', 'services'];
+
 const DEFAULT_FRAME_PROFILE: BusinessProfile = {
   id: 'default-profile',
   name: 'Your Business Name',
@@ -582,6 +584,46 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
 
     throw new Error(`Failed to download video for processing (status ${downloadResult.statusCode})`);
   }, []);
+
+  const validateBusinessContent = useCallback(() => {
+    const hasVisibleCustomLayers = layers.some(layer => {
+      if (layer.fieldType === 'footerBackground') return false;
+      if (layer.fieldType && visibleFields[layer.fieldType] === false) return false;
+      return true;
+    });
+
+    if (!hasVisibleCustomLayers) {
+      Alert.alert(
+        'Add Business Details',
+        'Please add at least one visible text, image, or logo layer before continuing.'
+      );
+      return false;
+    }
+
+    const visibleTextFields = TEXT_FIELD_KEYS.filter(key => visibleFields[key] !== false);
+    const missingTextForVisibleFields =
+      visibleTextFields.length > 0 &&
+      visibleTextFields.every(fieldKey => {
+        const textLayer = layers.find(layer =>
+          layer.type === 'text' &&
+          layer.fieldType === fieldKey &&
+          visibleFields[fieldKey] !== false &&
+          typeof layer.content === 'string' &&
+          layer.content.trim().length > 0
+        );
+        return !textLayer;
+      });
+
+    if (missingTextForVisibleFields) {
+      Alert.alert(
+        'Missing Business Info',
+        'Please fill in the visible business fields or hide them before continuing.'
+      );
+      return false;
+    }
+
+    return true;
+  }, [layers, visibleFields]);
 
   // Create theme-aware styles
   const getThemeStyles = () => ({
@@ -1227,6 +1269,10 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
       Alert.alert('No Content', 'Please add some content to your video before generating.');
       return;
     }
+
+    if (!validateBusinessContent()) {
+      return;
+    }
     
     // FFmpeg-based processing doesn't require VideoComposer module
     console.log('🎬 Using FFmpeg-based video processing service');
@@ -1322,7 +1368,7 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
       setIsProcessing(false);
       setProcessingProgress(0);
     }
-  }, [layers, isProcessing, currentCanvasWidth, currentCanvasHeight, selectedProfile, navigation]);
+  }, [layers, isProcessing, currentCanvasWidth, currentCanvasHeight, selectedProfile, navigation, validateBusinessContent]);
 
   // Cloud processing function
   const handleCloudProcessing = useCallback(async () => {
@@ -1349,6 +1395,10 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
       if (layers.length === 0) {
         console.log('⚠️ No layers found, but continuing with test overlay...');
         // Don't return early - let's test with a fallback overlay
+      }
+
+      if (!validateBusinessContent()) {
+        return;
       }
 
       if (isProcessing) {
@@ -1536,7 +1586,7 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
       setIsProcessing(false);
       setProcessingProgress(0);
     }
-  }, [layers, selectedVideo, isProcessing, currentCanvasWidth, currentCanvasHeight, selectedProfile, navigation]);
+  }, [layers, selectedVideo, isProcessing, currentCanvasWidth, currentCanvasHeight, selectedProfile, navigation, validateBusinessContent]);
 
   const createVideoCanvas = useCallback(() => {
     // Convert current layers to video canvas format
@@ -2151,6 +2201,10 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
       return;
     }
 
+    if (!validateBusinessContent()) {
+      return;
+    }
+
     const { payload: overlayPayload, overlayImageUri } = await buildOverlayPayload();
 
     if (Platform.OS !== 'android' || overlayPayload.length === 0) {
@@ -2242,6 +2296,7 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
     selectedProfile,
     selectedTemplateId,
     selectedVideo?.uri,
+    validateBusinessContent,
   ]);
 
   // Render functions

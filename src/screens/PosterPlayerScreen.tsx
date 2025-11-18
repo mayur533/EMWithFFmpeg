@@ -75,21 +75,27 @@ const templateContainsLanguage = (template: Template, languageId: string): boole
   // Extract tags once so we can reuse them
   const tags = Array.isArray(template.tags) ? template.tags : [];
 
-  // If the template doesn't specify languages or tags, treat it as language agnostic
-  if (templateLanguages.length === 0 && tags.length === 0) {
+  // Check if template explicitly matches the language in languages array
+  if (templateLanguages.length > 0 && templateLanguages.includes(normalizedLanguage)) {
     return true;
   }
 
-  if (templateLanguages.includes(normalizedLanguage)) {
-    return true;
-  }
-
+  // Check if template matches the language via tags
   if (tags.length > 0) {
     const normalizedTags = tags
       .filter((tag): tag is string => typeof tag === 'string')
       .map(tag => tag.toLowerCase());
     const keywords = LANGUAGE_KEYWORDS[normalizedLanguage] || [normalizedLanguage];
-    return keywords.some(keyword => normalizedTags.some(tag => tag.includes(keyword)));
+    if (keywords.some(keyword => normalizedTags.some(tag => tag.includes(keyword)))) {
+      return true;
+    }
+  }
+
+  // Only treat as language-agnostic if no language info exists AND we're on default language (English)
+  // This prevents templates without language info from showing for all languages
+  if (templateLanguages.length === 0 && tags.length === 0) {
+    // Show only for English (default language) if template has no language info
+    return normalizedLanguage === 'english';
   }
 
   return false;
@@ -196,6 +202,46 @@ const PosterPlayerScreen: React.FC = () => {
     setAllTemplates(Array.from(templatesMap.values()));
   }, [initialPoster, initialRelatedPosters, selectedLanguage]);
 
+  // Detect language from initial poster on mount
+  useEffect(() => {
+    const initialPosterWithLanguages = mergeTemplateLanguages(initialPoster);
+    
+    // Detect the primary language from the initial poster
+    const posterLanguages = Array.isArray(initialPosterWithLanguages.languages)
+      ? initialPosterWithLanguages.languages.map((lang: string) => lang.toLowerCase())
+      : [];
+    
+    const posterTags = Array.isArray(initialPosterWithLanguages.tags) ? initialPosterWithLanguages.tags : [];
+    const languagesFromTags = extractLanguagesFromTags(posterTags);
+    const allPosterLanguages = Array.from(new Set([...posterLanguages, ...languagesFromTags.map(l => l.toLowerCase())]));
+    
+    // Available language IDs that we support
+    const availableLanguageIds = ['english', 'marathi', 'hindi'];
+    
+    // Find the first matching language from available languages
+    const detectedLanguage = availableLanguageIds.find(langId => {
+      const normalizedLangId = langId.toLowerCase();
+      // Check if the poster's languages include this language
+      if (allPosterLanguages.includes(normalizedLangId)) {
+        return true;
+      }
+      // Check if tags contain keywords for this language
+      const keywords = LANGUAGE_KEYWORDS[normalizedLangId] || [normalizedLangId];
+      return keywords.some(keyword => 
+        allPosterLanguages.some(posterLang => posterLang.includes(keyword)) ||
+        posterTags.some((tag: unknown) => 
+          typeof tag === 'string' && tag.toLowerCase().includes(keyword)
+        )
+      );
+    });
+    
+    // If a language is detected, switch to it
+    if (detectedLanguage) {
+      setSelectedLanguage(detectedLanguage);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPoster?.id]); // Run when initial poster changes
+
   // Ensure poster selection respects the active language filter
   useEffect(() => {
     if (!allTemplates.length) {
@@ -236,9 +282,46 @@ const PosterPlayerScreen: React.FC = () => {
   }, [allTemplates, selectedLanguage]);
 
   const handlePosterSelect = useCallback((poster: Template) => {
-    // Simply update the preview - don't modify the grid at all
-    setCurrentPoster(mergeTemplateLanguages(poster));
-  }, []);
+    // Merge template languages to ensure we have all language info
+    const posterWithLanguages = mergeTemplateLanguages(poster);
+    
+    // Detect the primary language from the poster
+    const posterLanguages = Array.isArray(posterWithLanguages.languages)
+      ? posterWithLanguages.languages.map((lang: string) => lang.toLowerCase())
+      : [];
+    
+    const posterTags = Array.isArray(posterWithLanguages.tags) ? posterWithLanguages.tags : [];
+    const languagesFromTags = extractLanguagesFromTags(posterTags);
+    const allPosterLanguages = Array.from(new Set([...posterLanguages, ...languagesFromTags.map(l => l.toLowerCase())]));
+    
+    // Available language IDs that we support
+    const availableLanguageIds = ['english', 'marathi', 'hindi'];
+    
+    // Find the first matching language from available languages
+    const detectedLanguage = availableLanguageIds.find(langId => {
+      const normalizedLangId = langId.toLowerCase();
+      // Check if the poster's languages include this language
+      if (allPosterLanguages.includes(normalizedLangId)) {
+        return true;
+      }
+      // Check if tags contain keywords for this language
+      const keywords = LANGUAGE_KEYWORDS[normalizedLangId] || [normalizedLangId];
+      return keywords.some(keyword => 
+        allPosterLanguages.some(posterLang => posterLang.includes(keyword)) ||
+        posterTags.some((tag: unknown) => 
+          typeof tag === 'string' && tag.toLowerCase().includes(keyword)
+        )
+      );
+    });
+    
+    // If a language is detected and it's different from current selection, switch to it
+    if (detectedLanguage && detectedLanguage !== selectedLanguage) {
+      setSelectedLanguage(detectedLanguage);
+    }
+    
+    // Update the current poster
+    setCurrentPoster(posterWithLanguages);
+  }, [selectedLanguage]);
 
   const handleLanguageChange = useCallback((languageId: string) => {
     setSelectedLanguage(languageId);

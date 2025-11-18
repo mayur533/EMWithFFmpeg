@@ -122,9 +122,9 @@ const SubscriptionScreen: React.FC = () => {
   const plans = {
     quarterly: {
       name: 'Quarterly Pro',
-      price: '₹1',
-      originalPrice: '₹499',
-      savings: 'Special Offer',
+      price: '₹499',
+      originalPrice: '₹1,497',
+      savings: '67% OFF',
       period: '3 months',
       features: [
         'Unlimited poster creation',
@@ -254,8 +254,12 @@ const SubscriptionScreen: React.FC = () => {
       const uiPriceCandidate =
         Number.isFinite(uiPriceCandidateRaw) && uiPriceCandidateRaw > 0 ? uiPriceCandidateRaw : NaN;
 
-      // Temporary override: force ₹1 test payment regardless of plan price
-      const normalizedPlanAmountRupees = 1;
+      const normalizedPlanAmountRupees =
+        Number.isFinite(planPriceFromApi) && (planPriceFromApi as number) > 0
+          ? (planPriceFromApi as number)
+          : Number.isFinite(uiPriceCandidate) && (uiPriceCandidate as number) > 0
+            ? (uiPriceCandidate as number)
+            : 499;
 
       // Create payment order with backend to obtain order ID and amount
       const orderDetails = await subscriptionApi.createPaymentOrder({

@@ -4,6 +4,8 @@ buildscript {
         minSdkVersion = 24
         compileSdkVersion = 35  // Required by AndroidX libraries
         targetSdkVersion = 35
+        // NDK r28+ aligns libraries to 16 KB by default, but AGP 8.5.1+ handles it automatically
+        // Keep r25 for compatibility with React Native 0.80.2
         ndkVersion = "25.1.8937393"
         kotlinVersion = "1.9.24"
     }
@@ -12,9 +14,11 @@ buildscript {
         mavenCentral()
     }
     dependencies {
-        classpath("com.android.tools.build:gradle")
+        // Force AGP 8.7.3 explicitly for 16 KB page size support
+        // AGP 8.5.1+ automatically aligns native libraries for 16 KB pages
+        classpath("com.android.tools.build:gradle:8.7.3")
         classpath("com.facebook.react:react-native-gradle-plugin")
-        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlinVersion")
         classpath("com.google.gms:google-services:4.4.2")
     }
 }
@@ -27,6 +31,28 @@ allprojects {
         maven { url "https://maven.google.com" }
         maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
         maven { url "https://oss.sonatype.org/content/repositories/releases/" }
+    }
+    
+    // Force 16 KB page size alignment for all native builds
+    afterEvaluate { project ->
+        if (project.hasProperty("android")) {
+            android {
+                defaultConfig {
+                    externalNativeBuild {
+                        cmake {
+                            // Add linker flags for 16 KB page size support
+                            // These flags must be passed to the linker, not the compiler
+                            arguments "-DANDROID_PLATFORM=android-24"
+                            arguments "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+                            arguments "-DCMAKE_EXE_LINKER_FLAGS=-Wl,-z,max-page-size=16384"
+                            // Also try as compiler flags (some CMake setups need this)
+                            cppFlags "-Wl,-z,max-page-size=16384"
+                            cFlags "-Wl,-z,max-page-size=16384"
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 

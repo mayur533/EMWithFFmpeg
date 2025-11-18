@@ -392,6 +392,15 @@ class HomeApiService {
       
       const response = await api.get(url);
       
+      // ===== PRINT COMPLETE API RESPONSE =====
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('📦 [FEATURED CONTENT API] COMPLETE RESPONSE');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('📋 Response Status:', response.status);
+      console.log('📋 Response Headers:', JSON.stringify(response.headers, null, 2));
+      console.log('📋 Full Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('═══════════════════════════════════════════════════════');
+      
       // Validate response structure
       if (!response.data.success) {
         return {
@@ -426,6 +435,25 @@ class HomeApiService {
       }
       
       const convertedData = this.convertFeaturedContentUrls(featuredData);
+      
+      console.log('✅ [FEATURED CONTENT API] Response Details:');
+      console.log('   - Success:', response.data.success);
+      console.log('   - Message:', response.data.message);
+      console.log('   - Total Items:', convertedData.length);
+      
+      // Log first featured item as example
+      if (convertedData.length > 0) {
+        console.log('📸 [FIRST FEATURED ITEM EXAMPLE]:');
+        console.log('   Raw Data:', JSON.stringify(convertedData[0], null, 2));
+        console.log('   - ID:', convertedData[0].id);
+        console.log('   - Title:', convertedData[0].title);
+        console.log('   - Type:', convertedData[0].type);
+        console.log('   - Image URL:', convertedData[0].imageUrl);
+        console.log('   - Video URL:', convertedData[0].videoUrl);
+        console.log('   - Link:', convertedData[0].link);
+        console.log('   - Is Active:', convertedData[0].isActive);
+        console.log('   - Priority:', convertedData[0].priority);
+      }
       
       // Cache the result if default request
       if (shouldCache) {
@@ -588,9 +616,35 @@ class HomeApiService {
       
       const response = await api.get(url);
       
+      // ===== PRINT COMPLETE API RESPONSE =====
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('📦 [BUSINESS EVENTS API] COMPLETE RESPONSE');
+      console.log('═══════════════════════════════════════════════════════');
+      console.log('📋 Response Status:', response.status);
+      console.log('📋 Response Headers:', JSON.stringify(response.headers, null, 2));
+      console.log('📋 Full Response Data:', JSON.stringify(response.data, null, 2));
+      console.log('═══════════════════════════════════════════════════════');
+      
       // Convert relative URLs to absolute URLs
       if (response.data.success && response.data.data) {
         response.data.data = this.convertProfessionalTemplatesUrls(response.data.data);
+        
+        console.log('✅ [BUSINESS EVENTS API] Response Details:');
+        console.log('   - Success:', response.data.success);
+        console.log('   - Message:', response.data.message);
+        console.log('   - Total Templates:', response.data.data.length);
+        
+        // Log first template as example
+        if (response.data.data.length > 0) {
+          console.log('📸 [FIRST TEMPLATE EXAMPLE]:');
+          console.log('   Raw Data:', JSON.stringify(response.data.data[0], null, 2));
+          console.log('   - ID:', response.data.data[0].id);
+          console.log('   - Name:', response.data.data[0].name);
+          console.log('   - Category:', response.data.data[0].category);
+          console.log('   - Thumbnail URL:', response.data.data[0].thumbnail);
+          console.log('   - Is Premium:', response.data.data[0].isPremium);
+          console.log('   - Downloads:', response.data.data[0].downloads);
+        }
         
         // Cache the result if default request
         if (shouldCache) {

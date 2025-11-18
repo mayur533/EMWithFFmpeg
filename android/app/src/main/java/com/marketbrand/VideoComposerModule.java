@@ -329,8 +329,6 @@ public class VideoComposerModule extends ReactContextBaseJavaModule {
         // Process video frames
         boolean inputDone = false;
         boolean outputDone = false;
-        ByteBuffer[] inputBuffers = encoder.getInputBuffers();
-        ByteBuffer[] outputBuffers = encoder.getOutputBuffers();
         MediaCodec.BufferInfo bufferInfo = new MediaCodec.BufferInfo();
         
         long frameCount = 0;
@@ -341,7 +339,7 @@ public class VideoComposerModule extends ReactContextBaseJavaModule {
                 // Read input video frames
                 int inputBufferIndex = encoder.dequeueInputBuffer(10000);
                 if (inputBufferIndex >= 0) {
-                    ByteBuffer inputBuffer = inputBuffers[inputBufferIndex];
+                    ByteBuffer inputBuffer = encoder.getInputBuffer(inputBufferIndex);
                     int sampleSize = extractor.readSampleData(inputBuffer, 0);
                     
                     if (sampleSize < 0) {
@@ -363,9 +361,9 @@ public class VideoComposerModule extends ReactContextBaseJavaModule {
             // Handle encoder output
             int outputBufferIndex = encoder.dequeueOutputBuffer(bufferInfo, 10000);
             if (outputBufferIndex >= 0) {
-                ByteBuffer outputBuffer = outputBuffers[outputBufferIndex];
+                ByteBuffer outputBuffer = encoder.getOutputBuffer(outputBufferIndex);
                 
-                if (bufferInfo.size > 0) {
+                if (outputBuffer != null && bufferInfo.size > 0) {
                     muxer.writeSampleData(muxerVideoTrackIndex, outputBuffer, bufferInfo);
                 }
                 

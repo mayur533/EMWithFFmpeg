@@ -1,11 +1,14 @@
 import React, { useMemo, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, ViewStyle, ImageStyle, Image } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, ViewStyle, ImageStyle, Image, Text } from 'react-native';
+import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // Type-safe ResizeMode
 type ImageResizeMode = 'cover' | 'contain' | 'stretch' | 'center';
 
+const defaultFallbackSource = require('../assets/MainLogo/MB.png');
+
 interface OptimizedImageProps {
-  uri: string;
+  uri?: string | null;
   style?: ImageStyle | ViewStyle;
   resizeMode?: ImageResizeMode;
   showLoader?: boolean;
@@ -56,19 +59,25 @@ const ensureImageUri = (input: string): string => {
  * - Error handling
  */
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
-  uri,
+  uri = '',
   style,
   resizeMode = 'cover',
   showLoader = true,
   loaderColor = '#667eea',
   loaderSize = 'small',
-  fallbackSource,
+  fallbackSource = defaultFallbackSource,
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
-  const displayUri = useMemo(() => ensureImageUri(uri), [uri]);
+  const sanitizedUri = useMemo(() => (typeof uri === 'string' ? uri.trim() : ''), [uri]);
+  const displayUri = useMemo(() => (sanitizedUri ? ensureImageUri(sanitizedUri) : ''), [sanitizedUri]);
 
   const handleLoadStart = () => {
+    if (!sanitizedUri) {
+      setLoading(false);
+      setError(true);
+      return;
+    }
     setLoading(true);
     setError(false);
   };
@@ -80,27 +89,55 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   const handleError = (err?: any) => {
     setLoading(false);
     setError(true);
-    console.error('❌ [IMAGE LOAD ERROR]');
-    console.error('  - Requested URI:', uri);
-    console.error('  - Loaded URI   :', displayUri);
-    console.error('  - Error        :', err);
+    
+    // Extract meaningful error information
+    const errorMessage = err?.message || err?.toString() || 'Unknown error';
+    const errorCode = err?.nativeEvent?.error?.code || err?.code || 'N/A';
+    const errorDescription = err?.nativeEvent?.error?.description || err?.description || 'N/A';
+    
+    // Only log error if it's not a network timeout or similar transient error
+    if (!errorMessage.includes('network') && !errorMessage.includes('timeout')) {
+      console.warn('⚠️ [IMAGE LOAD ERROR]');
+      console.warn('  - Requested URI:', uri);
+      console.warn('  - Loaded URI   :', displayUri);
+      console.warn('  - Error Code   :', errorCode);
+      console.warn('  - Error Message:', errorMessage);
+      console.warn('  - Error Details:', errorDescription);
+      if (err?.nativeEvent) {
+        console.warn('  - Native Event :', JSON.stringify(err.nativeEvent, null, 2));
+      }
+    }
   };
+
+  const shouldShowFallback = error || !sanitizedUri;
 
   return (
     <View style={style}>
-      <Image
-        source={
-          error && fallbackSource
-            ? fallbackSource
-            : { uri: displayUri }
-        }
-        style={StyleSheet.absoluteFill}
-        resizeMode={resizeMode}
-        onLoadStart={handleLoadStart}
-        onLoadEnd={handleLoadEnd}
-        onError={handleError}
-      />
-      {loading && showLoader && (
+      {shouldShowFallback ? (
+        fallbackSource ? (
+          <Image
+            source={fallbackSource}
+            style={StyleSheet.absoluteFill}
+            resizeMode={resizeMode}
+          />
+        ) : (
+          // Show placeholder when error occurs and no fallback is provided
+          <View style={[StyleSheet.absoluteFill, styles.errorContainer]}>
+            <Icon name="image" size={40} color="#999999" />
+            <Text style={styles.errorText}>Image unavailable</Text>
+          </View>
+        )
+      ) : (
+        <Image
+          source={{ uri: displayUri }}
+          style={StyleSheet.absoluteFill}
+          resizeMode={resizeMode}
+          onLoadStart={handleLoadStart}
+          onLoadEnd={handleLoadEnd}
+          onError={handleError}
+        />
+      )}
+      {loading && showLoader && !error && sanitizedUri && (
         <View style={styles.loaderContainer}>
           <ActivityIndicator size={loaderSize} color={loaderColor} />
         </View>
@@ -115,6 +152,17 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     backgroundColor: 'rgba(0, 0, 0, 0.05)',
+  },
+  errorContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.05)',
+    gap: 8,
+  },
+  errorText: {
+    fontSize: 12,
+    color: '#999999',
+    fontWeight: '500',
   },
 });
 
