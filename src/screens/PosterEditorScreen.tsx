@@ -2829,7 +2829,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         </View>
         
         {/* Frame Selector */}
-        {showFrameSelector && (
+        {false && showFrameSelector && (
           <FrameSelector
             frames={frames}
             selectedFrameId={selectedFrame?.id || ''}
@@ -3125,34 +3125,36 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         </View>
         
         {/* Frames Section */}
-        <View style={styles.templatesSection}>
-          <View style={styles.templatesHeader}>
-            <Text style={styles.templatesTitle}>Frames</Text>
+        {false && (
+          <View style={styles.templatesSection}>
+            <View style={styles.templatesHeader}>
+              <Text style={styles.templatesTitle}>Frames</Text>
+            </View>
+            <ScrollView 
+              style={styles.templatesContent} 
+              horizontal={true}
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.templatesScrollContent}
+            >
+              {frames.map((frame) => (
+                <TouchableOpacity
+                  key={frame.id}
+                  style={[styles.templateButton, selectedFrame?.id === frame.id && styles.templateButtonActive]}
+                  onPress={() => applyFrame(frame)}
+                >
+                  <View style={styles.templatePreview}>
+                    <Image
+                      source={frame.background}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                    />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-          <ScrollView 
-            style={styles.templatesContent} 
-            horizontal={true}
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.templatesScrollContent}
-          >
-            {frames.map((frame) => (
-              <TouchableOpacity
-                key={frame.id}
-                style={[styles.templateButton, selectedFrame?.id === frame.id && styles.templateButtonActive]}
-                onPress={() => applyFrame(frame)}
-              >
-                <View style={styles.templatePreview}>
-                  <Image
-                    source={frame.background}
-                    style={{ width: '100%', height: '100%' }}
-                    resizeMode="cover"
-                  />
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        )}
         </View>
 
       {/* Business Profile Selection Modal */}

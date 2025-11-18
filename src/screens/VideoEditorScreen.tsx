@@ -47,6 +47,7 @@ import RNFS from 'react-native-fs';
 import LinearGradient from 'react-native-linear-gradient';
 import { responsiveText } from '../utils/responsiveUtils';
 import VideoOverlayProcessor, { OverlayPayload } from '../services/VideoOverlayProcessor';
+import PremiumTemplateModal from '../components/PremiumTemplateModal';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -336,6 +337,7 @@ const VideoEditorScreen: React.FC<VideoEditorScreenProps> = ({ route }) => {
   const [showProfileModal, setShowProfileModal] = useState(false);
   const [showProfileSelectionModal, setShowProfileSelectionModal] = useState(false);
   const [loadingProfiles, setLoadingProfiles] = useState(false);
+  const [showPremiumModal, setShowPremiumModal] = useState(false);
 
   // Template and frame state
   const [selectedFrame, setSelectedFrame] = useState<Frame | null>(null);
@@ -2191,6 +2193,11 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
   };
 
   const handleNext = useCallback(async () => {
+    if (!isSubscribed) {
+      setShowPremiumModal(true);
+      return;
+    }
+
     if (layers.length === 0) {
       Alert.alert('No Content', 'Please add at least one text, image, or logo layer to your video.');
       return;
@@ -2297,6 +2304,7 @@ const [videoDimensions, setVideoDimensions] = useState<{ width: number; height: 
     selectedTemplateId,
     selectedVideo?.uri,
     validateBusinessContent,
+    isSubscribed,
   ]);
 
   // Render functions
@@ -3355,39 +3363,41 @@ const renderLayer = (
         </View>
 
         {/* Frames Section */}
-        <View style={styles.templatesSection}>
-          <View style={styles.templatesHeader}>
-            <Text style={styles.templatesTitle}>Frames</Text>
+        {false && (
+          <View style={styles.templatesSection}>
+            <View style={styles.templatesHeader}>
+              <Text style={styles.templatesTitle}>Frames</Text>
+            </View>
+            <ScrollView
+              style={styles.templatesContent}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              showsVerticalScrollIndicator={false}
+              contentContainerStyle={styles.templatesScrollContent}
+            >
+              {frames.map(frame => (
+                <TouchableOpacity
+                  key={frame.id}
+                  style={[styles.templateButton, selectedFrame?.id === frame.id && styles.templateButtonActive]}
+                  onPress={() => applyFrame(frame)}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.templatePreview}>
+                    <Image
+                      source={frame.background}
+                      style={{ width: '100%', height: '100%' }}
+                      resizeMode="cover"
+                    />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
           </View>
-          <ScrollView
-            style={styles.templatesContent}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            showsVerticalScrollIndicator={false}
-            contentContainerStyle={styles.templatesScrollContent}
-          >
-            {frames.map(frame => (
-              <TouchableOpacity
-                key={frame.id}
-                style={[styles.templateButton, selectedFrame?.id === frame.id && styles.templateButtonActive]}
-                onPress={() => applyFrame(frame)}
-                activeOpacity={0.85}
-              >
-                <View style={styles.templatePreview}>
-                  <Image
-                    source={frame.background}
-                    style={{ width: '100%', height: '100%' }}
-                    resizeMode="cover"
-                  />
-                </View>
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
+        )}
         </ScrollView>
       </View>
       {/* Frame Selector */}
-      {showFrameSelector && (
+      {false && showFrameSelector && (
         <FrameSelector
           frames={frames}
           selectedFrameId={selectedFrame?.id || ''}
@@ -3532,6 +3542,18 @@ const renderLayer = (
           </View>
         </View>
       </Modal>
+
+      {/* Premium Modal */}
+      <PremiumTemplateModal
+        visible={showPremiumModal}
+        onClose={() => setShowPremiumModal(false)}
+        onUpgrade={async () => {
+          setShowPremiumModal(false);
+          await refreshSubscription();
+          (navigation as any).navigate('Subscription');
+        }}
+        selectedTemplate={null}
+      />
 
       {/* Business Profile Selection Modal */}
       <Modal

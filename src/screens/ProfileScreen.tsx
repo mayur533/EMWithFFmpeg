@@ -2105,7 +2105,8 @@ const ProfileScreen: React.FC = () => {
                 />
               </View>
 
-              {/* Business Category */}
+              {/* Business Category section hidden */}
+              {false && (
               <View style={[styles.inputGroup, {
                 marginBottom: dynamicModerateScale(12),
               }]}>
@@ -2193,6 +2194,7 @@ const ProfileScreen: React.FC = () => {
                 ))}
                 </ScrollView>
               </View>
+              )}
 
               {/* Phone Number */}
               <View style={[styles.inputGroup, {
