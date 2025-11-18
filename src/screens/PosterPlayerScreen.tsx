@@ -446,6 +446,31 @@ const PosterPlayerScreen: React.FC = () => {
     });
   }, [navigation, currentPoster, selectedLanguage]);
 
+  const getTemplateLanguageCode = useCallback((template: Template) => {
+    const templateLanguages = Array.isArray(template.languages)
+      ? template.languages
+          .filter((lang): lang is string => typeof lang === 'string')
+          .map(lang => lang.toLowerCase())
+      : [];
+
+    const firstMatch = templateLanguages.find(langId =>
+      languages.some(lang => lang.id === langId)
+    );
+    if (firstMatch) {
+      return languages.find(lang => lang.id === firstMatch)?.code || 'EN';
+    }
+
+    const templateTags = Array.isArray(template.tags)
+      ? template.tags.filter((tag): tag is string => typeof tag === 'string')
+      : [];
+    const languageMatch = languages.find(lang =>
+      (LANGUAGE_KEYWORDS[lang.id] || [lang.id]).some(keyword =>
+        templateTags.some(tag => tag.toLowerCase().includes(keyword))
+      )
+    );
+    return languageMatch?.code || 'EN';
+  }, [languages]);
+
   const renderRelatedPoster = useCallback(({ item }: { item: Template }) => (
     <TouchableOpacity
       style={[styles.relatedPosterCard, { width: cardWidth, height: cardHeight }]}
@@ -461,11 +486,11 @@ const PosterPlayerScreen: React.FC = () => {
       
       <View style={styles.relatedPosterLanguageBadge}>
         <Text style={styles.relatedPosterLanguageText}>
-          {languages.find(lang => lang.id === selectedLanguage)?.code || 'EN'}
+          {getTemplateLanguageCode(item)}
         </Text>
       </View>
     </TouchableOpacity>
-  ), [handlePosterSelect, selectedLanguage, languages, cardWidth, cardHeight, getHighQualityImageUrl]);
+  ), [handlePosterSelect, cardWidth, cardHeight, getHighQualityImageUrl, getTemplateLanguageCode]);
 
   const renderLanguageButton = useCallback((language: typeof languages[0]) => {
     const iconSize = getIconSize(12);
