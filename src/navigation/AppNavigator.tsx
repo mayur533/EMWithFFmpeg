@@ -271,83 +271,104 @@ const CustomTabBar = (props: any) => {
   const borderWidth = currentModerateScale(0.8); // Further reduced from 1
   
   const handleMyBusinessShortcut = async () => {
-    console.log('🖱️ [NAVBAR] Logo button clicked - fetching business posters');
-    try {
-      let response = await businessCategoryPostersApi.getUserCategoryPosters();
-      console.log('📦 [NAVBAR] User category response:', {
-        success: response.success,
-        count: response.data?.posters?.length || 0,
-        category: response.data?.category,
-      });
+    console.log('🖱️ [NAVBAR] Logo button clicked - navigating immediately');
+    
+    // Navigate immediately with placeholder data to avoid delay
+    const placeholderPoster = {
+      id: 'loading',
+      name: 'Loading...',
+      thumbnail: '',
+      category: 'General',
+      downloads: 0,
+      isDownloaded: false,
+      tags: [],
+    };
 
-      if (!response.success || !response.data?.posters?.length) {
-        console.warn('⚠️ [NAVBAR] No posters found for user category, trying General');
-        try {
-          response = await businessCategoryPostersApi.getPostersByCategory('General');
-          console.log('📦 [NAVBAR] General category response:', {
-            success: response.success,
-            count: response.data?.posters?.length || 0,
-          });
-        } catch (generalError) {
-          console.error('❌ [NAVBAR] General category fallback failed:', generalError);
-        }
-      }
+    const navigationParams = {
+      selectedPoster: placeholderPoster,
+      relatedPosters: [],
+      searchQuery: '',
+      templateSource: 'professional' as const,
+    };
 
-      if (response.success && response.data) {
-        const templates = (response.data.posters || []).map((poster) => ({
-          id: poster.id,
-          name: poster.title,
-          thumbnail: poster.imageUrl || poster.thumbnail,
-          category: poster.category,
-          downloads: poster.downloads || 0,
-          isDownloaded: false,
-          tags: poster.tags || [],
-        }));
-
-        const selectedPoster =
-          templates[0] ||
-          ({
-            id: 'empty',
-            name: 'No Posters Available',
-            thumbnail: '',
-            category: response.data.category || 'General',
-            downloads: 0,
-            isDownloaded: false,
-            tags: [],
-          } as any);
-
-        const relatedPosters = templates.slice(1);
-        const navigationParams = {
-          selectedPoster,
-          relatedPosters,
-          searchQuery: '',
-          templateSource: 'professional' as const,
-        };
-
-        if (navigationRef.isReady()) {
-          console.log('🚀 [NAVBAR] Navigating via navigationRef');
-          navigateService('PosterPlayer', navigationParams);
-          return;
-        }
-
-        const parentNavigator = props.navigation.getParent();
-        if (parentNavigator) {
-          console.log('🚀 [NAVBAR] Navigating via parent navigator');
-          parentNavigator.navigate('PosterPlayer', navigationParams);
-          return;
-        }
-
-        console.warn('⚠️ [NAVBAR] Parent navigator unavailable, attempting direct navigation');
+    // Navigate immediately
+    if (navigationRef.isReady()) {
+      console.log('🚀 [NAVBAR] Navigating immediately via navigationRef');
+      navigateService('PosterPlayer', navigationParams);
+    } else {
+      const parentNavigator = props.navigation.getParent();
+      if (parentNavigator) {
+        console.log('🚀 [NAVBAR] Navigating immediately via parent navigator');
+        parentNavigator.navigate('PosterPlayer', navigationParams);
+      } else {
+        console.log('🚀 [NAVBAR] Navigating immediately via direct navigation');
         props.navigation.navigate('PosterPlayer', navigationParams);
-        return;
       }
-
-      console.warn('⚠️ [NAVBAR] API failed - falling back to MyBusiness tab');
-      props.navigation.navigate('MyBusiness');
-    } catch (error) {
-      console.error('❌ [NAVBAR] Error handling business posters:', error);
-      props.navigation.navigate('MyBusiness');
     }
+
+    // Load data in the background after navigation
+    (async () => {
+      try {
+        console.log('📡 [NAVBAR] Fetching business posters in background');
+        let response = await businessCategoryPostersApi.getUserCategoryPosters();
+        console.log('📦 [NAVBAR] User category response:', {
+          success: response.success,
+          count: response.data?.posters?.length || 0,
+          category: response.data?.category,
+        });
+
+        if (!response.success || !response.data?.posters?.length) {
+          console.warn('⚠️ [NAVBAR] No posters found for user category, trying General');
+          try {
+            response = await businessCategoryPostersApi.getPostersByCategory('General');
+            console.log('📦 [NAVBAR] General category response:', {
+              success: response.success,
+              count: response.data?.posters?.length || 0,
+            });
+          } catch (generalError) {
+            console.error('❌ [NAVBAR] General category fallback failed:', generalError);
+          }
+        }
+
+        if (response.success && response.data && response.data.posters?.length > 0) {
+          const templates = (response.data.posters || []).map((poster) => ({
+            id: poster.id,
+            name: poster.title,
+            thumbnail: poster.imageUrl || poster.thumbnail,
+            category: poster.category,
+            downloads: poster.downloads || 0,
+            isDownloaded: false,
+            tags: poster.tags || [],
+          }));
+
+          const selectedPoster = templates[0];
+          const relatedPosters = templates.slice(1);
+          
+          // Update navigation params if screen is still active
+          // Navigate again with updated params - React Navigation will update the route
+          const updatedParams = {
+            selectedPoster,
+            relatedPosters,
+            searchQuery: '',
+            templateSource: 'professional' as const,
+          };
+
+          // Update the current screen with loaded data
+          if (navigationRef.isReady()) {
+            const currentRoute = navigationRef.getCurrentRoute();
+            if (currentRoute?.name === 'PosterPlayer') {
+              console.log('🔄 [NAVBAR] Updating PosterPlayer with loaded data');
+              // Navigate again with updated params - React Navigation will update the route params
+              navigateService('PosterPlayer', updatedParams);
+            }
+          }
+        } else {
+          console.warn('⚠️ [NAVBAR] No posters available');
+        }
+      } catch (error) {
+        console.error('❌ [NAVBAR] Error loading business posters in background:', error);
+      }
+    })();
   };
 
   return (

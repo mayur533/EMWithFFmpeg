@@ -21,7 +21,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import authService from '../services/auth';
-import authApi from '../services/authApi';
+import authApi, { ProfileResponse, UserProfile } from '../services/authApi';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import userBusinessProfilesService from '../services/userBusinessProfiles';
 import businessProfileService from '../services/businessProfile';
@@ -1282,8 +1282,17 @@ const ProfileScreen: React.FC = () => {
         
         const response = await authApi.uploadProfileImage(userId, imageUri);
         
-        // Extract the logo URL from response
-        uploadedLogoUrl = response.data?.logo || response.data?.data?.logo;
+        // Extract the logo URL from response (handle multiple response shapes)
+        const responsePayload: Partial<UserProfile> | undefined =
+          (response as ProfileResponse)?.data ??
+          (response as any)?.data ??
+          (response as any);
+
+        uploadedLogoUrl =
+          responsePayload?.logo ||
+          responsePayload?.companyLogo ||
+          (response as any)?.data?.data?.logo ||
+          (response as any)?.logo;
         
         if (!uploadedLogoUrl) {
           console.error('❌ [STEP 2] No logo URL in response:', response);

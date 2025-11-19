@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { View, ActivityIndicator, StyleSheet, ViewStyle, ImageStyle, Image, Text } from 'react-native';
+import { View, ActivityIndicator, StyleSheet, ViewStyle, ImageStyle, Image, Text, Dimensions, StyleProp } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 
 // Type-safe ResizeMode
@@ -9,7 +9,7 @@ const defaultFallbackSource = require('../assets/MainLogo/MB.png');
 
 interface OptimizedImageProps {
   uri?: string | null;
-  style?: ImageStyle | ViewStyle;
+  style?: StyleProp<ViewStyle | ImageStyle>;
   resizeMode?: ImageResizeMode;
   showLoader?: boolean;
   loaderColor?: string;
@@ -49,6 +49,68 @@ const ensureImageUri = (input: string): string => {
   }
 };
 
+const CLOUDINARY_UPLOAD_SEGMENT = '/upload/';
+const CLOUDINARY_MIN_WIDTH = 320;
+const CLOUDINARY_MAX_WIDTH = 1200;
+const CLOUDINARY_DEFAULT_WIDTH = Math.min(
+  CLOUDINARY_MAX_WIDTH,
+  Math.max(CLOUDINARY_MIN_WIDTH, Math.round(Dimensions.get('window').width || CLOUDINARY_MIN_WIDTH)),
+);
+const CLOUDINARY_BASE_TRANSFORM = 'f_auto,q_auto:eco,c_limit';
+
+const clampWidth = (value?: number | null): number => {
+  if (typeof value !== 'number' || Number.isNaN(value)) {
+    return CLOUDINARY_DEFAULT_WIDTH;
+  }
+  return Math.min(CLOUDINARY_MAX_WIDTH, Math.max(CLOUDINARY_MIN_WIDTH, Math.round(value)));
+};
+
+const getTargetWidth = (style?: StyleProp<ViewStyle | ImageStyle>): number => {
+  if (!style) {
+    return CLOUDINARY_DEFAULT_WIDTH;
+  }
+
+  const flattened = StyleSheet.flatten(style);
+  const { width, height } = flattened || {};
+
+  if (typeof width === 'number') {
+    return clampWidth(width);
+  }
+
+  if (typeof height === 'number') {
+    // Fall back to height to avoid downloading far larger bitmaps than necessary
+    return clampWidth(height);
+  }
+
+  return CLOUDINARY_DEFAULT_WIDTH;
+};
+
+const applyCloudinaryTransform = (input: string, targetWidth: number): string => {
+  if (!input || !input.includes('res.cloudinary.com') || !input.includes(CLOUDINARY_UPLOAD_SEGMENT)) {
+    return input;
+  }
+
+  try {
+    const [prefix, remainder] = input.split(CLOUDINARY_UPLOAD_SEGMENT);
+    if (!remainder) {
+      return input;
+    }
+
+    const [firstSegment, ...restSegments] = remainder.split('/');
+
+    // If the first segment is not a version string, we assume a transform already exists
+    if (firstSegment && !/^v\d+/.test(firstSegment)) {
+      return input;
+    }
+
+    const restPath = [firstSegment, ...restSegments].join('/');
+    const transform = `${CLOUDINARY_BASE_TRANSFORM},w_${targetWidth}`;
+    return `${prefix}${CLOUDINARY_UPLOAD_SEGMENT}${transform}/${restPath}`;
+  } catch (error) {
+    return input;
+  }
+};
+
 /**
  * OptimizedImage Component
  * 
@@ -69,8 +131,13 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
 }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const targetWidth = useMemo(() => getTargetWidth(style), [style]);
   const sanitizedUri = useMemo(() => (typeof uri === 'string' ? uri.trim() : ''), [uri]);
   const displayUri = useMemo(() => (sanitizedUri ? ensureImageUri(sanitizedUri) : ''), [sanitizedUri]);
+  const optimizedUri = useMemo(
+    () => (displayUri ? applyCloudinaryTransform(displayUri, targetWidth) : ''),
+    [displayUri, targetWidth],
+  );
 
   const handleLoadStart = () => {
     if (!sanitizedUri) {
@@ -100,6 +167,10 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
       console.warn('⚠️ [IMAGE LOAD ERROR]');
       console.warn('  - Requested URI:', uri);
       console.warn('  - Loaded URI   :', displayUri);
+      if (optimizedUri && optimizedUri !== displayUri) {
+        console.warn('  - Optimized URI:', optimizedUri);
+        console.warn('  - Target Width :', targetWidth);
+      }
       console.warn('  - Error Code   :', errorCode);
       console.warn('  - Error Message:', errorMessage);
       console.warn('  - Error Details:', errorDescription);
@@ -129,7 +200,7 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
         )
       ) : (
         <Image
-          source={{ uri: displayUri }}
+          source={{ uri: optimizedUri }}
           style={StyleSheet.absoluteFill}
           resizeMode={resizeMode}
           onLoadStart={handleLoadStart}

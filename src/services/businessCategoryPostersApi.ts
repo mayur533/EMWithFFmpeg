@@ -59,9 +59,15 @@ class BusinessCategoryPostersApiService {
       }
 
       console.log(`📡 [CATEGORY POSTERS API] Fetching posters for: ${category}`);
-      console.log(`📡 [CATEGORY POSTERS API] Endpoint: /api/mobile/posters/category/${encodeURIComponent(category)}`);
+      console.log(
+        `📡 [CATEGORY POSTERS API] Endpoint: /api/mobile/posters/category/${encodeURIComponent(
+          category,
+        )}?limit=200`,
+      );
       
-      const response = await api.get(`/api/mobile/posters/category/${encodeURIComponent(category)}`);
+      const response = await api.get(
+        `/api/mobile/posters/category/${encodeURIComponent(category)}?limit=200`,
+      );
       
       // ===== PRINT COMPLETE API RESPONSE =====
       console.log('═══════════════════════════════════════════════════════');
@@ -171,8 +177,12 @@ class BusinessCategoryPostersApiService {
         console.log('⚠️ [USER CATEGORY POSTERS] No profiles found, using General category');
         return this.getPostersByCategory('General');
       }
-    } catch (error) {
-      console.error('❌ [USER CATEGORY POSTERS] Error:', error.message);
+    } catch (error: unknown) {
+      const errorMessage =
+        typeof error === 'object' && error !== null && 'message' in error
+          ? String((error as any).message)
+          : 'Unknown error';
+      console.error('❌ [USER CATEGORY POSTERS] Error:', errorMessage);
       // Return empty data when there's an error
       return {
         success: false,

@@ -144,6 +144,23 @@ const PosterPlayerScreen: React.FC = () => {
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string | null>(null);
 
+  // Watch for route param changes and update currentPoster when real data arrives
+  useEffect(() => {
+    // Skip if we have a loading placeholder
+    if (initialPoster.id === 'loading' || !initialPoster.thumbnail) {
+      return;
+    }
+
+    // If currentPoster is still the loading placeholder, update it
+    if (currentPoster.id === 'loading' || !currentPoster.thumbnail) {
+      const newPoster = mergeTemplateLanguages(initialPoster);
+      if (newPoster.thumbnail) {
+        console.log('🔄 [POSTER PLAYER] Updating currentPoster with loaded data:', newPoster.id);
+        setCurrentPoster(newPoster);
+      }
+    }
+  }, [initialPoster, currentPoster]);
+
   // Get high quality image URL for preview (replace thumbnail params with high quality)
   const getHighQualityImageUrl = (poster: Template): string => {
     // Check if poster has a previewUrl property (cast to any to access)
@@ -186,6 +203,11 @@ const PosterPlayerScreen: React.FC = () => {
   useEffect(() => {
     const ensureLanguages = (template: Template): Template => mergeTemplateLanguages(template);
 
+    // Skip if we have a loading placeholder
+    if (initialPoster.id === 'loading') {
+      return;
+    }
+
     const templatesToMerge = initialRelatedPosters.find(p => p.id === initialPoster.id)
       ? initialRelatedPosters
       : [initialPoster, ...initialRelatedPosters];
@@ -198,9 +220,25 @@ const PosterPlayerScreen: React.FC = () => {
     });
 
     // Always include the initial poster (ensuring languages too)
-    templatesMap.set(initialPoster.id, ensureLanguages(initialPoster));
+    const ensuredInitialPoster = ensureLanguages(initialPoster);
+    templatesMap.set(initialPoster.id, ensuredInitialPoster);
 
-    setAllTemplates(Array.from(templatesMap.values()));
+    const updatedTemplates = Array.from(templatesMap.values());
+    setAllTemplates(updatedTemplates);
+
+    // Update currentPoster when new data arrives (when initialPoster changes from loading to real data)
+    // Check if currentPoster is still the loading placeholder or has no thumbnail
+    setCurrentPoster(prevPoster => {
+      if (prevPoster.id === 'loading' || !prevPoster.thumbnail) {
+        // If we have a valid poster with thumbnail, use it
+        if (ensuredInitialPoster.thumbnail) {
+          return ensuredInitialPoster;
+        }
+      }
+      // Otherwise, try to find the current poster in the updated templates
+      const foundPoster = updatedTemplates.find(t => t.id === prevPoster.id);
+      return foundPoster || ensuredInitialPoster;
+    });
   }, [initialPoster, initialRelatedPosters, selectedLanguage]);
 
   // Detect language from initial poster on mount

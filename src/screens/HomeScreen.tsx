@@ -181,8 +181,8 @@ const HomeScreen: React.FC = React.memo(() => {
       // Load all 4 APIs in parallel (cache will make this instant on repeat loads)
       const [featuredResponse, eventsResponse, templatesResponse, videosResponse] = await Promise.allSettled([
         homeApi.getFeaturedContent({ limit: 10 }),
-        homeApi.getUpcomingEvents({ limit: 20 }),
-        homeApi.getProfessionalTemplates({ limit: 20 }),
+        homeApi.getUpcomingEvents({ limit: 200 }),
+        homeApi.getProfessionalTemplates({ limit: 200 }),
         homeApi.getVideoContent({ limit: 20 })
       ]);
 

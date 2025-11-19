@@ -273,7 +273,7 @@ class GreetingTemplatesService {
       if (language) {
         params.append('language', language);
       }
-      params.append('limit', '50');
+      params.append('limit', '200');
       
       const response = await api.get(`/api/mobile/greetings/templates?${params.toString()}`);
       
