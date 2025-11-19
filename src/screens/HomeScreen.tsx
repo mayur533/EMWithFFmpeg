@@ -1180,9 +1180,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         colors={['transparent', 'rgba(0,0,0,0.7)']}
                         style={styles.upcomingEventOverlay}
                       />
-                      <View style={styles.upcomingEventBadge}>
+                      {/* <View style={styles.upcomingEventBadge}>
                         <Text style={styles.upcomingEventBadgeText}>{event.category}</Text>
-                      </View>
+                      </View> */}
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -1601,7 +1601,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {event.isFree ? (
+                        {/* {event.isFree ? (
                           <LinearGradient
                             colors={['#4ecdc4', '#44a08d']}
                             start={{ x: 0, y: 0 }}
@@ -1616,7 +1616,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                             <Icon name="star" size={moderateScale(9)} color="#FFD700" />
                             <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
                           </View>
-                        )}
+                        )} */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -1686,7 +1686,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {template.isPremium ? (
+                        {/* {template.isPremium ? (
                           <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
                             <Icon name="star" size={moderateScale(9)} color="#FFD700" />
                             <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
@@ -1701,7 +1701,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                             <Icon name="star" size={moderateScale(9)} color="#ffffff" />
                             <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
                           </LinearGradient>
-                        )}
+                        )} */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -1771,7 +1771,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {video.isPremium ? (
+                        {/* {video.isPremium ? (
                           <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
                             <Icon name="star" size={moderateScale(9)} color="#FFD700" />
                             <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
@@ -1786,7 +1786,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                             <Icon name="star" size={moderateScale(9)} color="#ffffff" />
                             <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
                           </LinearGradient>
-                        )}
+                        )} */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -1857,7 +1857,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        <LinearGradient
+                        {/* <LinearGradient
                           colors={['#4ecdc4', '#44a08d']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
@@ -1865,7 +1865,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         >
                           <Icon name="star" size={12} color="#ffffff" />
                           <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient>
+                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -1929,7 +1929,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        <LinearGradient
+                        {/* <LinearGradient
                           colors={['#4ecdc4', '#44a08d']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
@@ -1937,7 +1937,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         >
                           <Icon name="star" size={12} color="#ffffff" />
                           <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient>
+                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -2001,7 +2001,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        <LinearGradient
+                        {/* <LinearGradient
                           colors={['#4ecdc4', '#44a08d']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
@@ -2009,7 +2009,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         >
                           <Icon name="star" size={12} color="#ffffff" />
                           <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient>
+                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -2073,7 +2073,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        <LinearGradient
+                        {/* <LinearGradient
                           colors={['#4ecdc4', '#44a08d']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
@@ -2081,7 +2081,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         >
                           <Icon name="star" size={12} color="#ffffff" />
                           <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient>
+                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -2145,7 +2145,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        <LinearGradient
+                        {/* <LinearGradient
                           colors={['#4ecdc4', '#44a08d']}
                           start={{ x: 0, y: 0 }}
                           end={{ x: 1, y: 0 }}
@@ -2153,7 +2153,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         >
                           <Icon name="star" size={12} color="#ffffff" />
                           <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient>
+                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -2482,10 +2482,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                         <View style={styles.upcomingEventModalImageContainer}>
                           <OptimizedImage uri={featured.imageUrl} style={styles.upcomingEventModalImage} resizeMode="cover" />
                           <LinearGradient colors={['transparent', 'rgba(0,0,0,0.8)']} style={styles.upcomingEventModalOverlay} />
-                          <LinearGradient colors={['#4ecdc4', '#44a08d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.upcomingEventModalBadge}>
+                          {/* <LinearGradient colors={['#4ecdc4', '#44a08d']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.upcomingEventModalBadge}>
                             <Icon name="star" size={12} color="#ffffff" />
                             <Text style={styles.upcomingEventModalBadgeText}>Featured</Text>
-                          </LinearGradient>
+                          </LinearGradient> */}
                         </View>
                       </TouchableOpacity>
                     );

@@ -109,7 +109,7 @@ const HelpSupportScreen: React.FC = () => {
   const faqs: FAQItem[] = [
     {
       question: 'How do I create a custom template?',
-      answer: 'Navigate to the Templates section, select a base template, and tap on "Customize". You can then add your business details, change colors, fonts, and images to match your brand.',
+      answer: 'Navigate to the Template screen, then upload an image or video. After uploading, you can apply templates, add text, and customize your content as needed.',
     },
     {
       question: 'How do I download my created content?',
@@ -121,7 +121,7 @@ const HelpSupportScreen: React.FC = () => {
     },
     {
       question: 'Can I cancel my subscription?',
-      answer: 'Yes, you can cancel your subscription at any time from the Profile > Subscription section. Your access will continue until the end of your current billing period.',
+      answer: 'Subscriptions cannot be cancelled once activated. Your subscription will remain active for the entire billing period you selected. Please contact our support team for any concerns regarding your subscription.',
     },
     {
       question: 'How do I add my business profile?',
@@ -129,7 +129,7 @@ const HelpSupportScreen: React.FC = () => {
     },
     {
       question: 'Are my designs saved automatically?',
-      answer: 'Yes, all your work is automatically saved to your account. You can access your drafts and completed designs from the "My Designs" section at any time.',
+      answer: 'No, designs are not saved automatically. Please manually save your work before closing the app or navigating away. It is recommended to download your completed designs to your device gallery to ensure they are preserved.',
     },
     {
       question: 'How do I share my content?',
@@ -274,25 +274,25 @@ const HelpSupportScreen: React.FC = () => {
       >
         {/* Header */}
         <View style={[styles.header, {
-          paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
-          paddingVertical: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
+          paddingHorizontal: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(6),
+          paddingVertical: isTabletDevice ? dynamicModerateScale(5) : dynamicModerateScale(4),
         }]}>
           <TouchableOpacity
             style={[styles.backButton, {
-              width: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
-              height: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+              width: isTabletDevice ? dynamicModerateScale(26) : dynamicModerateScale(22),
+              height: isTabletDevice ? dynamicModerateScale(26) : dynamicModerateScale(22),
             }]}
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#333333" />
+            <Icon name="arrow-back" size={isTabletDevice ? getIconSize(16) : getIconSize(14)} color="#333333" />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, {
-            fontSize: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12),
+            fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
           }]}>Help & Support</Text>
           <View style={[styles.backButton, {
-            width: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
-            height: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+            width: isTabletDevice ? dynamicModerateScale(26) : dynamicModerateScale(22),
+            height: isTabletDevice ? dynamicModerateScale(26) : dynamicModerateScale(22),
           }]} />
         </View>
 
@@ -462,7 +462,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight || 0 : 0,
+    paddingTop: Platform.OS === 'android' ? (StatusBar.currentHeight || 0) * 0.3 : 0,
   },
   backButton: {
     justifyContent: 'center',
