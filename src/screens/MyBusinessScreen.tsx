@@ -365,6 +365,12 @@ const MyBusinessScreen: React.FC = () => {
                 paddingHorizontal: dynamicModerateScale(8),
                 paddingBottom: dynamicModerateScale(12),
               }]}
+              // Performance optimizations for large lists
+              removeClippedSubviews={true}
+              maxToRenderPerBatch={isTablet ? 12 : 8}
+              windowSize={10}
+              initialNumToRender={isTablet ? 12 : 8}
+              updateCellsBatchingPeriod={50}
             />
           ) : (
             <View style={[styles.emptyPostersContainer, {

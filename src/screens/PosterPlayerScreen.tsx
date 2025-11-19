@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
+import React, { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -143,23 +143,7 @@ const PosterPlayerScreen: React.FC = () => {
   const [languageMenuVisible, setLanguageMenuVisible] = useState<boolean>(false);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string | null>(null);
-
-  // Watch for route param changes and update currentPoster when real data arrives
-  useEffect(() => {
-    // Skip if we have a loading placeholder
-    if (initialPoster.id === 'loading' || !initialPoster.thumbnail) {
-      return;
-    }
-
-    // If currentPoster is still the loading placeholder, update it
-    if (currentPoster.id === 'loading' || !currentPoster.thumbnail) {
-      const newPoster = mergeTemplateLanguages(initialPoster);
-      if (newPoster.thumbnail) {
-        console.log('🔄 [POSTER PLAYER] Updating currentPoster with loaded data:', newPoster.id);
-        setCurrentPoster(newPoster);
-      }
-    }
-  }, [initialPoster, currentPoster]);
+  const preloadedImagesRef = useRef<Set<string>>(new Set());
 
   // Get high quality image URL for preview (replace thumbnail params with high quality)
   const getHighQualityImageUrl = (poster: Template): string => {
@@ -198,6 +182,81 @@ const PosterPlayerScreen: React.FC = () => {
     const highQualityUrl = `${url}${separator}quality=high&width=2400`;
     return highQualityUrl;
   };
+
+  // Preload images for better scrolling performance
+  const preloadImages = useCallback((posters: Template[], startIndex: number = 0, count: number = 20) => {
+    const imagesToPreload = posters.slice(startIndex, startIndex + count);
+    imagesToPreload.forEach(poster => {
+      const imageUrl = poster.thumbnail || (poster as any).previewUrl || (poster as any).content?.background;
+      if (imageUrl && !preloadedImagesRef.current.has(imageUrl)) {
+        preloadedImagesRef.current.add(imageUrl);
+        Image.prefetch(imageUrl).catch(() => {
+          // Silently fail if prefetch fails
+        });
+      }
+    });
+  }, []);
+
+  // Preload images when filteredPosters change
+  useEffect(() => {
+    if (filteredPosters.length > 0) {
+      // Preload first batch immediately
+      preloadImages(filteredPosters, 0, 20);
+      
+      // Preload next batch after a short delay
+      const timeoutId = setTimeout(() => {
+        preloadImages(filteredPosters, 20, 20);
+      }, 500);
+      
+      return () => clearTimeout(timeoutId);
+    }
+  }, [filteredPosters, preloadImages]);
+
+  // Handle viewable items change for progressive image loading
+  const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
+    if (viewableItems.length > 0) {
+      const lastVisibleIndex = Math.max(...viewableItems.map((item: any) => item.index));
+      // Preload next 20 items when user scrolls near the end
+      if (lastVisibleIndex >= filteredPosters.length - 10) {
+        const nextBatchStart = Math.min(lastVisibleIndex + 1, filteredPosters.length);
+        preloadImages(filteredPosters, nextBatchStart, 20);
+      }
+    }
+  }, [filteredPosters, preloadImages]);
+
+  const viewabilityConfig = useRef({
+    itemVisiblePercentThreshold: 50,
+    minimumViewTime: 100,
+  });
+
+  // Memory cleanup on unmount
+  useEffect(() => {
+    return () => {
+      // Clear preloaded images ref
+      preloadedImagesRef.current.clear();
+      // Clear image cache if available
+      if (Image.clearMemoryCache) {
+        Image.clearMemoryCache();
+      }
+    };
+  }, []);
+
+  // Watch for route param changes and update currentPoster when real data arrives
+  useEffect(() => {
+    // Skip if we have a loading placeholder
+    if (initialPoster.id === 'loading' || !initialPoster.thumbnail) {
+      return;
+    }
+
+    // If currentPoster is still the loading placeholder, update it
+    if (currentPoster.id === 'loading' || !currentPoster.thumbnail) {
+      const newPoster = mergeTemplateLanguages(initialPoster);
+      if (newPoster.thumbnail) {
+        console.log('🔄 [POSTER PLAYER] Updating currentPoster with loaded data:', newPoster.id);
+        setCurrentPoster(newPoster);
+      }
+    }
+  }, [initialPoster, currentPoster]);
 
   // Sync state when route params change
   useEffect(() => {
@@ -707,6 +766,24 @@ const PosterPlayerScreen: React.FC = () => {
                showsVerticalScrollIndicator={true}
                contentContainerStyle={styles.relatedList}
                style={styles.relatedFlatList}
+               // Performance optimizations for large lists
+               removeClippedSubviews={true}
+               maxToRenderPerBatch={screenWidth >= 768 ? 12 : 8}
+               windowSize={10}
+               initialNumToRender={screenWidth >= 768 ? 12 : 8}
+               updateCellsBatchingPeriod={50}
+               getItemLayout={(data, index) => {
+                 const numColumns = screenWidth >= 768 ? 4 : 3;
+                 const gap = moderateScale(3);
+                 const row = Math.floor(index / numColumns);
+                 return {
+                   length: cardHeight + gap,
+                   offset: (cardHeight + gap) * row,
+                   index,
+                 };
+               }}
+               onViewableItemsChanged={onViewableItemsChanged}
+               viewabilityConfig={viewabilityConfig.current}
              />
            ) : (
              <View style={styles.noPostersContainer}>
