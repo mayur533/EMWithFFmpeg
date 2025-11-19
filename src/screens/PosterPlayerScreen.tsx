@@ -101,6 +101,58 @@ const templateContainsLanguage = (template: Template, languageId: string): boole
   return false;
 };
 
+// Memoized poster item component for better performance (moved outside to prevent recreation)
+interface RelatedPosterItemProps {
+  item: Template;
+  cardWidth: number;
+  cardHeight: number;
+  imageUrl: string;
+  languageCode: string;
+  onPress: (item: Template) => void;
+}
+
+const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({ 
+  item, 
+  cardWidth, 
+  cardHeight,
+  imageUrl,
+  languageCode,
+  onPress
+}) => {
+  const handlePress = useCallback(() => onPress(item), [item, onPress]);
+
+  return (
+    <TouchableOpacity
+      style={[styles.relatedPosterCard, { width: cardWidth, height: cardHeight }]}
+      onPress={handlePress}
+      activeOpacity={0.8}
+    >
+      <OptimizedImage
+        uri={imageUrl}
+        style={styles.relatedPosterImage}
+        resizeMode="cover"
+      />
+      <View style={styles.relatedPosterLanguageBadge}>
+        <Text style={styles.relatedPosterLanguageText}>
+          {languageCode}
+        </Text>
+      </View>
+    </TouchableOpacity>
+  );
+}, (prevProps, nextProps) => {
+  // Custom comparison function for better performance
+  return (
+    prevProps.item.id === nextProps.item.id &&
+    prevProps.item.thumbnail === nextProps.item.thumbnail &&
+    prevProps.imageUrl === nextProps.imageUrl &&
+    prevProps.languageCode === nextProps.languageCode &&
+    prevProps.cardWidth === nextProps.cardWidth &&
+    prevProps.cardHeight === nextProps.cardHeight
+  );
+});
+
+RelatedPosterItem.displayName = 'RelatedPosterItem';
+
 type PosterPlayerScreenRouteProp = RouteProp<MainStackParamList, 'PosterPlayer'>;
 type PosterPlayerScreenNavigationProp = StackNavigationProp<MainStackParamList, 'PosterPlayer'>;
 
@@ -145,7 +197,7 @@ const PosterPlayerScreen: React.FC = () => {
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string | null>(null);
   const preloadedImagesRef = useRef<Set<string>>(new Set());
 
-  // Get high quality image URL for preview (replace thumbnail params with high quality)
+  // Get high quality image URL for preview (full quality, no width restrictions)
   const getHighQualityImageUrl = (poster: Template): string => {
     // Check if poster has a previewUrl property (cast to any to access)
     const previewUrl = (poster as any).previewUrl;
@@ -167,6 +219,28 @@ const PosterPlayerScreen: React.FC = () => {
       return '';
     }
     
+    // For Cloudinary URLs, remove all transforms to get original full quality
+    if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+      try {
+        const [prefix, remainder] = url.split('/upload/');
+        if (remainder) {
+          // Extract the version and path (everything after /upload/)
+          // Remove any existing transforms (everything before version like v123456)
+          const parts = remainder.split('/');
+          const versionIndex = parts.findIndex(p => /^v\d+/.test(p));
+          
+          if (versionIndex >= 0) {
+            // Reconstruct URL with only version and path, no transforms = original quality
+            const versionAndPath = parts.slice(versionIndex).join('/');
+            // No transforms means original full quality image
+            return `${prefix}/upload/${versionAndPath}`;
+          }
+        }
+      } catch (error) {
+        // If parsing fails, fall through to default handling
+      }
+    }
+    
     // If URL already contains 'thumbnailUrl' or 'thumbnail' in path, try to get full URL
     // by replacing /thumbnailUrl/ or /thumbnail/ with /url/ or removing it
     if (url.includes('/thumbnailUrl/') || url.includes('/thumbnail/')) {
@@ -175,9 +249,9 @@ const PosterPlayerScreen: React.FC = () => {
     }
     
     // Remove any existing quality/size parameters
-    url = url.replace(/[?&](quality|width|height|w|h|size)=[^&]*/gi, '');
+    url = url.replace(/[?&](quality|width|height|w|h|size|f_auto|q_auto|c_limit)=[^&]*/gi, '');
     
-    // Add high quality parameters
+    // For non-Cloudinary URLs, add high quality parameters
     const separator = url.includes('?') ? '&' : '?';
     const highQualityUrl = `${url}${separator}quality=high&width=2400`;
     return highQualityUrl;
@@ -568,26 +642,21 @@ const PosterPlayerScreen: React.FC = () => {
     return languageMatch?.code || 'EN';
   }, [languages]);
 
-  const renderRelatedPoster = useCallback(({ item }: { item: Template }) => (
-    <TouchableOpacity
-      style={[styles.relatedPosterCard, { width: cardWidth, height: cardHeight }]}
-      onPress={() => handlePosterSelect(item)}
-      activeOpacity={0.8}
-    >
-      <OptimizedImage
-        uri={getHighQualityImageUrl(item)}
-        style={styles.relatedPosterImage}
-        resizeMode="cover"
+  const renderRelatedPoster = useCallback(({ item }: { item: Template }) => {
+    const imageUrl = getHighQualityImageUrl(item);
+    const languageCode = getTemplateLanguageCode(item);
+    
+    return (
+      <RelatedPosterItem
+        item={item}
+        cardWidth={cardWidth}
+        cardHeight={cardHeight}
+        imageUrl={imageUrl}
+        languageCode={languageCode}
+        onPress={handlePosterSelect}
       />
-      
-      
-      <View style={styles.relatedPosterLanguageBadge}>
-        <Text style={styles.relatedPosterLanguageText}>
-          {getTemplateLanguageCode(item)}
-        </Text>
-      </View>
-    </TouchableOpacity>
-  ), [handlePosterSelect, cardWidth, cardHeight, getHighQualityImageUrl, getTemplateLanguageCode]);
+    );
+  }, [cardWidth, cardHeight, handlePosterSelect, getHighQualityImageUrl, getTemplateLanguageCode]);
 
   const renderLanguageButton = useCallback((language: typeof languages[0]) => {
     const iconSize = getIconSize(12);
@@ -668,11 +737,10 @@ const PosterPlayerScreen: React.FC = () => {
 
          {/* Compact Poster Section */}
          <View style={[styles.posterContainer, { height: computedPreviewHeight, width: '100%' }]}>
-         <OptimizedImage
-           uri={getHighQualityImageUrl(currentPoster)}
+         <Image
+           source={{ uri: getHighQualityImageUrl(currentPoster) }}
            style={styles.posterImage}
            resizeMode="contain"
-           showLoader={false}
          />
          <View style={styles.posterOverlay}>
            {languageMenuVisible && (
