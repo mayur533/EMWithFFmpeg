@@ -26,6 +26,7 @@ import BusinessProfileForm from '../components/BusinessProfileForm';
 import BottomSheet from '../components/BottomSheet';
 import RazorpayCheckout from 'react-native-razorpay';
 import { RAZORPAY_KEY_ID } from '@env';
+import { useSubscription } from '../contexts/SubscriptionContext';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -47,6 +48,7 @@ const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 const BusinessProfilesScreen: React.FC = () => {
   const { isDarkMode, theme } = useTheme();
+  const { addTransaction } = useSubscription();
   const insets = useSafeAreaInsets();
   const [profiles, setProfiles] = useState<any[]>([]);
   const [allProfiles, setAllProfiles] = useState<any[]>([]); // Cache all profiles for instant filtering
@@ -316,7 +318,7 @@ const BusinessProfilesScreen: React.FC = () => {
     };
     
     loadPendingData();
-  }, [loadBusinessProfiles]);
+  }, [addTransaction, loadBusinessProfiles]);
 
   useEffect(() => {
     pendingProfileDataRef.current = pendingProfileData;
@@ -469,9 +471,11 @@ const BusinessProfilesScreen: React.FC = () => {
 
   const processBusinessProfilePaymentSuccess = useCallback(async (
     paymentResponse: any,
-    orderMeta: { amount?: number; amountPaise?: number; currency?: string }
+    orderMeta: { amount?: number; amountPaise?: number; currency?: string; orderId?: string }
   ) => {
     try {
+      console.log('🟢 [BUSINESS PAY] Handler invoked', { paymentResponse, orderMeta });
+
       await businessProfileService.verifyBusinessProfilePayment({
         orderId: paymentResponse?.razorpay_order_id,
         paymentId: paymentResponse?.razorpay_payment_id,
@@ -480,13 +484,53 @@ const BusinessProfilesScreen: React.FC = () => {
         amountPaise: orderMeta.amountPaise,
         currency: orderMeta.currency,
       });
+      console.log('✅ [BUSINESS PAY] verify-payment success');
 
       const profileData = pendingProfileDataRef.current;
       if (!profileData) {
         throw new Error('Missing business profile data after payment. Please try again.');
       }
 
+      const resolvedAmount =
+        typeof orderMeta.amount === 'number'
+          ? orderMeta.amount
+          : orderMeta.amountPaise
+            ? orderMeta.amountPaise / 100
+            : 1;
+      console.log('ℹ️ [BUSINESS PAY] Resolved amount:', resolvedAmount);
+
+      try {
+        console.log('📡 [BUSINESS PAY] Logging transaction via addTransaction');
+        await addTransaction({
+          paymentId: paymentResponse?.razorpay_payment_id || `pay_${Date.now()}`,
+          orderId:
+            orderMeta.orderId ||
+            paymentResponse?.razorpay_order_id ||
+            `order_${Date.now()}`,
+          amount: resolvedAmount,
+          currency: orderMeta.currency || 'INR',
+          status: 'success',
+          plan: 'business_profile',
+          planName: 'Business Profile',
+          description: 'Business profile payment',
+          method: 'razorpay',
+          metadata: {
+            email: profileData.email,
+            contact: profileData.phone,
+            name: profileData.name,
+            category: profileData.category,
+            type: 'business_profile',
+          },
+          type: 'business_profile',
+        });
+        console.log('✅ [BUSINESS PAY] addTransaction finished');
+      } catch (transactionError) {
+        console.warn('⚠️ [BUSINESS PAY] Unable to record transaction:', transactionError);
+      }
+
+      console.log('📡 [BUSINESS PAY] Calling createBusinessProfile');
       const newProfile = await businessProfileService.createBusinessProfile(profileData);
+      console.log('✅ [BUSINESS PAY] Business profile created:', newProfile?.id);
 
       await AsyncStorage.removeItem('pending_business_profile_data');
       setPendingProfileData(null);
@@ -502,13 +546,20 @@ const BusinessProfilesScreen: React.FC = () => {
         loadBusinessProfiles();
       }, 800);
     } catch (error: any) {
-      console.error('Error finalizing business profile payment:', error);
+      console.error('❌ [BUSINESS PAY] Error finalizing payment:', error);
+      console.error('❌ [BUSINESS PAY] Error details:', {
+        message: error?.message,
+        responseStatus: error?.response?.status,
+        responseData: error?.response?.data,
+        stack: error?.stack,
+      });
       setErrorMessage(error.message || 'Payment verification failed. Please contact support.');
       setShowErrorModal(true);
     } finally {
       setIsProcessingPayment(false);
+      console.log('🔚 [BUSINESS PAY] Handler flow complete');
     }
-  }, [loadBusinessProfiles]);
+  }, [addTransaction, loadBusinessProfiles]);
 
   const handlePayNow = useCallback(async () => {
     if (!pendingProfileDataRef.current) {
@@ -518,14 +569,20 @@ const BusinessProfilesScreen: React.FC = () => {
     }
 
     try {
+      console.log('🟠 [BUSINESS PAY] Starting payment flow');
       setShowPaymentModal(false);
       setIsProcessingPayment(true);
 
       // Ensure pending data is stored before initiating payment
       await AsyncStorage.setItem('pending_business_profile_data', JSON.stringify(pendingProfileDataRef.current));
+      console.log('🗂️ [BUSINESS PAY] Pending form data saved to AsyncStorage');
 
       // Create payment order for business profile
-      const orderDetails = await businessProfileService.createBusinessProfilePaymentOrder();
+      const orderDetails = await businessProfileService.createBusinessProfilePaymentOrder({
+        amount: 1,
+        currency: 'INR',
+      });
+      console.log('📦 [BUSINESS PAY] create-payment-order response:', orderDetails);
 
       if (!orderDetails?.orderId) {
         throw new Error('Failed to create payment order. Please try again.');
@@ -535,11 +592,12 @@ const BusinessProfilesScreen: React.FC = () => {
         ? orderDetails.amountInPaise
         : orderDetails.amount
           ? Math.round(Number(orderDetails.amount) * 100)
-          : 0;
+          : 100;
 
       if (!amountInPaise) {
         throw new Error('Invalid payment amount. Please contact support.');
       }
+      console.log('💰 [BUSINESS PAY] amountInPaise resolved:', amountInPaise);
 
       const resolvedKey = orderDetails.razorpayKey || RAZORPAY_KEY_ID;
       if (!resolvedKey) {
@@ -548,6 +606,19 @@ const BusinessProfilesScreen: React.FC = () => {
 
       const currentUser = authService.getCurrentUser();
       const amountInRupees = amountInPaise / 100;
+      const resolvedAmount = typeof orderDetails.amount === 'number' ? orderDetails.amount : amountInRupees;
+
+      let handlerInvoked = false;
+      const handleRazorpaySuccess = async (response: any) => {
+        handlerInvoked = true;
+        console.log('🟢 [BUSINESS PAY] Razorpay handler triggered:', response);
+        await processBusinessProfilePaymentSuccess(response, {
+          amount: resolvedAmount,
+          amountPaise: amountInPaise,
+          currency: orderDetails.currency || 'INR',
+          orderId: orderDetails.orderId,
+        });
+      };
 
       const options = {
         description: 'Business Profile Addition',
@@ -562,23 +633,78 @@ const BusinessProfilesScreen: React.FC = () => {
           name: currentUser?.name || currentUser?.companyName || 'User',
         },
         theme: { color: '#667eea' },
-        handler: async (response: any) => {
-          await processBusinessProfilePaymentSuccess(response, {
-            amount: orderDetails.amount,
-            amountPaise: amountInPaise,
-            currency: orderDetails.currency || 'INR',
-          });
+        method: {
+          upi: true,
+          card: true,
+          netbanking: false,
+          wallet: false,
+          emi: false,
+          paylater: false,
         },
+        config: {
+          upi: {
+            flow: 'intent',
+            apps: ['google_pay', 'phonepe'],
+          },
+          display: {
+            hide: [
+              { method: 'netbanking' },
+              { method: 'wallet' },
+              { method: 'emi' },
+              { method: 'paylater' },
+              { method: 'upi', flows: ['collect'] },
+            ],
+            blocks: {
+              card: {
+                name: 'Pay using Card',
+                instruments: [
+                  {
+                    method: 'card',
+                  },
+                ],
+              },
+              upi: {
+                name: 'Pay using UPI (GPay / PhonePe)',
+                instruments: [
+                  {
+                    method: 'upi',
+                    apps: ['google_pay', 'phonepe'],
+                    flows: ['intent'],
+                  },
+                ],
+              },
+            },
+            sequence: ['block.card', 'block.upi'],
+            preferences: {
+              show_default_blocks: false,
+            },
+          },
+        },
+        handler: handleRazorpaySuccess,
         modal: {
           ondismiss: () => {
+            console.log('⚪ [BUSINESS PAY] Razorpay modal dismissed');
             setIsProcessingPayment(false);
           },
         },
       };
 
-      await RazorpayCheckout.open(options);
+      console.log('🚀 [BUSINESS PAY] Opening Razorpay with options:', options);
+      const razorpayResponse = await RazorpayCheckout.open(options);
+      console.log('✅ [BUSINESS PAY] Razorpay promise resolved:', razorpayResponse);
+
+      if (!handlerInvoked && razorpayResponse?.razorpay_payment_id) {
+        console.log('ℹ️ [BUSINESS PAY] Handler not invoked; processing Razorpay response manually');
+        await handleRazorpaySuccess(razorpayResponse);
+      }
     } catch (error: any) {
-      console.error('Business profile payment error:', error);
+      console.error('❌ [BUSINESS PAY] Razorpay/open error:', error);
+      console.error('❌ [BUSINESS PAY] Error details:', {
+        message: error?.message,
+        description: error?.description,
+        code: error?.code,
+        metadata: error?.metadata,
+      });
       setErrorMessage(error.message || 'Payment failed. Please try again.');
       setShowErrorModal(true);
       setIsProcessingPayment(false);

@@ -1,6 +1,8 @@
 import api from './api';
 import authService from './auth';
 
+export type TransactionPlan = 'quarterly' | 'yearly' | 'business_profile';
+
 export interface Transaction {
   id: string;
   paymentId: string;
@@ -8,7 +10,7 @@ export interface Transaction {
   amount: number;
   currency: string;
   status: 'success' | 'failed' | 'pending' | 'cancelled';
-  plan: 'quarterly' | 'yearly';
+  plan: TransactionPlan;
   planName: string;
   timestamp: number;
   description: string;
@@ -18,7 +20,9 @@ export interface Transaction {
     email?: string;
     contact?: string;
     name?: string;
+    [key: string]: any;
   };
+  type?: 'subscription' | 'business_profile';
 }
 
 class TransactionHistoryService {
@@ -58,13 +62,33 @@ class TransactionHistoryService {
       console.log('================================================================================');
       
       if (response.data.success) {
-        const backendTransactions = response.data.data.transactions;
+        const backendTransactions = response.data.data.transactions || [];
         console.log('📦 Backend transactions count:', backendTransactions.length);
         console.log('📦 Backend transactions raw:', JSON.stringify(backendTransactions, null, 2));
         
         // Transform backend transactions to frontend format
         const transformedTransactions = backendTransactions.map((txn: any) => {
-          const planName = txn.planName || (txn.plan === 'quarterly_pro' ? 'Quarterly Pro' : 'Yearly Pro');
+          const normalizedPlanRaw = (txn.plan || txn.planId || txn.type || '').toLowerCase();
+          let plan: TransactionPlan = 'quarterly';
+          if (normalizedPlanRaw.includes('business')) {
+            plan = 'business_profile';
+          } else if (normalizedPlanRaw.includes('year')) {
+            plan = 'yearly';
+          } else {
+            plan = 'quarterly';
+          }
+
+          const planName =
+            txn.planName ||
+            (plan === 'business_profile'
+              ? 'Business Profile'
+              : plan === 'yearly'
+                ? 'Yearly Pro'
+                : 'Quarterly Pro');
+
+          const description =
+            txn.description ||
+            (plan === 'business_profile' ? 'Business Profile Payment' : `${planName} Subscription`);
           return {
             id: txn.id,
             paymentId: txn.paymentId || txn.transactionId,
@@ -72,17 +96,16 @@ class TransactionHistoryService {
             amount: txn.amount,
             currency: txn.currency || 'INR',
             status: txn.status.toLowerCase(),
-            plan: txn.plan === 'quarterly_pro' ? 'quarterly' : 'yearly',
-            planName: planName,
+            plan,
+            planName,
             timestamp: new Date(txn.createdAt).getTime(),
-            description: txn.description || `${planName} Subscription`,
+            description,
             method: 'razorpay',
-            metadata: txn.metadata ? JSON.parse(txn.metadata) : undefined
+            metadata: txn.metadata ? JSON.parse(txn.metadata) : undefined,
+            type: plan === 'business_profile' ? 'business_profile' : 'subscription',
           };
         });
-
-        console.log('✅ Retrieved and transformed transactions:', transformedTransactions.length);
-        console.log('📦 Transformed transactions:', JSON.stringify(transformedTransactions, null, 2));
+        console.log('✅ Retrieved transactions:', transformedTransactions.length);
         return transformedTransactions;
       } else {
         console.log('⚠️ Backend returned unsuccessful response:', response.data);
@@ -115,18 +138,82 @@ class TransactionHistoryService {
   }
 
 
-  // Add a new transaction (API endpoint removed - local only)
+  // Add a new transaction via backend API
   async addTransaction(transaction: Omit<Transaction, 'id' | 'timestamp'>): Promise<Transaction> {
-    console.log('💳 addTransaction - API endpoint removed, transaction not saved to backend');
-    
-    const newTransaction: Transaction = {
-      ...transaction,
-      id: `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
-      timestamp: Date.now(),
-    };
-    
-    console.log('⚠️ Transaction created locally only (no backend sync):', newTransaction.id);
-    return newTransaction;
+    try {
+      const payload: Record<string, any> = {
+        paymentId: transaction.paymentId,
+        orderId: transaction.orderId,
+        amount: transaction.amount,
+        currency: transaction.currency,
+        status: transaction.status,
+        plan: transaction.plan,
+        planName: transaction.planName,
+        description: transaction.description,
+        method: transaction.method,
+        type: transaction.plan === 'business_profile' ? 'business_profile' : 'subscription',
+      };
+
+      if (transaction.metadata) {
+        payload.metadata = transaction.metadata;
+      }
+
+      console.log('💳 addTransaction - sending payload to backend:', JSON.stringify(payload, null, 2));
+
+      const response = await api.post('/api/mobile/transactions', payload);
+      const responseData = response.data?.data?.transaction || response.data?.data || response.data;
+
+      if (response.data?.success && responseData) {
+        const metadata =
+          typeof responseData.metadata === 'string'
+            ? JSON.parse(responseData.metadata)
+            : responseData.metadata;
+
+        const mappedTransaction: Transaction = {
+          id: responseData.id || `txn_${Date.now()}`,
+          paymentId: responseData.paymentId || transaction.paymentId,
+          orderId: responseData.orderId || transaction.orderId,
+          amount: responseData.amount || transaction.amount,
+          currency: responseData.currency || transaction.currency,
+          status: (responseData.status || transaction.status).toLowerCase(),
+          plan:
+            (responseData.plan as TransactionPlan) ||
+            transaction.plan ||
+            'quarterly',
+          planName: responseData.planName || transaction.planName,
+          timestamp: responseData.createdAt
+            ? new Date(responseData.createdAt).getTime()
+            : Date.now(),
+          description: responseData.description || transaction.description,
+          method: (responseData.method as 'razorpay') || transaction.method,
+          metadata,
+          type:
+            responseData.type ||
+            (transaction.plan === 'business_profile'
+              ? 'business_profile'
+              : 'subscription'),
+        };
+
+        console.log('✅ Transaction recorded via API:', mappedTransaction.id);
+        return mappedTransaction;
+      }
+
+      console.warn('⚠️ addTransaction - backend did not return success, falling back to local object');
+      return {
+        ...transaction,
+        id: responseData?.id || `txn_${Date.now()}`,
+        timestamp: responseData?.createdAt
+          ? new Date(responseData.createdAt).getTime()
+          : Date.now(),
+      };
+    } catch (error) {
+      console.error('❌ addTransaction - error recording transaction via API:', error);
+      return {
+        ...transaction,
+        id: `txn_${Date.now()}`,
+        timestamp: Date.now(),
+      };
+    }
   }
 
   // Get transaction by ID
