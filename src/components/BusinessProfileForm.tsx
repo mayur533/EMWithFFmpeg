@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -13,6 +13,9 @@ import {
   KeyboardAvoidingView,
   Platform,
   Dimensions,
+  Keyboard,
+  TextInput as RNTextInput,
+  ReturnKeyTypeOptions,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -34,6 +37,10 @@ const FloatingInput = React.memo(({
   multiline = false,
   numberOfLines = 1,
   keyboardType = 'default',
+  inputRef,
+  returnKeyType = 'next',
+  onSubmitEditing,
+  blurOnSubmit = false,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -45,9 +52,14 @@ const FloatingInput = React.memo(({
   multiline?: boolean;
   numberOfLines?: number;
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'url';
+  inputRef?: (ref: RNTextInput | null) => void;
+  returnKeyType?: ReturnKeyTypeOptions;
+  onSubmitEditing?: () => void;
+  blurOnSubmit?: boolean;
 }) => (
   <View style={styles.inputContainer}>
     <TextInput
+      ref={inputRef}
       style={[
         styles.input,
         { 
@@ -68,11 +80,12 @@ const FloatingInput = React.memo(({
       numberOfLines={numberOfLines}
       keyboardType={keyboardType}
       autoCapitalize={field === 'email' ? 'none' : 'words'}
-      blurOnSubmit={false}
-      returnKeyType="next"
+      blurOnSubmit={blurOnSubmit}
+      returnKeyType={returnKeyType}
       autoCorrect={false}
       spellCheck={false}
       textContentType="none"
+      onSubmitEditing={onSubmitEditing}
     />
   </View>
 ));
@@ -116,6 +129,26 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
   const [validationErrors, setValidationErrors] = useState<string[]>([]);
   const [phoneValidationError, setPhoneValidationError] = useState<string>('');
   const [alternatePhoneValidationError, setAlternatePhoneValidationError] = useState<string>('');
+  const inputRefs = useRef<Record<string, RNTextInput | null>>({});
+
+  const focusField = (field: string) => {
+    const ref = inputRefs.current[field];
+    if (ref) {
+      ref.focus();
+    }
+  };
+
+  const registerInputRef = (field: string) => (ref: RNTextInput | null) => {
+    inputRefs.current[field] = ref;
+  };
+
+  const handleSubmitEditing = (nextField?: string) => () => {
+    if (nextField) {
+      focusField(nextField);
+    } else {
+      Keyboard.dismiss();
+    }
+  };
 
   const categories = [
     'Event Planners',
@@ -375,6 +408,8 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
                  focusedField={focusedField}
                  setFocusedField={setFocusedField}
                  theme={theme}
+                inputRef={registerInputRef('name')}
+                onSubmitEditing={handleSubmitEditing('phone')}
                />
 
               {/* Company Logo Upload */}
@@ -494,6 +529,7 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
               <View style={styles.inputContainer}>
                 <Text style={[styles.inputLabel, { color: isDarkMode ? '#ffffff' : '#1a1a1a' }]}>Phone Number *</Text>
                 <TextInput
+                  ref={registerInputRef('phone')}
                   style={[
                     styles.input,
                     { 
@@ -517,6 +553,7 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
                   autoCorrect={false}
                   spellCheck={false}
                   textContentType="none"
+                  onSubmitEditing={handleSubmitEditing('alternatePhone')}
                 />
                 {phoneValidationError ? (
                   <Text style={[styles.validationError, { color: '#ff4444' }]}>
@@ -533,6 +570,7 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
               {/* Alternate Phone Number with Validation */}
               <View style={styles.inputContainer}>
                 <TextInput
+                  ref={registerInputRef('alternatePhone')}
                   style={[
                     styles.input,
                     { 
@@ -556,6 +594,7 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
                   autoCorrect={false}
                   spellCheck={false}
                   textContentType="none"
+                  onSubmitEditing={handleSubmitEditing('email')}
                 />
                 {alternatePhoneValidationError ? (
                   <Text style={[styles.validationError, { color: '#ff4444' }]}>
@@ -578,6 +617,8 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
                  focusedField={focusedField}
                  setFocusedField={setFocusedField}
                  theme={theme}
+                 inputRef={registerInputRef('email')}
+                 onSubmitEditing={handleSubmitEditing('website')}
                />
 
                <FloatingInput
@@ -589,6 +630,8 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
                  focusedField={focusedField}
                  setFocusedField={setFocusedField}
                  theme={theme}
+                 inputRef={registerInputRef('website')}
+                 onSubmitEditing={handleSubmitEditing('address')}
                />
 
                <FloatingInput
@@ -601,6 +644,10 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
                  focusedField={focusedField}
                  setFocusedField={setFocusedField}
                  theme={theme}
+                 inputRef={registerInputRef('address')}
+                 returnKeyType="done"
+                 blurOnSubmit
+                 onSubmitEditing={handleSubmitEditing()}
                />
             </View>
           </ScrollView>

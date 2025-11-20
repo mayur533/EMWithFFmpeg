@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -14,6 +14,8 @@ import {
   Image,
   Modal,
   Animated,
+  Keyboard,
+  TextInput as RNTextInput,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import LinearGradient from 'react-native-linear-gradient';
@@ -63,7 +65,11 @@ const FloatingInput = React.memo(({
   numberOfLines = 1,
   keyboardType = 'default',
   secureTextEntry = false,
-  hasError = false
+  hasError = false,
+  inputRef,
+  returnKeyType = 'next',
+  onSubmitEditing,
+  blurOnSubmit = false,
 }: {
   value: string;
   onChangeText: (text: string) => void;
@@ -77,9 +83,14 @@ const FloatingInput = React.memo(({
   keyboardType?: 'default' | 'email-address' | 'phone-pad' | 'url';
   secureTextEntry?: boolean;
   hasError?: boolean;
+  inputRef?: (ref: RNTextInput | null) => void;
+  returnKeyType?: 'done' | 'go' | 'next' | 'search' | 'send';
+  onSubmitEditing?: () => void;
+  blurOnSubmit?: boolean;
 }) => (
     <View style={styles.inputContainer}>
     <TextInput
+      ref={inputRef}
       style={[
         styles.input,
         { 
@@ -99,6 +110,9 @@ const FloatingInput = React.memo(({
       numberOfLines={numberOfLines}
       keyboardType={keyboardType}
         secureTextEntry={secureTextEntry}
+      returnKeyType={returnKeyType}
+      onSubmitEditing={onSubmitEditing}
+      blurOnSubmit={blurOnSubmit}
     />
       </View>
 ));
@@ -130,7 +144,6 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   const [errorMessage, setErrorMessage] = useState('');
   const [modalAnimation] = useState(new Animated.Value(0));
   const [validationErrors, setValidationErrors] = useState<{[key: string]: string}>({});
-  const [showValidationSummary, setShowValidationSummary] = useState(false);
   const [modalDimensions, setModalDimensions] = useState(getModalDimensions());
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
@@ -138,6 +151,28 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   const [alternatePhoneValidationError, setAlternatePhoneValidationError] = useState<string>('');
   const [categories, setCategories] = useState<BusinessCategory[]>([]);
   const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(true);
+  const inputRefs = useRef<Record<string, RNTextInput | null>>({});
+
+  const registerInputRef = (field: string) => (ref: RNTextInput | null) => {
+    inputRefs.current[field] = ref;
+  };
+
+  const focusField = (field: string) => {
+    const ref = inputRefs.current[field];
+    if (ref) {
+      ref.focus();
+    }
+  };
+
+  const handleSubmitEditing = (nextField?: string, action?: () => void) => () => {
+    if (nextField) {
+      focusField(nextField);
+    } else if (action) {
+      action();
+    } else {
+      Keyboard.dismiss();
+    }
+  };
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -342,7 +377,6 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   const handleRegister = async () => {
     // Validate all fields using the comprehensive validation
     if (!validateForm()) {
-      setShowValidationSummary(true);
       return;
     }
 
@@ -391,7 +425,6 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
       useNativeDriver: true,
     }).start(() => {
       setShowErrorModal(false);
-      setShowValidationSummary(false);
     });
   };
 
@@ -405,10 +438,10 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   };
 
   useEffect(() => {
-    if (showErrorModal || showValidationSummary) {
+    if (showErrorModal) {
       showModal();
     }
-  }, [showErrorModal, showValidationSummary]);
+  }, [showErrorModal]);
 
   return (
     <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -501,6 +534,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                     setFocusedField={setFocusedField}
                     theme={theme}
                     hasError={!!validationErrors.name}
+                    inputRef={registerInputRef('name')}
+                    onSubmitEditing={handleSubmitEditing('description')}
                   />
                   {validationErrors.name && (
                     <View style={styles.errorContainer}>
@@ -522,6 +557,10 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   focusedField={focusedField}
                   setFocusedField={setFocusedField}
                   theme={theme}
+                  inputRef={registerInputRef('description')}
+                  returnKeyType="next"
+                  blurOnSubmit
+                  onSubmitEditing={handleSubmitEditing('phone')}
                 />
 
                 {/* Business Category */}
@@ -621,6 +660,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               <View style={styles.inputWrapper}>
                 <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Phone Number *</Text>
                 <TextInput
+                  ref={registerInputRef('phone')}
                   style={[
                     styles.input,
                     { 
@@ -637,6 +677,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="phone-pad"
                   maxLength={10}
+                  returnKeyType="next"
+                  onSubmitEditing={handleSubmitEditing('alternatePhone')}
                 />
                 {phoneValidationError ? (
                   <View style={styles.errorContainer}>
@@ -668,6 +710,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               <View style={styles.inputWrapper}>
                 <Text style={[styles.inputLabel, { color: theme.colors.text }]}>Alternate Phone (Optional)</Text>
                 <TextInput
+                  ref={registerInputRef('alternatePhone')}
                   style={[
                     styles.input,
                     { 
@@ -684,6 +727,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="phone-pad"
                   maxLength={10}
+                  returnKeyType="next"
+                  onSubmitEditing={handleSubmitEditing('email')}
                 />
                 {alternatePhoneValidationError ? (
                   <View style={styles.errorContainer}>
@@ -722,6 +767,9 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                     setFocusedField={setFocusedField}
                     theme={theme}
                     hasError={!!validationErrors.email}
+                    inputRef={registerInputRef('email')}
+                    returnKeyType="next"
+                    onSubmitEditing={handleSubmitEditing('website')}
                   />
                   {validationErrors.email && (
                     <View style={styles.errorContainer}>
@@ -742,6 +790,9 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                 focusedField={focusedField}
                 setFocusedField={setFocusedField}
                 theme={theme}
+                inputRef={registerInputRef('website')}
+                returnKeyType="next"
+                onSubmitEditing={handleSubmitEditing('address')}
               />
 
               <FloatingInput
@@ -754,6 +805,10 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                 focusedField={focusedField}
                 setFocusedField={setFocusedField}
                 theme={theme}
+                inputRef={registerInputRef('address')}
+                returnKeyType="next"
+                blurOnSubmit
+                onSubmitEditing={handleSubmitEditing('password')}
               />
             </View>
 
@@ -764,6 +819,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
               <View style={styles.inputWrapper}>
                 <View style={styles.passwordContainer}>
                   <TextInput
+                    ref={registerInputRef('password')}
                     style={[
                       styles.passwordInput,
                       { 
@@ -779,6 +835,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                     placeholder="Enter password *"
                     placeholderTextColor={theme.colors.textSecondary}
                     secureTextEntry={!showPassword}
+                    returnKeyType="next"
+                    onSubmitEditing={handleSubmitEditing('confirmPassword')}
                   />
                   <TouchableOpacity 
                     style={styles.eyeButton}
@@ -804,6 +862,7 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                 <View style={styles.inputWrapper}>
                   <View style={styles.passwordContainer}>
                     <TextInput
+                      ref={registerInputRef('confirmPassword')}
                       style={[
                         styles.passwordInput,
                         { 
@@ -819,6 +878,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                       placeholder="Confirm password *"
                       placeholderTextColor={theme.colors.textSecondary}
                       secureTextEntry={!showConfirmPassword}
+                      returnKeyType="done"
+                      onSubmitEditing={handleSubmitEditing(undefined, handleRegister)}
                     />
                     <TouchableOpacity 
                       style={styles.eyeButton}
@@ -935,210 +996,6 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                 activeOpacity={0.8}
               >
                 <Text style={styles.modalButtonText}>Try Again</Text>
-              </TouchableOpacity>
-            </View>
-          </Animated.View>
-        </View>
-      </Modal>
-
-      {/* Validation Errors Modal */}
-      <Modal
-        visible={showValidationSummary && Object.keys(validationErrors).length > 0}
-        transparent={true}
-        animationType="none"
-        onRequestClose={hideModal}
-      >
-        <View style={[
-          styles.modalOverlay,
-          modalDimensions.isLandscape && {
-            paddingHorizontal: modalDimensions.width * 0.15,
-            paddingVertical: modalDimensions.height * 0.05,
-          }
-        ]}>
-          <Animated.View 
-            style={[
-              styles.validationModalContainer,
-              { backgroundColor: theme.colors.surface },
-              modalDimensions.isTablet && {
-                maxWidth: modalDimensions.width * 0.6,
-              },
-              modalDimensions.isLandscape && !modalDimensions.isTablet && {
-                maxWidth: modalDimensions.width * 0.7,
-                maxHeight: modalDimensions.height * 0.85,
-              },
-              modalDimensions.isSmall && {
-                width: modalDimensions.width * 0.92,
-                paddingHorizontal: modalDimensions.width * 0.04,
-              },
-              {
-                transform: [{
-                  scale: modalAnimation.interpolate({
-                    inputRange: [0, 1],
-                    outputRange: [0.8, 1],
-                  }),
-                }],
-                opacity: modalAnimation,
-              }
-            ]}
-          >
-            {/* Modal Header */}
-            <View style={[
-              styles.validationModalHeader,
-              modalDimensions.isSmall && {
-                marginBottom: modalDimensions.height * 0.015,
-              }
-            ]}>
-              <View style={[
-                styles.validationIconContainer,
-                { backgroundColor: '#ffc107' + '20' },
-                modalDimensions.isSmall && {
-                  width: modalDimensions.width * 0.12,
-                  height: modalDimensions.width * 0.12,
-                }
-              ]}>
-                <Icon 
-                  name="warning" 
-                  size={modalDimensions.isSmall ? 24 : modalDimensions.isTablet ? 36 : 28} 
-                  color="#ffc107" 
-                />
-              </View>
-              <Text style={[
-                styles.validationModalTitle, 
-                { color: theme.colors.text },
-                modalDimensions.isSmall && {
-                  fontSize: 18,
-                },
-                modalDimensions.isTablet && {
-                  fontSize: 24,
-                }
-              ]}>
-                Please Fix These Errors
-              </Text>
-              <Text style={[
-                styles.validationModalSubtitle,
-                { color: theme.colors.textSecondary },
-                modalDimensions.isSmall && {
-                  fontSize: 12,
-                },
-                modalDimensions.isTablet && {
-                  fontSize: 16,
-                }
-              ]}>
-                {Object.keys(validationErrors).length} field{Object.keys(validationErrors).length > 1 ? 's need' : ' needs'} your attention
-              </Text>
-            </View>
-
-            {/* Errors List */}
-            <ScrollView 
-              style={[
-                styles.validationErrorsList,
-                modalDimensions.isLandscape && {
-                  maxHeight: modalDimensions.height * 0.5,
-                }
-              ]}
-              showsVerticalScrollIndicator={false}
-            >
-              {Object.entries(validationErrors).map(([field, error], index) => (
-                <View 
-                  key={field}
-                  style={[
-                    styles.validationErrorItem,
-                    { 
-                      backgroundColor: theme.colors.error + '10',
-                      borderLeftColor: theme.colors.error,
-                    },
-                    modalDimensions.isSmall && {
-                      paddingHorizontal: modalDimensions.width * 0.03,
-                      paddingVertical: modalDimensions.height * 0.012,
-                      marginBottom: modalDimensions.height * 0.01,
-                    },
-                    modalDimensions.isTablet && {
-                      paddingHorizontal: modalDimensions.width * 0.025,
-                      paddingVertical: modalDimensions.height * 0.015,
-                      marginBottom: modalDimensions.height * 0.015,
-                    }
-                  ]}
-                >
-                  <View style={styles.errorItemHeader}>
-                    <View style={[
-                      styles.errorBullet,
-                      { backgroundColor: theme.colors.error },
-                      modalDimensions.isSmall && {
-                        width: 6,
-                        height: 6,
-                      },
-                      modalDimensions.isTablet && {
-                        width: 10,
-                        height: 10,
-                      }
-                    ]} />
-                    <Text style={[
-                      styles.errorFieldName,
-                      { color: theme.colors.text },
-                      modalDimensions.isSmall && {
-                        fontSize: 13,
-                      },
-                      modalDimensions.isTablet && {
-                        fontSize: 17,
-                      }
-                    ]}>
-                      {field.replace(/([A-Z])/g, ' $1').replace(/^./, str => str.toUpperCase())}
-                    </Text>
-                  </View>
-                  <Text style={[
-                    styles.errorMessage,
-                    { color: theme.colors.textSecondary },
-                    modalDimensions.isSmall && {
-                      fontSize: 12,
-                      lineHeight: 16,
-                    },
-                    modalDimensions.isTablet && {
-                      fontSize: 16,
-                      lineHeight: 22,
-                    }
-                  ]}>
-                    {error}
-                  </Text>
-                </View>
-              ))}
-            </ScrollView>
-
-            {/* Action Button */}
-            <View style={[
-              styles.validationModalActions,
-              modalDimensions.isSmall && {
-                marginTop: modalDimensions.height * 0.015,
-              },
-              modalDimensions.isTablet && {
-                marginTop: modalDimensions.height * 0.025,
-              }
-            ]}>
-              <TouchableOpacity
-                style={[
-                  styles.validationModalButton,
-                  { backgroundColor: theme.colors.primary },
-                  modalDimensions.isSmall && {
-                    paddingVertical: modalDimensions.height * 0.013,
-                  },
-                  modalDimensions.isTablet && {
-                    paddingVertical: modalDimensions.height * 0.02,
-                  }
-                ]}
-                onPress={hideModal}
-                activeOpacity={0.8}
-              >
-                <Icon name="check-circle" size={modalDimensions.isSmall ? 18 : modalDimensions.isTablet ? 24 : 20} color="#ffffff" />
-                <Text style={[
-                  styles.validationModalButtonText,
-                  modalDimensions.isSmall && {
-                    fontSize: 14,
-                  },
-                  modalDimensions.isTablet && {
-                    fontSize: 18,
-                  }
-                ]}>
-                  Got It, Let Me Fix These
-                </Text>
               </TouchableOpacity>
             </View>
           </Animated.View>

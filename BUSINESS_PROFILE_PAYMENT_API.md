@@ -26,14 +26,14 @@ At present, the frontend expects an order-creation endpoint called `/api/mobile/
 #### Request Body
 ```json
 {
-  "amount": 1,
+  "amount": 99,
   "currency": "INR",
   "type": "business_profile"
 }
 ```
 
 Notes:
-- `amount` – integer (₹) or optional; backend can default to configured price. Frontend currently assumes ₹499 but can accept whatever amount backend returns.
+- `amount` – integer (₹) or optional; backend can default to configured price. Frontend currently assumes ₹99 but can accept whatever amount backend returns.
 - `currency` – optional, default `INR`.
 - `type` – optional but helps distinguish from subscription orders.
 - User identity should be inferred from the authenticated request (JWT). No need to pass `userId` from the app.
@@ -44,8 +44,8 @@ Notes:
   "success": true,
   "data": {
     "orderId": "order_NZ8F93s7XXXXXX",
-     "amount": 1,
-     "amountInPaise": 100,
+     "amount": 99,
+     "amountInPaise": 9900,
     "currency": "INR",
     "razorpayKey": "rzp_live_xxxxxxx",
     "expiresAt": "2025-01-01T10:00:00.000Z",
@@ -87,8 +87,8 @@ Current frontend payload:
   "orderId": "...",
   "paymentId": "...",
   "signature": "...",
-  "amount": 499,
-  "amountPaise": 49900,
+  "amount": 99,
+  "amountPaise": 9900,
   "currency": "INR",
   "type": "business_profile"
 }
@@ -123,7 +123,7 @@ Frontend calls `/api/mobile/business-profile/payment-status` to check whether th
     "lastPayment": {
       "orderId": "...",
       "paymentId": "...",
-      "amount": 1,
+      "amount": 99,
       "createdAt": "..."
     }
   }

@@ -14,6 +14,7 @@ import {
   TextInput,
   Share,
   RefreshControl,
+  Keyboard,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -161,6 +162,7 @@ const ProfileScreen: React.FC = () => {
     website: currentUser?.website || '',
     companyLogo: currentUser?.logo || currentUser?.companyLogo || '',
   });
+  const editInputRefs = useRef<Record<string, TextInput | null>>({});
   const [phoneValidationError, setPhoneValidationError] = useState<string>('');
   const [alternatePhoneValidationError, setAlternatePhoneValidationError] = useState<string>('');
   const [isUpdating, setIsUpdating] = useState(false);
@@ -791,6 +793,27 @@ const ProfileScreen: React.FC = () => {
 
   const handleBusinessProfiles = () => {
     navigation.navigate('BusinessProfiles' as never);
+  };
+
+  const registerEditInputRef = (field: string) => (ref: TextInput | null) => {
+    editInputRefs.current[field] = ref;
+  };
+
+  const focusEditField = (field: string) => {
+    const ref = editInputRefs.current[field];
+    if (ref) {
+      ref.focus();
+    }
+  };
+
+  const handleEditSubmitEditing = (nextField?: string, action?: () => void) => () => {
+    if (nextField) {
+      focusEditField(nextField);
+    } else if (action) {
+      action();
+    } else {
+      Keyboard.dismiss();
+    }
   };
 
   const handleDarkModeToggle = async () => {
@@ -2068,6 +2091,7 @@ const ProfileScreen: React.FC = () => {
                   marginBottom: dynamicModerateScale(3),
                 }]}>Company Name *</Text>
                 <TextInput
+                  ref={registerEditInputRef('editName')}
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
@@ -2081,6 +2105,8 @@ const ProfileScreen: React.FC = () => {
                   onChangeText={(text) => setEditFormData({...editFormData, name: text})}
                   placeholder="Enter your company name"
                   placeholderTextColor={theme.colors.textSecondary}
+                  returnKeyType="next"
+                  onSubmitEditing={handleEditSubmitEditing('editDescription')}
                 />
               </View>
 
@@ -2094,6 +2120,7 @@ const ProfileScreen: React.FC = () => {
                   marginBottom: dynamicModerateScale(3),
                 }]}>Description</Text>
                 <TextInput
+                  ref={registerEditInputRef('editDescription')}
                   style={[styles.textArea, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
@@ -2111,6 +2138,9 @@ const ProfileScreen: React.FC = () => {
                   multiline
                   numberOfLines={3}
                   textAlignVertical="top"
+                  returnKeyType="next"
+                  blurOnSubmit
+                  onSubmitEditing={handleEditSubmitEditing('editPhone')}
                 />
               </View>
 
@@ -2215,6 +2245,7 @@ const ProfileScreen: React.FC = () => {
                   marginBottom: dynamicModerateScale(3),
                 }]}>Phone Number *</Text>
                 <TextInput
+                  ref={registerEditInputRef('editPhone')}
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: phoneValidationError ? '#ff4444' : theme.colors.border,
@@ -2238,6 +2269,8 @@ const ProfileScreen: React.FC = () => {
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="phone-pad"
                   maxLength={10}
+                  returnKeyType="next"
+                  onSubmitEditing={handleEditSubmitEditing('editAlternatePhone')}
                 />
                 {phoneValidationError ? (
                   <Text style={[styles.validationError, { 
@@ -2271,6 +2304,7 @@ const ProfileScreen: React.FC = () => {
                   marginBottom: dynamicModerateScale(3),
                 }]}>Alternate Phone</Text>
                 <TextInput
+                  ref={registerEditInputRef('editAlternatePhone')}
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: alternatePhoneValidationError ? '#ff4444' : theme.colors.border,
@@ -2298,6 +2332,8 @@ const ProfileScreen: React.FC = () => {
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="phone-pad"
                   maxLength={10}
+                  returnKeyType="next"
+                  onSubmitEditing={handleEditSubmitEditing('editEmail')}
                 />
                 {alternatePhoneValidationError ? (
                   <Text style={[styles.validationError, { 
@@ -2331,6 +2367,7 @@ const ProfileScreen: React.FC = () => {
                   marginBottom: dynamicModerateScale(3),
                 }]}>Email *</Text>
                 <TextInput
+                ref={registerEditInputRef('editEmail')}
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
@@ -2346,6 +2383,8 @@ const ProfileScreen: React.FC = () => {
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="email-address"
                   autoCapitalize="none"
+                returnKeyType="next"
+                onSubmitEditing={handleEditSubmitEditing('editWebsite')}
                 />
               </View>
 
@@ -2359,6 +2398,7 @@ const ProfileScreen: React.FC = () => {
                   marginBottom: dynamicModerateScale(3),
                 }]}>Website</Text>
                 <TextInput
+                ref={registerEditInputRef('editWebsite')}
                   style={[styles.textInput, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
@@ -2374,6 +2414,8 @@ const ProfileScreen: React.FC = () => {
                   placeholderTextColor={theme.colors.textSecondary}
                   keyboardType="url"
                   autoCapitalize="none"
+                returnKeyType="next"
+                onSubmitEditing={handleEditSubmitEditing('editAddress')}
                 />
               </View>
 
@@ -2387,6 +2429,7 @@ const ProfileScreen: React.FC = () => {
                   marginBottom: dynamicModerateScale(3),
                 }]}>Address</Text>
                 <TextInput
+                ref={registerEditInputRef('editAddress')}
                   style={[styles.textArea, { 
                     backgroundColor: theme.colors.surface,
                     borderColor: theme.colors.border,
@@ -2404,6 +2447,9 @@ const ProfileScreen: React.FC = () => {
                   multiline
                   numberOfLines={2}
                   textAlignVertical="top"
+                returnKeyType="done"
+                blurOnSubmit
+                onSubmitEditing={handleEditSubmitEditing()}
                 />
               </View>
             </ScrollView>

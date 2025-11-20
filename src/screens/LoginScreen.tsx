@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -12,6 +12,7 @@ import {
   Alert,
   Image,
   Modal,
+  Keyboard,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -47,7 +48,11 @@ const FloatingInput = React.memo(({
   theme,
   secureTextEntry = false,
   keyboardType = 'default',
-  autoCapitalize = 'none'
+  autoCapitalize = 'none',
+  inputRef,
+  returnKeyType = 'next',
+  onSubmitEditing,
+  blurOnSubmit = false,
 }: any) => (
   <View style={styles.inputContainer}>
          <Text style={[
@@ -58,6 +63,7 @@ const FloatingInput = React.memo(({
        {label}
      </Text>
            <TextInput
+        ref={inputRef}
          style={[
            styles.input, 
            { 
@@ -75,11 +81,12 @@ const FloatingInput = React.memo(({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         placeholderTextColor={theme.colors.textSecondary}
-        blurOnSubmit={false}
-        returnKeyType="next"
+        blurOnSubmit={blurOnSubmit}
+        returnKeyType={returnKeyType}
         autoCorrect={false}
         spellCheck={false}
         textContentType="none"
+        onSubmitEditing={onSubmitEditing}
     />
   </View>
 ));
@@ -94,6 +101,28 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const inputRefs = useRef<Record<string, TextInput | null>>({});
+
+  const registerInputRef = (field: string) => (ref: TextInput | null) => {
+    inputRefs.current[field] = ref;
+  };
+
+  const focusField = (field: string) => {
+    const ref = inputRefs.current[field];
+    if (ref) {
+      ref.focus();
+    }
+  };
+
+  const handleSubmitEditing = (nextField?: string, action?: () => void) => () => {
+    if (nextField) {
+      focusField(nextField);
+    } else if (action) {
+      action();
+    } else {
+      Keyboard.dismiss();
+    }
+  };
 
   const handleSignIn = useCallback(async () => {
     if (!email || !password) {
@@ -174,6 +203,9 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
                 isFocused={emailFocused}
                 theme={theme}
                 keyboardType="email-address"
+                inputRef={registerInputRef('email')}
+                returnKeyType="next"
+                onSubmitEditing={handleSubmitEditing('password')}
               />
 
               {/* Password Input with Eye Button */}
@@ -187,6 +219,7 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
                 </Text>
                 <View style={styles.passwordContainer}>
                   <TextInput
+                    ref={registerInputRef('password')}
                     style={[
                       styles.passwordInput, 
                       { 
@@ -203,9 +236,10 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
                     secureTextEntry={!showPassword}
                     placeholderTextColor={theme.colors.textSecondary}
                     blurOnSubmit={false}
-                    returnKeyType="next"
+                    returnKeyType="done"
                     autoCorrect={false}
                     autoCapitalize="none"
+                    onSubmitEditing={handleSubmitEditing(undefined, handleSignIn)}
                   />
                   <TouchableOpacity 
                     style={styles.eyeButton}
