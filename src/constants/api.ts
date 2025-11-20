@@ -13,7 +13,7 @@ export const API_ENDPOINTS = {
   
   // Mobile App Endpoints
   MOBILE: {
-    BUSINESS_CATEGORIES: '/api/mobile/business-categories',
+    BUSINESS_CATEGORIES: '/api/mobile/business-categories/business',
     CONTENT: (customerId: string) => `/api/mobile/content/${customerId}`,
     PROFILE: (customerId: string) => `/api/mobile/profile/${customerId}`,
   },

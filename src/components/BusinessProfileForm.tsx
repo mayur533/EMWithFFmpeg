@@ -122,6 +122,10 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
     'Decorators',
     'Sound Suppliers',
     'Light Suppliers',
+    'Banquet Hall',
+    'Generator',
+    'Catering',
+    'Mandap',
   ];
 
   useEffect(() => {

@@ -257,6 +257,56 @@ const PosterPlayerScreen: React.FC = () => {
     return highQualityUrl;
   };
 
+  // Language options
+  const languages = useMemo(() => [
+    { id: 'english', name: 'English', code: 'EN' },
+    { id: 'marathi', name: 'Marathi', code: 'MR' },
+    { id: 'hindi', name: 'Hindi', code: 'HI' },
+  ], []);
+
+  // Display ALL posters (filtered by language)
+  const serviceFilterKeywords: Record<string, string[]> = useMemo(() => ({
+    generator: ['generator'],
+    decorators: ['decor', 'decorator', 'stage'],
+    sound: ['sound', 'audio', 'dj'],
+    mandap: ['mandap']
+  }), []);
+
+  const isEventPlannerCategory = useMemo(() => {
+    const category = (currentPoster?.category || initialPoster?.category || '').trim().toLowerCase();
+    if (!category) return false;
+    return category.includes('event planner');
+  }, [currentPoster, initialPoster]);
+
+  const templateMatchesServiceFilter = useCallback((template: Template) => {
+    if (!isEventPlannerCategory || !selectedServiceFilter) return true;
+    const keywords = serviceFilterKeywords[selectedServiceFilter] || [];
+    const templateTags = Array.isArray(template.tags)
+      ? template.tags
+          .filter((tag): tag is string => typeof tag === 'string')
+          .map(tag => tag.toLowerCase())
+      : [];
+    return keywords.some(keyword => templateTags.some(tag => tag.includes(keyword)));
+  }, [isEventPlannerCategory, selectedServiceFilter, serviceFilterKeywords]);
+
+  const filteredPosters = useMemo(() => {
+    const languageFiltered = allTemplates.filter(template =>
+      templateContainsLanguage(template, selectedLanguage),
+    );
+    const serviceFiltered = languageFiltered.filter(templateMatchesServiceFilter);
+
+    if (serviceFiltered.length > 0) {
+      return serviceFiltered;
+    }
+
+    const fallbackByService = allTemplates.filter(templateMatchesServiceFilter);
+    if (fallbackByService.length > 0) {
+      return fallbackByService;
+    }
+
+    return allTemplates;
+  }, [allTemplates, selectedLanguage, templateMatchesServiceFilter]);
+
   // Preload images for better scrolling performance
   const preloadImages = useCallback((posters: Template[], startIndex: number = 0, count: number = 20) => {
     const imagesToPreload = posters.slice(startIndex, startIndex + count);
@@ -309,8 +359,8 @@ const PosterPlayerScreen: React.FC = () => {
       // Clear preloaded images ref
       preloadedImagesRef.current.clear();
       // Clear image cache if available
-      if (Image.clearMemoryCache) {
-        Image.clearMemoryCache();
+      if ((Image as any).clearMemoryCache) {
+        (Image as any).clearMemoryCache();
       }
     };
   }, []);
@@ -441,49 +491,11 @@ const PosterPlayerScreen: React.FC = () => {
     });
   }, [allTemplates, selectedLanguage]);
 
-  // Language options
-  const languages = useMemo(() => [
-    { id: 'english', name: 'English', code: 'EN' },
-    { id: 'marathi', name: 'Marathi', code: 'MR' },
-    { id: 'hindi', name: 'Hindi', code: 'HI' },
-  ], []);
-
-  // Display ALL posters (filtered by language)
-  const serviceFilterKeywords: Record<string, string[]> = useMemo(() => ({
-    generator: ['generator'],
-    decorators: ['decor', 'decorator', 'stage'],
-    sound: ['sound', 'audio', 'dj'],
-    mandap: ['mandap']
-  }), []);
-
-  const isEventPlannerCategory = useMemo(() => {
-    const category = (currentPoster?.category || initialPoster?.category || '').trim().toLowerCase();
-    if (!category) return false;
-    return category.includes('event planner');
-  }, [currentPoster, initialPoster]);
-
   useEffect(() => {
     if (!isEventPlannerCategory && selectedServiceFilter) {
       setSelectedServiceFilter(null);
     }
   }, [isEventPlannerCategory, selectedServiceFilter]);
-
-  const templateMatchesServiceFilter = useCallback((template: Template) => {
-    if (!isEventPlannerCategory || !selectedServiceFilter) return true;
-    const keywords = serviceFilterKeywords[selectedServiceFilter] || [];
-    const templateTags = Array.isArray(template.tags)
-      ? template.tags
-          .filter((tag): tag is string => typeof tag === 'string')
-          .map(tag => tag.toLowerCase())
-      : [];
-    return keywords.some(keyword => templateTags.some(tag => tag.includes(keyword)));
-  }, [isEventPlannerCategory, selectedServiceFilter, serviceFilterKeywords]);
-
-  const filteredPosters = useMemo(() => {
-    return allTemplates
-      .filter(template => templateContainsLanguage(template, selectedLanguage))
-      .filter(templateMatchesServiceFilter);
-  }, [allTemplates, selectedLanguage, templateMatchesServiceFilter]);
 
   const handlePosterSelect = useCallback((poster: Template) => {
     // Merge template languages to ensure we have all language info
@@ -840,16 +852,6 @@ const PosterPlayerScreen: React.FC = () => {
                windowSize={10}
                initialNumToRender={screenWidth >= 768 ? 12 : 8}
                updateCellsBatchingPeriod={50}
-               getItemLayout={(data, index) => {
-                 const numColumns = screenWidth >= 768 ? 4 : 3;
-                 const gap = moderateScale(3);
-                 const row = Math.floor(index / numColumns);
-                 return {
-                   length: cardHeight + gap,
-                   offset: (cardHeight + gap) * row,
-                   index,
-                 };
-               }}
                onViewableItemsChanged={onViewableItemsChanged}
                viewabilityConfig={viewabilityConfig.current}
              />

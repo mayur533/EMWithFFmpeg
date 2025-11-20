@@ -109,7 +109,6 @@ const HomeScreen: React.FC = React.memo(() => {
 
   const [activeTab, setActiveTab] = useState('trending');
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
   const [banners, setBanners] = useState<Banner[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -400,7 +399,6 @@ const HomeScreen: React.FC = React.memo(() => {
 
   const handleTabChange = useCallback(async (tab: string) => {
     setActiveTab(tab);
-    setSelectedCategory('all'); // Reset category when changing tabs
     setIsSearching(false); // Reset search state
     
     // Use API data for different tabs
@@ -449,21 +447,7 @@ const HomeScreen: React.FC = React.memo(() => {
     if (!searchQuery.trim()) {
       setIsSearching(false);
       setDisableBackgroundUpdates(false); // Re-enable background updates when clearing search
-      // Reset to current tab and category state using API data
-      if (selectedCategory === 'all') {
-        setTemplates(professionalTemplates);
-      } else {
-        const filtered = professionalTemplates.filter(template => {
-          const categoryMap: { [key: string]: string } = {
-            'event-planners': 'Event Planners',
-            'decorators': 'Decorators',
-            'sound-suppliers': 'Sound Suppliers',
-            'light-suppliers': 'Light Suppliers'
-          };
-          return template.category === categoryMap[selectedCategory];
-        });
-        setTemplates(filtered);
-      }
+      setTemplates(professionalTemplates);
       
       // Try API call in background
       setTimeout(async () => {
@@ -471,18 +455,10 @@ const HomeScreen: React.FC = React.memo(() => {
         if (currentRequestId !== requestId) return;
         
         try {
-          if (selectedCategory === 'all') {
-            const templatesData = await dashboardService.getTemplatesByTab(activeTab);
-            // Only update if this is still the current request
-            if (currentRequestId === requestId) {
-              setTemplates(templatesData);
-            }
-          } else {
-            const results = await dashboardService.getTemplatesByCategory(selectedCategory);
-            // Only update if this is still the current request
-            if (currentRequestId === requestId) {
-              setTemplates(results);
-            }
+          const templatesData = await dashboardService.getTemplatesByTab(activeTab);
+          // Only update if this is still the current request
+          if (currentRequestId === requestId) {
+            setTemplates(templatesData);
           }
         } catch (error) {
           console.error('Search reset error:', error);
@@ -515,68 +491,7 @@ const HomeScreen: React.FC = React.memo(() => {
         console.error('Search error:', error);
       }
     }, 100);
-  }, [searchQuery, selectedCategory, activeTab, professionalTemplates, currentRequestId, isSearching]);
-
-  const handleCategorySelect = useCallback(async (categoryId: string) => {
-    setSelectedCategory(categoryId);
-    setIsSearching(false); // Reset search state when selecting category
-    setDisableBackgroundUpdates(true); // Disable background updates when user selects category
-    
-    const requestId = currentRequestId + 1;
-    setCurrentRequestId(requestId);
-    
-    if (categoryId === 'all') {
-      // Use API data immediately for better performance
-      setTemplates(professionalTemplates);
-      
-      // Try API call in background
-      setTimeout(async () => {
-        // Check if this is still the current request
-        if (currentRequestId !== requestId) return;
-        
-        try {
-          const templatesData = await dashboardService.getTemplatesByTab(activeTab);
-          // Only update if this is still the current request and we're on 'all' category
-          if (currentRequestId === requestId && selectedCategory === 'all') {
-            setTemplates(templatesData);
-          }
-        } catch (error) {
-          console.log('Using API data for all category:', error);
-        }
-      }, 100);
-      return;
-    }
-    
-    // Use local filtering immediately for better performance with API data
-    const filtered = professionalTemplates.filter(template => {
-      const categoryMap: { [key: string]: string } = {
-        'event-planners': 'Event Planners',
-        'decorators': 'Decorators',
-        'sound-suppliers': 'Sound Suppliers',
-        'light-suppliers': 'Light Suppliers'
-      };
-      return template.category === categoryMap[categoryId];
-    });
-    setTemplates(filtered);
-    
-    // Try API call in background
-    setTimeout(async () => {
-      // Check if this is still the current request
-      if (currentRequestId !== requestId) return;
-      
-      try {
-        const results = await dashboardService.getTemplatesByCategory(categoryId);
-        // Only update if this is still the current request and we're on the same category
-        if (currentRequestId === requestId && selectedCategory === categoryId) {
-          setTemplates(results);
-        }
-      } catch (error) {
-        console.error('Category filter error:', error);
-      }
-    }, 100);
-  }, [activeTab, professionalTemplates, currentRequestId, selectedCategory]);
-
-
+  }, [searchQuery, activeTab, professionalTemplates, currentRequestId, isSearching]);
 
 const handleTemplatePress = useCallback((template: Template | VideoContent) => {
   const matchedVideo = videoContent.find(video => video.id === template.id);
@@ -1197,7 +1112,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
               {renderBrowseAllButton(handleViewAllTemplates)}
             </View>
             <FlatList
-              key={`templates-${templates.length}-${selectedCategory}`}
+              key={`templates-${templates.length}`}
               data={templates}
               renderItem={renderTemplate}
               keyExtractor={keyExtractor}

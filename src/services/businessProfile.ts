@@ -1,5 +1,6 @@
 import api from './api';
 import eventMarketersBusinessProfileService from './eventMarketersBusinessProfileService';
+import authService from './auth';
 
 export interface BusinessProfile {
   id: string;
@@ -219,17 +220,45 @@ class BusinessProfileService {
     try {
       console.log('Creating business profile via API:', data.name);
       
+      // Get current user for owner name
+      const currentUser = authService.getCurrentUser();
+      const ownerNameFromUser = currentUser?.name || currentUser?.companyName || currentUser?.displayName || currentUser?.firstName;
+      const ownerNameFallback = currentUser?.email
+        ? currentUser.email.split('@')[0]
+        : (data.name ? `${data.name} Owner` : 'Business Owner');
+      const ownerName = (ownerNameFromUser && ownerNameFromUser.trim()) || ownerNameFallback;
+
+      const businessName = (data.name || '').trim();
+      const email = (data.email || '').trim();
+      const phone = (data.phone || '').trim();
+      const category = (data.category || '').trim();
+      const address = (data.address || '').trim();
+
+      if (!businessName || !ownerName || !email || !phone || !category) {
+        console.error('❌ [CREATE] Missing required fields:', {
+          businessName,
+          ownerName,
+          email,
+          phone,
+          category,
+        });
+        throw new Error('Business name, owner name, email, phone, and category are required.');
+      }
+      
       // Map frontend data to backend format
       const backendData = {
-        businessName: data.name,
-        email: data.email,
-        phone: data.phone,
-        address: data.address,
-        category: data.category,
+        businessName,
+        ownerName,
+        email,
+        phone,
+        address,
+        category,
         logo: data.companyLogo || '',
         description: data.description || '',
         website: data.website || ''
       };
+      
+      console.log('📤 Sending business profile data:', JSON.stringify(backendData, null, 2));
       
       const response = await api.post('/api/mobile/business-profile', backendData);
       
@@ -580,6 +609,142 @@ class BusinessProfileService {
     } catch (error) {
       console.error('Error verifying business profile:', error);
       throw error;
+    }
+  }
+
+  // Create payment order for business profile purchase
+  async createBusinessProfilePaymentOrder(params?: { amount?: number; currency?: string }) {
+    try {
+      const currentUser = authService.getCurrentUser();
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      const payload = {
+        amount: params?.amount ?? 499,
+        currency: params?.currency ?? 'INR',
+      };
+
+      console.log('🧾 Creating business profile payment order:', payload);
+      const response = await api.post('/api/mobile/business-profile/create-payment-order', payload);
+
+      if (response.data?.success) {
+        console.log('✅ Business profile payment order created:', response.data.data);
+        return response.data.data;
+      }
+
+      console.warn('⚠️ Business profile payment order API returned unsuccessful response');
+      throw new Error(response.data?.message || 'Failed to create payment order');
+    } catch (error) {
+      console.error('❌ Error creating business profile payment order:', error);
+      throw error;
+    }
+  }
+
+  // Verify payment for business profile creation
+  async verifyBusinessProfilePayment(paymentData: {
+    orderId: string;
+    paymentId: string;
+    signature: string;
+    amount?: number;
+    amountPaise?: number;
+    currency?: string;
+    email?: string;
+    contact?: string;
+  }): Promise<{ success: boolean; message: string; data?: any }> {
+    try {
+      const currentUser = authService.getCurrentUser();
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      console.log('🔍 Verifying business profile payment with backend:', {
+        orderId: paymentData.orderId,
+        paymentId: paymentData.paymentId,
+      });
+      
+      const payload: Record<string, any> = {
+        orderId: paymentData.orderId,
+        paymentId: paymentData.paymentId,
+        signature: paymentData.signature,
+        type: 'business_profile', // Indicate this is for business profile payment
+      };
+
+      if (typeof paymentData.amount === 'number') {
+        payload.amount = paymentData.amount;
+      }
+
+      if (typeof paymentData.amountPaise === 'number') {
+        payload.amountPaise = paymentData.amountPaise;
+      }
+
+      if (paymentData.currency) {
+        payload.currency = paymentData.currency;
+      }
+
+      if (paymentData.email) {
+        payload.email = paymentData.email;
+      }
+
+      if (paymentData.contact) {
+        payload.contact = paymentData.contact;
+      }
+
+      console.log('📨 Sending business profile payment verification payload:', payload);
+
+      const response = await api.post('/api/mobile/business-profile/verify-payment', payload);
+      
+      console.log('✅ Business profile payment verified successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Business profile payment verification error:', error);
+      
+      // Provide more detailed error message
+      const errorMessage = error.response?.data?.message || error.message || 'Payment verification failed';
+      throw new Error(errorMessage);
+    }
+  }
+
+  // Check if user has paid for additional business profile creation
+  async checkBusinessProfilePaymentStatus(): Promise<{ hasPaid: boolean; message?: string }> {
+    try {
+      const currentUser = authService.getCurrentUser();
+      const userId = currentUser?.id;
+      
+      if (!userId) {
+        throw new Error('User not authenticated');
+      }
+
+      console.log('🔍 Checking business profile payment status for user:', userId);
+      
+      const response = await api.get('/api/mobile/business-profile/payment-status');
+      
+      if (response.data.success) {
+        const hasPaid = response.data.data?.hasPaid || response.data.data?.paymentVerified || false;
+        console.log('✅ Payment status checked:', hasPaid ? 'Payment verified' : 'Payment not verified');
+        return {
+          hasPaid,
+          message: response.data.message
+        };
+      } else {
+        console.log('⚠️ Payment status check returned unsuccessful response');
+        return { hasPaid: false, message: response.data.message || 'Payment verification required' };
+      }
+    } catch (error: any) {
+      console.error('❌ Error checking business profile payment status:', error);
+      
+      // If endpoint doesn't exist (404), assume payment is required
+      if (error.response?.status === 404) {
+        console.log('⚠️ Payment status endpoint not found, assuming payment required');
+        return { hasPaid: false, message: 'Payment verification required' };
+      }
+      
+      // For other errors, assume payment is required for safety
+      return { hasPaid: false, message: 'Unable to verify payment status' };
     }
   }
 

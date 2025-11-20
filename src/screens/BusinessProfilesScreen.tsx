@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,17 +11,21 @@ import {
   Dimensions,
   Image,
   Modal,
+  ActivityIndicator,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../context/ThemeContext';
-import { useFocusEffect } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import businessProfileService from '../services/businessProfile';
 import userBusinessProfilesService from '../services/userBusinessProfiles';
 import authService from '../services/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import BusinessProfileForm from '../components/BusinessProfileForm';
 import BottomSheet from '../components/BottomSheet';
+import RazorpayCheckout from 'react-native-razorpay';
+import { RAZORPAY_KEY_ID } from '@env';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -61,6 +65,11 @@ const BusinessProfilesScreen: React.FC = () => {
   const [profileToDelete, setProfileToDelete] = useState<string | null>(null);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [pendingProfileData, setPendingProfileData] = useState<any>(null); // Store form data while user pays
+  const [isProcessingPayment, setIsProcessingPayment] = useState(false);
+  const navigation = useNavigation();
+  const pendingProfileDataRef = useRef<any>(null);
 
   // Memoized mock data for immediate loading
   const mockProfiles = useMemo(() => [
@@ -291,15 +300,84 @@ const BusinessProfilesScreen: React.FC = () => {
 
   useEffect(() => {
     loadBusinessProfiles();
+    
+    // Load pending profile data from AsyncStorage on mount
+    const loadPendingData = async () => {
+      try {
+        const storedPendingData = await AsyncStorage.getItem('pending_business_profile_data');
+        if (storedPendingData) {
+          const pendingData = JSON.parse(storedPendingData);
+          setPendingProfileData(pendingData);
+          console.log('📋 Loaded pending business profile data from storage');
+        }
+      } catch (error) {
+        console.error('❌ Error loading pending profile data:', error);
+      }
+    };
+    
+    loadPendingData();
   }, [loadBusinessProfiles]);
 
-  // Refresh profiles when screen comes into focus (e.g., returning from Profile edit)
+  useEffect(() => {
+    pendingProfileDataRef.current = pendingProfileData;
+  }, [pendingProfileData]);
+
+  // Check payment status and create profile if payment was successful
+  const checkPaymentAndCreateProfile = useCallback(async () => {
+    try {
+      // Determine pending data (state or stored)
+      let pendingData = pendingProfileData;
+
+      if (!pendingData) {
+        const storedPendingData = await AsyncStorage.getItem('pending_business_profile_data');
+        if (!storedPendingData) {
+          return; // No pending profile data
+        }
+        pendingData = JSON.parse(storedPendingData);
+        setPendingProfileData(pendingData);
+      }
+
+      console.log('🔍 Checking payment status for business profile creation...');
+      const paymentStatus = await businessProfileService.checkBusinessProfilePaymentStatus();
+
+      if (!paymentStatus.hasPaid) {
+        console.log('ℹ️ Payment not verified yet. Waiting for successful payment...');
+        return;
+      }
+
+      console.log('✅ Payment verified by API. Creating business profile...');
+      const newProfile = await businessProfileService.createBusinessProfile(pendingData);
+
+      setProfiles(prev => [...prev, newProfile]);
+      setAllProfiles(prev => [...prev, newProfile]);
+
+      await AsyncStorage.removeItem('pending_business_profile_data');
+      setPendingProfileData(null);
+
+      setSuccessMessage(paymentStatus.message || 'Business profile created successfully after payment verification');
+      setShowSuccessModal(true);
+      console.log('✅ Business profile created after payment:', newProfile.id);
+
+      setTimeout(() => {
+        loadBusinessProfiles();
+      }, 1000);
+    } catch (error) {
+      console.error('❌ Error verifying payment or creating business profile:', error);
+      setErrorMessage('Payment verification failed. Please contact support.');
+      setShowErrorModal(true);
+    }
+  }, [pendingProfileData, loadBusinessProfiles]);
+
+  // Refresh profiles when screen comes into focus (e.g., returning from Profile edit or Payment)
   useFocusEffect(
     useCallback(() => {
       console.log('🔄 BusinessProfilesScreen focused - refreshing profiles and images...');
       setImageRefreshKey(Date.now()); // Force image refresh
       loadBusinessProfiles();
-    }, [loadBusinessProfiles])
+      
+      // Check if payment was completed and create profile if needed
+      checkPaymentAndCreateProfile();
+    }, [loadBusinessProfiles, checkPaymentAndCreateProfile])
   );
 
   const onRefresh = useCallback(async () => {
@@ -379,11 +457,145 @@ const BusinessProfilesScreen: React.FC = () => {
   }, []);
 
   const handleAddProfile = useCallback(() => {
+    // Always allow opening the form - payment check will happen on save
     setEditingProfile(null);
     setShowBottomSheet(true);
   }, []);
 
+  const handlePaymentModalClose = useCallback(() => {
+    setShowPaymentModal(false);
+    setIsProcessingPayment(false);
+  }, []);
+
+  const processBusinessProfilePaymentSuccess = useCallback(async (
+    paymentResponse: any,
+    orderMeta: { amount?: number; amountPaise?: number; currency?: string }
+  ) => {
+    try {
+      await businessProfileService.verifyBusinessProfilePayment({
+        orderId: paymentResponse?.razorpay_order_id,
+        paymentId: paymentResponse?.razorpay_payment_id,
+        signature: paymentResponse?.razorpay_signature,
+        amount: orderMeta.amount,
+        amountPaise: orderMeta.amountPaise,
+        currency: orderMeta.currency,
+      });
+
+      const profileData = pendingProfileDataRef.current;
+      if (!profileData) {
+        throw new Error('Missing business profile data after payment. Please try again.');
+      }
+
+      const newProfile = await businessProfileService.createBusinessProfile(profileData);
+
+      await AsyncStorage.removeItem('pending_business_profile_data');
+      setPendingProfileData(null);
+      setShowPaymentModal(false);
+      setShowForm(false);
+      setShowBottomSheet(false);
+      setEditingProfile(null);
+      setSuccessMessage('Business profile created successfully.');
+      setShowSuccessModal(true);
+
+      // Refresh profiles to ensure UI consistency
+      setTimeout(() => {
+        loadBusinessProfiles();
+      }, 800);
+    } catch (error: any) {
+      console.error('Error finalizing business profile payment:', error);
+      setErrorMessage(error.message || 'Payment verification failed. Please contact support.');
+      setShowErrorModal(true);
+    } finally {
+      setIsProcessingPayment(false);
+    }
+  }, [loadBusinessProfiles]);
+
+  const handlePayNow = useCallback(async () => {
+    if (!pendingProfileDataRef.current) {
+      setErrorMessage('No business profile data found. Please fill the form again.');
+      setShowErrorModal(true);
+      return;
+    }
+
+    try {
+      setShowPaymentModal(false);
+      setIsProcessingPayment(true);
+
+      // Ensure pending data is stored before initiating payment
+      await AsyncStorage.setItem('pending_business_profile_data', JSON.stringify(pendingProfileDataRef.current));
+
+      // Create payment order for business profile
+      const orderDetails = await businessProfileService.createBusinessProfilePaymentOrder();
+
+      if (!orderDetails?.orderId) {
+        throw new Error('Failed to create payment order. Please try again.');
+      }
+
+      const amountInPaise = typeof orderDetails.amountInPaise === 'number'
+        ? orderDetails.amountInPaise
+        : orderDetails.amount
+          ? Math.round(Number(orderDetails.amount) * 100)
+          : 0;
+
+      if (!amountInPaise) {
+        throw new Error('Invalid payment amount. Please contact support.');
+      }
+
+      const resolvedKey = orderDetails.razorpayKey || RAZORPAY_KEY_ID;
+      if (!resolvedKey) {
+        throw new Error('Missing Razorpay key configuration.');
+      }
+
+      const currentUser = authService.getCurrentUser();
+      const amountInRupees = amountInPaise / 100;
+
+      const options = {
+        description: 'Business Profile Addition',
+        currency: orderDetails.currency || 'INR',
+        key: resolvedKey,
+        amount: amountInPaise,
+        order_id: orderDetails.orderId,
+        name: 'Market Brand',
+        prefill: {
+          email: currentUser?.email || 'user@example.com',
+          contact: currentUser?.phoneNumber || '9999999999',
+          name: currentUser?.name || currentUser?.companyName || 'User',
+        },
+        theme: { color: '#667eea' },
+        handler: async (response: any) => {
+          await processBusinessProfilePaymentSuccess(response, {
+            amount: orderDetails.amount,
+            amountPaise: amountInPaise,
+            currency: orderDetails.currency || 'INR',
+          });
+        },
+        modal: {
+          ondismiss: () => {
+            setIsProcessingPayment(false);
+          },
+        },
+      };
+
+      await RazorpayCheckout.open(options);
+    } catch (error: any) {
+      console.error('Business profile payment error:', error);
+      setErrorMessage(error.message || 'Payment failed. Please try again.');
+      setShowErrorModal(true);
+      setIsProcessingPayment(false);
+    }
+  }, [processBusinessProfilePaymentSuccess]);
+
   const handleFormSubmit = useCallback(async (formData: any) => {
+    // All new profiles require payment approval before creation
+    if (!editingProfile) {
+      setPendingProfileData(formData);
+      await AsyncStorage.setItem('pending_business_profile_data', JSON.stringify(formData));
+      setShowPaymentModal(true);
+      setShowForm(false);
+      setShowBottomSheet(false);
+      return; // IMPORTANT: Return early to prevent profile creation
+    }
+
     setFormLoading(true);
     try {
       if (editingProfile) {
@@ -485,16 +697,15 @@ const BusinessProfilesScreen: React.FC = () => {
           loadBusinessProfiles();
         }, 1000);
       } else {
-        // Create new profile
+        // This branch should be unreachable because new profiles require payment and return earlier.
+        // Keep as a fallback for admin/internal usage.
+        console.warn('⚠️ Fallback: creating business profile without payment (should not happen in normal flow)');
         const newProfile = await businessProfileService.createBusinessProfile(formData);
-        // Add to both displayed profiles and cached profiles
         setProfiles(prev => [...prev, newProfile]);
         setAllProfiles(prev => [...prev, newProfile]);
         setSuccessMessage('Business profile created successfully');
         setShowSuccessModal(true);
-        console.log('✅ Business profile created:', newProfile.id);
-        
-        // Refresh the profiles list to ensure consistency
+        console.log('✅ Business profile created (fallback path):', newProfile.id);
         setTimeout(() => {
           loadBusinessProfiles();
         }, 1000);
@@ -943,6 +1154,94 @@ const BusinessProfilesScreen: React.FC = () => {
             </TouchableOpacity>
           </TouchableOpacity>
         </Modal>
+
+        {/* Payment Required Modal */}
+        <Modal
+          visible={showPaymentModal}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={handlePaymentModalClose}
+          statusBarTranslucent={true}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={[styles.paymentModalContainer, { backgroundColor: theme.colors.surface }]}>
+              {/* Premium Badge */}
+              <View style={styles.paymentPremiumBadge}>
+                <Icon name="star" size={Math.min(screenWidth * 0.04, 16)} color="#DAA520" />
+                <Text style={styles.paymentPremiumBadgeText}>PREMIUM</Text>
+              </View>
+
+              {/* Modal Header */}
+              <View style={styles.paymentModalHeader}>
+                <Text style={[styles.paymentModalTitle, { color: theme.colors.text }]}>
+                  Payment Required
+                </Text>
+                <Text style={[styles.paymentModalSubtitle, { color: theme.colors.textSecondary }]}>
+                  You already have a business profile. To add additional business profiles, payment is required for each new profile.
+                </Text>
+              </View>
+
+              {/* Features List */}
+              <View style={styles.paymentFeaturesList}>
+                <View style={styles.paymentFeatureItem}>
+                  <Icon name="check-circle" size={Math.min(screenWidth * 0.04, 16)} color="#4CAF50" />
+                  <Text style={[styles.paymentFeatureText, { color: theme.colors.text }]}>
+                    Add an additional business profile
+                  </Text>
+                </View>
+                <View style={styles.paymentFeatureItem}>
+                  <Icon name="check-circle" size={Math.min(screenWidth * 0.04, 16)} color="#4CAF50" />
+                  <Text style={[styles.paymentFeatureText, { color: theme.colors.text }]}>
+                    Manage multiple business profiles
+                  </Text>
+                </View>
+                <View style={styles.paymentFeatureItem}>
+                  <Icon name="check-circle" size={Math.min(screenWidth * 0.04, 16)} color="#4CAF50" />
+                  <Text style={[styles.paymentFeatureText, { color: theme.colors.text }]}>
+                    Each additional profile requires payment
+                  </Text>
+                </View>
+              </View>
+
+              {/* Modal Footer */}
+              <View style={styles.paymentModalFooter}>
+                <TouchableOpacity 
+                  style={[styles.paymentCancelButton, { borderColor: theme.colors.border || '#cccccc' }]}
+                  onPress={handlePaymentModalClose}
+                >
+                  <Text style={[styles.paymentCancelButtonText, { color: theme.colors.textSecondary }]}>
+                    Maybe Later
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={styles.paymentButton}
+                  onPress={handlePayNow}
+                  disabled={isProcessingPayment}
+                  activeOpacity={isProcessingPayment ? 0.8 : 0.9}
+                >
+                  <LinearGradient
+                    colors={['#FF6B6B', '#FF8E53']}
+                    style={styles.paymentButtonGradient}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 0 }}
+                  >
+                    {isProcessingPayment ? (
+                      <>
+                        <ActivityIndicator size="small" color="#ffffff" />
+                        <Text style={styles.paymentButtonText}>Processing...</Text>
+                      </>
+                    ) : (
+                      <>
+                        <Icon name="payment" size={Math.min(screenWidth * 0.035, 14)} color="#ffffff" style={styles.paymentButtonIcon} />
+                        <Text style={styles.paymentButtonText}>Pay Now</Text>
+                      </>
+                    )}
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
       </LinearGradient>
     </SafeAreaView>
   );
@@ -1370,6 +1669,113 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: Math.min(screenWidth * 0.037, 15),
     fontWeight: '600',
+  },
+  // Payment Modal Styles
+  paymentModalContainer: {
+    width: Math.min(screenWidth * 0.88, 380),
+    maxWidth: 380,
+    borderRadius: 18,
+    padding: Math.max(20, screenWidth * 0.05),
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+    alignSelf: 'center',
+  },
+  paymentPremiumBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(255, 215, 0, 0.1)',
+    paddingHorizontal: Math.min(screenWidth * 0.03, 12),
+    paddingVertical: Math.min(screenHeight * 0.008, 6),
+    borderRadius: 16,
+    alignSelf: 'center',
+    marginBottom: Math.min(screenHeight * 0.015, 12),
+    borderWidth: 1,
+    borderColor: 'rgba(255, 215, 0, 0.3)',
+  },
+  paymentPremiumBadgeText: {
+    fontSize: Math.min(screenWidth * 0.025, 10),
+    fontWeight: '700',
+    color: '#B8860B',
+    marginLeft: 4,
+    letterSpacing: 0.8,
+  },
+  paymentModalHeader: {
+    alignItems: 'center',
+    marginBottom: Math.min(screenHeight * 0.02, 16),
+  },
+  paymentModalTitle: {
+    fontSize: Math.min(screenWidth * 0.05, 20),
+    fontWeight: '700',
+    textAlign: 'center',
+    marginBottom: Math.min(screenHeight * 0.008, 6),
+  },
+  paymentModalSubtitle: {
+    fontSize: Math.min(screenWidth * 0.035, 14),
+    textAlign: 'center',
+    lineHeight: Math.min(screenWidth * 0.05, 20),
+    paddingHorizontal: Math.min(screenWidth * 0.02, 8),
+  },
+  paymentFeaturesList: {
+    marginBottom: Math.min(screenHeight * 0.02, 16),
+  },
+  paymentFeatureItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: Math.min(screenHeight * 0.01, 8),
+  },
+  paymentFeatureText: {
+    fontSize: Math.min(screenWidth * 0.033, 13),
+    marginLeft: Math.min(screenWidth * 0.025, 10),
+    flex: 1,
+    lineHeight: Math.min(screenWidth * 0.045, 18),
+  },
+  paymentModalFooter: {
+    flexDirection: 'row',
+    gap: Math.min(screenWidth * 0.025, 10),
+    alignItems: 'stretch',
+    width: '100%',
+  },
+  paymentCancelButton: {
+    flex: 1,
+    paddingVertical: Math.min(screenHeight * 0.015, 12),
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  paymentCancelButtonText: {
+    fontSize: Math.min(screenWidth * 0.033, 13),
+    fontWeight: '600',
+  },
+  paymentButton: {
+    flex: 1,
+    borderRadius: 10,
+    overflow: 'hidden',
+    minHeight: 44,
+  },
+  paymentButtonGradient: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Math.min(screenHeight * 0.015, 12),
+    minHeight: 44,
+  },
+  paymentButtonIcon: {
+    marginRight: Math.min(screenWidth * 0.015, 6),
+  },
+  paymentButtonText: {
+    fontSize: Math.min(screenWidth * 0.033, 13),
+    fontWeight: '700',
+    color: '#ffffff',
   },
 });
 

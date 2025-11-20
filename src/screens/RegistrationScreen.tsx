@@ -22,6 +22,7 @@ import { launchImageLibrary, launchCamera, ImagePickerResponse, MediaType } from
 import { useTheme } from '../context/ThemeContext';
 import loginAPIs from '../services/loginAPIs';
 import ImagePickerModal from '../components/ImagePickerModal';
+import businessCategoriesService, { BusinessCategory } from '../services/businessCategoriesService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -135,13 +136,8 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [phoneValidationError, setPhoneValidationError] = useState<string>('');
   const [alternatePhoneValidationError, setAlternatePhoneValidationError] = useState<string>('');
-
-  const categories = [
-    'Event Planners',
-    'Decorators',
-    'Sound Suppliers',
-    'Light Suppliers',
-  ];
+  const [categories, setCategories] = useState<BusinessCategory[]>([]);
+  const [isLoadingCategories, setIsLoadingCategories] = useState<boolean>(true);
 
   useEffect(() => {
     const updateDimensions = () => {
@@ -150,6 +146,34 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
 
     const subscription = Dimensions.addEventListener('change', updateDimensions);
     return () => subscription?.remove();
+  }, []);
+
+  // Fetch business categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setIsLoadingCategories(true);
+        console.log('📡 [REGISTRATION] Fetching business categories...');
+        const response = await businessCategoriesService.getBusinessCategories();
+        
+        if (response.success && response.categories && response.categories.length > 0) {
+          console.log('✅ [REGISTRATION] Categories fetched successfully:', response.categories.length);
+          setCategories(response.categories);
+        } else {
+          console.warn('⚠️ [REGISTRATION] No categories received from API');
+          // Keep empty array, will show empty state in UI
+          setCategories([]);
+        }
+      } catch (error) {
+        console.error('❌ [REGISTRATION] Error fetching categories:', error);
+        // On error, keep empty array - user can still register but won't see categories
+        setCategories([]);
+      } finally {
+        setIsLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
   }, []);
 
   // Validate phone with real-time digit count feedback (exactly 10 digits)
@@ -534,47 +558,63 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
                   )}
                   
                   {/* Category Options */}
-                  <ScrollView 
-                    horizontal 
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.categoryScrollContent}
-                  >
-                  {categories.map((category) => (
-                    <TouchableOpacity
-                      key={category}
-                      style={[
-                        styles.categoryOption,
-                        { 
-                          backgroundColor: formData.category === category 
-                            ? theme.colors.primary 
-                            : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(102,126,234,0.1)'),
-                          borderColor: formData.category === category 
-                            ? theme.colors.primary 
-                            : (isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(102,126,234,0.3)'),
-                        },
-                        formData.category === category && {
-                          shadowColor: theme.colors.primary,
-                          shadowOffset: { width: 0, height: 2 },
-                          shadowOpacity: 0.3,
-                          shadowRadius: 4,
-                          elevation: 5,
-                        }
-                      ]}
-                      onPress={() => handleInputChange('category', category)}
-                    >
-                      <Text style={[
-                        styles.categoryOptionText,
-                        { 
-                          color: formData.category === category 
-                            ? '#ffffff' 
-                            : (isDarkMode ? '#ffffff' : theme.colors.primary)
-                        }
-                      ]}>
-                        {category}
+                  {isLoadingCategories ? (
+                    <View style={styles.categoryLoadingContainer}>
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                      <Text style={[styles.categoryLoadingText, { color: theme.colors.textSecondary }]}>
+                        Loading categories...
                       </Text>
-                    </TouchableOpacity>
-                  ))}
-                  </ScrollView>
+                    </View>
+                  ) : categories.length === 0 ? (
+                    <View style={styles.categoryEmptyContainer}>
+                      <Icon name="info-outline" size={20} color={theme.colors.textSecondary} />
+                      <Text style={[styles.categoryEmptyText, { color: theme.colors.textSecondary }]}>
+                        No categories available. Please try again later.
+                      </Text>
+                    </View>
+                  ) : (
+                    <ScrollView 
+                      horizontal 
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.categoryScrollContent}
+                    >
+                      {categories.map((category) => (
+                        <TouchableOpacity
+                          key={category.id || category.name}
+                          style={[
+                            styles.categoryOption,
+                            { 
+                              backgroundColor: formData.category === category.name 
+                                ? theme.colors.primary 
+                                : (isDarkMode ? 'rgba(255,255,255,0.1)' : 'rgba(102,126,234,0.1)'),
+                              borderColor: formData.category === category.name 
+                                ? theme.colors.primary 
+                                : (isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(102,126,234,0.3)'),
+                            },
+                            formData.category === category.name && {
+                              shadowColor: theme.colors.primary,
+                              shadowOffset: { width: 0, height: 2 },
+                              shadowOpacity: 0.3,
+                              shadowRadius: 4,
+                              elevation: 5,
+                            }
+                          ]}
+                          onPress={() => handleInputChange('category', category.name)}
+                        >
+                          <Text style={[
+                            styles.categoryOptionText,
+                            { 
+                              color: formData.category === category.name 
+                                ? '#ffffff' 
+                                : (isDarkMode ? '#ffffff' : theme.colors.primary)
+                            }
+                          ]}>
+                            {category.name}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  )}
               </View>
               
               {/* Phone Number with Real-time Validation */}
@@ -1370,6 +1410,30 @@ const styles = StyleSheet.create({
   },
   categoryOptionTextSelected: {
     fontWeight: '600',
+  },
+  categoryLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Math.max(16, screenHeight * 0.02),
+    gap: Math.max(8, screenWidth * 0.02),
+  },
+  categoryLoadingText: {
+    fontSize: isSmallScreen ? 12 : 14,
+    marginLeft: Math.max(8, screenWidth * 0.02),
+  },
+  categoryEmptyContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: Math.max(16, screenHeight * 0.02),
+    paddingHorizontal: Math.max(12, screenWidth * 0.03),
+    gap: Math.max(8, screenWidth * 0.02),
+  },
+  categoryEmptyText: {
+    fontSize: isSmallScreen ? 12 : 14,
+    textAlign: 'center',
+    flex: 1,
   },
   registerButton: {
     paddingVertical: Math.max(12, screenHeight * 0.015),

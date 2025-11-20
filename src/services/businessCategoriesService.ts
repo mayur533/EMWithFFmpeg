@@ -20,27 +20,34 @@ class BusinessCategoriesService {
   // Get all business categories
   async getBusinessCategories(): Promise<BusinessCategoriesResponse> {
     try {
-      console.log('📡 [CATEGORY API] Calling: /api/mobile/business-categories');
-      const response = await api.get('/api/mobile/business-categories');
+      console.log('📡 [CATEGORY API] Calling: /api/mobile/business-categories/business');
+      const response = await api.get('/api/mobile/business-categories/business');
       
       console.log('✅ [CATEGORY API] Response received');
       console.log('📊 [CATEGORY API] Full Response:', JSON.stringify(response.data, null, 2));
       console.log('📊 [CATEGORY API] Success:', response.data.success);
-      console.log('📊 [CATEGORY API] Categories count:', response.data.categories?.length || 0);
       
-      if (response.data.categories && response.data.categories.length > 0) {
-        console.log('📊 [CATEGORY API] First category:', JSON.stringify(response.data.categories[0], null, 2));
-        console.log('📊 [CATEGORY API] All category names:', response.data.categories.map((cat: BusinessCategory) => cat.name));
+      // Handle new response structure: categories are in response.data.data.categories
+      const categories = response.data.data?.categories || response.data.categories || [];
+      console.log('📊 [CATEGORY API] Categories count:', categories.length);
+      
+      if (categories && categories.length > 0) {
+        console.log('📊 [CATEGORY API] First category:', JSON.stringify(categories[0], null, 2));
+        console.log('📊 [CATEGORY API] All category names:', categories.map((cat: BusinessCategory) => cat.name));
       }
       
       // Cache the categories
-      if (response.data.success && response.data.categories) {
-        this.categoriesCache = response.data.categories;
+      if (response.data.success && categories.length > 0) {
+        this.categoriesCache = categories;
         this.cacheTimestamp = Date.now();
         console.log('💾 [CATEGORY API] Categories cached successfully');
       }
       
-      return response.data;
+      // Return in expected format
+      return {
+        success: response.data.success || true,
+        categories: categories
+      };
     } catch (error) {
       console.error('❌ [CATEGORY API] Error:', error);
       console.error('❌ [CATEGORY API] Error details:', JSON.stringify(error, null, 2));

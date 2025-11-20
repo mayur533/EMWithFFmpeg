@@ -9,7 +9,16 @@ import authService from '../services/auth';
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import { navigationRef, navigate as navigateService } from './NavigationService';
-import { Image, View, Text, TouchableOpacity, Dimensions } from 'react-native';
+import {
+  Image,
+  View,
+  Text,
+  TouchableOpacity,
+  Dimensions,
+  Modal,
+  ActivityIndicator,
+  Alert,
+} from 'react-native';
 
 // Responsive scaling functions
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -105,7 +114,7 @@ export type MainStackParamList = {
 export type TabParamList = {
   Home: undefined;
   Templates: undefined;
-  MyBusiness: undefined;
+  PosterPlayer: undefined;
   Greetings: undefined;
   Profile: undefined;
 };
@@ -130,7 +139,6 @@ import TransactionHistoryScreen from '../screens/TransactionHistoryScreen';
 import GreetingTemplatesScreen from '../screens/GreetingTemplatesScreen';
 import GreetingEditorScreen from '../screens/GreetingEditorScreen';
 import MyPostersScreen from '../screens/MyPostersScreen';
-import MyBusinessScreen from '../screens/MyBusinessScreen';
 import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
 import AboutUsScreen from '../screens/AboutUsScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
@@ -239,6 +247,8 @@ const TabNavigator = () => {
 const CustomTabBar = (props: any) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
+  const [isLoadingPosters, setIsLoadingPosters] = React.useState(false);
+  const isPosterPlayerFocused = props.state.routes[props.state.index]?.name === 'PosterPlayer';
   
   // Dynamic dimensions for screen rotation/resize support
   const [dimensions, setDimensions] = React.useState(() => {
@@ -270,108 +280,72 @@ const CustomTabBar = (props: any) => {
   const fontSize = currentModerateScale(isCurrentlySmall ? 7 : 8);
   const borderWidth = currentModerateScale(0.8); // Further reduced from 1
   
-  const handleMyBusinessShortcut = async () => {
-    console.log('🖱️ [NAVBAR] Logo button clicked - navigating immediately');
-    
-    // Navigate immediately with placeholder data to avoid delay
-    const placeholderPoster = {
-      id: 'loading',
-      name: 'Loading...',
-      thumbnail: '',
-      category: 'General',
-      downloads: 0,
-      isDownloaded: false,
-      tags: [],
-    };
+  const handlePosterPlayerShortcut = React.useCallback(async () => {
+    console.log('🖱️ [NAVBAR] Poster shortcut triggered - fetching user category posters');
+    setIsLoadingPosters(true);
 
-    const navigationParams = {
-      selectedPoster: placeholderPoster,
-      relatedPosters: [],
-      searchQuery: '',
-      templateSource: 'professional' as const,
-    };
+    try {
+      // Get user's business category and fetch posters
+      const response = await businessCategoryPostersApi.getUserCategoryPosters();
 
-    // Navigate immediately
-    if (navigationRef.isReady()) {
-      console.log('🚀 [NAVBAR] Navigating immediately via navigationRef');
-      navigateService('PosterPlayer', navigationParams);
-    } else {
-      const parentNavigator = props.navigation.getParent();
-      if (parentNavigator) {
-        console.log('🚀 [NAVBAR] Navigating immediately via parent navigator');
-        parentNavigator.navigate('PosterPlayer', navigationParams);
-      } else {
-        console.log('🚀 [NAVBAR] Navigating immediately via direct navigation');
-        props.navigation.navigate('PosterPlayer', navigationParams);
-      }
-    }
-
-    // Load data in the background after navigation
-    (async () => {
-      try {
-        console.log('📡 [NAVBAR] Fetching business posters in background');
-        let response = await businessCategoryPostersApi.getUserCategoryPosters();
-        console.log('📦 [NAVBAR] User category response:', {
-          success: response.success,
-          count: response.data?.posters?.length || 0,
-          category: response.data?.category,
+      if (response?.success && response.data?.posters && response.data.posters.length > 0) {
+        // Map BusinessCategoryPoster to Template format for PosterPlayerScreen
+        const mapPosterToTemplate = (poster: any) => ({
+          id: poster.id,
+          name: poster.title || 'Poster',
+          thumbnail: poster.imageUrl || poster.thumbnail || '',
+          category: poster.category || response.data.category || 'General',
+          downloads: poster.downloads || 0,
+          isDownloaded: false,
+          languages: [],
+          tags: poster.tags || [],
         });
 
-        if (!response.success || !response.data?.posters?.length) {
-          console.warn('⚠️ [NAVBAR] No posters found for user category, trying General');
-          try {
-            response = await businessCategoryPostersApi.getPostersByCategory('General');
-            console.log('📦 [NAVBAR] General category response:', {
-              success: response.success,
-              count: response.data?.posters?.length || 0,
-            });
-          } catch (generalError) {
-            console.error('❌ [NAVBAR] General category fallback failed:', generalError);
-          }
-        }
+        const selectedPoster = mapPosterToTemplate(response.data.posters[0]);
+        const relatedPosters = response.data.posters.slice(1).map(mapPosterToTemplate);
 
-        if (response.success && response.data && response.data.posters?.length > 0) {
-          const templates = (response.data.posters || []).map((poster) => ({
-            id: poster.id,
-            name: poster.title,
-            thumbnail: poster.imageUrl || poster.thumbnail,
-            category: poster.category,
-            downloads: poster.downloads || 0,
-            isDownloaded: false,
-            tags: poster.tags || [],
-          }));
+        // Navigate to PosterPlayerScreen with the posters
+        const navigationParams = {
+          selectedPoster,
+          relatedPosters,
+          searchQuery: '',
+          templateSource: 'professional' as const,
+        };
 
-          const selectedPoster = templates[0];
-          const relatedPosters = templates.slice(1);
-          
-          // Update navigation params if screen is still active
-          // Navigate again with updated params - React Navigation will update the route
-          const updatedParams = {
-            selectedPoster,
-            relatedPosters,
-            searchQuery: '',
-            templateSource: 'professional' as const,
-          };
-
-          // Update the current screen with loaded data
-          if (navigationRef.isReady()) {
-            const currentRoute = navigationRef.getCurrentRoute();
-            if (currentRoute?.name === 'PosterPlayer') {
-              console.log('🔄 [NAVBAR] Updating PosterPlayer with loaded data');
-              // Navigate again with updated params - React Navigation will update the route params
-              navigateService('PosterPlayer', updatedParams);
-            }
-          }
+        if (navigationRef.isReady()) {
+          navigateService('PosterPlayer', navigationParams);
         } else {
-          console.warn('⚠️ [NAVBAR] No posters available');
+          const parentNavigator = props.navigation.getParent();
+          if (parentNavigator) {
+            parentNavigator.navigate('PosterPlayer', navigationParams);
+          } else {
+            props.navigation.navigate('PosterPlayer', navigationParams);
+          }
         }
-      } catch (error) {
-        console.error('❌ [NAVBAR] Error loading business posters in background:', error);
+      } else {
+        console.warn('⚠️ [NAVBAR] No posters available for user category');
+        Alert.alert(
+          'No posters available',
+          'We could not find posters for your business category right now. Please try again later.',
+        );
       }
-    })();
-  };
+    } catch (error) {
+      console.error('❌ [NAVBAR] Error loading user category posters:', error);
+      Alert.alert(
+        'Unable to load posters',
+        'Something went wrong while loading your posters. Please try again later.',
+      );
+    } finally {
+      setIsLoadingPosters(false);
+    }
+  }, [props.navigation]);
+
+  if (isPosterPlayerFocused) {
+    return null;
+  }
 
   return (
+    <>
     <View style={{
       backgroundColor: theme.colors.surface,
       borderTopWidth: currentModerateScale(0.3), // Further reduced from 0.5
@@ -398,9 +372,9 @@ const CustomTabBar = (props: any) => {
         borderRadius: logoContainerSize / 2,
       }} />
       
-      {/* Logo positioned to overlap with screen content - Clickable to navigate to My Business */}
+      {/* Logo positioned to overlap with screen content - Clickable to navigate to Poster Player */}
       <TouchableOpacity
-        onPress={handleMyBusinessShortcut}
+        onPress={handlePosterPlayerShortcut}
         activeOpacity={0.7}
         style={{
           position: 'absolute',
@@ -453,9 +427,8 @@ const CustomTabBar = (props: any) => {
           const isFocused = props.state.index === index;
 
           const onPress = () => {
-            // Intercept MyBusiness tab to navigate to PosterPlayerScreen instead
-            if (route.name === 'MyBusiness') {
-              handleMyBusinessShortcut();
+            if (route.name === 'PosterPlayer') {
+              handlePosterPlayerShortcut();
               return;
             }
 
@@ -516,6 +489,42 @@ const CustomTabBar = (props: any) => {
         })}
       </View>
     </View>
+
+    {/* Loading overlay while fetching user category posters */}
+    <Modal transparent animationType="fade" visible={isLoadingPosters}>
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.35)',
+          justifyContent: 'center',
+          alignItems: 'center',
+        }}
+      >
+        <View
+          style={{
+            backgroundColor: theme.colors.surface,
+            padding: 20,
+            borderRadius: 14,
+            width: 220,
+            alignItems: 'center',
+            gap: 10,
+          }}
+        >
+          <ActivityIndicator size="small" color={theme.colors.primary} />
+          <Text
+            style={{
+              fontSize: 14,
+              fontWeight: '600',
+              color: theme.colors.text,
+              textAlign: 'center',
+            }}
+          >
+            Loading posters...
+          </Text>
+        </View>
+      </View>
+    </Modal>
+    </>
   );
 };
 
@@ -553,10 +562,11 @@ const MainTabNavigator = () => {
         }}
       />
       <Tab.Screen 
-        name="MyBusiness" 
-        component={MyBusinessScreen}
+        name="PosterPlayer" 
+        component={PosterPlayerScreen}
         options={{
           title: 'My Business',
+          tabBarStyle: { display: 'none' },
         }}
       />
       <Tab.Screen 
