@@ -660,7 +660,7 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
                  value={formData.email}
                  onChangeText={(value) => handleInputChange('email', value)}
                  field="email"
-                 placeholder="Enter email address"
+                 placeholder="Enter email address *"
                  keyboardType="email-address"
                  focusedField={focusedField}
                  setFocusedField={setFocusedField}
