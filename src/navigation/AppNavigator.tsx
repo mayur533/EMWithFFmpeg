@@ -604,7 +604,7 @@ const AppNavigator = () => {
     let authStateReceived = false;
     let authUser: any = null;
     const startTime = Date.now();
-    const MIN_SPLASH_TIME = 8000; // Minimum 8 seconds to allow intro video to play
+    const MIN_SPLASH_TIME = 2000; // Reduced to 2 seconds for faster app startup
     
     // Extended timeout to allow intro video to play fully before checking auth state
     const timeout = setTimeout(() => {
@@ -613,7 +613,7 @@ const AppNavigator = () => {
         setIsLoading(false);
         setIsAuthenticated(false);
       }
-    }, 10000); // 10 seconds timeout for auth state
+    }, 5000); // Reduced to 5 seconds timeout for auth state
 
     // Listen to authentication state changes
     const unsubscribe = authService.onAuthStateChanged((user) => {

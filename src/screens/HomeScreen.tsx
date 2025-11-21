@@ -268,6 +268,7 @@ const HomeScreen: React.FC = React.memo(() => {
       }
       if (goodMorningResponse.status === 'fulfilled' && goodMorningResponse.value.length > 0) {
         console.log('✅ [GOOD MORNING] Setting templates:', goodMorningResponse.value.length);
+        console.log('📦 [GOOD MORNING] Sample template structure:', JSON.stringify(goodMorningResponse.value[0], null, 2));
         setGoodMorningTemplates(goodMorningResponse.value.slice(0, 10));
         setGoodMorningTemplatesRaw(goodMorningResponse.value);
       } else {
@@ -369,17 +370,153 @@ const HomeScreen: React.FC = React.memo(() => {
     loadApiData();
   }, [loadApiData]);
 
-  // Handle search query changes - using API data only
+  // Collect all greeting templates for unified search
+  const allGreetingTemplates = useMemo(() => {
+    const all: any[] = [];
+    
+    // Collect from all greeting sections (use Raw arrays for complete data)
+    if (motivationTemplatesRaw.length > 0) all.push(...motivationTemplatesRaw);
+    if (goodMorningTemplatesRaw.length > 0) all.push(...goodMorningTemplatesRaw);
+    if (businessEthicsTemplatesRaw.length > 0) all.push(...businessEthicsTemplatesRaw);
+    if (devotionalTemplatesRaw.length > 0) all.push(...devotionalTemplatesRaw);
+    if (leaderQuotesTemplatesRaw.length > 0) all.push(...leaderQuotesTemplatesRaw);
+    if (atmanirbharBharatTemplatesRaw.length > 0) all.push(...atmanirbharBharatTemplatesRaw);
+    if (goodThoughtsTemplatesRaw.length > 0) all.push(...goodThoughtsTemplatesRaw);
+    if (trendingTemplatesRaw.length > 0) all.push(...trendingTemplatesRaw);
+    if (bhagvatGitaTemplatesRaw.length > 0) all.push(...bhagvatGitaTemplatesRaw);
+    if (booksTemplatesRaw.length > 0) all.push(...booksTemplatesRaw);
+    if (celebratesMomentsTemplatesRaw.length > 0) all.push(...celebratesMomentsTemplatesRaw);
+    
+    // Convert greeting templates to Template format for unified search
+    const converted = all.map(greetingTemplate => ({
+      id: greetingTemplate.id,
+      name: greetingTemplate.name || greetingTemplate.title || '',
+      thumbnail: greetingTemplate.thumbnail || greetingTemplate.imageUrl || '',
+      category: greetingTemplate.category || 'Greeting',
+      downloads: greetingTemplate.downloads || 0,
+      isDownloaded: greetingTemplate.isDownloaded || false,
+      description: greetingTemplate.description || greetingTemplate.content?.text || '',
+      tags: greetingTemplate.tags || [],
+      isGreeting: true, // Flag to identify greeting templates
+      originalTemplate: greetingTemplate, // Keep reference to original
+    }));
+    
+    // Debug: Log Good Morning templates structure
+    if (goodMorningTemplatesRaw.length > 0) {
+      console.log('🔍 [SEARCH] Good Morning templates count:', goodMorningTemplatesRaw.length);
+      console.log('🔍 [SEARCH] Sample Good Morning template:', JSON.stringify(converted.find(t => goodMorningTemplatesRaw.some(gm => gm.id === t.id)), null, 2));
+    }
+    
+    return converted;
+  }, [
+    motivationTemplatesRaw,
+    goodMorningTemplatesRaw,
+    businessEthicsTemplatesRaw,
+    devotionalTemplatesRaw,
+    leaderQuotesTemplatesRaw,
+    atmanirbharBharatTemplatesRaw,
+    goodThoughtsTemplatesRaw,
+    trendingTemplatesRaw,
+    bhagvatGitaTemplatesRaw,
+    booksTemplatesRaw,
+    celebratesMomentsTemplatesRaw,
+  ]);
+
+  // Debounced search handler - triggers search after user stops typing
   useEffect(() => {
-    const handleSearchQueryChange = async () => {
+    // Clear any existing timeout
+    const timeoutId = setTimeout(() => {
       if (searchQuery.trim() === '') {
         // Reset to show all business events from API
         setTemplates(professionalTemplates);
+        setIsSearching(false);
+        setDisableBackgroundUpdates(false);
+      } else {
+        // Trigger search after debounce delay
+        const requestId = currentRequestId + 1;
+        setCurrentRequestId(requestId);
+        setIsSearching(true);
+        setDisableBackgroundUpdates(true);
+        
+        // Combine professional templates and greeting templates for unified search
+        const allTemplates = [...professionalTemplates, ...allGreetingTemplates];
+        
+        console.log('🔍 [SEARCH] Total templates to search:', allTemplates.length);
+        console.log('🔍 [SEARCH] Professional templates:', professionalTemplates.length);
+        console.log('🔍 [SEARCH] Greeting templates:', allGreetingTemplates.length);
+        console.log('🔍 [SEARCH] Query:', searchQuery);
+        
+        // Use local search immediately for better performance
+        // Search in name, category, description, and tags
+        const searchLower = searchQuery.toLowerCase();
+        const filtered = allTemplates.filter(template => {
+          // Search in name
+          if (template.name?.toLowerCase().includes(searchLower)) return true;
+          
+          // Search in category
+          if (template.category?.toLowerCase().includes(searchLower)) return true;
+          
+          // Search in description
+          if (template.description?.toLowerCase().includes(searchLower)) return true;
+          
+          // Search in tags array
+          if (template.tags && Array.isArray(template.tags)) {
+            const tagMatch = template.tags.some(tag => 
+              tag?.toLowerCase().includes(searchLower)
+            );
+            if (tagMatch) return true;
+          }
+          
+          return false;
+        });
+        
+        console.log('🔍 [SEARCH] Filtered results:', filtered.length);
+        if (filtered.length > 0) {
+          console.log('🔍 [SEARCH] Sample result:', JSON.stringify(filtered[0], null, 2));
+        }
+        
+        setTemplates(filtered);
+        
+        // Try API search in background for professional templates
+        setTimeout(async () => {
+          if (currentRequestId !== requestId) return;
+          try {
+            // Search professional templates via API
+            const professionalResults = await dashboardService.searchTemplates(searchQuery);
+            
+            // Search greeting templates via API
+            const greetingResults = await greetingTemplatesService.searchTemplates(searchQuery);
+            
+            // Convert greeting results to Template format
+            const convertedGreetingResults = greetingResults.map(greetingTemplate => ({
+              id: greetingTemplate.id,
+              name: greetingTemplate.name || greetingTemplate.title || '',
+              thumbnail: greetingTemplate.thumbnail || greetingTemplate.imageUrl || '',
+              category: greetingTemplate.category || 'Greeting',
+              downloads: greetingTemplate.downloads || 0,
+              isDownloaded: greetingTemplate.isDownloaded || false,
+              description: greetingTemplate.description || greetingTemplate.content?.text || '',
+              tags: greetingTemplate.tags || [],
+              isGreeting: true,
+              originalTemplate: greetingTemplate,
+            }));
+            
+            // Combine results
+            const combinedResults = [...professionalResults, ...convertedGreetingResults];
+            
+            if (currentRequestId === requestId) {
+              setTemplates(combinedResults);
+            }
+          } catch (error) {
+            console.error('Search error:', error);
+          }
+        }, 100);
       }
-    };
+    }, 300); // 300ms debounce delay
 
-    handleSearchQueryChange();
-  }, [searchQuery, professionalTemplates]);
+    // Cleanup timeout on unmount or when searchQuery changes
+    return () => clearTimeout(timeoutId);
+  }, [searchQuery, professionalTemplates, allGreetingTemplates, currentRequestId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -493,7 +630,7 @@ const HomeScreen: React.FC = React.memo(() => {
     }, 100);
   }, [searchQuery, activeTab, professionalTemplates, currentRequestId, isSearching]);
 
-const handleTemplatePress = useCallback((template: Template | VideoContent) => {
+const handleTemplatePress = useCallback((template: Template | VideoContent | any) => {
   const matchedVideo = videoContent.find(video => video.id === template.id);
 
   if (matchedVideo) {
@@ -505,6 +642,18 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
     return;
   }
 
+  // Check if it's a greeting template
+  if (template.isGreeting && template.originalTemplate) {
+    const relatedTemplates = allGreetingTemplates.filter(t => t.id !== template.id);
+    navigation.navigate('PosterPlayer', {
+      selectedPoster: template.originalTemplate,
+      relatedPosters: relatedTemplates.map(t => t.originalTemplate || t),
+      searchQuery: searchQuery,
+      templateSource: 'greeting',
+    });
+    return;
+  }
+
   const matchedPoster = professionalTemplates.find(poster => poster.id === template.id);
   const related = professionalTemplates.filter(poster => poster.id !== (matchedPoster?.id ?? template.id));
 
@@ -512,7 +661,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
     selectedPoster: (matchedPoster ?? template) as Template,
     relatedPosters: related,
   });
-}, [videoContent, professionalTemplates, navigation]);
+}, [videoContent, professionalTemplates, allGreetingTemplates, navigation, searchQuery]);
 
   const closeModal = useCallback(() => {
     setIsModalVisible(false);
@@ -1028,29 +1177,33 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             </TouchableOpacity>
           </View> */}
 
-          {/* Banner Carousel */}
-          <View style={styles.bannerSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Featured Content</Text>
-              {featuredContent.length > 0 && renderBrowseAllButton(handleViewAllFeaturedContent)}
+          {/* Banner Carousel - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && (
+            <View style={styles.bannerSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Featured Content</Text>
+                {featuredContent.length > 0 && renderBrowseAllButton(handleViewAllFeaturedContent)}
+              </View>
+              <FlatList
+                data={banners}
+                renderItem={renderBanner}
+                keyExtractor={keyExtractor}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.bannerList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={3}
+                windowSize={5}
+                initialNumToRender={3}
+                updateCellsBatchingPeriod={50}
+                nestedScrollEnabled={true}
+                scrollEnabled={true}
+              />
             </View>
-            <FlatList
-              data={banners}
-              renderItem={renderBanner}
-              keyExtractor={keyExtractor}
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              contentContainerStyle={styles.bannerList}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={3}
-              windowSize={5}
-              nestedScrollEnabled={true}
-              scrollEnabled={true}
-            />
-          </View>
+          )}
 
-          {/* Upcoming Festivals */}
-          {upcomingEvents.length > 0 && (
+          {/* Upcoming Festivals - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && upcomingEvents.length > 0 && (
             <View style={styles.upcomingEventsSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Upcoming Festivals</Text>
@@ -1105,29 +1258,65 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
             </View>
           )}
 
-          {/* Templates Grid */}
-          <View style={styles.templatesSection}>
-            <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Events</Text>
-              {renderBrowseAllButton(handleViewAllTemplates)}
+          {/* Templates Grid - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Events</Text>
+                {renderBrowseAllButton(handleViewAllTemplates)}
+              </View>
+              <FlatList
+                key={`templates-${templates.length}`}
+                data={templates}
+                renderItem={renderTemplate}
+                keyExtractor={keyExtractor}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
+                contentContainerStyle={styles.horizontalList}
+              />
             </View>
-            <FlatList
-              key={`templates-${templates.length}`}
-              data={templates}
-              renderItem={renderTemplate}
-              keyExtractor={keyExtractor}
-              horizontal={true}
-              showsHorizontalScrollIndicator={false}
-              nestedScrollEnabled={true}
-              removeClippedSubviews={true}
-              maxToRenderPerBatch={12}
-              windowSize={10}
-              contentContainerStyle={styles.horizontalList}
-            />
-          </View>
+          )}
+          
+          {/* Search Results - Shown only when searching */}
+          {isSearching && searchQuery.trim() !== '' && (
+            <View style={styles.templatesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Search Results</Text>
+              </View>
+              {templates.length > 0 ? (
+                <FlatList
+                  key={`search-results-${templates.length}`}
+                  data={templates}
+                  renderItem={renderTemplate}
+                  keyExtractor={keyExtractor}
+                  horizontal={true}
+                  showsHorizontalScrollIndicator={false}
+                  nestedScrollEnabled={true}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
+                  contentContainerStyle={styles.horizontalList}
+                />
+              ) : (
+                <View style={{ padding: 20, alignItems: 'center' }}>
+                  <Text style={{ color: theme.colors.textSecondary, fontSize: 14 }}>
+                    No results found for "{searchQuery}"
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
 
-          {/* Video Section */}
-          {videoContent.length > 0 && (
+          {/* Video Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && videoContent.length > 0 && (
             <View style={styles.videoSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Video Content</Text>
@@ -1142,15 +1331,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={12}
-                windowSize={10}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
                 contentContainerStyle={styles.horizontalList}
               />
             </View>
           )}
 
-          {/* Motivation Section */}
-          {motivationTemplates.length > 0 && (
+          {/* Motivation Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && motivationTemplates.length > 0 && (
             <View style={styles.templatesSection}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Motivation</Text>
@@ -1167,12 +1358,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Good Morning Section */}
-          {goodMorningTemplates.length > 0 && (
+          {/* Good Morning Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && goodMorningTemplates.length > 0 && (
             <View style={styles.templatesSection}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Good Morning</Text>
@@ -1195,12 +1391,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Business Ethics Section */}
-          {businessEthicsTemplates.length > 0 && (
+          {/* Business Ethics Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && businessEthicsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
             <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Ethics</Text>
@@ -1217,12 +1418,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Devotional Section */}
-          {devotionalTemplates.length > 0 && (
+          {/* Devotional Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && devotionalTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Devotional</Text>
@@ -1239,12 +1445,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Leader Quotes Section */}
-          {leaderQuotesTemplates.length > 0 && (
+          {/* Leader Quotes Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && leaderQuotesTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Leader Quotes</Text>
@@ -1261,12 +1472,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Atmanirbhar Bharat Section */}
-          {atmanirbharBharatTemplates.length > 0 && (
+          {/* Atmanirbhar Bharat Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && atmanirbharBharatTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Atmanirbhar Bharat</Text>
@@ -1283,12 +1499,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Good Thoughts Section */}
-          {goodThoughtsTemplates.length > 0 && (
+          {/* Good Thoughts Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && goodThoughtsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Good Thoughts</Text>
@@ -1305,12 +1526,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Trending Section */}
-          {trendingTemplates.length > 0 && (
+          {/* Trending Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && trendingTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Trending</Text>
@@ -1327,12 +1553,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Bhagvat Gita Section */}
-          {bhagvatGitaTemplates.length > 0 && (
+          {/* Bhagvat Gita Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && bhagvatGitaTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Bhagvat Gita</Text>
@@ -1349,12 +1580,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Books Section */}
-          {booksTemplates.length > 0 && (
+          {/* Books Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && booksTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Books</Text>
@@ -1371,12 +1607,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
 
-          {/* Celebrates the Moments Section */}
-          {celebratesMomentsTemplates.length > 0 && (
+          {/* Celebrates the Moments Section - Hidden when searching */}
+          {!isSearching && searchQuery.trim() === '' && celebratesMomentsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Celebrates the Moments</Text>
@@ -1393,6 +1634,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
               />
             </View>
           )}
@@ -1485,6 +1731,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: event }) => (
                     <TouchableOpacity
                       activeOpacity={0.8}
@@ -1575,6 +1826,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity
                       activeOpacity={0.8}
@@ -1660,6 +1916,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: video }) => (
                     <TouchableOpacity
                       activeOpacity={0.8}
@@ -1752,6 +2013,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity
                       activeOpacity={0.8}
@@ -1824,6 +2090,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity
                       activeOpacity={0.8}
@@ -1896,6 +2167,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity
                       activeOpacity={0.8}
@@ -1968,6 +2244,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity
                       activeOpacity={0.8}
@@ -2040,6 +2321,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity
                       activeOpacity={0.8}
@@ -2101,6 +2387,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeAtmanirbharBharatModal();
@@ -2145,6 +2436,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeGoodThoughtsModal();
@@ -2189,6 +2485,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeTrendingModal();
@@ -2233,6 +2534,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeBhagvatGitaModal();
@@ -2277,6 +2583,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeBooksModal();
@@ -2321,6 +2632,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent) => {
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
                   renderItem={({ item: template }) => (
                     <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
                       closeCelebratesMomentsModal();
