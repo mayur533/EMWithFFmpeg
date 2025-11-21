@@ -409,9 +409,32 @@ const RegistrationScreen: React.FC<RegistrationScreenProps> = ({ navigation }) =
 
       // Navigation will be handled automatically by auth state change
       // No need to show success alert as user will be redirected to home
-    } catch (error) {
+    } catch (error: any) {
       console.error('Registration error:', error);
-      setErrorMessage('Registration failed. Please try again.');
+      
+      // Extract error message from API response
+      const errorMessage = error.response?.data?.message || error.message || '';
+      const errorMessageLower = errorMessage.toLowerCase();
+      
+      // Check if error indicates email is already registered
+      const isEmailAlreadyRegistered = 
+        errorMessageLower.includes('already registered') ||
+        errorMessageLower.includes('email already') ||
+        errorMessageLower.includes('already exists') ||
+        errorMessageLower.includes('user already exists') ||
+        errorMessageLower.includes('email is already') ||
+        errorMessageLower.includes('email address is already') ||
+        errorMessageLower.includes('duplicate email') ||
+        errorMessageLower.includes('email already registered') ||
+        (error.response?.status === 409) || // Conflict status code often used for duplicates
+        (error.response?.status === 400 && errorMessageLower.includes('email'));
+      
+      if (isEmailAlreadyRegistered) {
+        setErrorMessage('This email is already registered. Please use a different email address or try signing in.');
+      } else {
+        setErrorMessage(errorMessage || 'Registration failed. Please try again.');
+      }
+      
       setShowErrorModal(true);
     } finally {
       setIsLoading(false);
