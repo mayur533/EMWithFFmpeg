@@ -290,21 +290,21 @@ const PosterPlayerScreen: React.FC = () => {
   }, [isEventPlannerCategory, selectedServiceFilter, serviceFilterKeywords]);
 
   const filteredPosters = useMemo(() => {
+    // First filter by language - if no matches, return empty array
     const languageFiltered = allTemplates.filter(template =>
       templateContainsLanguage(template, selectedLanguage),
     );
+    
+    // If no language matches, show nothing
+    if (languageFiltered.length === 0) {
+      return [];
+    }
+    
+    // Then apply service filter if applicable
     const serviceFiltered = languageFiltered.filter(templateMatchesServiceFilter);
 
-    if (serviceFiltered.length > 0) {
-      return serviceFiltered;
-    }
-
-    const fallbackByService = allTemplates.filter(templateMatchesServiceFilter);
-    if (fallbackByService.length > 0) {
-      return fallbackByService;
-    }
-
-    return allTemplates;
+    // Return service-filtered results (even if empty, don't fallback to all templates)
+    return serviceFiltered;
   }, [allTemplates, selectedLanguage, templateMatchesServiceFilter]);
 
   // Preload images for better scrolling performance

@@ -1,6 +1,6 @@
 // HomeScreen comprehensively optimized for all device sizes with ultra-compact header, search bar, and content sizing
 // Performance optimizations: FastImage for better image loading and caching, lazy loading for lists
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -101,6 +101,46 @@ const HomeScreen: React.FC = React.memo(() => {
 
   const cardWidth = getCardWidth();
   
+  // Helper function for moderateScale (matches the one defined at bottom of file)
+  const getModerateScale = useCallback((size: number, factor = 0.5) => {
+    const scale = (s: number) => (screenWidth / 375) * s;
+    return size + (scale(size) - size) * factor;
+  }, [screenWidth]);
+  
+  // Helper function for getResponsiveValue (matches the one defined at bottom of file)
+  const getResponsiveValue = useCallback((small: number, medium: number, large: number) => {
+    if (screenWidth < 400) return small;
+    if (screenWidth < 768) return medium;
+    return large;
+  }, [screenWidth]);
+  
+  // Calculate item spacing for getItemLayout (matches templateCardWrapper marginRight)
+  const itemSpacing = useMemo(() => {
+    return getModerateScale(3);
+  }, [getModerateScale]);
+  
+  // Memoized getItemLayout for horizontal FlatLists with fixed card width
+  const getItemLayout = useCallback((data: any, index: number) => {
+    const itemLength = cardWidth + itemSpacing;
+    return {
+      length: itemLength,
+      offset: itemLength * index,
+      index,
+    };
+  }, [cardWidth, itemSpacing]);
+  
+  // Memoized getItemLayout for banner carousel (different width)
+  const getBannerItemLayout = useCallback((data: any, index: number) => {
+    const bannerWidth = getResponsiveValue(screenWidth * 0.70, screenWidth * 0.65, screenWidth * 0.55);
+    const bannerSpacing = getModerateScale(4); // matches bannerContainerWrapper marginRight
+    const itemLength = bannerWidth + bannerSpacing;
+    return {
+      length: itemLength,
+      offset: itemLength * index,
+      index,
+    };
+  }, [screenWidth, getResponsiveValue, getModerateScale]);
+  
   // Responsive icon sizes for different UI elements
   const searchIconSize = getIconSize(14);
   const statusIconSize = getIconSize(8);
@@ -175,7 +215,9 @@ const HomeScreen: React.FC = React.memo(() => {
     setApiError(null);
     
     try {
-      console.log(isRefresh ? '🔄 Refreshing home screen data...' : '📡 Loading home screen data...');
+      if (__DEV__) {
+        console.log(isRefresh ? '🔄 Refreshing home screen data...' : '📡 Loading home screen data...');
+      }
       
       // Load all 4 APIs in parallel (cache will make this instant on repeat loads)
       const [featuredResponse, eventsResponse, templatesResponse, videosResponse] = await Promise.allSettled([
@@ -214,18 +256,26 @@ const HomeScreen: React.FC = React.memo(() => {
       // Handle business events
       if (templatesResponse.status === 'fulfilled' && templatesResponse.value.success) {
         setProfessionalTemplates(templatesResponse.value.data);
-        console.log('✅ Business events loaded:', templatesResponse.value.data.length, 'items');
+        if (__DEV__) {
+          console.log('✅ Business events loaded:', templatesResponse.value.data.length, 'items');
+        }
       } else {
-        console.log('⚠️ Business events API failed');
+        if (__DEV__) {
+          console.log('⚠️ Business events API failed');
+        }
         setProfessionalTemplates([]);
       }
 
       // Handle video content
       if (videosResponse.status === 'fulfilled' && videosResponse.value.success) {
         setVideoContent(videosResponse.value.data);
-        console.log('✅ Video content loaded:', videosResponse.value.data.length, 'items');
+        if (__DEV__) {
+          console.log('✅ Video content loaded:', videosResponse.value.data.length, 'items');
+        }
       } else {
-        console.log('⚠️ Video content API failed');
+        if (__DEV__) {
+          console.log('⚠️ Video content API failed');
+        }
         setVideoContent([]);
       }
 
@@ -256,92 +306,81 @@ const HomeScreen: React.FC = React.memo(() => {
         greetingTemplatesService.searchTemplates('celebrates the moments')
       ]);
 
-      // Handle greeting sections responses - Only set data if array has items
-      if (motivationResponse.status === 'fulfilled' && motivationResponse.value.length > 0) {
-        console.log('✅ [MOTIVATION] Setting templates:', motivationResponse.value.length);
-        setMotivationTemplates(motivationResponse.value.slice(0, 10));
-        setMotivationTemplatesRaw(motivationResponse.value);
-      } else {
-        console.log('⚠️ [MOTIVATION] No data available or API failed');
-        setMotivationTemplates([]);
-        setMotivationTemplatesRaw([]);
+      // Handle greeting sections responses - Batch state updates for better performance
+      // React 18+ automatically batches, but we'll process all responses first then update state
+      const greetingUpdates = {
+        motivation: motivationResponse.status === 'fulfilled' && motivationResponse.value.length > 0
+          ? { display: motivationResponse.value.slice(0, 10), raw: motivationResponse.value }
+          : { display: [], raw: [] },
+        goodMorning: goodMorningResponse.status === 'fulfilled' && goodMorningResponse.value.length > 0
+          ? { display: goodMorningResponse.value.slice(0, 10), raw: goodMorningResponse.value }
+          : { display: [], raw: [] },
+        businessEthics: businessEthicsResponse.status === 'fulfilled' && businessEthicsResponse.value.length > 0
+          ? { display: businessEthicsResponse.value.slice(0, 10), raw: businessEthicsResponse.value }
+          : { display: [], raw: [] },
+        devotional: devotionalResponse.status === 'fulfilled' && devotionalResponse.value.length > 0
+          ? { display: devotionalResponse.value.slice(0, 10), raw: devotionalResponse.value }
+          : { display: [], raw: [] },
+        leaderQuotes: leaderQuotesResponse.status === 'fulfilled' && leaderQuotesResponse.value.length > 0
+          ? { display: leaderQuotesResponse.value.slice(0, 10), raw: leaderQuotesResponse.value }
+          : { display: [], raw: [] },
+        atmanirbharBharat: atmanirbharResponse.status === 'fulfilled' && atmanirbharResponse.value.length > 0
+          ? { display: atmanirbharResponse.value.slice(0, 10), raw: atmanirbharResponse.value }
+          : { display: [], raw: [] },
+        goodThoughts: goodThoughtsResponse.status === 'fulfilled' && goodThoughtsResponse.value.length > 0
+          ? { display: goodThoughtsResponse.value.slice(0, 10), raw: goodThoughtsResponse.value }
+          : { display: [], raw: [] },
+        trending: trendingResponse.status === 'fulfilled' && trendingResponse.value.length > 0
+          ? { display: trendingResponse.value.slice(0, 10), raw: trendingResponse.value }
+          : { display: [], raw: [] },
+        bhagvatGita: bhagvatGitaResponse.status === 'fulfilled' && bhagvatGitaResponse.value.length > 0
+          ? { display: bhagvatGitaResponse.value.slice(0, 10), raw: bhagvatGitaResponse.value }
+          : { display: [], raw: [] },
+        books: booksResponse.status === 'fulfilled' && booksResponse.value.length > 0
+          ? { display: booksResponse.value.slice(0, 10), raw: booksResponse.value }
+          : { display: [], raw: [] },
+        celebratesMoments: celebratesResponse.status === 'fulfilled' && celebratesResponse.value.length > 0
+          ? { display: celebratesResponse.value.slice(0, 10), raw: celebratesResponse.value }
+          : { display: [], raw: [] },
+      };
+
+      // Batch all state updates together (React 18+ auto-batches, but this makes it explicit)
+      if (__DEV__ && greetingUpdates.motivation.raw.length > 0) {
+        console.log('✅ [MOTIVATION] Setting templates:', greetingUpdates.motivation.raw.length);
       }
-      if (goodMorningResponse.status === 'fulfilled' && goodMorningResponse.value.length > 0) {
-        console.log('✅ [GOOD MORNING] Setting templates:', goodMorningResponse.value.length);
-        console.log('📦 [GOOD MORNING] Sample template structure:', JSON.stringify(goodMorningResponse.value[0], null, 2));
-        setGoodMorningTemplates(goodMorningResponse.value.slice(0, 10));
-        setGoodMorningTemplatesRaw(goodMorningResponse.value);
-      } else {
-        console.log('⚠️ [GOOD MORNING] No data available or API failed');
-        setGoodMorningTemplates([]);
-        setGoodMorningTemplatesRaw([]);
+      if (__DEV__ && greetingUpdates.goodMorning.raw.length > 0) {
+        console.log('✅ [GOOD MORNING] Setting templates:', greetingUpdates.goodMorning.raw.length);
+        console.log('📦 [GOOD MORNING] Sample template structure:', JSON.stringify(greetingUpdates.goodMorning.raw[0], null, 2));
       }
-      if (businessEthicsResponse.status === 'fulfilled' && businessEthicsResponse.value.length > 0) {
-        setBusinessEthicsTemplates(businessEthicsResponse.value.slice(0, 10));
-        setBusinessEthicsTemplatesRaw(businessEthicsResponse.value);
-      } else {
-        setBusinessEthicsTemplates([]);
-        setBusinessEthicsTemplatesRaw([]);
-      }
-      if (devotionalResponse.status === 'fulfilled' && devotionalResponse.value.length > 0) {
-        setDevotionalTemplates(devotionalResponse.value.slice(0, 10));
-        setDevotionalTemplatesRaw(devotionalResponse.value);
-      } else {
-        setDevotionalTemplates([]);
-        setDevotionalTemplatesRaw([]);
-      }
-      if (leaderQuotesResponse.status === 'fulfilled' && leaderQuotesResponse.value.length > 0) {
-        setLeaderQuotesTemplates(leaderQuotesResponse.value.slice(0, 10));
-        setLeaderQuotesTemplatesRaw(leaderQuotesResponse.value);
-      } else {
-        setLeaderQuotesTemplates([]);
-        setLeaderQuotesTemplatesRaw([]);
-      }
-      if (atmanirbharResponse.status === 'fulfilled' && atmanirbharResponse.value.length > 0) {
-        setAtmanirbharBharatTemplates(atmanirbharResponse.value.slice(0, 10));
-        setAtmanirbharBharatTemplatesRaw(atmanirbharResponse.value);
-      } else {
-        setAtmanirbharBharatTemplates([]);
-        setAtmanirbharBharatTemplatesRaw([]);
-      }
-      if (goodThoughtsResponse.status === 'fulfilled' && goodThoughtsResponse.value.length > 0) {
-        setGoodThoughtsTemplates(goodThoughtsResponse.value.slice(0, 10));
-        setGoodThoughtsTemplatesRaw(goodThoughtsResponse.value);
-      } else {
-        setGoodThoughtsTemplates([]);
-        setGoodThoughtsTemplatesRaw([]);
-      }
-      if (trendingResponse.status === 'fulfilled' && trendingResponse.value.length > 0) {
-        setTrendingTemplates(trendingResponse.value.slice(0, 10));
-        setTrendingTemplatesRaw(trendingResponse.value);
-      } else {
-        setTrendingTemplates([]);
-        setTrendingTemplatesRaw([]);
-      }
-      if (bhagvatGitaResponse.status === 'fulfilled' && bhagvatGitaResponse.value.length > 0) {
-        setBhagvatGitaTemplates(bhagvatGitaResponse.value.slice(0, 10));
-        setBhagvatGitaTemplatesRaw(bhagvatGitaResponse.value);
-      } else {
-        setBhagvatGitaTemplates([]);
-        setBhagvatGitaTemplatesRaw([]);
-      }
-      if (booksResponse.status === 'fulfilled' && booksResponse.value.length > 0) {
-        setBooksTemplates(booksResponse.value.slice(0, 10));
-        setBooksTemplatesRaw(booksResponse.value);
-      } else {
-        setBooksTemplates([]);
-        setBooksTemplatesRaw([]);
-      }
-      if (celebratesResponse.status === 'fulfilled' && celebratesResponse.value.length > 0) {
-        setCelebratesMomentsTemplates(celebratesResponse.value.slice(0, 10));
-        setCelebratesMomentsTemplatesRaw(celebratesResponse.value);
-      } else {
-        setCelebratesMomentsTemplates([]);
-        setCelebratesMomentsTemplatesRaw([]);
-      }
+      
+      // Update all states in a single batch
+      setMotivationTemplates(greetingUpdates.motivation.display);
+      setMotivationTemplatesRaw(greetingUpdates.motivation.raw);
+      setGoodMorningTemplates(greetingUpdates.goodMorning.display);
+      setGoodMorningTemplatesRaw(greetingUpdates.goodMorning.raw);
+      setBusinessEthicsTemplates(greetingUpdates.businessEthics.display);
+      setBusinessEthicsTemplatesRaw(greetingUpdates.businessEthics.raw);
+      setDevotionalTemplates(greetingUpdates.devotional.display);
+      setDevotionalTemplatesRaw(greetingUpdates.devotional.raw);
+      setLeaderQuotesTemplates(greetingUpdates.leaderQuotes.display);
+      setLeaderQuotesTemplatesRaw(greetingUpdates.leaderQuotes.raw);
+      setAtmanirbharBharatTemplates(greetingUpdates.atmanirbharBharat.display);
+      setAtmanirbharBharatTemplatesRaw(greetingUpdates.atmanirbharBharat.raw);
+      setGoodThoughtsTemplates(greetingUpdates.goodThoughts.display);
+      setGoodThoughtsTemplatesRaw(greetingUpdates.goodThoughts.raw);
+      setTrendingTemplates(greetingUpdates.trending.display);
+      setTrendingTemplatesRaw(greetingUpdates.trending.raw);
+      setBhagvatGitaTemplates(greetingUpdates.bhagvatGita.display);
+      setBhagvatGitaTemplatesRaw(greetingUpdates.bhagvatGita.raw);
+      setBooksTemplates(greetingUpdates.books.display);
+      setBooksTemplatesRaw(greetingUpdates.books.raw);
+      setCelebratesMomentsTemplates(greetingUpdates.celebratesMoments.display);
+      setCelebratesMomentsTemplatesRaw(greetingUpdates.celebratesMoments.raw);
 
     } catch (error) {
-      console.error('Error loading API data:', error);
+      if (__DEV__) {
+        console.error('Error loading API data:', error);
+      }
       setApiError('Failed to load some content. Using offline data.');
     } finally {
       setApiLoading(false);
@@ -356,7 +395,9 @@ const HomeScreen: React.FC = React.memo(() => {
         // Load data from APIs only - no mock data
         await loadApiData();
       } catch (error) {
-        console.log('Error loading API data:', error);
+        if (__DEV__) {
+          console.log('Error loading API data:', error);
+        }
       } finally {
         setLoading(false);
       }
@@ -370,8 +411,35 @@ const HomeScreen: React.FC = React.memo(() => {
     loadApiData();
   }, [loadApiData]);
 
-  // Collect all greeting templates for unified search
+  // Optimized: Use ref to cache greeting templates and only recalculate when data lengths change
+  const greetingTemplatesCacheRef = useRef<{
+    templates: any[];
+    lengthsSignature: string; // Serialized lengths for quick comparison
+  }>({ templates: [], lengthsSignature: '' });
+
+  // Collect all greeting templates for unified search (optimized with caching)
   const allGreetingTemplates = useMemo(() => {
+    // Calculate current lengths signature for quick comparison
+    const currentLengthsSignature = [
+      motivationTemplatesRaw.length,
+      goodMorningTemplatesRaw.length,
+      businessEthicsTemplatesRaw.length,
+      devotionalTemplatesRaw.length,
+      leaderQuotesTemplatesRaw.length,
+      atmanirbharBharatTemplatesRaw.length,
+      goodThoughtsTemplatesRaw.length,
+      trendingTemplatesRaw.length,
+      bhagvatGitaTemplatesRaw.length,
+      booksTemplatesRaw.length,
+      celebratesMomentsTemplatesRaw.length,
+    ].join(',');
+    
+    // If lengths haven't changed, return cached result (optimization)
+    if (greetingTemplatesCacheRef.current.lengthsSignature === currentLengthsSignature && 
+        greetingTemplatesCacheRef.current.templates.length > 0) {
+      return greetingTemplatesCacheRef.current.templates;
+    }
+    
     const all: any[] = [];
     
     // Collect from all greeting sections (use Raw arrays for complete data)
@@ -401,8 +469,14 @@ const HomeScreen: React.FC = React.memo(() => {
       originalTemplate: greetingTemplate, // Keep reference to original
     }));
     
-    // Debug: Log Good Morning templates structure
-    if (goodMorningTemplatesRaw.length > 0) {
+    // Cache the result
+    greetingTemplatesCacheRef.current = {
+      templates: converted,
+      lengthsSignature: currentLengthsSignature,
+    };
+    
+    // Debug: Log Good Morning templates structure (dev only)
+    if (__DEV__ && goodMorningTemplatesRaw.length > 0) {
       console.log('🔍 [SEARCH] Good Morning templates count:', goodMorningTemplatesRaw.length);
       console.log('🔍 [SEARCH] Sample Good Morning template:', JSON.stringify(converted.find(t => goodMorningTemplatesRaw.some(gm => gm.id === t.id)), null, 2));
     }
@@ -441,10 +515,12 @@ const HomeScreen: React.FC = React.memo(() => {
         // Combine professional templates and greeting templates for unified search
         const allTemplates = [...professionalTemplates, ...allGreetingTemplates];
         
-        console.log('🔍 [SEARCH] Total templates to search:', allTemplates.length);
-        console.log('🔍 [SEARCH] Professional templates:', professionalTemplates.length);
-        console.log('🔍 [SEARCH] Greeting templates:', allGreetingTemplates.length);
-        console.log('🔍 [SEARCH] Query:', searchQuery);
+        if (__DEV__) {
+          console.log('🔍 [SEARCH] Total templates to search:', allTemplates.length);
+          console.log('🔍 [SEARCH] Professional templates:', professionalTemplates.length);
+          console.log('🔍 [SEARCH] Greeting templates:', allGreetingTemplates.length);
+          console.log('🔍 [SEARCH] Query:', searchQuery);
+        }
         
         // Use local search immediately for better performance
         // Search in name, category, description, and tags
@@ -470,9 +546,11 @@ const HomeScreen: React.FC = React.memo(() => {
           return false;
         });
         
-        console.log('🔍 [SEARCH] Filtered results:', filtered.length);
-        if (filtered.length > 0) {
-          console.log('🔍 [SEARCH] Sample result:', JSON.stringify(filtered[0], null, 2));
+        if (__DEV__) {
+          console.log('🔍 [SEARCH] Filtered results:', filtered.length);
+          if (filtered.length > 0) {
+            console.log('🔍 [SEARCH] Sample result:', JSON.stringify(filtered[0], null, 2));
+          }
         }
         
         setTemplates(filtered);
@@ -508,7 +586,11 @@ const HomeScreen: React.FC = React.memo(() => {
               setTemplates(combinedResults);
             }
           } catch (error) {
-            console.error('Search error:', error);
+            if (__DEV__) {
+              if (__DEV__) {
+              console.error('Search error:', error);
+            }
+            }
           }
         }, 100);
       }
@@ -528,7 +610,9 @@ const HomeScreen: React.FC = React.memo(() => {
       // Refresh API data
       await loadApiData(true);
     } catch (error) {
-      console.log('Error refreshing data:', error);
+      if (__DEV__) {
+        console.log('Error refreshing data:', error);
+      }
     } finally {
       setRefreshing(false);
     }
@@ -549,7 +633,9 @@ const HomeScreen: React.FC = React.memo(() => {
       });
       setTemplates(filteredTemplates);
     } catch (error) {
-      console.log('Error filtering templates for tab:', tab, error);
+      if (__DEV__) {
+        console.log('Error filtering templates for tab:', tab, error);
+      }
     }
   }, [professionalTemplates]);
 
@@ -572,7 +658,9 @@ const HomeScreen: React.FC = React.memo(() => {
       try {
         await dashboardService.downloadTemplate(templateId);
       } catch (error) {
-        console.error('Error downloading template:', error);
+        if (__DEV__) {
+          console.error('Error downloading template:', error);
+        }
       }
     }, 100);
   }, []);
@@ -598,7 +686,9 @@ const HomeScreen: React.FC = React.memo(() => {
             setTemplates(templatesData);
           }
         } catch (error) {
-          console.error('Search reset error:', error);
+          if (__DEV__) {
+            console.error('Search reset error:', error);
+          }
         }
       }, 100);
       return;
@@ -978,7 +1068,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   const createGreetingCardRenderer = useCallback((categoryTemplates: any[], searchQuery?: string, onCardPress?: (template: any) => void) => {
     return ({ item }: { item: any }) => {
       if (!item || !item.thumbnail) {
-        console.error('❌ [RENDER GREETING CARD] Invalid item:', item);
+        if (__DEV__) {
+          console.error('❌ [RENDER GREETING CARD] Invalid item:', item);
+        }
         return null;
       }
 
@@ -1196,6 +1288,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={3}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getBannerItemLayout}
                 nestedScrollEnabled={true}
                 scrollEnabled={true}
               />
@@ -1278,6 +1371,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
                 contentContainerStyle={styles.horizontalList}
               />
             </View>
@@ -1303,6 +1397,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
+                  getItemLayout={getItemLayout}
                   contentContainerStyle={styles.horizontalList}
                 />
               ) : (
@@ -1335,6 +1430,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
                 contentContainerStyle={styles.horizontalList}
               />
             </View>
@@ -1363,6 +1459,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -1423,6 +1520,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -1450,6 +1548,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -1477,6 +1576,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -1504,6 +1604,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -1531,6 +1632,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -1558,6 +1660,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -1585,6 +1688,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -1612,6 +1716,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -1639,6 +1744,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 windowSize={5}
                 initialNumToRender={10}
                 updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
