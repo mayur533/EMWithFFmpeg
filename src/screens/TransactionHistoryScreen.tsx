@@ -59,7 +59,7 @@ const TransactionHistoryScreen: React.FC = () => {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   const { transactions, transactionStats, refreshTransactions } = useSubscription();
-  const { theme } = useTheme();
+  const { theme, isDarkMode } = useTheme();
   
   // Dynamic dimensions for responsive layout (matching HomeScreen)
   const [dimensions, setDimensions] = useState(() => {
@@ -485,14 +485,14 @@ const TransactionHistoryScreen: React.FC = () => {
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <StatusBar 
-        barStyle="light-content" 
+        barStyle={isDarkMode ? "light-content" : "dark-content"} 
         backgroundColor="transparent" 
         translucent={true}
       />
       
       {/* Header */}
       <LinearGradient
-        colors={['#667eea', '#764ba2']}
+        colors={theme.colors.gradient}
         style={[styles.header, { 
           paddingTop: insets.top + (isTabletDevice ? dynamicModerateScale(4) : dynamicModerateScale(2)),
           paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
@@ -503,18 +503,25 @@ const TransactionHistoryScreen: React.FC = () => {
           style={[styles.backButton, {
             padding: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
             borderRadius: dynamicModerateScale(10),
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
           }]}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#ffffff" />
+          <Icon 
+            name="arrow-back" 
+            size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
+            color={isDarkMode ? '#ffffff' : '#1a1a1a'} 
+          />
         </TouchableOpacity>
         <View style={styles.headerContent}>
           <Text style={[styles.headerTitle, {
             fontSize: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12),
+            color: isDarkMode ? '#ffffff' : '#1a1a1a',
           }]}>Transaction History</Text>
           <Text style={[styles.headerSubtitle, {
             fontSize: isTabletDevice ? dynamicModerateScale(8.5) : dynamicModerateScale(7.5),
             marginTop: dynamicModerateScale(1),
+            color: isDarkMode ? 'rgba(255, 255, 255, 0.8)' : 'rgba(0, 0, 0, 0.7)',
           }]}>
             {filteredTransactions.length} transaction{filteredTransactions.length !== 1 ? 's' : ''} found
           </Text>
@@ -523,10 +530,15 @@ const TransactionHistoryScreen: React.FC = () => {
           style={[styles.refreshButton, {
             padding: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
             borderRadius: dynamicModerateScale(10),
+            backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.15)' : 'rgba(0, 0, 0, 0.1)',
           }]}
           onPress={onRefresh}
         >
-          <Icon name="refresh" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#ffffff" />
+          <Icon 
+            name="refresh" 
+            size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
+            color={isDarkMode ? '#ffffff' : '#1a1a1a'} 
+          />
         </TouchableOpacity>
       </LinearGradient>
 
@@ -609,10 +621,10 @@ const styles = StyleSheet.create({
     elevation: 10,
   },
   backButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    // backgroundColor is set inline based on theme
   },
   refreshButton: {
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    // backgroundColor is set inline based on theme
   },
   headerContent: {
     flex: 1,
@@ -620,10 +632,10 @@ const styles = StyleSheet.create({
   },
   headerTitle: {
     fontWeight: '700',
-    color: '#ffffff',
+    // color is set inline based on theme
   },
   headerSubtitle: {
-    color: 'rgba(255, 255, 255, 0.8)',
+    // color is set inline based on theme
   },
   scrollView: {
     flex: 1,

@@ -22,6 +22,7 @@ import Icon from 'react-native-vector-icons/MaterialIcons';
 import { BusinessProfile, CreateBusinessProfileData } from '../services/businessProfile';
 import { useTheme } from '../context/ThemeContext';
 import ImagePickerModal from './ImagePickerModal';
+import businessCategoriesService from '../services/businessCategoriesService';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -150,16 +151,40 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
     }
   };
 
-  const categories = [
-    'Event Planners',
-    'Decorators',
-    'Sound Suppliers',
-    'Light Suppliers',
-    'Banquet Hall',
-    'Generator',
-    'Catering',
-    'Mandap',
-  ];
+  const [categories, setCategories] = useState<string[]>([]);
+  const [loadingCategories, setLoadingCategories] = useState(false);
+
+  // Fetch business categories from API
+  useEffect(() => {
+    const fetchCategories = async () => {
+      if (!visible) return; // Only fetch when form is visible
+      
+      setLoadingCategories(true);
+      try {
+        console.log('📡 [BUSINESS PROFILE FORM] Fetching business categories...');
+        const response = await businessCategoriesService.getBusinessCategories();
+        
+        if (response.success && response.categories && response.categories.length > 0) {
+          // Extract category names from the API response
+          const categoryNames = response.categories.map(cat => cat.name);
+          setCategories(categoryNames);
+          console.log('✅ [BUSINESS PROFILE FORM] Categories loaded:', categoryNames.length);
+        } else {
+          console.warn('⚠️ [BUSINESS PROFILE FORM] No categories received from API');
+          // Fallback to empty array or default categories
+          setCategories([]);
+        }
+      } catch (error) {
+        console.error('❌ [BUSINESS PROFILE FORM] Error fetching categories:', error);
+        // Fallback to empty array on error
+        setCategories([]);
+      } finally {
+        setLoadingCategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [visible]);
 
   useEffect(() => {
     if (profile) {
@@ -482,42 +507,65 @@ const BusinessProfileForm: React.FC<BusinessProfileFormProps> = ({
                   },
                   focusedField === 'category' && [styles.inputFocused, { borderColor: theme.colors.primary }]
                 ]}>
-                  <Text style={[styles.pickerText, { color: formData.category ? theme.colors.text : theme.colors.textSecondary }]}>
-                    {formData.category || 'Select business category'}
-                  </Text>
-                </View>
-                <View style={styles.categoryOptions}>
-                  {categories.map((category) => (
-                    <TouchableOpacity
-                      key={category}
-                      style={[
-                        styles.categoryOption,
-                        { 
-                          backgroundColor: formData.category === category 
-                            ? theme.colors.primary 
-                            : (isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(102,126,234,0.1)'),
-                          borderWidth: 1,
-                          borderColor: formData.category === category 
-                            ? theme.colors.primary 
-                            : (isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(102,126,234,0.2)')
-                        }
-                      ]}
-                      onPress={() => handleInputChange('category', category)}
-                    >
-                      <Text style={[
-                        styles.categoryOptionText,
-                        { 
-                          color: formData.category === category 
-                            ? '#ffffff' 
-                            : (isDarkMode ? '#ffffff' : theme.colors.primary)
-                        },
-                        formData.category === category && styles.categoryOptionTextSelected
-                      ]}>
-                        {category}
+                  {loadingCategories ? (
+                    <View style={styles.categoryLoadingContainer}>
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                      <Text style={[styles.pickerText, { color: theme.colors.textSecondary, marginLeft: 8 }]}>
+                        Loading categories...
                       </Text>
-                    </TouchableOpacity>
-                  ))}
+                    </View>
+                  ) : (
+                    <Text style={[styles.pickerText, { color: formData.category ? theme.colors.text : theme.colors.textSecondary }]}>
+                      {formData.category || 'Select business category'}
+                    </Text>
+                  )}
                 </View>
+                {loadingCategories ? (
+                  <View style={styles.categoryOptions}>
+                    <Text style={[styles.categoryLoadingText, { color: theme.colors.textSecondary }]}>
+                      Loading categories...
+                    </Text>
+                  </View>
+                ) : categories.length === 0 ? (
+                  <View style={styles.categoryOptions}>
+                    <Text style={[styles.categoryLoadingText, { color: theme.colors.textSecondary }]}>
+                      No categories available. Please try again later.
+                    </Text>
+                  </View>
+                ) : (
+                  <View style={styles.categoryOptions}>
+                    {categories.map((category) => (
+                      <TouchableOpacity
+                        key={category}
+                        style={[
+                          styles.categoryOption,
+                          { 
+                            backgroundColor: formData.category === category 
+                              ? theme.colors.primary 
+                              : (isDarkMode ? 'rgba(255,255,255,0.15)' : 'rgba(102,126,234,0.1)'),
+                            borderWidth: 1,
+                            borderColor: formData.category === category 
+                              ? theme.colors.primary 
+                              : (isDarkMode ? 'rgba(255,255,255,0.2)' : 'rgba(102,126,234,0.2)')
+                          }
+                        ]}
+                        onPress={() => handleInputChange('category', category)}
+                      >
+                        <Text style={[
+                          styles.categoryOptionText,
+                          { 
+                            color: formData.category === category 
+                              ? '#ffffff' 
+                              : (isDarkMode ? '#ffffff' : theme.colors.primary)
+                          },
+                          formData.category === category && styles.categoryOptionTextSelected
+                        ]}>
+                          {category}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                )}
               </View>
             </View>
 
@@ -1403,6 +1451,16 @@ const styles = StyleSheet.create({
     marginTop: Math.max(3, screenHeight * 0.004),
     marginLeft: Math.max(6, screenWidth * 0.008),
     fontWeight: '500',
+  },
+  categoryLoadingContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  categoryLoadingText: {
+    fontSize: Math.min(screenWidth * 0.033, 13),
+    fontStyle: 'italic',
+    textAlign: 'center',
+    paddingVertical: Math.max(8, screenHeight * 0.01),
   },
 });
 
