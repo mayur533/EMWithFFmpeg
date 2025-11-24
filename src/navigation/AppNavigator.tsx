@@ -57,6 +57,7 @@ export type MainStackParamList = {
     templateSource?: 'greeting' | 'professional' | 'featured';
     businessCategory?: string;
     greetingCategory?: string;
+    originScreen?: string;
   };
   AboutUs: undefined;
   PrivacyPolicy: undefined;

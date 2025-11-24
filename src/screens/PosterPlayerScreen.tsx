@@ -285,6 +285,7 @@ const PosterPlayerScreen: React.FC = () => {
     relatedPosters: initialRelatedPosters,
     businessCategory,
     greetingCategory,
+    originScreen,
   } = route.params;
   const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
   const [allTemplates, setAllTemplates] = useState<Template[]>([]);
@@ -665,8 +666,18 @@ const PosterPlayerScreen: React.FC = () => {
 
           // Set first template as current poster and others as related
           const ensuredTemplates = convertedTemplates.map(t => mergeTemplateLanguages(t));
-          setAllTemplates(ensuredTemplates);
-          setCurrentPoster(ensuredTemplates[0]);
+
+          // Ensure the initially selected poster is present
+          const initialPosterWithLanguages = mergeTemplateLanguages(initialPoster);
+          const existingIndex = ensuredTemplates.findIndex(t => t.id === initialPosterWithLanguages.id);
+          let nextTemplates = ensuredTemplates;
+          if (existingIndex === -1 && initialPosterWithLanguages.thumbnail) {
+            nextTemplates = [initialPosterWithLanguages, ...ensuredTemplates];
+          }
+
+          const matchingPoster = nextTemplates.find(t => t.id === initialPosterWithLanguages.id && initialPosterWithLanguages.thumbnail);
+          setAllTemplates(nextTemplates);
+          setCurrentPoster(matchingPoster || nextTemplates[0]);
           
           console.log('✅ [POSTER PLAYER] Loaded', ensuredTemplates.length, 'greeting category templates');
           if (__DEV__ && ensuredTemplates[0]?.tags) {
@@ -1152,6 +1163,19 @@ const PosterPlayerScreen: React.FC = () => {
     );
   }, [currentPoster]);
 
+  const handleBackPress = useCallback(() => {
+    if (originScreen === 'GreetingTemplates') {
+      navigation.navigate('GreetingTemplates');
+      return;
+    }
+
+    if (navigation.canGoBack()) {
+      navigation.goBack();
+    } else {
+      navigation.navigate('MainTabs');
+    }
+  }, [navigation, originScreen]);
+
   const handleNextPress = useCallback(() => {
     navigation.navigate('PosterEditor', {
       selectedImage: {
@@ -1260,7 +1284,7 @@ const PosterPlayerScreen: React.FC = () => {
         {/* Header with Back, Language Dropdown, Next */}
         <View style={styles.topHeader}>
           <TouchableOpacity
-            onPress={() => navigation.goBack()}
+            onPress={handleBackPress}
             style={styles.headerTextButton}
             activeOpacity={0.85}
           >

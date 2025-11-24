@@ -78,6 +78,33 @@ const GreetingTemplatesScreen: React.FC = () => {
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
 
+  const getTemplateTags = useCallback((template: GreetingTemplate): string[] => {
+    if (Array.isArray((template as any).tags)) {
+      return (template as any).tags
+        .map((tag: unknown) => (typeof tag === 'string' ? tag.trim() : ''))
+        .filter(tag => tag.length > 0);
+    }
+
+    if (typeof (template as any).tags === 'string') {
+      return (template as any).tags
+        .split(',')
+        .map(tag => tag.trim())
+        .filter(tag => tag.length > 0);
+    }
+
+    return [];
+  }, []);
+
+  const convertToPosterTemplate = useCallback((template: GreetingTemplate) => ({
+    id: template.id,
+    name: template.name || 'Greeting Template',
+    thumbnail: template.thumbnail || (template as any).content?.background || '',
+    category: template.category || 'Greeting',
+    downloads: template.downloads || 0,
+    isDownloaded: template.isDownloaded || false,
+    tags: getTemplateTags(template),
+  }), [getTemplateTags]);
+
   // Optimized data fetching - removed dependency to prevent re-renders
   const fetchData = async (isRefresh: boolean = false) => {
     try {
@@ -278,6 +305,20 @@ const GreetingTemplatesScreen: React.FC = () => {
     setFilteredTemplates(categoryFiltered);
   }, [filterTemplatesByCategory, allTemplates]);
 
+  const getPrimaryTagForTemplate = useCallback((template: GreetingTemplate): string => {
+    const templateTags = getTemplateTags(template);
+    if (templateTags.length > 0) {
+      return templateTags[0];
+    }
+
+    if (template.category) {
+      return template.category;
+    }
+
+    const matchingCategory = categories.find(cat => cat.id === (template as any).categoryId);
+    return matchingCategory?.name || 'Greeting';
+  }, [getTemplateTags, categories]);
+
   const handleTemplatePress = useCallback((template: GreetingTemplate) => {
     if (template.isPremium && !checkPremiumAccess('premium_greetings')) {
       setSelectedPremiumTemplate(template);
@@ -285,19 +326,35 @@ const GreetingTemplatesScreen: React.FC = () => {
       return;
     }
 
-    // Use high quality image URL instead of thumbnail
-    const highQualityUrl = getHighQualityImageUrl(template);
+    const primaryTag = getPrimaryTagForTemplate(template);
+    const normalizedPrimaryTag = primaryTag.toLowerCase();
 
-    navigation.navigate('PosterEditor', {
-      selectedImage: {
-        uri: highQualityUrl || template.thumbnail, // Fallback to thumbnail if high quality URL is empty
-        title: template.name,
-        description: template.category,
-      },
-      selectedLanguage: 'English',
-      selectedTemplateId: template.id,
+    const relatedTemplates = allTemplates.filter(item => {
+      if (item.id === template.id) {
+        return false;
+      }
+      const itemTags = getTemplateTags(item).map(tag => tag.toLowerCase());
+      return itemTags.some(tag => tag.includes(normalizedPrimaryTag)) ||
+        (item.category || '').toLowerCase().includes(normalizedPrimaryTag);
     });
-  }, [isSubscribed, navigation, getHighQualityImageUrl]);
+
+    const selectedPoster = convertToPosterTemplate(template);
+    const relatedPosters = relatedTemplates.map(convertToPosterTemplate);
+
+    navigation.navigate('PosterPlayer', {
+      selectedPoster,
+      relatedPosters,
+      greetingCategory: primaryTag,
+      originScreen: 'GreetingTemplates',
+    });
+  }, [
+    allTemplates,
+    checkPremiumAccess,
+    convertToPosterTemplate,
+    getPrimaryTagForTemplate,
+    getTemplateTags,
+    navigation,
+  ]);
 
 
   const handleRefresh = useCallback(async () => {

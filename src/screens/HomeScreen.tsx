@@ -1633,7 +1633,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             >
               <Text 
                 style={[styles.businessCategoryName, { color: '#ffffff', textAlign: 'left' }]}
-                numberOfLines={2}
+                numberOfLines={1}
+                ellipsizeMode="tail"
               >
                 {item.name}
               </Text>
@@ -1696,7 +1697,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             >
               <Text 
                 style={[styles.businessCategoryName, { color: '#ffffff', textAlign: 'left' }]}
-                numberOfLines={2}
+                numberOfLines={1}
+                ellipsizeMode="tail"
               >
                 {item.name}
               </Text>
