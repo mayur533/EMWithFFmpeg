@@ -55,6 +55,30 @@ import responsiveUtils, {
 // Compact spacing multiplier to reduce all spacing
 const COMPACT_MULTIPLIER = 0.5;
 
+const convertBusinessPosterToTemplate = (poster: any, categoryName: string): Template => {
+  let normalizedTags: string[] = [];
+  if (Array.isArray(poster.tags)) {
+    normalizedTags = poster.tags
+      .map((tag: any) => String(tag).trim())
+      .filter((tag: string) => tag.length > 0);
+  } else if (typeof poster.tags === 'string') {
+    normalizedTags = poster.tags
+      .split(',')
+      .map((tag: string) => tag.trim())
+      .filter((tag: string) => tag.length > 0);
+  }
+
+  return {
+    id: poster.id,
+    name: poster.title || poster.name || `${categoryName} Poster`,
+    thumbnail: poster.imageUrl || poster.thumbnail || '',
+    category: poster.category || categoryName,
+    downloads: poster.downloads || 0,
+    isDownloaded: false,
+    tags: normalizedTags,
+  };
+};
+
 const HomeScreen: React.FC = React.memo(() => {
   const { isDarkMode, theme } = useTheme();
   const insets = useSafeAreaInsets();
@@ -73,6 +97,10 @@ const HomeScreen: React.FC = React.memo(() => {
     });
 
     return () => subscription?.remove();
+  }, []);
+
+  const closeBusinessCategoriesModal = useCallback(() => {
+    setIsBusinessCategoriesModalVisible(false);
   }, []);
 
   const screenWidth = dimensions.width;
@@ -159,7 +187,7 @@ const HomeScreen: React.FC = React.memo(() => {
   // Business categories state
   const [businessCategories, setBusinessCategories] = useState<BusinessCategory[]>([]);
   const [businessCategoriesLoading, setBusinessCategoriesLoading] = useState(false);
-  const [businessCategoryImages, setBusinessCategoryImages] = useState<Record<string, string>>({});
+  const [businessCategoryPreviews, setBusinessCategoryPreviews] = useState<Record<string, Template[]>>({});
 
   // Greeting categories state
   const [greetingCategoriesList, setGreetingCategoriesList] = useState<Array<{ id: string; name: string; icon: string; color?: string }>>([]);
@@ -191,6 +219,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const [disableBackgroundUpdates, setDisableBackgroundUpdates] = useState(false);
   const [isUpcomingEventsModalVisible, setIsUpcomingEventsModalVisible] = useState(false);
   const [isTemplatesModalVisible, setIsTemplatesModalVisible] = useState(false);
+  const [isBusinessCategoriesModalVisible, setIsBusinessCategoriesModalVisible] = useState(false);
   const [isVideosModalVisible, setIsVideosModalVisible] = useState(false);
   const [showVideoComingSoonModal, setShowVideoComingSoonModal] = useState(false);
   
@@ -558,11 +587,14 @@ const HomeScreen: React.FC = React.memo(() => {
       const imageEntries = await Promise.all(
         categories.map(async category => {
           try {
-            const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 1);
-            const firstPoster = response.data?.posters?.[0];
-            const previewUrl = firstPoster?.imageUrl || firstPoster?.thumbnail;
-            if (previewUrl) {
-              return [category.id, previewUrl] as const;
+            const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 5);
+            const posters = response.data?.posters || [];
+            const templates = posters
+              .map((poster: any) => convertBusinessPosterToTemplate(poster, category.name))
+              .filter((template: Template) => !!template.thumbnail)
+              .slice(0, 5);
+            if (templates.length > 0) {
+              return [category.id, templates] as const;
             }
           } catch (error) {
             if (__DEV__) {
@@ -573,14 +605,14 @@ const HomeScreen: React.FC = React.memo(() => {
         })
       );
 
-      const nextImages: Record<string, string> = {};
-      imageEntries.forEach(([categoryId, imageUrl]) => {
-        if (imageUrl) {
-          nextImages[categoryId] = imageUrl;
+      const nextPreviews: Record<string, Template[]> = {};
+      imageEntries.forEach(([categoryId, templates]) => {
+        if (templates && templates.length > 0) {
+          nextPreviews[categoryId] = templates;
         }
       });
 
-      setBusinessCategoryImages(prev => ({ ...prev, ...nextImages }));
+      setBusinessCategoryPreviews(prev => ({ ...prev, ...nextPreviews }));
     } catch (error) {
       if (__DEV__) {
         console.error('Error fetching business category preview images:', error);
@@ -1204,9 +1236,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   }, []);
 
   const handleViewAllBusinessCategories = useCallback(() => {
-    // Navigate to GreetingTemplatesScreen which shows all categories
-    navigation.navigate('GreetingTemplates');
-  }, [navigation]);
+    setIsBusinessCategoriesModalVisible(true);
+  }, []);
 
   const handleViewAllGeneralCategories = useCallback(() => {
     // Navigate to GreetingTemplatesScreen which shows all general/greeting categories
@@ -1541,8 +1572,50 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     </TouchableOpacity>
   ), [handleFeaturedCarouselPress, featuredCarouselItemWidth]);
 
-  // Handler for business category press - navigate to PosterPlayerScreen with selected category
-  const handleBusinessCategoryPress = useCallback((category: BusinessCategory) => {
+  const handleBusinessCategoryPress = useCallback(async (category: BusinessCategory) => {
+    const cachedTemplates = businessCategoryPreviews[category.id];
+
+    if (cachedTemplates && cachedTemplates.length > 0) {
+      navigation.navigate('PosterPlayer', {
+        selectedPoster: cachedTemplates[0],
+        relatedPosters: cachedTemplates.slice(1),
+        searchQuery: '',
+        templateSource: 'professional',
+        businessCategory: category.name,
+      });
+      return;
+    }
+
+    try {
+      const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 5);
+
+      if (response?.success && Array.isArray(response.data?.posters) && response.data.posters.length > 0) {
+        const templates = response.data.posters
+          .map(poster => convertBusinessPosterToTemplate(poster, category.name))
+          .filter(template => template.thumbnail);
+
+        if (templates.length > 0) {
+          setBusinessCategoryPreviews(prev => ({
+            ...prev,
+            [category.id]: templates,
+          }));
+
+          navigation.navigate('PosterPlayer', {
+            selectedPoster: templates[0],
+            relatedPosters: templates.slice(1),
+            searchQuery: '',
+            templateSource: 'professional',
+            businessCategory: category.name,
+          });
+          return;
+        }
+      }
+    } catch (error) {
+      if (__DEV__) {
+        console.error('❌ Error loading category posters:', error);
+      }
+    }
+
     navigation.navigate('PosterPlayer', {
       selectedPoster: {
         id: 'loading',
@@ -1555,9 +1628,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
       relatedPosters: [],
       searchQuery: '',
       templateSource: 'professional',
-      businessCategory: category.name, // Pass the selected business category
+      businessCategory: category.name,
     });
-  }, [navigation]);
+  }, [businessCategoryPreviews, navigation]);
 
   // Handler for greeting category press - navigate to PosterPlayerScreen with selected greeting category
   const handleGreetingCategoryPress = useCallback((category: { id: string; name: string }) => {
@@ -1579,11 +1652,15 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
 
   // Render business category card
   const renderBusinessCategoryCard = useCallback(({ item }: { item: BusinessCategory }) => {
-    const categoryImage =
-      businessCategoryImages[item.id] ||
-      item.imageUrl ||
-      item.image ||
-      null;
+    const previewTemplates = businessCategoryPreviews[item.id] || [];
+    const fallbackImage = previewTemplates[0]?.thumbnail || item.imageUrl || item.image || null;
+    let displayImages = previewTemplates
+      .map(template => template.thumbnail)
+      .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0)
+      .slice(0, 5);
+    if (displayImages.length === 0 && fallbackImage) {
+      displayImages = [fallbackImage];
+    }
     
     return (
       <TouchableOpacity
@@ -1599,9 +1676,27 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           }
         ]}>
           <View style={styles.businessCategoryImageSection}>
-            {categoryImage ? (
+            {displayImages.length > 1 ? (
+              <View style={styles.businessCategoryImageGrid}>
+                {displayImages.map((uri, index) => (
+                  <View
+                    key={`${item.id}-grid-${index}`}
+                    style={[
+                      styles.businessCategoryImageCell,
+                      index === 4 ? styles.businessCategoryImageCellFull : null,
+                    ]}
+                  >
+                    <OptimizedImage
+                      uri={uri}
+                      style={styles.businessCategoryImageCellImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : displayImages.length === 1 ? (
               <OptimizedImage 
-                uri={categoryImage} 
+                uri={displayImages[0]} 
                 style={styles.businessCategoryImage}
                 resizeMode="cover"
               />
@@ -1643,7 +1738,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         </View>
       </TouchableOpacity>
     );
-  }, [handleBusinessCategoryPress, cardWidth, theme, businessCategoryImages]);
+  }, [handleBusinessCategoryPress, cardWidth, theme, businessCategoryPreviews]);
 
   // Render greeting category card
   const renderGreetingCategoryCard = useCallback(({ item }: { item: { id: string; name: string; icon: string; color?: string } }) => {
@@ -1911,7 +2006,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && businessCategories.length > 0 && (
             <View style={styles.businessCategoriesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Categories</Text>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                Business Categories
+              </Text>
                 {renderBrowseAllButton(handleViewAllBusinessCategories)}
               </View>
               <FlatList
@@ -1936,7 +2033,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && greetingCategoriesList.length > 0 && (
             <View style={styles.businessCategoriesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>General Categories</Text>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                General Categories
+              </Text>
                 {renderBrowseAllButton(handleViewAllGeneralCategories)}
               </View>
               <FlatList
@@ -2013,7 +2112,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && upcomingEvents.length > 0 && (
             <View style={styles.upcomingEventsSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Upcoming Festivals</Text>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                Upcoming Festivals
+              </Text>
                 {renderBrowseAllButton(handleViewAllUpcomingEvents)}
               </View>
 
@@ -2069,7 +2170,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && professionalTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Events</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                  Business Events
+                </Text>
                 {renderBrowseAllButton(handleViewAllTemplates)}
               </View>
               <FlatList
@@ -2095,7 +2198,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {isSearching && searchQuery.trim() !== '' && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Search Results</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                  Search Results
+                </Text>
               </View>
               {templates.length > 0 ? (
                 <FlatList
@@ -2128,7 +2233,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && videoContent.length > 0 && (
             <View style={styles.videoSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Video Content</Text>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                Video Content
+              </Text>
                 {renderBrowseAllButton(handleViewAllVideos)}
               </View>
               <FlatList
@@ -2154,7 +2261,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && motivationTemplates.length > 0 && (
             <View style={styles.templatesSection}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Motivation</Text>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                Motivation
+              </Text>
               {renderBrowseAllButton(handleViewAllMotivation)}
             </View>
               <FlatList
@@ -2182,7 +2291,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && goodMorningTemplates.length > 0 && (
             <View style={styles.templatesSection}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Good Morning</Text>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                Good Morning
+              </Text>
               {renderBrowseAllButton(handleViewAllGoodMorning)}
             </View>
               <FlatList
@@ -2215,7 +2326,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && businessEthicsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
             <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Ethics</Text>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                Business Ethics
+              </Text>
               {renderBrowseAllButton(handleViewAllBusinessEthics)}
             </View>
               <FlatList
@@ -2243,7 +2356,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && devotionalTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Devotional</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                  Devotional
+                </Text>
                 {renderBrowseAllButton(handleViewAllDevotional)}
               </View>
               <FlatList
@@ -2271,7 +2386,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && leaderQuotesTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Leader Quotes</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                  Leader Quotes
+                </Text>
                 {renderBrowseAllButton(handleViewAllLeaderQuotes)}
               </View>
               <FlatList
@@ -2299,7 +2416,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && atmanirbharBharatTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Atmanirbhar Bharat</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                  Atmanirbhar Bharat
+                </Text>
                 {renderBrowseAllButton(handleViewAllAtmanirbharBharat)}
               </View>
               <FlatList
@@ -2327,7 +2446,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && goodThoughtsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Good Thoughts</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                  Good Thoughts
+                </Text>
                 {renderBrowseAllButton(handleViewAllGoodThoughts)}
               </View>
               <FlatList
@@ -2355,7 +2476,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && trendingTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Trending</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                  Trending
+                </Text>
                 {renderBrowseAllButton(handleViewAllTrending)}
               </View>
               <FlatList
@@ -2383,7 +2506,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && bhagvatGitaTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Bhagvat Gita</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                  Bhagvat Gita
+                </Text>
                 {renderBrowseAllButton(handleViewAllBhagvatGita)}
               </View>
               <FlatList
@@ -2411,7 +2536,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {!isSearching && searchQuery.trim() === '' && booksTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Books</Text>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                  Books
+                </Text>
                 {renderBrowseAllButton(handleViewAllBooks)}
               </View>
               <FlatList
@@ -2438,10 +2565,12 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           {/* Celebrates the Moments Section - Hidden when searching */}
           {!isSearching && searchQuery.trim() === '' && celebratesMomentsTemplates.length > 0 && (
             <View style={styles.templatesSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Celebrates the Moments</Text>
-                {renderBrowseAllButton(handleViewAllCelebratesMoments)}
-              </View>
+            <View style={styles.sectionHeader}>
+              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
+                Celebrates the Moments
+              </Text>
+              {renderBrowseAllButton(handleViewAllCelebratesMoments)}
+            </View>
               <FlatList
                 data={celebratesMomentsTemplates}
                 renderItem={createGreetingCardRenderer(
@@ -2696,6 +2825,118 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                       </View>
                     </TouchableOpacity>
                   )}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* Business Categories Modal */}
+        <Modal
+          visible={isBusinessCategoriesModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeBusinessCategoriesModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient
+                colors={['#f5f5f5', '#ffffff']}
+                style={styles.upcomingEventsModalGradient}
+              >
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>Business Categories</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upcomingEventsCloseButton}
+                    onPress={closeBusinessCategoriesModal}
+                  >
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`business-categories-modal-${businessCategories.length}`}
+                  data={businessCategories}
+                  keyExtractor={(item) => item.id}
+                  numColumns={4}
+                  columnWrapperStyle={styles.upcomingEventModalRow}
+                  contentContainerStyle={styles.upcomingEventsModalScroll}
+                  showsVerticalScrollIndicator={false}
+                  removeClippedSubviews={true}
+                  maxToRenderPerBatch={10}
+                  windowSize={5}
+                  initialNumToRender={10}
+                  updateCellsBatchingPeriod={50}
+                  renderItem={({ item }) => {
+                    const previewTemplates = businessCategoryPreviews[item.id] || [];
+                    const fallbackImage = previewTemplates[0]?.thumbnail || item.imageUrl || item.image || null;
+                    let displayImages = previewTemplates
+                      .map(template => template.thumbnail)
+                      .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0)
+                      .slice(0, 5);
+                    if (displayImages.length === 0 && fallbackImage) {
+                      displayImages = [fallbackImage];
+                    }
+
+                    return (
+                      <TouchableOpacity
+                        activeOpacity={0.8}
+                        style={styles.upcomingEventModalCard}
+                        onPress={() => {
+                          closeBusinessCategoriesModal();
+                          handleBusinessCategoryPress(item);
+                        }}
+                      >
+                        <View style={styles.upcomingEventModalImageContainer}>
+                          {displayImages.length > 1 ? (
+                            <View style={styles.businessCategoryModalGrid}>
+                              {displayImages.map((uri, index) => (
+                                <View
+                                  key={`${item.id}-modal-grid-${index}`}
+                                  style={[
+                                    styles.businessCategoryModalCell,
+                                    index === 4 ? styles.businessCategoryModalCellFull : null,
+                                  ]}
+                                >
+                                  <OptimizedImage
+                                    uri={uri}
+                                    style={styles.businessCategoryModalCellImage}
+                                    resizeMode="cover"
+                                  />
+                                </View>
+                              ))}
+                            </View>
+                          ) : displayImages.length === 1 ? (
+                            <OptimizedImage 
+                              uri={displayImages[0]} 
+                              style={styles.upcomingEventModalImage} 
+                              resizeMode="cover" 
+                            />
+                          ) : (
+                            <View style={[styles.upcomingEventModalImage, { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)' }]}>
+                              <Text style={styles.businessCategoryIcon}>{item.icon || item.name?.[0] || 'MB'}</Text>
+                            </View>
+                          )}
+                          <LinearGradient
+                            colors={['transparent', 'rgba(0,0,0,0.85)']}
+                            style={styles.upcomingEventModalOverlay}
+                          />
+                          <View style={styles.businessCategoryModalNameContainer}>
+                            <Text 
+                              style={styles.businessCategoryModalName}
+                              numberOfLines={1}
+                              ellipsizeMode="tail"
+                            >
+                              {item.name}
+                            </Text>
+                          </View>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -3831,7 +4072,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: moderateScale(8),
   },
   sectionTitle: {
-    fontSize: moderateScale(12),
+    fontSize: moderateScale(14),
     fontWeight: 'bold',
     marginBottom: verticalScale(4),
     paddingHorizontal: moderateScale(10),
@@ -3894,10 +4135,10 @@ const styles = StyleSheet.create({
      paddingHorizontal: moderateScale(10),
      marginBottom: verticalScale(4),
    },
- viewAllButton: {
-   paddingHorizontal: moderateScale(1),
-   paddingVertical: moderateScale(1),
-   borderRadius: moderateScale(6),
+  viewAllButton: {
+   paddingHorizontal: moderateScale(2),
+   paddingVertical: moderateScale(2),
+   borderRadius: moderateScale(8),
    overflow: 'hidden',
  },
  viewAllButtonGradient: {
@@ -3909,8 +4150,8 @@ const styles = StyleSheet.create({
    flexDirection: 'row',
    gap: moderateScale(2),
  },
- viewAllButtonText: {
-   fontSize: moderateScale(8),
+  viewAllButtonText: {
+   fontSize: SCREEN_WIDTH < 360 ? moderateScale(10) : moderateScale(9),
    fontWeight: '600',
    color: '#ffffff',
  },
@@ -3977,6 +4218,24 @@ const styles = StyleSheet.create({
     flex: 1,
     width: '100%',
   },
+  businessCategoryImageGrid: {
+    flex: 1,
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  businessCategoryImageCell: {
+    width: '50%',
+    height: '50%',
+    padding: 1,
+  },
+  businessCategoryImageCellFull: {
+    width: '100%',
+  },
+  businessCategoryImageCellImage: {
+    width: '100%',
+    height: '100%',
+  },
   businessCategoryImage: {
     width: '100%',
     height: '100%',
@@ -3990,6 +4249,36 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     textAlign: 'left',
     letterSpacing: 0.2,
+  },
+  businessCategoryModalNameContainer: {
+    position: 'absolute',
+    left: moderateScale(6),
+    right: moderateScale(6),
+    bottom: moderateScale(6),
+  },
+  businessCategoryModalName: {
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+    color: '#ffffff',
+    letterSpacing: 0.3,
+  },
+  businessCategoryModalGrid: {
+    flex: 1,
+    width: '100%',
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+  },
+  businessCategoryModalCell: {
+    width: '50%',
+    height: '50%',
+    padding: 1,
+  },
+  businessCategoryModalCellFull: {
+    width: '100%',
+  },
+  businessCategoryModalCellImage: {
+    width: '100%',
+    height: '100%',
   },
   videoSection: {
     paddingBottom: verticalScale(15),
