@@ -53,8 +53,8 @@ export const getCardDimensions = () => {
   // Calculate card width to fit evenly
   const cardWidth = Math.floor(availableWidth / visibleCards);
   
-  // More compact height (closer to square, like HomeScreen's verticalScale(60))
-  const cardHeight = verticalScale(60); // Compact height matching HomeScreen
+  // Make cards square by setting height equal to width (like HomeScreen)
+  const cardHeight = cardWidth;
   
   return { cardWidth, cardHeight, visibleCards, cardGap };
 };
@@ -207,18 +207,18 @@ const styles = StyleSheet.create({
     left: -1,
     right: -1,
     bottom: -1,
-    borderRadius: moderateScale(10),
+    borderRadius: moderateScale(8),
     zIndex: 1,
   },
   gradientBorder: {
     flex: 1,
-    borderRadius: moderateScale(10),
+    borderRadius: moderateScale(8),
     padding: 1,
   },
   card: {
     width: cardWidth,
     height: cardHeight,
-    borderRadius: moderateScale(10), // Compact border radius
+    borderRadius: moderateScale(8), // Compact border radius
     overflow: 'hidden',
     borderWidth: 0.5, // Thinner border
     position: 'relative',

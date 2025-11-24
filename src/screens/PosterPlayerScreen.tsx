@@ -19,6 +19,7 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import { Template } from '../services/dashboard';
 import { useTheme } from '../context/ThemeContext';
 import OptimizedImage from '../components/OptimizedImage';
+import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
 
 const LANGUAGE_KEYWORDS: Record<string, string[]> = {
   english: ['english', 'en'],
@@ -218,6 +219,7 @@ const PosterPlayerScreen: React.FC = () => {
   const { 
     selectedPoster: initialPoster, 
     relatedPosters: initialRelatedPosters,
+    businessCategory,
   } = route.params;
   const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
   const [allTemplates, setAllTemplates] = useState<Template[]>([]);
@@ -258,7 +260,7 @@ const PosterPlayerScreen: React.FC = () => {
         }
         
         // Split the remainder into parts
-        const parts = remainder.split('/');
+          const parts = remainder.split('/');
         
         // Find the version number (starts with 'v' followed by digits)
         // This is the reliable way to identify the actual image path in Cloudinary URLs
@@ -269,10 +271,10 @@ const PosterPlayerScreen: React.FC = () => {
             break;
           }
         }
-        
-        if (versionIndex >= 0) {
+          
+          if (versionIndex >= 0) {
           // Extract everything from version onwards (this is the actual image path)
-          const versionAndPath = parts.slice(versionIndex).join('/');
+            const versionAndPath = parts.slice(versionIndex).join('/');
           
           // Get maximum quality image for preview
           // Use 100% quality (q_100) for best possible quality
@@ -459,8 +461,73 @@ const PosterPlayerScreen: React.FC = () => {
     }
   }, [initialPoster, currentPoster]);
 
-  // Sync state when route params change
+  // Fetch business category posters when businessCategory is provided
   useEffect(() => {
+    if (!businessCategory) {
+      return;
+    }
+
+    const fetchBusinessCategoryPosters = async () => {
+      try {
+        console.log('📡 [POSTER PLAYER] Fetching business category posters for:', businessCategory);
+        const response = await businessCategoryPostersApi.getPostersByCategory(businessCategory, 5);
+        
+        if (response.success && response.data.posters) {
+          // Convert BusinessCategoryPoster to Template format (already limited to 5 by API)
+          const convertedTemplates: Template[] = response.data.posters.map((poster: any) => {
+            // Normalize tags to ensure they're in the correct format
+            let normalizedTags: string[] = [];
+            if (Array.isArray(poster.tags)) {
+              normalizedTags = poster.tags.map((tag: any) => String(tag).trim()).filter((tag: string) => tag.length > 0);
+            } else if (typeof poster.tags === 'string') {
+              // Handle string tags (comma-separated or single tag)
+              normalizedTags = poster.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+            }
+
+            const template: Template = {
+              id: poster.id,
+              name: poster.title || poster.name || 'Business Poster',
+              thumbnail: poster.imageUrl || poster.thumbnail || '',
+              category: poster.category || businessCategory,
+              downloads: poster.downloads || 0,
+              isDownloaded: false,
+              tags: normalizedTags,
+            };
+
+            if (__DEV__ && normalizedTags.length > 0) {
+              console.log(`📋 [POSTER CONVERSION] Poster ${template.id} tags:`, normalizedTags);
+            }
+
+            return template;
+          });
+
+          if (convertedTemplates.length > 0) {
+            // Set first poster as current poster and others as related
+            const ensuredTemplates = convertedTemplates.map(t => mergeTemplateLanguages(t));
+            setAllTemplates(ensuredTemplates);
+            setCurrentPoster(ensuredTemplates[0]);
+            
+            console.log('✅ [POSTER PLAYER] Loaded', ensuredTemplates.length, 'business category posters');
+            if (__DEV__ && ensuredTemplates[0]?.tags) {
+              console.log('📋 [POSTER PLAYER] First poster tags:', ensuredTemplates[0].tags);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('❌ [POSTER PLAYER] Error fetching business category posters:', error);
+      }
+    };
+
+    fetchBusinessCategoryPosters();
+  }, [businessCategory]);
+
+  // Sync state when route params change (only if businessCategory is not provided)
+  useEffect(() => {
+    // Skip if business category is provided (handled by separate useEffect above)
+    if (businessCategory) {
+      return;
+    }
+
     const ensureLanguages = (template: Template): Template => mergeTemplateLanguages(template);
 
     // Skip if we have a loading placeholder
@@ -499,7 +566,7 @@ const PosterPlayerScreen: React.FC = () => {
       const foundPoster = updatedTemplates.find(t => t.id === prevPoster.id);
       return foundPoster || ensuredInitialPoster;
     });
-  }, [initialPoster, initialRelatedPosters, selectedLanguage]);
+  }, [initialPoster, initialRelatedPosters, selectedLanguage, businessCategory]);
 
   // Detect language from initial poster on mount
   useEffect(() => {
@@ -540,6 +607,75 @@ const PosterPlayerScreen: React.FC = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialPoster?.id]); // Run when initial poster changes
+
+  // Detect language from current poster when business category posters are loaded
+  // This ensures language detection works when clicking business category cards
+  useEffect(() => {
+    // Skip if no currentPoster or if it's a loading placeholder
+    if (!currentPoster || currentPoster.id === 'loading' || !currentPoster.thumbnail) {
+      return;
+    }
+
+    // Only run for business category posters (when businessCategory param exists)
+    if (!businessCategory) {
+      return;
+    }
+
+    const posterWithLanguages = mergeTemplateLanguages(currentPoster);
+    
+    // Detect the primary language from tags
+    const posterTags = Array.isArray(posterWithLanguages.tags) ? posterWithLanguages.tags : [];
+    
+    if (posterTags.length === 0) {
+      return; // No tags to detect language from
+    }
+
+    console.log('🔍 [LANGUAGE DETECTION] Detecting language for business category poster:', {
+      posterId: currentPoster.id,
+      tags: posterTags,
+      businessCategory
+    });
+
+    // Extract languages from tags using the helper function
+    const languagesFromTags = extractLanguagesFromTags(posterTags);
+    
+    // Also check if poster has explicit languages array
+    const posterLanguages = Array.isArray(posterWithLanguages.languages)
+      ? posterWithLanguages.languages.map((lang: string) => lang.toLowerCase())
+      : [];
+    
+    // Combine both sources
+    const allDetectedLanguages = Array.from(new Set([...languagesFromTags, ...posterLanguages]));
+    
+    // Available language IDs that we support (priority order: hindi, marathi, english)
+    const availableLanguageIds = ['hindi', 'marathi', 'english'];
+    
+    // Find the first matching language from available languages (prioritizing hindi/marathi over english)
+    const detectedLanguage = availableLanguageIds.find(langId => {
+      const normalizedLangId = langId.toLowerCase();
+      return allDetectedLanguages.some(detectedLang => detectedLang.toLowerCase() === normalizedLangId);
+    });
+    
+    // If a language is detected and it's different from current selection, switch to it
+    if (detectedLanguage) {
+      if (detectedLanguage !== selectedLanguage) {
+        console.log(`🔄 [LANGUAGE DETECTION] Switching language from ${selectedLanguage} to ${detectedLanguage}`, {
+          detectedLanguages: allDetectedLanguages,
+          tags: posterTags
+        });
+        setSelectedLanguage(detectedLanguage);
+      } else {
+        console.log(`✅ [LANGUAGE DETECTION] Language already set to ${detectedLanguage}`);
+      }
+    } else {
+      console.log('⚠️ [LANGUAGE DETECTION] No language detected from tags:', posterTags, 'Defaulting to English');
+      // Default to English if no language detected
+      if (selectedLanguage !== 'english') {
+        setSelectedLanguage('english');
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPoster?.id, businessCategory]); // Run when current poster changes for business category
 
   // Ensure poster selection respects the active language filter
   useEffect(() => {
@@ -906,8 +1042,8 @@ const PosterPlayerScreen: React.FC = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.headerTextButtonGradient}
-            >
-              <Text style={styles.headerButtonText}>Back</Text>
+          >
+            <Text style={styles.headerButtonText}>Back</Text>
             </LinearGradient>
           </TouchableOpacity>
 
@@ -921,11 +1057,11 @@ const PosterPlayerScreen: React.FC = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.languageDropdownButtonGradient}
-            >
-              <Text style={styles.languageDropdownText}>
-                {languages.find(l => l.id === selectedLanguage)?.name || 'Select Language'}
-              </Text>
-              <Icon name={languageMenuVisible ? 'expand-less' : 'expand-more'} size={getIconSize(14)} color="#ffffff" />
+          >
+            <Text style={styles.languageDropdownText}>
+              {languages.find(l => l.id === selectedLanguage)?.name || 'Select Language'}
+            </Text>
+            <Icon name={languageMenuVisible ? 'expand-less' : 'expand-more'} size={getIconSize(14)} color="#ffffff" />
             </LinearGradient>
           </TouchableOpacity>
 
@@ -939,8 +1075,8 @@ const PosterPlayerScreen: React.FC = () => {
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
               style={styles.headerTextButtonGradient}
-            >
-              <Text style={styles.headerButtonText}>Next</Text>
+          >
+            <Text style={styles.headerButtonText}>Next</Text>
             </LinearGradient>
           </TouchableOpacity>
         </View>

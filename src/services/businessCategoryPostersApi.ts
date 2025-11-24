@@ -34,39 +34,43 @@ class BusinessCategoryPostersApiService {
   /**
    * Get posters for a specific business category
    */
-  async getPostersByCategory(category: string): Promise<BusinessCategoryPostersResponse> {
+  async getPostersByCategory(category: string, limit?: number): Promise<BusinessCategoryPostersResponse> {
     try {
       const cacheKey = `category_${category}`;
       const now = Date.now();
       
-      // Check cache first
-      if (this.postersCache.has(cacheKey)) {
-        const cached = this.postersCache.get(cacheKey)!;
+      const requestLimit = limit || 200;
+      
+      // Check cache first (use base cache key without limit for flexibility)
+      const baseCacheKey = `category_${category}`;
+      if (this.postersCache.has(baseCacheKey)) {
+        const cached = this.postersCache.get(baseCacheKey)!;
         const cacheAge = now - cached.timestamp;
         
         if (cacheAge < this.CACHE_DURATION) {
-          console.log(`✅ [CACHE] Returning ${cached.data.length} cached posters for: ${category}`);
+          // Apply limit if requested (for cache hits)
+          const limitedPosters = requestLimit ? cached.data.slice(0, requestLimit) : cached.data;
+          console.log(`✅ [CACHE] Returning ${limitedPosters.length} cached posters for: ${category} (limited to ${requestLimit})`);
           return {
             success: true,
             data: {
-              posters: cached.data,
+              posters: limitedPosters,
               category,
-              total: cached.data.length
+              total: limitedPosters.length
             },
             message: 'Posters fetched from cache'
           };
         }
       }
-
-      console.log(`📡 [CATEGORY POSTERS API] Fetching posters for: ${category}`);
+      console.log(`📡 [CATEGORY POSTERS API] Fetching posters for: ${category} (limit: ${requestLimit})`);
       console.log(
         `📡 [CATEGORY POSTERS API] Endpoint: /api/mobile/posters/category/${encodeURIComponent(
           category,
-        )}?limit=200`,
+        )}?limit=${requestLimit}`,
       );
       
       const response = await api.get(
-        `/api/mobile/posters/category/${encodeURIComponent(category)}?limit=200`,
+        `/api/mobile/posters/category/${encodeURIComponent(category)}?limit=${requestLimit}`,
       );
       
       // ===== PRINT COMPLETE API RESPONSE =====
@@ -112,19 +116,23 @@ class BusinessCategoryPostersApiService {
           } as BusinessCategoryPoster;
         });
         
-        // Cache the results with absolute URLs
-        this.postersCache.set(cacheKey, {
+        // Apply limit if requested (in case API returns more than requested)
+        const limitedPosters = requestLimit ? postersWithAbsoluteUrls.slice(0, requestLimit) : postersWithAbsoluteUrls;
+        
+        // Cache the full results (without limit) so different limits can share cache
+        this.postersCache.set(baseCacheKey, {
           data: postersWithAbsoluteUrls,
           timestamp: now
         });
         
-        console.log(`✅ [CATEGORY POSTERS API] Cached ${postersWithAbsoluteUrls.length} poster(s)`);
+        console.log(`✅ [CATEGORY POSTERS API] Cached ${postersWithAbsoluteUrls.length} poster(s), returning ${limitedPosters.length}`);
         
         return {
           ...response.data,
           data: {
             ...response.data.data,
-            posters: postersWithAbsoluteUrls
+            posters: limitedPosters,
+            total: limitedPosters.length
           }
         };
       } else {

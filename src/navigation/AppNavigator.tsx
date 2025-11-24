@@ -55,6 +55,7 @@ export type MainStackParamList = {
     relatedPosters: any[];
     searchQuery?: string;
     templateSource?: 'greeting' | 'professional' | 'featured';
+    businessCategory?: string;
   };
   AboutUs: undefined;
   PrivacyPolicy: undefined;

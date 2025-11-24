@@ -2565,8 +2565,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.backButtonGradient}
-          >
-            <Text style={styles.backButtonText}>Back</Text>
+        >
+          <Text style={styles.backButtonText}>Back</Text>
           </LinearGradient>
         </TouchableOpacity>
         <View style={styles.headerContent}>
@@ -2726,8 +2726,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             start={{ x: 0, y: 0 }}
             end={{ x: 1, y: 0 }}
             style={styles.nextButtonGradient}
-          >
-            <Text style={styles.nextButtonText}>Next</Text>
+        >
+          <Text style={styles.nextButtonText}>Next</Text>
           </LinearGradient>
         </TouchableOpacity>
       </View>

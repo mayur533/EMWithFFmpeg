@@ -307,18 +307,50 @@ const GreetingTemplatesScreen: React.FC = () => {
     setRefreshing(false);
   }, []);
 
+  // Helper function to add opacity to color (reusable for all category buttons)
+  const addOpacityToColor = useCallback((color: string, opacity: number): string => {
+    // Handle hex colors
+    if (color.startsWith('#')) {
+      const hex = color.slice(1);
+      if (hex.length === 6) {
+        const r = parseInt(hex.slice(0, 2), 16);
+        const g = parseInt(hex.slice(2, 4), 16);
+        const b = parseInt(hex.slice(4, 6), 16);
+        return `rgba(${r}, ${g}, ${b}, ${opacity})`;
+      }
+    }
+    // Handle rgba colors
+    if (color.startsWith('rgba')) {
+      return color.replace(/[\d.]+\)$/g, `${opacity})`);
+    }
+    // Fallback to original color
+    return color;
+  }, []);
+
   // Memoized render functions with optimized dependencies
   const renderCategoryTab = useCallback(({ item }: { item: GreetingCategory }) => {
     // Check if icon is an emoji (not a Material icon name)
     const isEmoji = item.icon && /[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/u.test(item.icon);
+    
+    const isSelected = selectedCategory === item.id;
+    const categoryColor = item.color || '#4A90E2';
+    const backgroundColor = isSelected 
+      ? categoryColor 
+      : addOpacityToColor(categoryColor, 0.15); // Light version when not selected
+    const borderColor = isSelected 
+      ? categoryColor 
+      : addOpacityToColor(categoryColor, 0.3); // Slightly visible border
+    const textColor = isSelected 
+      ? '#FFFFFF' 
+      : categoryColor; // Use category color for text when not selected
     
     return (
       <TouchableOpacity
         style={[
           styles.categoryTab,
           {
-            backgroundColor: selectedCategory === item.id ? item.color : theme.colors.surface,
-            borderColor: theme.colors.border,
+            backgroundColor: backgroundColor,
+            borderColor: borderColor,
           }
         ]}
         onPress={() => handleCategorySelect(item.id)}
@@ -333,7 +365,7 @@ const GreetingTemplatesScreen: React.FC = () => {
           style={[
             styles.categoryTabText,
             {
-              color: selectedCategory === item.id ? '#FFFFFF' : theme.colors.text,
+              color: textColor,
               fontSize: moderateScale(8),
             }
           ]}
@@ -342,7 +374,7 @@ const GreetingTemplatesScreen: React.FC = () => {
         </Text>
       </TouchableOpacity>
     );
-  }, [selectedCategory, theme.colors.surface, theme.colors.border, theme.colors.text, handleCategorySelect]);
+  }, [selectedCategory, handleCategorySelect, addOpacityToColor]);
 
   // Optimized template card renderer for vertical grid
   const renderTemplateCard = useCallback(({ item, index }: { item: GreetingTemplate; index: number }) => {
@@ -625,8 +657,12 @@ const GreetingTemplatesScreen: React.FC = () => {
               style={[
                 styles.categoryTab,
                 {
-                  backgroundColor: selectedCategory === 'all' ? theme.colors.primary : theme.colors.surface,
-                  borderColor: theme.colors.border,
+                  backgroundColor: selectedCategory === 'all' 
+                    ? theme.colors.primary 
+                    : addOpacityToColor(theme.colors.primary || '#667eea', 0.15),
+                  borderColor: selectedCategory === 'all' 
+                    ? theme.colors.primary 
+                    : addOpacityToColor(theme.colors.primary || '#667eea', 0.3),
                 }
               ]}
               onPress={() => handleCategorySelect('all')}
@@ -635,13 +671,13 @@ const GreetingTemplatesScreen: React.FC = () => {
               <Icon
                 name="apps"
                 size={moderateScale(14)}
-                color={selectedCategory === 'all' ? '#FFFFFF' : theme.colors.text}
+                color={selectedCategory === 'all' ? '#FFFFFF' : theme.colors.primary}
               />
               <Text
                 style={[
                   styles.categoryTabText,
                   {
-                    color: selectedCategory === 'all' ? '#FFFFFF' : theme.colors.text,
+                    color: selectedCategory === 'all' ? '#FFFFFF' : theme.colors.primary,
                     fontSize: moderateScale(8),
                   }
                 ]}

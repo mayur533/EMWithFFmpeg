@@ -5,6 +5,8 @@ export interface BusinessCategory {
   name: string;
   description: string;
   icon: string;
+  imageUrl?: string;
+  image?: string;
 }
 
 export interface BusinessCategoriesResponse {

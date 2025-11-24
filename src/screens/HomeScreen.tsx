@@ -32,6 +32,8 @@ import homeApi, {
   VideoContent 
 } from '../services/homeApi';
 import greetingTemplatesService from '../services/greetingTemplates';
+import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
+import businessCategoriesService, { BusinessCategory } from '../services/businessCategoriesService';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 // import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
@@ -148,7 +150,31 @@ const HomeScreen: React.FC = React.memo(() => {
 
 
   const [activeTab, setActiveTab] = useState('trending');
+  const [selectedCategory, setSelectedCategory] = useState<'business' | 'general'>('business');
   const [searchQuery, setSearchQuery] = useState('');
+  const [greetingCategories, setGreetingCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
+  const categoryFadeAnim = useRef(new Animated.Value(1)).current;
+  
+  // Business categories state
+  const [businessCategories, setBusinessCategories] = useState<BusinessCategory[]>([]);
+  const [businessCategoriesLoading, setBusinessCategoriesLoading] = useState(false);
+  const [businessCategoryImages, setBusinessCategoryImages] = useState<Record<string, string>>({});
+
+  const animateCategoryChange = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(categoryFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(categoryFadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [categoryFadeAnim]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -339,7 +365,7 @@ const HomeScreen: React.FC = React.memo(() => {
         }
         setVideoContent([]);
       }
-      
+
       // Only show network error if ALL main requests failed AND they were network/timeout errors
       // Don't show error if at least one request succeeded (partial success is acceptable)
       if (successCount === 0 && networkErrors.length > 0) {
@@ -498,6 +524,115 @@ const HomeScreen: React.FC = React.memo(() => {
   useEffect(() => {
     loadApiData();
   }, [loadApiData]);
+
+  // Load greeting categories
+  useEffect(() => {
+    const loadCategories = async () => {
+      try {
+        const categories = await greetingTemplatesService.getCategories();
+        if (categories && categories.length > 0) {
+          setGreetingCategories(categories);
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Error loading greeting categories:', error);
+        }
+      }
+    };
+    
+    loadCategories();
+  }, []);
+
+  const fetchBusinessCategoryPreviewImages = useCallback(async (categories: BusinessCategory[]) => {
+    if (!categories || categories.length === 0) {
+      return;
+    }
+
+    try {
+      const imageEntries = await Promise.all(
+        categories.map(async category => {
+          try {
+            const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 1);
+            const firstPoster = response.data?.posters?.[0];
+            const previewUrl = firstPoster?.imageUrl || firstPoster?.thumbnail;
+            if (previewUrl) {
+              return [category.id, previewUrl] as const;
+            }
+          } catch (error) {
+            if (__DEV__) {
+              console.warn(`⚠️ Failed to fetch preview for category ${category.name}:`, error);
+            }
+          }
+          return [category.id, undefined] as const;
+        })
+      );
+
+      const nextImages: Record<string, string> = {};
+      imageEntries.forEach(([categoryId, imageUrl]) => {
+        if (imageUrl) {
+          nextImages[categoryId] = imageUrl;
+        }
+      });
+
+      setBusinessCategoryImages(prev => ({ ...prev, ...nextImages }));
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error fetching business category preview images:', error);
+      }
+    }
+  }, []);
+
+  // Load business categories and filter out user's own category
+  useEffect(() => {
+    const loadBusinessCategories = async () => {
+      setBusinessCategoriesLoading(true);
+      try {
+        const response = await businessCategoriesService.getBusinessCategories();
+        if (response.success && response.categories) {
+          // Get current user's business category
+          const currentUser = authService.getCurrentUser();
+          const userCategory = currentUser?.category || currentUser?._originalCategory || '';
+          
+          // Filter out user's own business category
+          const filteredCategories = response.categories.filter((category: BusinessCategory) => {
+            const categoryName = category.name?.trim() || '';
+            const userCategoryName = userCategory?.trim() || '';
+            // Compare both name and ID to ensure we filter correctly
+            return categoryName.toLowerCase() !== userCategoryName.toLowerCase() &&
+                   category.id !== userCategory;
+          });
+          
+          setBusinessCategories(filteredCategories);
+          fetchBusinessCategoryPreviewImages(filteredCategories);
+          
+          if (__DEV__) {
+            console.log('✅ [BUSINESS CATEGORIES] Loaded:', filteredCategories.length, 'categories');
+            console.log('   User category (excluded):', userCategory);
+          }
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Error loading business categories:', error);
+        }
+      } finally {
+        setBusinessCategoriesLoading(false);
+      }
+    };
+    
+    loadBusinessCategories();
+  }, [fetchBusinessCategoryPreviewImages]);
+
+  // Rotate categories every 3 seconds
+  useEffect(() => {
+    if (greetingCategories.length === 0) return;
+    
+    const interval = setInterval(() => {
+      animateCategoryChange();
+      setCurrentCategoryIndex((prevIndex) => (prevIndex + 1) % greetingCategories.length);
+    }, 3000); // Change every 3 seconds
+    
+    return () => clearInterval(interval);
+  }, [greetingCategories, animateCategoryChange]);
 
   // Optimized: Use ref to cache greeting templates and only recalculate when data lengths change
   const greetingTemplatesCacheRef = useRef<{
@@ -1149,6 +1284,9 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     );
   }, [theme, playIconSize, cardWidth]);
 
+  const featuredCarouselItemWidth = useMemo(() => screenWidth - moderateScale(40), [screenWidth]);
+  const featuredCarouselSnapInterval = useMemo(() => featuredCarouselItemWidth + moderateScale(10), [featuredCarouselItemWidth]);
+
   // Memoized key extractors
   const keyExtractor = useCallback((item: any) => item.id, []);
 
@@ -1211,10 +1349,151 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         end={{ x: 1, y: 0 }}
         style={styles.viewAllButtonGradient}
       >
-        <Text style={styles.viewAllButtonText}>Browse All</Text>
+        <Text style={styles.viewAllButtonText}>View More</Text>
       </LinearGradient>
     </TouchableOpacity>
   ), [theme.colors.primary, theme.colors.secondary]);
+
+  const featuredCarouselRef = useRef<FlatList<FeaturedContent>>(null);
+  const [featuredCarouselIndex, setFeaturedCarouselIndex] = useState(0);
+
+  useEffect(() => {
+    if (!featuredContent.length) return;
+
+    const interval = setInterval(() => {
+      setFeaturedCarouselIndex(prevIndex => {
+        const nextIndex = (prevIndex + 1) % featuredContent.length;
+        featuredCarouselRef.current?.scrollToIndex({
+          index: nextIndex,
+          animated: true,
+          viewPosition: 0.5,
+        });
+        return nextIndex;
+      });
+    }, 4000);
+
+    return () => clearInterval(interval);
+  }, [featuredContent]);
+
+  const handleFeaturedCarouselPress = useCallback((item: FeaturedContent) => {
+    const selectedTemplate: Template = {
+      id: item.id,
+      name: item.title,
+      thumbnail: item.imageUrl,
+      category: item.type || 'Featured Content',
+      downloads: 0,
+      isDownloaded: false,
+      tags: [],
+    };
+
+    const relatedTemplates = featuredContent
+      .filter(fc => fc.id !== item.id)
+      .map(fc => ({
+        id: fc.id,
+        name: fc.title,
+        thumbnail: fc.imageUrl,
+        category: fc.type || 'Featured Content',
+        downloads: 0,
+        isDownloaded: false,
+        tags: [],
+      }));
+
+    navigation.navigate('PosterPlayer', {
+      selectedPoster: selectedTemplate,
+      relatedPosters: relatedTemplates,
+    });
+  }, [featuredContent, navigation]);
+
+  const handleFeaturedCarouselScrollFailure = useCallback((info: { index: number }) => {
+    requestAnimationFrame(() => {
+      featuredCarouselRef.current?.scrollToOffset({
+        offset: info.index * featuredCarouselSnapInterval,
+        animated: true,
+      });
+    });
+  }, [featuredCarouselSnapInterval]);
+
+  const getFeaturedCarouselItemLayout = useCallback((_: any, index: number) => ({
+    length: featuredCarouselSnapInterval,
+    offset: featuredCarouselSnapInterval * index,
+    index,
+  }), [featuredCarouselSnapInterval]);
+
+  const renderFeaturedCarouselItem = useCallback(({ item }: { item: FeaturedContent }) => (
+    <TouchableOpacity
+      key={item.id}
+      activeOpacity={0.85}
+      style={[styles.featuredCarouselCard, { width: featuredCarouselItemWidth }]}
+      onPress={() => handleFeaturedCarouselPress(item)}
+    >
+      <OptimizedImage uri={item.imageUrl} style={styles.featuredCarouselImage} resizeMode="cover" />
+    </TouchableOpacity>
+  ), [handleFeaturedCarouselPress, featuredCarouselItemWidth]);
+
+  // Handler for business category press - navigate to PosterPlayerScreen with selected category
+  const handleBusinessCategoryPress = useCallback((category: BusinessCategory) => {
+    navigation.navigate('PosterPlayer', {
+      selectedPoster: {
+        id: 'loading',
+        name: category.name,
+        thumbnail: '',
+        category: category.name,
+        downloads: 0,
+        isDownloaded: false,
+      },
+      relatedPosters: [],
+      searchQuery: '',
+      templateSource: 'professional',
+      businessCategory: category.name, // Pass the selected business category
+    });
+  }, [navigation]);
+
+  // Render business category card
+  const renderBusinessCategoryCard = useCallback(({ item }: { item: BusinessCategory }) => {
+    const categoryImage =
+      businessCategoryImages[item.id] ||
+      item.imageUrl ||
+      item.image ||
+      null;
+    
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={[styles.businessCategoryCard, { width: cardWidth }]}
+        onPress={() => handleBusinessCategoryPress(item)}
+      >
+        <View style={[
+          styles.businessCategoryCardContent, 
+          { 
+            backgroundColor: theme.colors.cardBackground,
+            height: cardWidth, // Make cards square
+          }
+        ]}>
+          <View style={styles.businessCategoryImageSection}>
+            {categoryImage ? (
+              <View style={styles.businessCategoryImageContainer}>
+                <OptimizedImage 
+                  uri={categoryImage} 
+                  style={styles.businessCategoryImage}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : item.icon ? (
+              <Text style={styles.businessCategoryIcon}>
+                {item.icon}
+              </Text>
+            ) : null}
+          </View>
+          <Text 
+            style={[styles.businessCategoryName, { color: theme.colors.text }]}
+            numberOfLines={2}
+          >
+            {item.name}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [handleBusinessCategoryPress, cardWidth, theme, businessCategoryImages]);
 
   if (loading) {
     return (
@@ -1304,7 +1583,139 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 </TouchableOpacity>
               )}
             </View>
+            
+          {/* Category Buttons */}
+          <View style={styles.categoryButtonsContainer}>
+              <TouchableOpacity
+                style={[
+                  styles.categoryButton,
+                  styles.categoryButtonBusiness,
+                  selectedCategory === 'business' && styles.categoryButtonActive,
+                ]}
+                onPress={() => setSelectedCategory('business')}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={selectedCategory === 'business' 
+                    ? ['#667eea', '#764ba2']
+                    : ['rgba(102, 126, 234, 0.1)', 'rgba(118, 75, 162, 0.05)']
+                  }
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.categoryButtonGradient}
+                >
+                  <View style={styles.categoryButtonContent}>
+                    <Icon 
+                      name="business" 
+                      size={moderateScale(14)} 
+                      color={selectedCategory === 'business' ? '#ffffff' : '#667eea'} 
+                      style={styles.categoryButtonIcon}
+                    />
+                    <Text style={[
+                      styles.categoryButtonText,
+                      styles.categoryButtonTextBusiness,
+                      { color: selectedCategory === 'business' ? '#ffffff' : '#667eea' }
+                    ]}>
+                      Business
+                    </Text>
           </View>
+                </LinearGradient>
+              </TouchableOpacity>
+              
+              <TouchableOpacity
+                style={[
+                  styles.categoryButton,
+                  styles.categoryButtonRotating,
+                  selectedCategory === 'general' && styles.categoryButtonActive,
+                ]}
+                onPress={() => navigation.navigate('GreetingTemplates')}
+                activeOpacity={0.85}
+              >
+                <LinearGradient
+                  colors={['#f093fb', '#f5576c']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={styles.categoryButtonGradient}
+                >
+                  <View style={styles.categoryButtonContent}>
+                    <Icon 
+                      name="auto-awesome" 
+                      size={moderateScale(14)} 
+                      color="#ffffff" 
+                      style={styles.categoryButtonIcon}
+                    />
+                    <Animated.Text style={[
+                      styles.categoryButtonText,
+                      styles.categoryButtonRotatingText,
+                      { 
+                        color: '#ffffff',
+                        opacity: categoryFadeAnim,
+                      }
+                    ]}>
+                      {greetingCategories.length > 0 
+                        ? greetingCategories[currentCategoryIndex]?.name || 'General'
+                        : 'General'}
+                    </Animated.Text>
+                  </View>
+                </LinearGradient>
+              </TouchableOpacity>
+            </View>
+          </View>
+
+          {featuredContent.length > 0 && (
+            <View style={styles.featuredCarouselContainer}>
+              <FlatList
+                ref={featuredCarouselRef}
+                data={featuredContent}
+                renderItem={renderFeaturedCarouselItem}
+                keyExtractor={(item) => item.id}
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                pagingEnabled
+                snapToAlignment="center"
+                snapToInterval={featuredCarouselSnapInterval}
+                decelerationRate="fast"
+                getItemLayout={getFeaturedCarouselItemLayout}
+                onScrollToIndexFailed={handleFeaturedCarouselScrollFailure}
+                contentContainerStyle={styles.featuredCarouselList}
+              />
+              <View style={styles.featuredCarouselIndicators}>
+                {featuredContent.map((_, index) => (
+                  <View
+                    key={index}
+                    style={[
+                      styles.featuredCarouselDot,
+                      index === featuredCarouselIndex && styles.featuredCarouselDotActive,
+                    ]}
+                  />
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Business Categories Section */}
+          {!isSearching && searchQuery.trim() === '' && businessCategories.length > 0 && (
+            <View style={styles.businessCategoriesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Categories</Text>
+              </View>
+              <FlatList
+                data={businessCategories}
+                renderItem={renderBusinessCategoryCard}
+                keyExtractor={(item) => item.id}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
+                contentContainerStyle={styles.horizontalList}
+              />
+            </View>
+          )}
 
           {/* Festival Calendar - Commented out for now */}
           {/* <View style={styles.calendarSection}>
@@ -1357,31 +1768,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             </TouchableOpacity>
           </View> */}
 
-          {/* Banner Carousel - Hidden when searching, only show if data exists */}
-          {!isSearching && searchQuery.trim() === '' && banners.length > 0 && (
-            <View style={styles.bannerSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Featured Content</Text>
-                {featuredContent.length > 0 && renderBrowseAllButton(handleViewAllFeaturedContent)}
-              </View>
-              <FlatList
-                data={banners}
-                renderItem={renderBanner}
-                keyExtractor={keyExtractor}
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.bannerList}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={3}
-                windowSize={5}
-                initialNumToRender={3}
-                updateCellsBatchingPeriod={50}
-                getItemLayout={getBannerItemLayout}
-                nestedScrollEnabled={true}
-                scrollEnabled={true}
-              />
-            </View>
-          )}
 
           {/* Upcoming Festivals - Hidden when searching */}
           {!isSearching && searchQuery.trim() === '' && upcomingEvents.length > 0 && (
@@ -3051,6 +3437,134 @@ const styles = StyleSheet.create({
     marginRight: moderateScale(4),
     padding: moderateScale(2),
   },
+  featuredCarouselContainer: {
+    marginTop: moderateScale(10),
+    marginBottom: moderateScale(6),
+  },
+  featuredCarouselList: {
+    paddingHorizontal: moderateScale(12),
+  },
+  featuredCarouselCard: {
+    height: verticalScale(110),
+    borderRadius: moderateScale(12),
+    overflow: 'hidden',
+    marginRight: moderateScale(10),
+    backgroundColor: '#f2f2f2',
+  },
+  featuredCarouselImage: {
+    width: '100%',
+    height: '100%',
+  },
+  featuredCarouselOverlay: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: '100%',
+  },
+  featuredCarouselContent: {
+    position: 'absolute',
+    bottom: moderateScale(10),
+    left: moderateScale(12),
+    right: moderateScale(12),
+  },
+  featuredCarouselTitle: {
+    color: '#ffffff',
+    fontSize: moderateScale(12),
+    fontWeight: '700',
+    marginBottom: moderateScale(4),
+  },
+  featuredCarouselBadge: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: moderateScale(3),
+    borderRadius: moderateScale(6),
+  },
+  featuredCarouselBadgeText: {
+    color: '#ffffff',
+    fontSize: moderateScale(9),
+    fontWeight: '600',
+  },
+  featuredCarouselIndicators: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginTop: moderateScale(6),
+    gap: moderateScale(4),
+  },
+  featuredCarouselDot: {
+    width: moderateScale(6),
+    height: moderateScale(6),
+    borderRadius: moderateScale(3),
+    backgroundColor: 'rgba(0,0,0,0.15)',
+  },
+  featuredCarouselDotActive: {
+    width: moderateScale(16),
+    backgroundColor: '#667eea',
+  },
+  categoryButtonsContainer: {
+    flexDirection: 'row',
+    marginTop: moderateScale(8),
+    gap: moderateScale(8),
+  },
+  categoryButton: {
+    flex: 1,
+    borderRadius: moderateScale(8),
+    overflow: 'hidden',
+    borderWidth: 1.5,
+  },
+  categoryButtonBusiness: {
+    borderColor: 'rgba(102, 126, 234, 0.4)',
+  },
+  categoryButtonRotating: {
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  categoryButtonActive: {
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 6,
+    },
+    shadowOpacity: 0.25,
+    shadowRadius: 10,
+    elevation: 8,
+  },
+  categoryButtonGradient: {
+    paddingVertical: moderateScale(12),
+    paddingHorizontal: moderateScale(16),
+    borderRadius: moderateScale(8),
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: moderateScale(42),
+  },
+  categoryButtonContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: moderateScale(8),
+  },
+  categoryButtonIcon: {
+    marginRight: moderateScale(2),
+  },
+  categoryButtonText: {
+    fontSize: moderateScale(12),
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
+  categoryButtonTextBusiness: {
+    textShadowColor: 'rgba(0, 0, 0, 0.15)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
+  categoryButtonRotatingText: {
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textShadowColor: 'rgba(0, 0, 0, 0.15)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
+  },
   tabsContainer: {
     flexDirection: 'row',
     paddingHorizontal: moderateScale(18),
@@ -3203,6 +3717,53 @@ const styles = StyleSheet.create({
   templatesSection: {
     paddingBottom: verticalScale(15),
     paddingHorizontal: moderateScale(8),
+  },
+  businessCategoriesSection: {
+    paddingBottom: verticalScale(15),
+    paddingHorizontal: moderateScale(8),
+  },
+  businessCategoryCard: {
+    marginRight: moderateScale(3),
+  },
+  businessCategoryCardContent: {
+    width: '100%',
+    borderRadius: moderateScale(8),
+    padding: 0,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    ...responsiveShadow.small,
+    borderWidth: 0.5,
+    borderColor: 'rgba(0,0,0,0.05)',
+    overflow: 'hidden',
+  },
+  businessCategoryImageSection: {
+    width: '100%',
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: moderateScale(8),
+    paddingBottom: moderateScale(4),
+  },
+  businessCategoryImageContainer: {
+    width: '100%',
+    height: '100%',
+    borderRadius: moderateScale(6),
+    overflow: 'hidden',
+    backgroundColor: 'rgba(0,0,0,0.05)',
+  },
+  businessCategoryImage: {
+    width: '100%',
+    height: '100%',
+  },
+  businessCategoryIcon: {
+    fontSize: moderateScale(32),
+  },
+  businessCategoryName: {
+    fontSize: moderateScale(10),
+    fontWeight: '600',
+    textAlign: 'center',
+    paddingHorizontal: moderateScale(8),
+    paddingBottom: moderateScale(8),
   },
   videoSection: {
     paddingBottom: verticalScale(15),
@@ -3407,12 +3968,12 @@ const styles = StyleSheet.create({
      fontWeight: 'bold',
      color: '#333333',
    },
-  // Upcoming Festivals Modal Styles - Compact & Responsive
-  upcomingEventsModalContent: {
+   // Upcoming Festivals Modal Styles - Compact & Responsive
+   upcomingEventsModalContent: {
      width: SCREEN_WIDTH >= 768 ? SCREEN_WIDTH * 0.90 : SCREEN_WIDTH * 0.96,
      maxWidth: SCREEN_WIDTH >= 768 ? 900 : SCREEN_WIDTH * 0.96,
-     height: SCREEN_HEIGHT * 0.85, // Reduced from 0.9
-     backgroundColor: '#ffffff',
+      height: SCREEN_HEIGHT * 0.85, // Reduced from 0.9
+      backgroundColor: '#ffffff',
      borderRadius: SCREEN_WIDTH >= 768 ? moderateScale(20) : moderateScale(16), // Reduced from 30/25
       overflow: 'hidden',
       position: 'relative',
