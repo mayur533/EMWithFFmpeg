@@ -20,6 +20,7 @@ import { Template } from '../services/dashboard';
 import { useTheme } from '../context/ThemeContext';
 import OptimizedImage from '../components/OptimizedImage';
 import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
+import greetingTemplatesService from '../services/greetingTemplates';
 
 const LANGUAGE_KEYWORDS: Record<string, string[]> = {
   english: ['english', 'en'],
@@ -220,6 +221,7 @@ const PosterPlayerScreen: React.FC = () => {
     selectedPoster: initialPoster, 
     relatedPosters: initialRelatedPosters,
     businessCategory,
+    greetingCategory,
   } = route.params;
   const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
   const [allTemplates, setAllTemplates] = useState<Template[]>([]);
@@ -521,10 +523,105 @@ const PosterPlayerScreen: React.FC = () => {
     fetchBusinessCategoryPosters();
   }, [businessCategory]);
 
-  // Sync state when route params change (only if businessCategory is not provided)
+  // Fetch greeting category templates when greetingCategory is provided
   useEffect(() => {
-    // Skip if business category is provided (handled by separate useEffect above)
-    if (businessCategory) {
+    if (!greetingCategory) {
+      return;
+    }
+
+    const fetchGreetingCategoryTemplates = async () => {
+      try {
+        console.log('📡 [POSTER PLAYER] Fetching greeting category templates for:', greetingCategory);
+        
+        // Use getTemplates with category filter and limit of 200 to get templates
+        // Also use searchTemplates to ensure we get templates with matching tags
+        const [categoryTemplates, searchTemplates] = await Promise.all([
+          greetingTemplatesService.getTemplates({ category: greetingCategory, limit: 200 }),
+          greetingTemplatesService.searchTemplates(greetingCategory)
+        ]);
+        
+        // Combine both results and remove duplicates
+        const combinedTemplates = [...categoryTemplates, ...searchTemplates];
+        const uniqueTemplatesMap = new Map();
+        combinedTemplates.forEach(template => {
+          if (!uniqueTemplatesMap.has(template.id)) {
+            uniqueTemplatesMap.set(template.id, template);
+          }
+        });
+        const allTemplates = Array.from(uniqueTemplatesMap.values());
+        
+        // Filter templates to only include those that have the category name in their tags or category
+        const filteredTemplates = allTemplates.filter(template => {
+          const templateAny = template as any;
+          const templateTags = Array.isArray(templateAny.tags) ? templateAny.tags : [];
+          // Check if any tag contains the category name (case-insensitive)
+          const hasMatchingTag = templateTags.some((tag: string) => 
+            typeof tag === 'string' && tag.toLowerCase().includes(greetingCategory.toLowerCase())
+          );
+          // Also check if category matches
+          const categoryMatch = template.category?.toLowerCase().includes(greetingCategory.toLowerCase());
+          return hasMatchingTag || categoryMatch;
+        });
+        
+        // Use filtered templates if available, otherwise use all templates
+        // Limit to 200 templates (as requested by user for general categories)
+        const templatesToUse = filteredTemplates.length > 0 
+          ? filteredTemplates.slice(0, 200)
+          : allTemplates.slice(0, 200);
+        
+        console.log(`✅ [POSTER PLAYER] Loaded ${templatesToUse.length} templates for greeting category: ${greetingCategory}`);
+        
+        if (templatesToUse.length > 0) {
+          // Convert GreetingTemplate to Template format
+          const convertedTemplates: Template[] = templatesToUse.map((template: any) => {
+            // Normalize tags to ensure they're in the correct format
+            let normalizedTags: string[] = [];
+            if (Array.isArray(template.tags)) {
+              normalizedTags = template.tags.map((tag: any) => String(tag).trim()).filter((tag: string) => tag.length > 0);
+            } else if (typeof template.tags === 'string') {
+              normalizedTags = template.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+            }
+
+            const convertedTemplate: Template = {
+              id: template.id,
+              name: template.name || 'Greeting Template',
+              thumbnail: template.thumbnail || template.content?.background || '',
+              category: template.category || greetingCategory,
+              downloads: template.downloads || 0,
+              isDownloaded: template.isDownloaded || false,
+              tags: normalizedTags,
+            };
+
+            if (__DEV__ && normalizedTags.length > 0) {
+              console.log(`📋 [GREETING CONVERSION] Template ${convertedTemplate.id} tags:`, normalizedTags);
+            }
+
+            return convertedTemplate;
+          });
+
+          // Set first template as current poster and others as related
+          const ensuredTemplates = convertedTemplates.map(t => mergeTemplateLanguages(t));
+          setAllTemplates(ensuredTemplates);
+          setCurrentPoster(ensuredTemplates[0]);
+          
+          console.log('✅ [POSTER PLAYER] Loaded', ensuredTemplates.length, 'greeting category templates');
+          if (__DEV__ && ensuredTemplates[0]?.tags) {
+            console.log('📋 [POSTER PLAYER] First greeting template tags:', ensuredTemplates[0].tags);
+            console.log('📋 [POSTER PLAYER] All templates tags:', ensuredTemplates.map(t => ({ id: t.id, tags: t.tags })));
+          }
+        }
+      } catch (error) {
+        console.error('❌ [POSTER PLAYER] Error fetching greeting category templates:', error);
+      }
+    };
+
+    fetchGreetingCategoryTemplates();
+  }, [greetingCategory]);
+
+  // Sync state when route params change (only if businessCategory or greetingCategory is not provided)
+  useEffect(() => {
+    // Skip if business category or greeting category is provided (handled by separate useEffects above)
+    if (businessCategory || greetingCategory) {
       return;
     }
 
@@ -566,7 +663,7 @@ const PosterPlayerScreen: React.FC = () => {
       const foundPoster = updatedTemplates.find(t => t.id === prevPoster.id);
       return foundPoster || ensuredInitialPoster;
     });
-  }, [initialPoster, initialRelatedPosters, selectedLanguage, businessCategory]);
+  }, [initialPoster, initialRelatedPosters, selectedLanguage, businessCategory, greetingCategory]);
 
   // Detect language from initial poster on mount
   useEffect(() => {
@@ -616,8 +713,8 @@ const PosterPlayerScreen: React.FC = () => {
       return;
     }
 
-    // Only run for business category posters (when businessCategory param exists)
-    if (!businessCategory) {
+    // Only run for business category or greeting category posters
+    if (!businessCategory && !greetingCategory) {
       return;
     }
 
@@ -630,10 +727,11 @@ const PosterPlayerScreen: React.FC = () => {
       return; // No tags to detect language from
     }
 
-    console.log('🔍 [LANGUAGE DETECTION] Detecting language for business category poster:', {
+    console.log('🔍 [LANGUAGE DETECTION] Detecting language for category poster:', {
       posterId: currentPoster.id,
       tags: posterTags,
-      businessCategory
+      businessCategory,
+      greetingCategory
     });
 
     // Extract languages from tags using the helper function
@@ -675,7 +773,7 @@ const PosterPlayerScreen: React.FC = () => {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [currentPoster?.id, businessCategory]); // Run when current poster changes for business category
+  }, [currentPoster?.id, businessCategory, greetingCategory]); // Run when current poster changes for category
 
   // Ensure poster selection respects the active language filter
   useEffect(() => {

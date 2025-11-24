@@ -161,6 +161,11 @@ const HomeScreen: React.FC = React.memo(() => {
   const [businessCategoriesLoading, setBusinessCategoriesLoading] = useState(false);
   const [businessCategoryImages, setBusinessCategoryImages] = useState<Record<string, string>>({});
 
+  // Greeting categories state
+  const [greetingCategoriesList, setGreetingCategoriesList] = useState<Array<{ id: string; name: string; icon: string; color?: string }>>([]);
+  const [greetingCategoriesLoading, setGreetingCategoriesLoading] = useState(false);
+  const [greetingCategoryImages, setGreetingCategoryImages] = useState<Record<string, string>>({});
+
   const animateCategoryChange = useCallback(() => {
     Animated.sequence([
       Animated.timing(categoryFadeAnim, {
@@ -543,6 +548,7 @@ const HomeScreen: React.FC = React.memo(() => {
     loadCategories();
   }, []);
 
+
   const fetchBusinessCategoryPreviewImages = useCallback(async (categories: BusinessCategory[]) => {
     if (!categories || categories.length === 0) {
       return;
@@ -581,6 +587,101 @@ const HomeScreen: React.FC = React.memo(() => {
       }
     }
   }, []);
+
+  const fetchGreetingCategoryPreviewImages = useCallback(async (categories: Array<{ id: string; name: string }>) => {
+    if (!categories || categories.length === 0) {
+      return;
+    }
+
+    try {
+      const imageEntries = await Promise.all(
+        categories.map(async category => {
+          try {
+            // Use searchTemplates to search by category name in tags
+            // This ensures we get templates that have the category name in their tags
+            const templates = await greetingTemplatesService.searchTemplates(category.name);
+            
+            // Filter to find templates that have the category name in their tags
+            // The search already filters by tags, but we'll verify the match
+            const matchingTemplate = templates.find(template => {
+              // Access tags from the template (tags may not be in interface but exist in API response)
+              const templateAny = template as any;
+              const templateTags = Array.isArray(templateAny.tags) ? templateAny.tags : [];
+              
+              // Check if any tag contains the category name (case-insensitive)
+              const tagMatch = templateTags.some((tag: string) => 
+                typeof tag === 'string' && tag.toLowerCase().includes(category.name.toLowerCase())
+              );
+              
+              // Also check if category name matches
+              const categoryMatch = template.category?.toLowerCase().includes(category.name.toLowerCase());
+              
+              return tagMatch || categoryMatch;
+            });
+            
+            // Use the matching template or fall back to first result (search already filters by tags)
+            const selectedTemplate = matchingTemplate || templates?.[0];
+            const previewUrl = selectedTemplate?.thumbnail || selectedTemplate?.content?.background;
+            
+            if (previewUrl) {
+              if (__DEV__) {
+                const templateAny = selectedTemplate as any;
+                console.log(`✅ [GREETING PREVIEW] Found preview for category "${category.name}":`, {
+                  templateId: selectedTemplate?.id,
+                  tags: templateAny?.tags || []
+                });
+              }
+              return [category.id, previewUrl] as const;
+            }
+          } catch (error) {
+            if (__DEV__) {
+              console.warn(`⚠️ Failed to fetch preview for greeting category ${category.name}:`, error);
+            }
+          }
+          return [category.id, undefined] as const;
+        })
+      );
+
+      const nextImages: Record<string, string> = {};
+      imageEntries.forEach(([categoryId, imageUrl]) => {
+        if (imageUrl) {
+          nextImages[categoryId] = imageUrl;
+        }
+      });
+
+      setGreetingCategoryImages(prev => ({ ...prev, ...nextImages }));
+    } catch (error) {
+      if (__DEV__) {
+        console.error('Error fetching greeting category preview images:', error);
+      }
+    }
+  }, []);
+
+  // Load greeting categories list for the section (different from rotating categories)
+  useEffect(() => {
+    const loadGreetingCategoriesList = async () => {
+      setGreetingCategoriesLoading(true);
+      try {
+        const categories = await greetingTemplatesService.getCategories();
+        if (categories && categories.length > 0) {
+          setGreetingCategoriesList(categories);
+          fetchGreetingCategoryPreviewImages(categories);
+          
+          if (__DEV__) {
+            console.log('✅ [GENERAL CATEGORIES] Loaded:', categories.length, 'categories');
+          }
+        }
+      } catch (error) {
+        if (__DEV__) {
+          console.error('Error loading greeting categories list:', error);
+        }
+      } finally {
+        setGreetingCategoriesLoading(false);
+      }
+    };
+    
+    loadGreetingCategoriesList();
+  }, [fetchGreetingCategoryPreviewImages]);
 
   // Load business categories and filter out user's own category
   useEffect(() => {
@@ -1102,6 +1203,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     setIsFeaturedContentModalVisible(false);
   }, []);
 
+  const handleViewAllBusinessCategories = useCallback(() => {
+    // Navigate to GreetingTemplatesScreen which shows all categories
+    navigation.navigate('GreetingTemplates');
+  }, [navigation]);
+
+  const handleViewAllGeneralCategories = useCallback(() => {
+    // Navigate to GreetingTemplatesScreen which shows all general/greeting categories
+    navigation.navigate('GreetingTemplates');
+  }, [navigation]);
+
   // Memoized render functions to prevent unnecessary re-renders
   const renderBanner = useCallback(({ item }: { item: Banner }) => {
     // Convert featured content to Template format for navigation
@@ -1448,6 +1559,24 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     });
   }, [navigation]);
 
+  // Handler for greeting category press - navigate to PosterPlayerScreen with selected greeting category
+  const handleGreetingCategoryPress = useCallback((category: { id: string; name: string }) => {
+    navigation.navigate('PosterPlayer', {
+      selectedPoster: {
+        id: 'loading',
+        name: category.name,
+        thumbnail: '',
+        category: category.name,
+        downloads: 0,
+        isDownloaded: false,
+      },
+      relatedPosters: [],
+      searchQuery: '',
+      templateSource: 'greeting',
+      greetingCategory: category.name, // Pass the selected greeting category
+    });
+  }, [navigation]);
+
   // Render business category card
   const renderBusinessCategoryCard = useCallback(({ item }: { item: BusinessCategory }) => {
     const categoryImage =
@@ -1494,6 +1623,49 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
       </TouchableOpacity>
     );
   }, [handleBusinessCategoryPress, cardWidth, theme, businessCategoryImages]);
+
+  // Render greeting category card
+  const renderGreetingCategoryCard = useCallback(({ item }: { item: { id: string; name: string; icon: string; color?: string } }) => {
+    const categoryImage = greetingCategoryImages[item.id] || null;
+    
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={[styles.businessCategoryCard, { width: cardWidth }]}
+        onPress={() => handleGreetingCategoryPress(item)}
+      >
+        <View style={[
+          styles.businessCategoryCardContent, 
+          { 
+            backgroundColor: theme.colors.cardBackground,
+            height: cardWidth, // Make cards square
+          }
+        ]}>
+          <View style={styles.businessCategoryImageSection}>
+            {categoryImage ? (
+              <View style={styles.businessCategoryImageContainer}>
+                <OptimizedImage 
+                  uri={categoryImage} 
+                  style={styles.businessCategoryImage}
+                  resizeMode="cover"
+                />
+              </View>
+            ) : item.icon ? (
+              <Text style={styles.businessCategoryIcon}>
+                {item.icon}
+              </Text>
+            ) : null}
+          </View>
+          <Text 
+            style={[styles.businessCategoryName, { color: theme.colors.text }]}
+            numberOfLines={2}
+          >
+            {item.name}
+          </Text>
+        </View>
+      </TouchableOpacity>
+    );
+  }, [handleGreetingCategoryPress, cardWidth, theme, greetingCategoryImages]);
 
   if (loading) {
     return (
@@ -1698,10 +1870,36 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             <View style={styles.businessCategoriesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Categories</Text>
+                {renderBrowseAllButton(handleViewAllBusinessCategories)}
               </View>
               <FlatList
                 data={businessCategories}
                 renderItem={renderBusinessCategoryCard}
+                keyExtractor={(item) => item.id}
+                horizontal={true}
+                showsHorizontalScrollIndicator={false}
+                nestedScrollEnabled={true}
+                removeClippedSubviews={true}
+                maxToRenderPerBatch={10}
+                windowSize={5}
+                initialNumToRender={10}
+                updateCellsBatchingPeriod={50}
+                getItemLayout={getItemLayout}
+                contentContainerStyle={styles.horizontalList}
+              />
+            </View>
+          )}
+
+          {/* General Categories Section */}
+          {!isSearching && searchQuery.trim() === '' && greetingCategoriesList.length > 0 && (
+            <View style={styles.businessCategoriesSection}>
+              <View style={styles.sectionHeader}>
+                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>General Categories</Text>
+                {renderBrowseAllButton(handleViewAllGeneralCategories)}
+              </View>
+              <FlatList
+                data={greetingCategoriesList}
+                renderItem={renderGreetingCategoryCard}
                 keyExtractor={(item) => item.id}
                 horizontal={true}
                 showsHorizontalScrollIndicator={false}
