@@ -1600,25 +1600,45 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         ]}>
           <View style={styles.businessCategoryImageSection}>
             {categoryImage ? (
-              <View style={styles.businessCategoryImageContainer}>
-                <OptimizedImage 
-                  uri={categoryImage} 
-                  style={styles.businessCategoryImage}
-                  resizeMode="cover"
-                />
+              <OptimizedImage 
+                uri={categoryImage} 
+                style={styles.businessCategoryImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={[
+                  styles.businessCategoryImage,
+                  { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)' },
+                ]}
+              >
+                {item.icon ? (
+                  <Text style={styles.businessCategoryIcon}>
+                    {item.icon}
+                  </Text>
+                ) : null}
               </View>
-            ) : item.icon ? (
-              <Text style={styles.businessCategoryIcon}>
-                {item.icon}
+            )}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.75)']}
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
+            />
+            <View
+              style={[
+                StyleSheet.absoluteFillObject,
+                { justifyContent: 'flex-end', padding: moderateScale(6) },
+              ]}
+              pointerEvents="none"
+            >
+              <Text 
+                style={[styles.businessCategoryName, { color: '#ffffff', textAlign: 'left' }]}
+                numberOfLines={2}
+              >
+                {item.name}
               </Text>
-            ) : null}
+            </View>
           </View>
-          <Text 
-            style={[styles.businessCategoryName, { color: theme.colors.text }]}
-            numberOfLines={2}
-          >
-            {item.name}
-          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -1643,25 +1663,45 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         ]}>
           <View style={styles.businessCategoryImageSection}>
             {categoryImage ? (
-              <View style={styles.businessCategoryImageContainer}>
-                <OptimizedImage 
-                  uri={categoryImage} 
-                  style={styles.businessCategoryImage}
-                  resizeMode="cover"
-                />
+              <OptimizedImage 
+                uri={categoryImage} 
+                style={styles.businessCategoryImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={[
+                  styles.businessCategoryImage,
+                  { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)' },
+                ]}
+              >
+                {item.icon ? (
+                  <Text style={styles.businessCategoryIcon}>
+                    {item.icon}
+                  </Text>
+                ) : null}
               </View>
-            ) : item.icon ? (
-              <Text style={styles.businessCategoryIcon}>
-                {item.icon}
+            )}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.75)']}
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
+            />
+            <View
+              style={[
+                StyleSheet.absoluteFillObject,
+                { justifyContent: 'flex-end', padding: moderateScale(6) },
+              ]}
+              pointerEvents="none"
+            >
+              <Text 
+                style={[styles.businessCategoryName, { color: '#ffffff', textAlign: 'left' }]}
+                numberOfLines={2}
+              >
+                {item.name}
               </Text>
-            ) : null}
+            </View>
           </View>
-          <Text 
-            style={[styles.businessCategoryName, { color: theme.colors.text }]}
-            numberOfLines={2}
-          >
-            {item.name}
-          </Text>
         </View>
       </TouchableOpacity>
     );
@@ -3644,7 +3684,7 @@ const styles = StyleSheet.create({
   },
   featuredCarouselCard: {
     height: verticalScale(110),
-    borderRadius: moderateScale(12),
+    borderRadius: moderateScale(8),
     overflow: 'hidden',
     marginRight: moderateScale(10),
     backgroundColor: '#f2f2f2',
@@ -3804,7 +3844,7 @@ const styles = StyleSheet.create({
   bannerContainer: {
     width: '100%',
     height: verticalScale(80),
-    borderRadius: moderateScale(12),
+    borderRadius: moderateScale(8),
     overflow: 'hidden',
     position: 'relative',
   },
@@ -3875,11 +3915,11 @@ const styles = StyleSheet.create({
        upcomingEventsList: {
       paddingHorizontal: moderateScale(3),
     },
-                   upcomingEventCard: {
+  upcomingEventCard: {
         width: getResponsiveValue(SCREEN_WIDTH * 0.32, SCREEN_WIDTH * 0.28, SCREEN_WIDTH * 0.18),
         marginRight: moderateScale(3),
         backgroundColor: 'rgba(255,255,255,0.1)',
-        borderRadius: moderateScale(10),
+        borderRadius: moderateScale(8),
         overflow: 'hidden',
         ...responsiveShadow.small,
       },
@@ -3926,28 +3966,14 @@ const styles = StyleSheet.create({
   businessCategoryCardContent: {
     width: '100%',
     borderRadius: moderateScale(8),
-    padding: 0,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
+    overflow: 'hidden',
     ...responsiveShadow.small,
     borderWidth: 0.5,
     borderColor: 'rgba(0,0,0,0.05)',
-    overflow: 'hidden',
   },
   businessCategoryImageSection: {
-    width: '100%',
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: moderateScale(8),
-    paddingBottom: moderateScale(4),
-  },
-  businessCategoryImageContainer: {
     width: '100%',
-    height: '100%',
-    borderRadius: moderateScale(6),
-    overflow: 'hidden',
-    backgroundColor: 'rgba(0,0,0,0.05)',
   },
   businessCategoryImage: {
     width: '100%',
@@ -3955,13 +3981,13 @@ const styles = StyleSheet.create({
   },
   businessCategoryIcon: {
     fontSize: moderateScale(32),
+    color: '#555',
   },
   businessCategoryName: {
     fontSize: moderateScale(10),
-    fontWeight: '600',
-    textAlign: 'center',
-    paddingHorizontal: moderateScale(8),
-    paddingBottom: moderateScale(8),
+    fontWeight: '700',
+    textAlign: 'left',
+    letterSpacing: 0.2,
   },
   videoSection: {
     paddingBottom: verticalScale(15),
@@ -3981,7 +4007,7 @@ const styles = StyleSheet.create({
   },
   templateCard: {
     width: '100%',
-    borderRadius: moderateScale(10),
+    borderRadius: moderateScale(8),
     overflow: 'hidden',
     ...responsiveShadow.small,
   },
@@ -4167,12 +4193,12 @@ const styles = StyleSheet.create({
      color: '#333333',
    },
    // Upcoming Festivals Modal Styles - Compact & Responsive
-   upcomingEventsModalContent: {
-     width: SCREEN_WIDTH >= 768 ? SCREEN_WIDTH * 0.90 : SCREEN_WIDTH * 0.96,
-     maxWidth: SCREEN_WIDTH >= 768 ? 900 : SCREEN_WIDTH * 0.96,
+  upcomingEventsModalContent: {
+    width: SCREEN_WIDTH >= 768 ? SCREEN_WIDTH * 0.90 : SCREEN_WIDTH * 0.96,
+    maxWidth: SCREEN_WIDTH >= 768 ? 900 : SCREEN_WIDTH * 0.96,
       height: SCREEN_HEIGHT * 0.85, // Reduced from 0.9
       backgroundColor: '#ffffff',
-     borderRadius: SCREEN_WIDTH >= 768 ? moderateScale(20) : moderateScale(16), // Reduced from 30/25
+     borderRadius: moderateScale(8),
       overflow: 'hidden',
       position: 'relative',
       shadowColor: '#000',

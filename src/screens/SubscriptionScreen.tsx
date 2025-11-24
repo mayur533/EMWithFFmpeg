@@ -750,46 +750,6 @@ const SubscriptionScreen: React.FC = () => {
           gap: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
           marginBottom: dynamicModerateScale(16),
         }]}>
-          {/* Free Plan Card */}
-          <View style={[styles.planCard, { 
-            backgroundColor: theme.colors.cardBackground,
-            borderRadius: dynamicModerateScale(12),
-            padding: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
-            minHeight: isTabletDevice ? dynamicModerateScale(280) : dynamicModerateScale(220),
-          }]}>
-            <View style={[styles.planHeader, {
-              marginBottom: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
-            }]}>
-              <Text style={[styles.planName, { 
-                color: theme.colors.text,
-                fontSize: dynamicModerateScale(14),
-                marginBottom: dynamicModerateScale(4),
-              }]}>Free</Text>
-              <Text style={[styles.planPrice, {
-                fontSize: dynamicModerateScale(20),
-              }]}>₹0</Text>
-              <Text style={[styles.planPeriod, { 
-                color: theme.colors.textSecondary,
-                fontSize: dynamicModerateScale(9),
-                marginTop: dynamicModerateScale(2),
-              }]}>forever</Text>
-            </View>
-            
-            <View style={[styles.featuresList, {
-              gap: dynamicModerateScale(6),
-            }]}>
-              <FeatureItem text="5 posters per month" included={true} />
-              <FeatureItem text="Basic templates" included={true} />
-              <FeatureItem text="Standard resolution" included={true} />
-              <FeatureItem text="Community support" included={true} />
-              <FeatureItem text="Premium templates" included={false} />
-              <FeatureItem text="No watermarks" included={false} />
-              <FeatureItem text="High-resolution exports" included={false} />
-              <FeatureItem text="Priority support" included={false} />
-            </View>
-          </View>
-
-          {/* Pro Plan Card */}
           <View style={[styles.proCard, { 
             backgroundColor: theme.colors.cardBackground,
             borderRadius: dynamicModerateScale(12),
@@ -1015,15 +975,9 @@ const SubscriptionScreen: React.FC = () => {
               paddingHorizontal: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(12),
             }]}
           >
-            <Icon 
-              name={isSubscribed ? 'check-circle' : 'upgrade'} 
-              size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
-              color="#ffffff" 
-            />
-                         <Text style={[styles.upgradeButtonText, {
-               fontSize: dynamicModerateScale(11),
-               marginLeft: dynamicModerateScale(6),
-             }]}>
+            <Text style={[styles.upgradeButtonText, {
+              fontSize: dynamicModerateScale(11),
+            }]}>
                {isSubscribed 
                  ? 'Already Pro' 
                  : isProcessing 
