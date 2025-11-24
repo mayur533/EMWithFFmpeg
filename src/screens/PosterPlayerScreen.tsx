@@ -9,6 +9,7 @@ import {
   StatusBar,
   FlatList,
   ScrollView,
+  PanResponder,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -103,6 +104,32 @@ const templateContainsLanguage = (template: Template, languageId: string): boole
   return false;
 };
 
+const hexToRgba = (hexColor: string, alpha = 1): string => {
+  if (!hexColor) {
+    return `rgba(0,0,0,${alpha})`;
+  }
+
+  let hex = hexColor.replace('#', '');
+
+  if (hex.length === 3) {
+    hex = hex
+      .split('')
+      .map(char => char + char)
+      .join('');
+  }
+
+  if (hex.length !== 6) {
+    return `rgba(0,0,0,${alpha})`;
+  }
+
+  const bigint = parseInt(hex, 16);
+  const r = (bigint >> 16) & 255;
+  const g = (bigint >> 8) & 255;
+  const b = bigint & 255;
+
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+};
+
 // Memoized poster item component for better performance (moved outside to prevent recreation)
 interface RelatedPosterItemProps {
   item: Template;
@@ -111,6 +138,8 @@ interface RelatedPosterItemProps {
   imageUrl: string;
   languageCode: string;
   onPress: (item: Template) => void;
+  isSelected: boolean;
+  overlayColors: string[];
 }
 
 const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({ 
@@ -119,7 +148,9 @@ const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({
   cardHeight,
   imageUrl,
   languageCode,
-  onPress
+  onPress,
+  isSelected,
+  overlayColors
 }) => {
   const handlePress = useCallback(() => onPress(item), [item, onPress]);
 
@@ -133,15 +164,34 @@ const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({
 
   return (
     <TouchableOpacity
-      style={[styles.relatedPosterCard, { width: validCardWidth, height: validCardHeight }]}
+      style={[
+        styles.relatedPosterCard,
+        { width: validCardWidth, height: validCardHeight },
+        isSelected && styles.relatedPosterCardSelected
+      ]}
       onPress={handlePress}
       activeOpacity={0.8}
     >
+      {isSelected && <View style={styles.selectedPosterGlow} pointerEvents="none" />}
       <OptimizedImage
         uri={imageUrl}
         style={styles.relatedPosterImage}
         resizeMode="cover"
       />
+      {isSelected && (
+        <LinearGradient
+          colors={overlayColors}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          pointerEvents="none"
+          style={styles.selectedPosterOverlay}
+        />
+      )}
+      {isSelected && (
+        <View style={styles.selectedPosterBadge}>
+          <Text style={styles.selectedPosterBadgeText}>Previewing</Text>
+        </View>
+      )}
       <View style={styles.relatedPosterLanguageBadge}>
         <Text style={styles.relatedPosterLanguageText}>
           {languageCode}
@@ -157,7 +207,9 @@ const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({
     prevProps.imageUrl === nextProps.imageUrl &&
     prevProps.languageCode === nextProps.languageCode &&
     prevProps.cardWidth === nextProps.cardWidth &&
-    prevProps.cardHeight === nextProps.cardHeight
+    prevProps.cardHeight === nextProps.cardHeight &&
+    prevProps.isSelected === nextProps.isSelected &&
+    prevProps.overlayColors === nextProps.overlayColors
   );
 });
 
@@ -168,9 +220,20 @@ type PosterPlayerScreenNavigationProp = StackNavigationProp<MainStackParamList, 
 
 const PosterPlayerScreen: React.FC = () => {
   const { theme } = useTheme();
+  const themeColors = theme.colors || {};
+  const primaryColor = themeColors.primary || '#764ba2';
+  const secondaryColor = themeColors.secondary || themeColors.primary || '#667eea';
   const navigation = useNavigation<PosterPlayerScreenNavigationProp>();
   const route = useRoute<PosterPlayerScreenRouteProp>();
   const insets = useSafeAreaInsets();
+  const previewOverlayColors = useMemo(() => {
+    const startColor = secondaryColor || primaryColor;
+    const endColor = primaryColor;
+    return [
+      hexToRgba(startColor, 0.95),
+      hexToRgba(endColor, 0.85),
+    ];
+  }, [primaryColor, secondaryColor]);
   
   // Dynamic dimensions for responsive layout
   const [dimensions, setDimensions] = useState(() => {
@@ -369,6 +432,7 @@ const PosterPlayerScreen: React.FC = () => {
       : [];
     return keywords.some(keyword => templateTags.some(tag => tag.includes(keyword)));
   }, [isEventPlannerCategory, selectedServiceFilter, serviceFilterKeywords]);
+
 
   const filteredPosters = useMemo(() => {
     // First filter by language - if no matches, return empty array
@@ -850,6 +914,68 @@ const PosterPlayerScreen: React.FC = () => {
     setCurrentPoster(posterWithLanguages);
   }, [selectedLanguage]);
 
+  const currentPosterIndex = useMemo(() => {
+    if (!currentPoster) {
+      return -1;
+    }
+    return filteredPosters.findIndex(template => template.id === currentPoster.id);
+  }, [filteredPosters, currentPoster]);
+
+  const showPosterAtIndex = useCallback((index: number) => {
+    if (!filteredPosters.length) {
+      return;
+    }
+
+    const safeIndex = Math.max(0, Math.min(filteredPosters.length - 1, index));
+    const poster = filteredPosters[safeIndex];
+    if (poster) {
+      handlePosterSelect(poster);
+    }
+  }, [filteredPosters, handlePosterSelect]);
+
+  const goToNextPoster = useCallback(() => {
+    if (currentPosterIndex === -1) {
+      showPosterAtIndex(0);
+      return;
+    }
+    const nextIndex = currentPosterIndex + 1;
+    if (nextIndex < filteredPosters.length) {
+      showPosterAtIndex(nextIndex);
+    }
+  }, [currentPosterIndex, filteredPosters.length, showPosterAtIndex]);
+
+  const goToPreviousPoster = useCallback(() => {
+    if (currentPosterIndex === -1) {
+      showPosterAtIndex(0);
+      return;
+    }
+    const previousIndex = currentPosterIndex - 1;
+    if (previousIndex >= 0) {
+      showPosterAtIndex(previousIndex);
+    }
+  }, [currentPosterIndex, showPosterAtIndex]);
+
+  const swipeThreshold = 30;
+
+  const swipeResponder = useMemo(
+    () =>
+      PanResponder.create({
+        onMoveShouldSetPanResponder: (_, gestureState) => {
+          const { dx, dy } = gestureState;
+          return Math.abs(dx) > Math.abs(dy) && Math.abs(dx) > 10;
+        },
+        onPanResponderRelease: (_, gestureState) => {
+          const { dx } = gestureState;
+          if (dx < -swipeThreshold) {
+            goToNextPoster();
+          } else if (dx > swipeThreshold) {
+            goToPreviousPoster();
+          }
+        },
+      }),
+    [goToNextPoster, goToPreviousPoster, swipeThreshold],
+  );
+
   const handleLanguageChange = useCallback((languageId: string) => {
     setSelectedLanguage(languageId);
     setLanguageMenuVisible(false);
@@ -1066,6 +1192,7 @@ const PosterPlayerScreen: React.FC = () => {
   const renderRelatedPoster = useCallback(({ item }: { item: Template }) => {
     const imageUrl = getHighQualityImageUrl(item);
     const languageCode = getTemplateLanguageCode(item);
+  const isSelected = currentPoster?.id === item.id;
     
     // Ensure cardWidth and cardHeight are valid numbers
     const validCardWidth = (isNaN(cardWidth) || !isFinite(cardWidth) || cardWidth <= 0) ? 100 : cardWidth;
@@ -1079,9 +1206,11 @@ const PosterPlayerScreen: React.FC = () => {
         imageUrl={imageUrl}
         languageCode={languageCode}
         onPress={handlePosterSelect}
+        isSelected={isSelected}
+        overlayColors={previewOverlayColors}
       />
     );
-  }, [cardWidth, cardHeight, handlePosterSelect, getHighQualityImageUrl, getTemplateLanguageCode]);
+  }, [cardWidth, cardHeight, handlePosterSelect, getHighQualityImageUrl, getTemplateLanguageCode, currentPoster, previewOverlayColors]);
 
   const renderLanguageButton = useCallback((language: typeof languages[0]) => {
     const iconSize = getIconSize(12);
@@ -1182,7 +1311,10 @@ const PosterPlayerScreen: React.FC = () => {
         {/* Dropdown will render over the preview instead of full-width */}
 
          {/* Compact Poster Section */}
-         <View style={[styles.posterContainer, { height: computedPreviewHeight, width: '100%' }]}>
+         <View
+           style={[styles.posterContainer, { height: computedPreviewHeight, width: '100%' }]}
+           {...swipeResponder.panHandlers}
+         >
          <Image
            source={{ uri: getHighQualityImageUrl(currentPoster) }}
            style={styles.posterImage}
@@ -1607,9 +1739,54 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.15)',
     marginBottom: moderateScale(6), // Compact margin
   },
+  relatedPosterCardSelected: {
+    borderColor: '#ffd166',
+    borderWidth: moderateScale(1.2),
+    shadowOpacity: 0.25,
+    shadowRadius: moderateScale(5),
+    elevation: 5,
+    transform: [{ scale: 1.02 }],
+  },
+  selectedPosterGlow: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    borderRadius: moderateScale(8),
+    borderWidth: moderateScale(2),
+    borderColor: 'rgba(255, 209, 102, 0.65)',
+    shadowColor: '#ffd166',
+    shadowOpacity: 0.9,
+    shadowRadius: moderateScale(6),
+    elevation: 6,
+  },
+  selectedPosterOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'transparent',
+  },
   relatedPosterImage: {
     width: '100%',
     height: '100%',
+  },
+  selectedPosterBadge: {
+    position: 'absolute',
+    bottom: moderateScale(4),
+    left: moderateScale(4),
+    backgroundColor: 'rgba(0,0,0,0.75)',
+    paddingHorizontal: moderateScale(6),
+    paddingVertical: moderateScale(2),
+    borderRadius: moderateScale(6),
+  },
+  selectedPosterBadgeText: {
+    color: '#ffd166',
+    fontSize: moderateScale(7),
+    fontWeight: '700',
+    letterSpacing: 0.3,
   },
   relatedPosterOverlay: {
     position: 'absolute',
