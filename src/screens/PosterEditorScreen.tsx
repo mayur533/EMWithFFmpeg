@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback, useEffect } from 'react';
+import React, { useState, useRef, useCallback, useEffect, useMemo } from 'react';
 // Optimized for all screen devices with responsive design improvements
 // Canvas height: 38-45% on portrait mode, 65% on landscape (prevents toolbar overlap)
 // Toolbar is fixed on screen (no vertical scroll) with horizontal scroll for buttons
@@ -410,13 +410,82 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const currentScreenWidth = dimensions.width;
   const currentScreenHeight = dimensions.height;
   
+  // Dynamic device detection that updates on rotation
+  const isTabletDevice = useMemo(() => Math.min(currentScreenWidth, currentScreenHeight) >= 768, [currentScreenWidth, currentScreenHeight]);
+  const isLandscapeMode = useMemo(() => currentScreenWidth > currentScreenHeight, [currentScreenWidth, currentScreenHeight]);
+  const isPortraitMode = useMemo(() => currentScreenHeight > currentScreenWidth, [currentScreenWidth, currentScreenHeight]);
+  
+  // Dynamic screen size breakpoints
+  const isUltraSmallDevice = useMemo(() => currentScreenWidth < 360, [currentScreenWidth]);
+  const isSmallDevice = useMemo(() => currentScreenWidth >= 360 && currentScreenWidth < 375, [currentScreenWidth]);
+  const isMediumDevice = useMemo(() => currentScreenWidth >= 375 && currentScreenWidth < 414, [currentScreenWidth]);
+  const isLargeDevice = useMemo(() => currentScreenWidth >= 414 && currentScreenWidth < 480, [currentScreenWidth]);
+  const isXLargeDevice = useMemo(() => currentScreenWidth >= 480, [currentScreenWidth]);
+  
   // Dynamic responsive scaling functions (for theme styles that need to update on orientation change)
   const dynamicScale = (size: number) => (currentScreenWidth / 375) * size;
   const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
   const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
   
-  // Get responsive dimensions
-  const { canvasWidth, canvasHeight, availableWidth, availableHeight } = getResponsiveDimensions(insets);
+  // Get responsive dimensions - dynamically calculated based on current screen size
+  const responsiveDimensions = useMemo(() => {
+    const availableWidth = currentScreenWidth - (insets.left + insets.right);
+    const availableHeight = currentScreenHeight - (insets.top + insets.bottom);
+    
+    // Calculate square canvas dimensions based on screen size
+    let canvasWidthRatio = 0.95;
+    
+    if (isLandscapeMode) {
+      // Landscape mode - smaller square canvas
+      canvasWidthRatio = isTabletDevice ? 0.5 : 0.6;
+    } else {
+      // Portrait mode - square canvas that fits the screen
+      if (isTabletDevice) {
+        canvasWidthRatio = 0.7;
+      } else if (isUltraSmallDevice) {
+        canvasWidthRatio = 0.95;
+      } else if (isSmallDevice) {
+        canvasWidthRatio = 0.93;
+      } else if (isMediumDevice) {
+        canvasWidthRatio = 0.92;
+      } else if (isLargeDevice) {
+        canvasWidthRatio = 0.90;
+      } else {
+        canvasWidthRatio = 0.88;
+      }
+    }
+    
+    // Make canvas square: width = height (1:1 aspect ratio for 1024x1024 images)
+    const canvasWidth = Math.min(availableWidth * canvasWidthRatio, currentScreenWidth * canvasWidthRatio);
+    const canvasHeight = canvasWidth; // Square canvas!
+    
+    return {
+      canvasWidth,
+      canvasHeight,
+      availableWidth,
+      availableHeight,
+      canvasWidthRatio,
+      canvasHeightRatio: canvasWidthRatio // Same as width ratio for square
+    };
+  }, [currentScreenWidth, currentScreenHeight, isLandscapeMode, isTabletDevice, isUltraSmallDevice, isSmallDevice, isMediumDevice, isLargeDevice, insets]);
+  
+  const { canvasWidth, canvasHeight, availableWidth, availableHeight } = responsiveDimensions;
+  
+  // Dynamic responsive helper functions
+  const getResponsiveIconSize = useCallback(() => {
+    if (isLandscapeMode) {
+      return Math.max(12, (isTabletDevice ? 20 : 16) * 0.8);
+    }
+    return Math.max(11, (isUltraSmallDevice ? 14 : isSmallDevice ? 16 : isMediumDevice ? 18 : isLargeDevice ? 20 : 22) * 0.8);
+  }, [isLandscapeMode, isTabletDevice, isUltraSmallDevice, isSmallDevice, isMediumDevice, isLargeDevice]);
+  
+  const getResponsiveButtonSize = useCallback(() => {
+    if (isLandscapeMode) {
+      return Math.max(49, (isTabletDevice ? 80 : 70) * 0.7);
+    }
+    return Math.max(42, (isUltraSmallDevice ? 60 : isSmallDevice ? 65 : isMediumDevice ? 70 : isLargeDevice ? 75 : 80) * 0.7);
+  }, [isLandscapeMode, isTabletDevice, isUltraSmallDevice, isSmallDevice, isMediumDevice, isLargeDevice]);
+  
   const canvasTopOffset = insets.top + moderateScale(12);
   const canvasBottomY = canvasTopOffset + canvasHeight;
   const fontModalSpacing = moderateScale(24);
@@ -1306,7 +1375,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     }
 
     // Create professional footer with contact information (3 lines)
-    const contactLineHeight = isTablet ? 20 : 16;
+    const contactLineHeight = isTabletDevice ? 20 : 16;
     const footerPadding = 10; // Top and bottom padding
     const footerHeight = (contactLineHeight * 3) + (footerPadding * 2); // 3 lines + padding
     const footerY = canvasHeight - footerHeight;
@@ -1317,7 +1386,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       return Math.max(baseSize * scaleFactor, baseSize * 0.8); // Minimum 80% of base size
     };
     
-    const footerTextSize = getResponsiveFooterFontSize(isTablet ? 14 : 11);
+    const footerTextSize = getResponsiveFooterFontSize(isTabletDevice ? 14 : 11);
     
     // Footer background overlay for better readability
     const footerBackgroundLayer: Layer = {
@@ -1463,7 +1532,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         zIndex: 10,
         fieldType: 'services',
         style: {
-          fontSize: Math.max(isTablet ? 12 : 9, footerTextSize),
+          fontSize: Math.max(isTabletDevice ? 12 : 9, footerTextSize),
           color: '#ffffff',
           fontFamily: 'System',
           fontWeight: '400',
@@ -2482,20 +2551,29 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       {/* Professional Header */}
       <View
         style={[styles.header, { 
-          paddingTop: insets.top + moderateScale(12),
+          paddingTop: insets.top + moderateScale(8),
           backgroundColor: theme?.colors?.surface || '#ffffff'
         }]}
       >
         <TouchableOpacity
           style={styles.backButton}
           onPress={() => navigation.goBack()}
+          activeOpacity={0.85}
         >
-          <Text style={styles.backButtonText}>Back</Text>
+          <LinearGradient
+            colors={[theme.colors.secondary, theme.colors.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.backButtonGradient}
+          >
+            <Text style={styles.backButtonText}>Back</Text>
+          </LinearGradient>
         </TouchableOpacity>
         <View style={styles.headerContent}>
         </View>
         <TouchableOpacity 
           style={styles.nextButton}
+          activeOpacity={0.85}
           onPress={async () => {
             // Check subscription status first
             if (!isSubscribed) {
@@ -2643,7 +2721,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             }
           }}
         >
-          <Text style={styles.nextButtonText}>Next</Text>
+          <LinearGradient
+            colors={[theme.colors.secondary, theme.colors.primary]}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 0 }}
+            style={styles.nextButtonGradient}
+          >
+            <Text style={styles.nextButtonText}>Next</Text>
+          </LinearGradient>
         </TouchableOpacity>
       </View>
 
@@ -3562,7 +3647,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         animationType="fade"
         onRequestClose={() => setShowRemoveFrameModal(false)}
       >
-        <View style={[styles.modalOverlay, { paddingHorizontal: isLandscape ? (isTablet ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallScreen ? responsiveSpacing.sm : responsiveSpacing.md) }]}>
+        <View style={[styles.modalOverlay, { paddingHorizontal: isLandscapeMode ? (isTabletDevice ? responsiveSpacing.lg : responsiveSpacing.md) : (isUltraSmallDevice ? responsiveSpacing.sm : responsiveSpacing.md) }]}>
           ... modal content ...
         </View>
       </Modal>
@@ -3575,46 +3660,46 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         animationType="fade"
         onRequestClose={() => setShowRemoveFrameWarningModal(false)}
       >
-        <View style={[styles.modalOverlay, { paddingHorizontal: isTablet ? responsiveSpacing.xl : isLandscape ? responsiveSpacing.lg : responsiveSpacing.md }]}>
+        <View style={[styles.modalOverlay, { paddingHorizontal: isTabletDevice ? responsiveSpacing.xl : isLandscapeMode ? responsiveSpacing.lg : responsiveSpacing.md }]}>
           <View style={[
             themeStyles.modalContent,
             {
-              width: isTablet 
+              width: isTabletDevice 
                 ? screenWidth * 0.5 
-                : isLandscape 
+                : isLandscapeMode 
                   ? screenWidth * 0.6 
-                  : isUltraSmallScreen 
+                  : isUltraSmallDevice 
                     ? screenWidth * 0.92 
                     : isSmallScreen 
                       ? screenWidth * 0.9 
                       : screenWidth * 0.85,
-              maxHeight: isTablet 
+              maxHeight: isTabletDevice 
                 ? screenHeight * 0.5 
-                : isLandscape 
+                : isLandscapeMode 
                   ? screenHeight * 0.5 
                   : screenHeight * 0.4,
             }
           ]}>
-            <View style={{ alignItems: 'center', marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md }}>
+            <View style={{ alignItems: 'center', marginBottom: isTabletDevice ? responsiveSpacing.lg : responsiveSpacing.md }}>
               <View style={{ 
-                width: isTablet ? 70 : isLandscape ? 60 : isUltraSmallScreen ? 50 : 60, 
-                height: isTablet ? 70 : isLandscape ? 60 : isUltraSmallScreen ? 50 : 60, 
-                borderRadius: isTablet ? 35 : isLandscape ? 30 : isUltraSmallScreen ? 25 : 30, 
+                width: isTabletDevice ? 70 : isLandscape ? 60 : isUltraSmallScreen ? 50 : 60, 
+                height: isTabletDevice ? 70 : isLandscapeMode ? 60 : isUltraSmallDevice ? 50 : 60, 
+                borderRadius: isTabletDevice ? 35 : isLandscapeMode ? 30 : isUltraSmallDevice ? 25 : 30, 
                 backgroundColor: '#fff8f0', 
                 justifyContent: 'center', 
                 alignItems: 'center',
-                marginBottom: isTablet ? responsiveSpacing.md : responsiveSpacing.sm
+                marginBottom: isTabletDevice ? responsiveSpacing.md : responsiveSpacing.sm
               }}>
                 <Icon 
                   name="warning" 
-                  size={isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 24 : 32} 
+                  size={isTabletDevice ? 36 : isLandscapeMode ? 32 : isUltraSmallDevice ? 24 : 32} 
                   color="#ff9800" 
                 />
               </View>
               <Text style={[
                 themeStyles.modalTitle, 
                 { 
-                  fontSize: isTablet ? 24 : isLandscape ? 20 : isUltraSmallScreen ? 18 : 20,
+                  fontSize: isTabletDevice ? 24 : isLandscapeMode ? 20 : isUltraSmallDevice ? 18 : 20,
                   marginBottom: responsiveSpacing.sm,
                   textAlign: 'center'
                 }
@@ -3624,10 +3709,10 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               <Text style={[
                 themeStyles.modalSubtitle, 
                 { 
-                  fontSize: isTablet ? 15 : isLandscape ? 13 : isUltraSmallScreen ? 12 : 14,
+                  fontSize: isTabletDevice ? 15 : isLandscapeMode ? 13 : isUltraSmallDevice ? 12 : 14,
                   textAlign: 'center',
-                  lineHeight: isTablet ? 22 : isLandscape ? 18 : isUltraSmallScreen ? 16 : 20,
-                  paddingHorizontal: isTablet ? responsiveSpacing.md : responsiveSpacing.sm
+                  lineHeight: isTabletDevice ? 22 : isLandscapeMode ? 18 : isUltraSmallDevice ? 16 : 20,
+                  paddingHorizontal: isTabletDevice ? responsiveSpacing.md : responsiveSpacing.sm
                 }
               ]}>
                 Please remove the current frame before applying a new template. You can remove the frame by clicking the "Remove Frame" button.
@@ -3637,7 +3722,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               styles.modalButtons,
               {
                 flexDirection: 'row',
-                gap: isTablet ? responsiveSpacing.md : responsiveSpacing.sm
+                gap: isTabletDevice ? responsiveSpacing.md : responsiveSpacing.sm
               }
             ]}>
               <TouchableOpacity
@@ -3646,8 +3731,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   {
                     flex: 1,
                     backgroundColor: '#ff9800',
-                    paddingVertical: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 12 : 14,
-                    borderRadius: isTablet ? 12 : isLandscape ? 10 : isUltraSmallScreen ? 8 : 10,
+                    paddingVertical: isTabletDevice ? 16 : isLandscapeMode ? 14 : isUltraSmallDevice ? 12 : 14,
+                    borderRadius: isTabletDevice ? 12 : isLandscapeMode ? 10 : isUltraSmallDevice ? 8 : 10,
                     marginHorizontal: 0
                   }
                 ]}
@@ -3656,7 +3741,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 <Text style={[
                   styles.addButtonText,
                   {
-                    fontSize: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 13 : 15
+                    fontSize: isTabletDevice ? 16 : isLandscapeMode ? 14 : isUltraSmallDevice ? 13 : 15
                   }
                 ]}>
                   Got it
@@ -3675,23 +3760,23 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         onRequestClose={() => setShowDeleteElementModal(false)}
         statusBarTranslucent={true}
       >
-        <View style={[styles.modalOverlay, { paddingHorizontal: isTablet ? responsiveSpacing.xl : isLandscape ? responsiveSpacing.lg : responsiveSpacing.md }]}>
+        <View style={[styles.modalOverlay, { paddingHorizontal: isTabletDevice ? responsiveSpacing.xl : isLandscapeMode ? responsiveSpacing.lg : responsiveSpacing.md }]}>
           <View style={[
             themeStyles.deleteModalContainer,
             {
               backgroundColor: theme.colors.surface,
-              width: isTablet 
+              width: isTabletDevice 
                 ? screenWidth * 0.5 
-                : isLandscape 
+                : isLandscapeMode 
                   ? screenWidth * 0.6 
-                  : isUltraSmallScreen 
+                  : isUltraSmallDevice 
                     ? screenWidth * 0.92 
                     : isSmallScreen 
                       ? screenWidth * 0.9 
                       : screenWidth * 0.85,
-              maxWidth: isTablet ? 500 : 450,
-              paddingHorizontal: isTablet ? responsiveSpacing.xl : isLandscape ? responsiveSpacing.lg : isUltraSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg,
-              paddingVertical: isTablet ? responsiveSpacing.xl : isLandscape ? responsiveSpacing.lg : isUltraSmallScreen ? responsiveSpacing.md : responsiveSpacing.lg,
+              maxWidth: isTabletDevice ? 500 : 450,
+              paddingHorizontal: isTabletDevice ? responsiveSpacing.xl : isLandscapeMode ? responsiveSpacing.lg : isUltraSmallDevice ? responsiveSpacing.md : responsiveSpacing.lg,
+              paddingVertical: isTabletDevice ? responsiveSpacing.xl : isLandscapeMode ? responsiveSpacing.lg : isUltraSmallDevice ? responsiveSpacing.md : responsiveSpacing.lg,
             }
           ]}>
             <View style={themeStyles.deleteModalHeader}>
@@ -3699,12 +3784,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 themeStyles.deleteIconContainer, 
                 { 
                   backgroundColor: '#ff444420',
-                  marginBottom: isTablet ? responsiveSpacing.md : responsiveSpacing.sm
+                  marginBottom: isTabletDevice ? responsiveSpacing.md : responsiveSpacing.sm
                 }
               ]}>
                 <Icon 
                   name="warning" 
-                  size={isTablet ? 36 : isLandscape ? 32 : isUltraSmallScreen ? 24 : 32} 
+                  size={isTabletDevice ? 36 : isLandscapeMode ? 32 : isUltraSmallDevice ? 24 : 32} 
                   color="#ff4444" 
                 />
               </View>
@@ -3713,7 +3798,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   themeStyles.deleteModalTitle, 
                   { 
                     color: theme.colors.text,
-                    marginBottom: isTablet ? responsiveSpacing.sm : responsiveSpacing.xs
+                    marginBottom: isTabletDevice ? responsiveSpacing.sm : responsiveSpacing.xs
                   }
                 ]}
               >
@@ -3729,7 +3814,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               >
                 <Icon 
                   name="close" 
-                  size={isTablet ? 24 : isLandscape ? 22 : isUltraSmallScreen ? 18 : 20} 
+                  size={isTabletDevice ? 24 : isLandscapeMode ? 22 : isUltraSmallDevice ? 18 : 20} 
                   color={theme.colors.textSecondary} 
                 />
               </TouchableOpacity>
@@ -3738,16 +3823,16 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             <View style={[
               themeStyles.deleteModalContent,
               {
-                marginBottom: isTablet ? responsiveSpacing.lg : responsiveSpacing.md,
-                paddingHorizontal: isTablet ? responsiveSpacing.md : isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm
+                marginBottom: isTabletDevice ? responsiveSpacing.lg : responsiveSpacing.md,
+                paddingHorizontal: isTabletDevice ? responsiveSpacing.md : isUltraSmallDevice ? responsiveSpacing.xs : responsiveSpacing.sm
               }
             ]}>
               <Text style={[
                 themeStyles.deleteModalMessage, 
                 { 
                   color: theme.colors.text,
-                  fontSize: isTablet ? 16 : isLandscape ? 15 : isUltraSmallScreen ? 13 : 15,
-                  lineHeight: isTablet ? 24 : isLandscape ? 22 : isUltraSmallScreen ? 18 : 22,
+                  fontSize: isTabletDevice ? 16 : isLandscapeMode ? 15 : isUltraSmallDevice ? 13 : 15,
+                  lineHeight: isTabletDevice ? 24 : isLandscapeMode ? 22 : isUltraSmallDevice ? 18 : 22,
                 }
               ]}>
                 Are you sure you want to delete this element? This action cannot be undone.
@@ -3757,7 +3842,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
             <View style={[
               themeStyles.deleteModalButtons,
               {
-                gap: isTablet ? responsiveSpacing.md : isLandscape ? responsiveSpacing.sm : isUltraSmallScreen ? responsiveSpacing.xs : responsiveSpacing.sm
+                gap: isTabletDevice ? responsiveSpacing.md : isLandscapeMode ? responsiveSpacing.sm : isUltraSmallDevice ? responsiveSpacing.xs : responsiveSpacing.sm
               }
             ]}>
               <TouchableOpacity 
@@ -3765,8 +3850,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   themeStyles.deleteModalCancelButton, 
                   { 
                     backgroundColor: theme.colors.inputBackground,
-                    paddingVertical: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 12 : 14,
-                    borderRadius: isTablet ? 12 : isLandscape ? 10 : isUltraSmallScreen ? 8 : 10,
+                    paddingVertical: isTabletDevice ? 16 : isLandscapeMode ? 14 : isUltraSmallDevice ? 12 : 14,
+                    borderRadius: isTabletDevice ? 12 : isLandscapeMode ? 10 : isUltraSmallDevice ? 8 : 10,
                   }
                 ]}
                 onPress={() => setShowDeleteElementModal(false)}
@@ -3775,7 +3860,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   themeStyles.deleteModalCancelText, 
                   { 
                     color: theme.colors.text,
-                    fontSize: isTablet ? 17 : isLandscape ? 16 : isUltraSmallScreen ? 14 : 16,
+                    fontSize: isTabletDevice ? 17 : isLandscapeMode ? 16 : isUltraSmallDevice ? 14 : 16,
                   }
                 ]}>
                   Cancel
@@ -3787,8 +3872,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   themeStyles.deleteModalDeleteButton, 
                   { 
                     backgroundColor: '#ff4444',
-                    paddingVertical: isTablet ? 16 : isLandscape ? 14 : isUltraSmallScreen ? 12 : 14,
-                    borderRadius: isTablet ? 12 : isLandscape ? 10 : isUltraSmallScreen ? 8 : 10,
+                    paddingVertical: isTabletDevice ? 16 : isLandscapeMode ? 14 : isUltraSmallDevice ? 12 : 14,
+                    borderRadius: isTabletDevice ? 12 : isLandscapeMode ? 10 : isUltraSmallDevice ? 8 : 10,
                   }
                 ]}
                 onPress={confirmDeleteElement}
@@ -3796,7 +3881,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 <Text style={[
                   themeStyles.deleteModalDeleteText,
                   {
-                    fontSize: isTablet ? 17 : isLandscape ? 16 : isUltraSmallScreen ? 14 : 16,
+                    fontSize: isTabletDevice ? 17 : isLandscapeMode ? 16 : isUltraSmallDevice ? 14 : 16,
                   }
                 ]}>
                   Delete
@@ -3833,11 +3918,11 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           <View style={[
             themeStyles.modalContent,
             {
-              width: isTablet 
+              width: isTabletDevice 
                 ? screenWidth * 0.5 
-                : isLandscape 
+                : isLandscapeMode 
                   ? screenWidth * 0.6 
-                  : isUltraSmallScreen 
+                  : isUltraSmallDevice 
                     ? screenWidth * 0.92 
                     : isSmallScreen 
                       ? screenWidth * 0.9 
@@ -3847,7 +3932,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
           ]}>
             <View style={{ alignItems: 'center', marginBottom: responsiveSpacing.lg }}>
               <View style={{ 
-                width: isTablet ? 70 : isUltraSmallScreen ? 50 : 60, 
+                width: isTabletDevice ? 70 : isUltraSmallScreen ? 50 : 60, 
                 height: isTablet ? 70 : isUltraSmallScreen ? 50 : 60, 
                 borderRadius: isTablet ? 35 : isUltraSmallScreen ? 25 : 30, 
                 backgroundColor: '#fff0f0', 
@@ -3857,14 +3942,14 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               }}>
                 <Icon 
                   name="wifi-off" 
-                  size={isTablet ? 36 : isUltraSmallScreen ? 24 : 32} 
+                  size={isTabletDevice ? 36 : isUltraSmallDevice ? 24 : 32} 
                   color="#ff4444" 
                 />
               </View>
               <Text style={[
                 themeStyles.modalTitle, 
                 { 
-                  fontSize: isTablet ? 24 : isUltraSmallScreen ? 18 : 20,
+                  fontSize: isTabletDevice ? 24 : isUltraSmallDevice ? 18 : 20,
                   marginBottom: responsiveSpacing.sm,
                   textAlign: 'center'
                 }
@@ -3896,8 +3981,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   {
                     flex: 1,
                     backgroundColor: '#667eea',
-                    paddingVertical: isTablet ? 16 : isUltraSmallScreen ? 12 : 14,
-                    borderRadius: isTablet ? 12 : isUltraSmallScreen ? 8 : 10,
+                    paddingVertical: isTabletDevice ? 16 : isUltraSmallDevice ? 12 : 14,
+                    borderRadius: isTabletDevice ? 12 : isUltraSmallDevice ? 8 : 10,
                     marginHorizontal: 0
                   }
                 ]}
@@ -3909,7 +3994,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 <Text style={[
                   styles.addButtonText,
                   {
-                    fontSize: isTablet ? 16 : isUltraSmallScreen ? 13 : 15
+                    fontSize: isTabletDevice ? 16 : isUltraSmallDevice ? 13 : 15
                   }
                 ]}>
                   Retry
@@ -3921,8 +4006,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   themeStyles.cancelButton,
                   {
                     flex: 1,
-                    paddingVertical: isTablet ? 16 : isUltraSmallScreen ? 12 : 14,
-                    borderRadius: isTablet ? 12 : isUltraSmallScreen ? 8 : 10,
+                    paddingVertical: isTabletDevice ? 16 : isUltraSmallDevice ? 12 : 14,
+                    borderRadius: isTabletDevice ? 12 : isUltraSmallDevice ? 8 : 10,
                     marginHorizontal: 0
                   }
                 ]}
@@ -3934,7 +4019,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 <Text style={[
                   themeStyles.cancelButtonText,
                   {
-                    fontSize: isTablet ? 16 : isUltraSmallScreen ? 13 : 15
+                    fontSize: isTabletDevice ? 16 : isUltraSmallDevice ? 13 : 15
                   }
                 ]}>
                   Go Back
@@ -3963,15 +4048,18 @@ const styles = StyleSheet.create({
     borderBottomWidth: 0,
   },
   backButton: {
+    borderRadius: moderateScale(6),
+    overflow: 'hidden',
+  },
+  backButtonGradient: {
     paddingHorizontal: moderateScale(12),
     paddingVertical: moderateScale(8),
-    borderRadius: moderateScale(12),
-    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    borderRadius: moderateScale(6),
     justifyContent: 'center',
     alignItems: 'center',
   },
   backButtonText: {
-    color: '#000000',
+    color: '#ffffff',
     fontSize: moderateScale(11),
     fontWeight: '600',
   },
@@ -3997,15 +4085,18 @@ const styles = StyleSheet.create({
     includeFontPadding: false,
   },
   nextButton: {
+    borderRadius: moderateScale(6),
+    overflow: 'hidden',
+  },
+  nextButtonGradient: {
     paddingHorizontal: moderateScale(12),
     paddingVertical: moderateScale(8),
-    borderRadius: moderateScale(12),
-    backgroundColor: 'rgba(0, 0, 0, 0.12)',
+    borderRadius: moderateScale(6),
     justifyContent: 'center',
     alignItems: 'center',
   },
   nextButtonText: {
-    color: '#000000',
+    color: '#ffffff',
     fontSize: moderateScale(11),
     fontWeight: '600',
   },
@@ -4169,12 +4260,12 @@ const styles = StyleSheet.create({
   // Bottom toolbar styles (replacing floating toolbar) - Fully responsive
   bottomToolbar: {
     backgroundColor: 'rgba(255, 255, 255, 0.95)',
-    borderRadius: isTablet ? 16 : isLandscape ? 12 : isUltraSmallScreen ? 6 : isSmallScreen ? 8 : 12,
-    paddingHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
-    paddingVertical: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 3 : isSmallScreen ? 4 : 6,
-    marginTop: isTablet ? 40 : isLandscape ? 35 : isUltraSmallScreen ? 25 : isSmallScreen ? 30 : 35,
-    marginBottom: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 5 : 10,
-    marginHorizontal: isTablet ? 12 : isLandscape ? 8 : isUltraSmallScreen ? 4 : isSmallScreen ? 6 : 8,
+    borderRadius: (Math.min(screenWidth, screenHeight) >= 768) ? 16 : (screenWidth > screenHeight) ? 12 : (screenWidth < 360) ? 6 : (screenWidth >= 360 && screenWidth < 375) ? 8 : 12,
+    paddingHorizontal: (Math.min(screenWidth, screenHeight) >= 768) ? 12 : (screenWidth > screenHeight) ? 8 : (screenWidth < 360) ? 4 : (screenWidth >= 360 && screenWidth < 375) ? 6 : 8,
+    paddingVertical: (Math.min(screenWidth, screenHeight) >= 768) ? 12 : (screenWidth > screenHeight) ? 8 : (screenWidth < 360) ? 3 : (screenWidth >= 360 && screenWidth < 375) ? 4 : 6,
+    marginTop: (Math.min(screenWidth, screenHeight) >= 768) ? 40 : (screenWidth > screenHeight) ? 35 : (screenWidth < 360) ? 25 : (screenWidth >= 360 && screenWidth < 375) ? 30 : 35,
+    marginBottom: (Math.min(screenWidth, screenHeight) >= 768) ? 12 : (screenWidth > screenHeight) ? 8 : (screenWidth < 360) ? 4 : (screenWidth >= 360 && screenWidth < 375) ? 5 : 10,
+    marginHorizontal: (Math.min(screenWidth, screenHeight) >= 768) ? 12 : (screenWidth > screenHeight) ? 8 : (screenWidth < 360) ? 4 : (screenWidth >= 360 && screenWidth < 375) ? 6 : 8,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -5258,8 +5349,22 @@ const styles = StyleSheet.create({
     padding: isSmallScreen ? 4 : 8,
   },
   framePreview: {
-    width: getResponsiveButtonSize(),
-    height: getResponsiveButtonSize(),
+    width: (() => {
+      const isLandscape = screenWidth > screenHeight;
+      const isTablet = Math.min(screenWidth, screenHeight) >= 768;
+      if (isLandscape) {
+        return Math.max(49, (isTablet ? 80 : 70) * 0.7);
+      }
+      return Math.max(42, (screenWidth < 360 ? 60 : screenWidth >= 360 && screenWidth < 375 ? 65 : screenWidth >= 375 && screenWidth < 414 ? 70 : screenWidth >= 414 && screenWidth < 480 ? 75 : 80) * 0.7);
+    })(),
+    height: (() => {
+      const isLandscape = screenWidth > screenHeight;
+      const isTablet = Math.min(screenWidth, screenHeight) >= 768;
+      if (isLandscape) {
+        return Math.max(49, (isTablet ? 80 : 70) * 0.7);
+      }
+      return Math.max(42, (screenWidth < 360 ? 60 : screenWidth >= 360 && screenWidth < 375 ? 65 : screenWidth >= 375 && screenWidth < 414 ? 70 : screenWidth >= 414 && screenWidth < 480 ? 75 : 80) * 0.7);
+    })(),
     borderRadius: isSmallScreen ? 6 : 8,
     backgroundColor: '#f8f9fa',
     justifyContent: 'center',

@@ -85,7 +85,7 @@ const GreetingTemplatesScreen: React.FC = () => {
       // Cache will make this instant on subsequent loads
       const [categoriesData, templatesData] = await Promise.all([
         greetingTemplatesService.getCategories(),
-        greetingTemplatesService.getTemplates(),
+        greetingTemplatesService.getTemplates({ limit: 200 }),
       ]);
       
       // Only update if we got data
@@ -170,6 +170,104 @@ const GreetingTemplatesScreen: React.FC = () => {
     }
   }, [searchQuery, selectedCategory, allTemplates]); // Removed function dependencies to prevent loops
 
+  // Get high quality image URL for greeting templates
+  const getHighQualityImageUrl = useCallback((template: GreetingTemplate): string => {
+    // Check if template has a previewUrl property
+    const previewUrl = (template as any).previewUrl;
+    if (previewUrl) {
+      return previewUrl;
+    }
+    
+    // Check for content.background (used in greeting templates for full quality image)
+    const contentBackground = (template as any).content?.background;
+    if (contentBackground) {
+      return contentBackground;
+    }
+    
+    // Otherwise, enhance the thumbnail URL for maximum quality
+    let url = template.thumbnail;
+    
+    if (!url) {
+      console.warn('⚠️ No thumbnail URL found for template:', template.id);
+      return '';
+    }
+    
+    // For Cloudinary URLs, get maximum quality image
+    if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+      try {
+        const [prefix, remainder] = url.split('/upload/');
+        if (!remainder) {
+          return url; // Can't parse, return original
+        }
+        
+        // Split the remainder into parts
+        const parts = remainder.split('/');
+        
+        // Find the version number (starts with 'v' followed by digits)
+        let versionIndex = -1;
+        for (let i = 0; i < parts.length; i++) {
+          if (/^v\d+/.test(parts[i])) {
+            versionIndex = i;
+            break;
+          }
+        }
+        
+        if (versionIndex >= 0) {
+          // Extract everything from version onwards (this is the actual image path)
+          const versionAndPath = parts.slice(versionIndex).join('/');
+          
+          // Get maximum quality image for preview
+          // Use 100% quality (q_100) for best possible quality
+          const maxWidth = Math.max(Math.round(screenWidth * 2.5), 2400); // 2.5x for very high quality
+          
+          // Use q_100 (100% quality) for maximum quality preview
+          const highQualityTransform = `q_100,c_limit,w_${maxWidth}`;
+          const highQualityUrl = `${prefix}/upload/${highQualityTransform}/${versionAndPath}`;
+          
+          return highQualityUrl;
+        } else {
+          // No version found - try to extract the image path from the end
+          const lastSegment = parts[parts.length - 1];
+          if (lastSegment && (lastSegment.includes('.') || parts.length === 1)) {
+            const imagePath = lastSegment;
+            const maxWidth = Math.max(Math.round(screenWidth * 2.5), 2400);
+            const highQualityTransform = `q_100,c_limit,w_${maxWidth}`;
+            return `${prefix}/upload/${highQualityTransform}/${imagePath}`;
+          }
+        }
+      } catch (error) {
+        console.warn('⚠️ Error parsing Cloudinary URL for high quality:', error);
+        // Fall through to default handling
+      }
+    }
+    
+    // If URL already contains 'thumbnailUrl' or 'thumbnail' in path, try to get full URL
+    if (url.includes('/thumbnailUrl/') || url.includes('/thumbnail/')) {
+      const fullUrl = url.replace(/\/thumbnailUrl\//g, '/url/').replace(/\/thumbnail\//g, '/images/');
+      url = fullUrl;
+    }
+    
+    // For non-Cloudinary URLs, try to enhance quality
+    const urlWithoutParams = url.split('?')[0];
+    const existingParams = url.includes('?') ? url.split('?')[1] : '';
+    const params = new URLSearchParams(existingParams);
+    
+    // Remove low-quality parameters
+    params.delete('quality');
+    params.delete('width');
+    params.delete('height');
+    params.delete('w');
+    params.delete('h');
+    params.delete('size');
+    
+    // Add high quality parameters
+    params.set('quality', '100');
+    params.set('width', '2400');
+    
+    const paramString = params.toString();
+    return paramString ? `${urlWithoutParams}?${paramString}` : urlWithoutParams;
+  }, [screenWidth]);
+
   // Instant category switching - no API calls
   const handleCategorySelect = useCallback((categoryFilter: string) => {
     setSelectedCategory(categoryFilter);
@@ -187,16 +285,19 @@ const GreetingTemplatesScreen: React.FC = () => {
       return;
     }
 
+    // Use high quality image URL instead of thumbnail
+    const highQualityUrl = getHighQualityImageUrl(template);
+
     navigation.navigate('PosterEditor', {
       selectedImage: {
-        uri: template.thumbnail,
+        uri: highQualityUrl || template.thumbnail, // Fallback to thumbnail if high quality URL is empty
         title: template.name,
         description: template.category,
       },
       selectedLanguage: 'English',
       selectedTemplateId: template.id,
     });
-  }, [isSubscribed, navigation]);
+  }, [isSubscribed, navigation, getHighQualityImageUrl]);
 
 
   const handleRefresh = useCallback(async () => {

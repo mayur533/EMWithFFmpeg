@@ -47,9 +47,7 @@ import responsiveUtils, {
   responsiveGrid, 
   responsiveButton, 
   responsiveInput, 
-  responsiveCard,
-  isTablet,
-  isLandscape 
+  responsiveCard
 } from '../utils/responsiveUtils';
 
 // Compact spacing multiplier to reduce all spacing
@@ -78,18 +76,20 @@ const HomeScreen: React.FC = React.memo(() => {
   const screenWidth = dimensions.width;
   const screenHeight = dimensions.height;
   
+  // Dynamic device detection that updates on rotation
+  const isTabletDevice = useMemo(() => screenWidth >= 768, [screenWidth]);
+  const isLandscapeMode = useMemo(() => screenWidth > screenHeight, [screenWidth, screenHeight]);
+  
   // Responsive icon sizes
   const getIconSize = useCallback((baseSize: number) => {
     const scale = screenWidth / 375; // Base on iPhone 8 width
     return Math.round(baseSize * scale);
   }, [screenWidth]);
   
-  // Responsive card calculations
+  // Responsive card calculations - dynamically adapts to screen size and rotation
   const getCardWidth = useCallback(() => {
-    if (isTablet) {
+    if (isTabletDevice) {
       return screenWidth * 0.15; // 6-7 cards visible on tablet
-    } else if (screenWidth >= 768) {
-      return screenWidth * 0.18; // 5 cards on large phones
     } else if (screenWidth >= 600) {
       return screenWidth * 0.22; // 4 cards on medium phones
     } else if (screenWidth >= 400) {
@@ -97,7 +97,7 @@ const HomeScreen: React.FC = React.memo(() => {
     } else {
       return screenWidth * 0.32; // 3 cards on small phones with more spacing
     }
-  }, [screenWidth]);
+  }, [screenWidth, isTabletDevice]);
 
   const cardWidth = getCardWidth();
   
@@ -219,18 +219,56 @@ const HomeScreen: React.FC = React.memo(() => {
         console.log(isRefresh ? '🔄 Refreshing home screen data...' : '📡 Loading home screen data...');
       }
       
+      // Track success count for error handling
+      let successCount = 0;
+      let totalMainRequests = 4;
+      const networkErrors: string[] = [];
+      
       // Load all 4 APIs in parallel (cache will make this instant on repeat loads)
       const [featuredResponse, eventsResponse, templatesResponse, videosResponse] = await Promise.allSettled([
-        homeApi.getFeaturedContent({ limit: 10 }),
-        homeApi.getUpcomingEvents({ limit: 200 }),
-        homeApi.getProfessionalTemplates({ limit: 200 }),
-        homeApi.getVideoContent({ limit: 20 })
+        homeApi.getFeaturedContent({ limit: 10 }).catch(err => {
+          if (__DEV__) {
+            console.log('⚠️ Featured content API error:', err?.message || err);
+          }
+          if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
+            networkErrors.push('featured');
+          }
+          throw err;
+        }),
+        homeApi.getUpcomingEvents({ limit: 200 }).catch(err => {
+          if (__DEV__) {
+            console.log('⚠️ Events API error:', err?.message || err);
+          }
+          if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
+            networkErrors.push('events');
+          }
+          throw err;
+        }),
+        homeApi.getProfessionalTemplates({ limit: 200 }).catch(err => {
+          if (__DEV__) {
+            console.log('⚠️ Templates API error:', err?.message || err);
+          }
+          if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
+            networkErrors.push('templates');
+          }
+          throw err;
+        }),
+        homeApi.getVideoContent({ limit: 20 }).catch(err => {
+          if (__DEV__) {
+            console.log('⚠️ Videos API error:', err?.message || err);
+          }
+          if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
+            networkErrors.push('videos');
+          }
+          throw err;
+        })
       ]);
 
       // Handle featured content
       if (featuredResponse.status === 'fulfilled' && featuredResponse.value.success) {
         const featured = featuredResponse.value.data;
         setFeaturedContent(featured);
+        successCount++;
         
         // Convert featured content to banners format
         const convertedBanners: Banner[] = featured.map(item => ({
@@ -243,43 +281,90 @@ const HomeScreen: React.FC = React.memo(() => {
       } else {
         setFeaturedContent([]);
         setBanners([]);
+        if (__DEV__ && featuredResponse.status === 'rejected') {
+          console.log('❌ Featured content failed:', featuredResponse.reason?.message);
+        }
       }
 
       // Handle upcoming festivals
       if (eventsResponse.status === 'fulfilled' && eventsResponse.value.success) {
         const events = eventsResponse.value.data;
         setUpcomingEvents(events);
+        successCount++;
       } else {
         setUpcomingEvents([]);
+        if (__DEV__ && eventsResponse.status === 'rejected') {
+          console.log('❌ Events failed:', eventsResponse.reason?.message);
+        }
       }
 
       // Handle business events
       if (templatesResponse.status === 'fulfilled' && templatesResponse.value.success) {
-        setProfessionalTemplates(templatesResponse.value.data);
+        const templates = templatesResponse.value.data;
+        setProfessionalTemplates(templates);
+        successCount++;
+        // Initialize templates state with professional templates if not searching
+        if (!disableBackgroundUpdates) {
+          setTemplates(templates);
+        }
         if (__DEV__) {
-          console.log('✅ Business events loaded:', templatesResponse.value.data.length, 'items');
+          console.log('✅ Business events loaded:', templates.length, 'items');
         }
       } else {
         if (__DEV__) {
           console.log('⚠️ Business events API failed');
+          if (templatesResponse.status === 'rejected') {
+            console.log('❌ Templates failed:', templatesResponse.reason?.message);
+          }
         }
         setProfessionalTemplates([]);
+        if (!disableBackgroundUpdates) {
+          setTemplates([]);
+        }
       }
 
       // Handle video content
       if (videosResponse.status === 'fulfilled' && videosResponse.value.success) {
         setVideoContent(videosResponse.value.data);
+        successCount++;
         if (__DEV__) {
           console.log('✅ Video content loaded:', videosResponse.value.data.length, 'items');
         }
       } else {
         if (__DEV__) {
           console.log('⚠️ Video content API failed');
+          if (videosResponse.status === 'rejected') {
+            console.log('❌ Videos failed:', videosResponse.reason?.message);
+          }
         }
         setVideoContent([]);
       }
+      
+      // Only show network error if ALL main requests failed AND they were network/timeout errors
+      // Don't show error if at least one request succeeded (partial success is acceptable)
+      if (successCount === 0 && networkErrors.length > 0) {
+        // All requests failed and at least some were network errors
+        if (networkErrors.length === totalMainRequests) {
+          // All were network errors
+          setApiError('Network connection issue. Please check your internet and try again.');
+        } else {
+          // Some network errors, some other errors - still show network issue
+          setApiError('Network connection issue. Please check your internet and try again.');
+        }
+      } else if (successCount === 0 && networkErrors.length === 0) {
+        // All failed but not network errors - might be server issue, don't show error immediately
+        if (__DEV__) {
+          console.log('⚠️ All requests failed but not network errors - might be temporary server issue');
+        }
+        // Only show error after retry fails or if it persists
+      } else if (successCount > 0 && successCount < totalMainRequests) {
+        // Partial success - don't show error, app is still functional
+        if (__DEV__) {
+          console.log(`✅ Partial success: ${successCount}/${totalMainRequests} requests succeeded`);
+        }
+      }
 
-      // Load greeting sections in parallel
+      // Load greeting sections in parallel (these are secondary, failures here won't trigger network error)
       const [
         motivationResponse,
         goodMorningResponse,
@@ -293,17 +378,17 @@ const HomeScreen: React.FC = React.memo(() => {
         booksResponse,
         celebratesResponse
       ] = await Promise.allSettled([
-        greetingTemplatesService.searchTemplates('motivational'),
-        greetingTemplatesService.searchTemplates('good morning'),
-        greetingTemplatesService.searchTemplates('business ethics'),
-        greetingTemplatesService.searchTemplates('devotional'),
-        greetingTemplatesService.searchTemplates('leader quotes'),
-        greetingTemplatesService.searchTemplates('atmanirbhar bharat'),
-        greetingTemplatesService.searchTemplates('good thoughts'),
-        greetingTemplatesService.searchTemplates('trending'),
-        greetingTemplatesService.searchTemplates('bhagvat gita'),
-        greetingTemplatesService.searchTemplates('books'),
-        greetingTemplatesService.searchTemplates('celebrates the moments')
+        greetingTemplatesService.searchTemplates('motivational').catch(() => []),
+        greetingTemplatesService.searchTemplates('good morning').catch(() => []),
+        greetingTemplatesService.searchTemplates('business ethics').catch(() => []),
+        greetingTemplatesService.searchTemplates('devotional').catch(() => []),
+        greetingTemplatesService.searchTemplates('leader quotes').catch(() => []),
+        greetingTemplatesService.searchTemplates('atmanirbhar bharat').catch(() => []),
+        greetingTemplatesService.searchTemplates('good thoughts').catch(() => []),
+        greetingTemplatesService.searchTemplates('trending').catch(() => []),
+        greetingTemplatesService.searchTemplates('bhagvat gita').catch(() => []),
+        greetingTemplatesService.searchTemplates('books').catch(() => []),
+        greetingTemplatesService.searchTemplates('celebrates the moments').catch(() => [])
       ]);
 
       // Handle greeting sections responses - Batch state updates for better performance
@@ -378,10 +463,13 @@ const HomeScreen: React.FC = React.memo(() => {
       setCelebratesMomentsTemplatesRaw(greetingUpdates.celebratesMoments.raw);
 
     } catch (error) {
+      // Only catch unexpected errors (like state setting errors or promise.allSettled issues)
+      // Expected API errors are already handled above
       if (__DEV__) {
-        console.error('Error loading API data:', error);
+        console.error('Unexpected error loading API data:', error);
       }
-      setApiError('Failed to load some content. Using offline data.');
+      // Don't set apiError here unless it's a truly unexpected error
+      // Most errors should be handled by Promise.allSettled above
     } finally {
       setApiLoading(false);
     }
@@ -537,7 +625,7 @@ const HomeScreen: React.FC = React.memo(() => {
           
           // Search in tags array
           if (template.tags && Array.isArray(template.tags)) {
-            const tagMatch = template.tags.some(tag => 
+            const tagMatch = template.tags.some((tag: string) => 
               tag?.toLowerCase().includes(searchLower)
             );
             if (tagMatch) return true;
@@ -568,13 +656,13 @@ const HomeScreen: React.FC = React.memo(() => {
             // Convert greeting results to Template format
             const convertedGreetingResults = greetingResults.map(greetingTemplate => ({
               id: greetingTemplate.id,
-              name: greetingTemplate.name || greetingTemplate.title || '',
-              thumbnail: greetingTemplate.thumbnail || greetingTemplate.imageUrl || '',
+              name: greetingTemplate.name || '',
+              thumbnail: greetingTemplate.thumbnail || '',
               category: greetingTemplate.category || 'Greeting',
               downloads: greetingTemplate.downloads || 0,
               isDownloaded: greetingTemplate.isDownloaded || false,
-              description: greetingTemplate.description || greetingTemplate.content?.text || '',
-              tags: greetingTemplate.tags || [],
+              description: greetingTemplate.content?.text || '',
+              tags: (greetingTemplate as any).tags || [],
               isGreeting: true,
               originalTemplate: greetingTemplate,
             }));
@@ -999,13 +1087,13 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             }
           ]}
         >
-          <View style={styles.templateImageContainer}>
+          <View style={[styles.templateImageContainer, { height: cardWidth }]}>
             <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
           </View>
         </Animated.View>
       </TouchableOpacity>
     );
-  }, [handleTemplatePress, theme]);
+  }, [handleTemplatePress, theme, cardWidth]);
 
 
   const renderVideoTemplate = useCallback(({ item }: { item: VideoContent }) => {
@@ -1050,7 +1138,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             }
           ]}
         >
-          <View style={styles.templateImageContainer}>
+          <View style={[styles.templateImageContainer, { height: cardWidth }]}>
             <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
             <View style={styles.videoPlayOverlay}>
               <Icon name="play-arrow" size={playIconSize} color="#ffffff" />
@@ -1059,7 +1147,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         </Animated.View>
       </TouchableOpacity>
     );
-  }, [theme, playIconSize]);
+  }, [theme, playIconSize, cardWidth]);
 
   // Memoized key extractors
   const keyExtractor = useCallback((item: any) => item.id, []);
@@ -1100,14 +1188,14 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
               }
             ]}
           >
-            <View style={styles.templateImageContainer}>
+            <View style={[styles.templateImageContainer, { height: cardWidth }]}>
               <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
             </View>
           </View>
         </TouchableOpacity>
       );
     };
-  }, [navigation, theme]);
+  }, [navigation, theme, cardWidth]);
 
 
 
@@ -1269,8 +1357,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             </TouchableOpacity>
           </View> */}
 
-          {/* Banner Carousel - Hidden when searching */}
-          {!isSearching && searchQuery.trim() === '' && (
+          {/* Banner Carousel - Hidden when searching, only show if data exists */}
+          {!isSearching && searchQuery.trim() === '' && banners.length > 0 && (
             <View style={styles.bannerSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Featured Content</Text>
@@ -1315,7 +1403,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                     activeOpacity={0.8}
                     style={styles.upcomingEventCard}
                     onPress={() => {
-                      // Create a mock template for the upcoming event
+                      // Convert upcoming event to template format for navigation
                       const eventTemplate: Template = {
                         id: `event-${event.id}`,
                         name: event.title,
@@ -1326,13 +1414,13 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                       };
                       navigation.navigate('PosterPlayer', {
                         selectedPoster: eventTemplate,
-                        relatedPosters: professionalTemplates.slice(0, 6), // Show first 6 templates as related
+                        relatedPosters: professionalTemplates.slice(0, 6),
                       });
                     }}
                   >
                     <View style={styles.upcomingEventImageContainer}>
                       <OptimizedImage 
-                        uri={event.imageUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop'} 
+                        uri={event.imageUrl} 
                         style={styles.upcomingEventImage}
                         resizeMode="cover"
                         fallbackSource={require('../assets/MainLogo/MB.png')}
@@ -1351,8 +1439,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             </View>
           )}
 
-          {/* Templates Grid - Hidden when searching */}
-          {!isSearching && searchQuery.trim() === '' && (
+          {/* Templates Grid - Hidden when searching, only show if data exists */}
+          {!isSearching && searchQuery.trim() === '' && professionalTemplates.length > 0 && (
             <View style={styles.templatesSection}>
               <View style={styles.sectionHeader}>
                 <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text }]}>Business Events</Text>
@@ -1360,7 +1448,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
               </View>
               <FlatList
                 key={`templates-${templates.length}`}
-                data={templates}
+                data={templates.length > 0 ? templates : professionalTemplates}
                 renderItem={renderTemplate}
                 keyExtractor={keyExtractor}
                 horizontal={true}
@@ -1847,7 +1935,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                       activeOpacity={0.8}
                       style={styles.upcomingEventModalCard}
                       onPress={() => {
-                        // Create a mock template for the upcoming event
+                        // Convert upcoming event to template format for navigation
                         const eventTemplate: Template = {
                           id: `event-${event.id}`,
                           name: event.title,
@@ -1858,13 +1946,13 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         };
                         navigation.navigate('PosterPlayer', {
                           selectedPoster: eventTemplate,
-                          relatedPosters: professionalTemplates.slice(0, 6), // Show first 6 templates as related
+                          relatedPosters: professionalTemplates.slice(0, 6),
                         });
                       }}
                     >
                       <View style={styles.upcomingEventModalImageContainer}>
                         <OptimizedImage 
-                          uri={event.imageUrl || 'https://images.unsplash.com/photo-1540575467063-178a50c2df87?w=400&h=300&fit=crop'} 
+                          uri={event.imageUrl} 
                           style={styles.upcomingEventModalImage}
                           resizeMode="cover"
                           fallbackSource={require('../assets/MainLogo/MB.png')}
@@ -3319,13 +3407,13 @@ const styles = StyleSheet.create({
      fontWeight: 'bold',
      color: '#333333',
    },
-   // Upcoming Festivals Modal Styles - Compact & Responsive
-   upcomingEventsModalContent: {
-      width: isTablet ? SCREEN_WIDTH * 0.90 : SCREEN_WIDTH * 0.96,
-      maxWidth: isTablet ? 900 : SCREEN_WIDTH * 0.96,
-      height: SCREEN_HEIGHT * 0.85, // Reduced from 0.9
-      backgroundColor: '#ffffff',
-      borderRadius: isTablet ? moderateScale(20) : moderateScale(16), // Reduced from 30/25
+  // Upcoming Festivals Modal Styles - Compact & Responsive
+  upcomingEventsModalContent: {
+     width: SCREEN_WIDTH >= 768 ? SCREEN_WIDTH * 0.90 : SCREEN_WIDTH * 0.96,
+     maxWidth: SCREEN_WIDTH >= 768 ? 900 : SCREEN_WIDTH * 0.96,
+     height: SCREEN_HEIGHT * 0.85, // Reduced from 0.9
+     backgroundColor: '#ffffff',
+     borderRadius: SCREEN_WIDTH >= 768 ? moderateScale(20) : moderateScale(16), // Reduced from 30/25
       overflow: 'hidden',
       position: 'relative',
       shadowColor: '#000',
@@ -3352,7 +3440,7 @@ const styles = StyleSheet.create({
       marginRight: moderateScale(6), // Reduced from 8
     },
     upcomingEventsModalTitle: {
-      fontSize: isTablet ? moderateScale(15) : moderateScale(13), // Further reduced from 18/16
+      fontSize: SCREEN_WIDTH >= 768 ? moderateScale(15) : moderateScale(13), // Further reduced from 18/16
       fontWeight: 'bold',
       color: '#333333',
       marginBottom: 0, // No margin needed without subtitle
@@ -3367,9 +3455,9 @@ const styles = StyleSheet.create({
       display: 'none',
     },
     upcomingEventsCloseButton: {
-      width: isTablet ? moderateScale(28) : moderateScale(26), // Further reduced from 36/32
-      height: isTablet ? moderateScale(28) : moderateScale(26),
-      borderRadius: isTablet ? moderateScale(14) : moderateScale(13),
+      width: SCREEN_WIDTH >= 768 ? moderateScale(28) : moderateScale(26), // Further reduced from 36/32
+      height: SCREEN_WIDTH >= 768 ? moderateScale(28) : moderateScale(26),
+      borderRadius: SCREEN_WIDTH >= 768 ? moderateScale(14) : moderateScale(13),
       backgroundColor: 'rgba(0,0,0,0.08)',
       justifyContent: 'center',
       alignItems: 'center',
@@ -3377,7 +3465,7 @@ const styles = StyleSheet.create({
       borderColor: 'rgba(0,0,0,0.1)',
     },
     upcomingEventsCloseButtonText: {
-      fontSize: isTablet ? moderateScale(15) : moderateScale(14), // Further reduced from 18/16
+      fontSize: SCREEN_WIDTH >= 768 ? moderateScale(15) : moderateScale(14), // Further reduced from 18/16
       color: '#333333',
       fontWeight: 'bold',
     },
@@ -3396,7 +3484,7 @@ const styles = StyleSheet.create({
       paddingHorizontal: 0,
     },
     upcomingEventModalCard: {
-      width: isTablet 
+      width: SCREEN_WIDTH >= 768
         ? (SCREEN_WIDTH * 0.90 - moderateScale(16) - moderateScale(9)) / 4 // Account for spacing between items (3 gaps * 3 = 9)
         : (SCREEN_WIDTH * 0.96 - moderateScale(16) - moderateScale(9)) / 4, // Account for spacing between items (3 gaps * 3 = 9)
       marginRight: moderateScale(3), // Add spacing between items
@@ -3409,7 +3497,7 @@ const styles = StyleSheet.create({
     },
       upcomingEventModalImageContainer: {
         width: '100%',
-        aspectRatio: isTablet ? 1 : 0.9, // More square for compact layout
+        aspectRatio: SCREEN_WIDTH >= 768 ? 1 : 0.9, // More square for compact layout
         position: 'relative',
         overflow: 'hidden',
         borderTopLeftRadius: moderateScale(8),
@@ -3424,7 +3512,7 @@ const styles = StyleSheet.create({
       bottom: 0,
       left: 0,
       right: 0,
-      height: isTablet ? moderateScale(50) : moderateScale(40), // Reduced from 80/60
+      height: SCREEN_WIDTH >= 768 ? moderateScale(50) : moderateScale(40), // Reduced from 80/60
     },
     upcomingEventModalBadge: {
       position: 'absolute',
@@ -3461,7 +3549,7 @@ const styles = StyleSheet.create({
       padding: moderateScale(6), // Reduced from responsiveSpacing.sm
     },
     upcomingEventModalTitle: {
-      fontSize: isTablet ? moderateScale(13) : moderateScale(12), // Reduced from 16/14
+      fontSize: SCREEN_WIDTH >= 768 ? moderateScale(13) : moderateScale(12), // Reduced from 16/14
       fontWeight: 'bold',
       color: '#333333',
       marginBottom: moderateScale(2), // Reduced from responsiveSpacing.xs
@@ -3474,7 +3562,7 @@ const styles = StyleSheet.create({
       alignItems: 'center',
     },
     upcomingEventModalDetailLabel: {
-      fontSize: isTablet ? moderateScale(11) : moderateScale(10), // Reduced from 14/13
+      fontSize: SCREEN_WIDTH >= 768 ? moderateScale(11) : moderateScale(10), // Reduced from 14/13
       color: '#666666',
       fontWeight: '500',
     },

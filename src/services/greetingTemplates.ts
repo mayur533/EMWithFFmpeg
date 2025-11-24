@@ -30,6 +30,7 @@ export interface GreetingFilters {
   language?: string;
   isPremium?: boolean;
   search?: string;
+  limit?: number;
 }
 
 class GreetingTemplatesService {
@@ -199,6 +200,7 @@ class GreetingTemplatesService {
       if (filters?.language) params.append('language', filters.language);
       if (filters?.isPremium !== undefined) params.append('isPremium', filters.isPremium.toString());
       if (filters?.search) params.append('search', filters.search);
+      if (filters?.limit) params.append('limit', filters.limit.toString());
 
       const endpoint = `/api/mobile/greetings/templates?${params.toString()}`;
       const response = await api.get(endpoint);

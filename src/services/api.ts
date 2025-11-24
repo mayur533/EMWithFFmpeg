@@ -18,7 +18,7 @@ const api = axios.create({
   //baseURL: 'http://192.168.0.106:3001', // Local development server (Android compatible)
   // baseURL: 'http://localhost:3001', // Local development server (Web only)
   baseURL: 'https://eventmarketersbackend.onrender.com', // Production backend server
-  timeout: 10000, // 10 seconds timeout for better reliability
+  timeout: 20000, // 20 seconds timeout for slower connections and server cold starts
   headers: {
     'Content-Type': 'application/json',
   },
@@ -120,9 +120,19 @@ api.interceptors.response.use(
       return Promise.reject(new Error('SERVER_ERROR'));
     }
 
-    // Handle network errors
+    // Handle network errors (no response means network issue)
     if (!error.response) {
-      console.error('Network error:', error.message);
+      // Check for specific network error codes
+      if (error.code === 'NETWORK_ERROR' || 
+          error.code === 'ERR_NETWORK' || 
+          error.code === 'ERR_INTERNET_DISCONNECTED' ||
+          error.message?.includes('Network Error') ||
+          error.message?.includes('network')) {
+        console.error('Network error:', error.message || error.code);
+        return Promise.reject(new Error('NETWORK_ERROR'));
+      }
+      // Generic no response error
+      console.error('Network error (no response):', error.message || error.code);
       return Promise.reject(new Error('NETWORK_ERROR'));
     }
     

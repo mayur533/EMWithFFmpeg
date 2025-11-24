@@ -368,14 +368,18 @@ class HomeApiService {
     // Only cache when no params are provided (default request)
     const shouldCache = !params || Object.keys(params).length === 0;
     
-    // Check cache first for default requests
+    // Check cache first for default requests only when network is available
+    // Note: Cache will be cleared when network fails to prevent showing stale data offline
     if (shouldCache && this.isCacheValid('featuredContent')) {
       console.log('✅ [CACHE] Returning cached featured content');
-      return {
-        success: true,
-        data: this.cache.featuredContent.data!,
-        message: 'Featured content retrieved from cache',
-      };
+      // Only return cache if we have cached data (cache might be null if never loaded)
+      if (this.cache.featuredContent.data && this.cache.featuredContent.data.length > 0) {
+        return {
+          success: true,
+          data: this.cache.featuredContent.data,
+          message: 'Featured content retrieved from cache',
+        };
+      }
     }
 
     try {
@@ -472,10 +476,16 @@ class HomeApiService {
       };
     } catch (error) {
       console.error('❌ [HOME API] Featured content error:', error);
+      // Clear cache when network fails to prevent showing stale cached data offline
+      if (shouldCache) {
+        this.cache.featuredContent = { data: null, timestamp: 0 };
+        console.log('🗑️ [CACHE] Cleared featured content cache due to network error');
+      }
+      // Return empty response when network fails
       return {
         success: false,
         data: [],
-        message: 'Failed to load featured content from API',
+        message: 'Failed to load featured content. Please check your network connection.',
       };
     }
   }
@@ -556,7 +566,12 @@ class HomeApiService {
       return response.data;
     } catch (error) {
       console.error('❌ [HOME API] Upcoming events error:', error);
-      return this.getMockUpcomingEvents(params);
+      // Return empty response instead of mock data when network fails
+      return {
+        success: false,
+        data: [],
+        message: 'Failed to load upcoming events. Please check your network connection.',
+      };
     }
   }
 
@@ -660,7 +675,12 @@ class HomeApiService {
       return response.data;
     } catch (error) {
       console.error('❌ [HOME API] Professional templates error:', error);
-      return this.getMockProfessionalTemplates(params);
+      // Return empty response instead of mock data when network fails
+      return {
+        success: false,
+        data: [],
+        message: 'Failed to load professional templates. Please check your network connection.',
+      };
     }
   }
 
@@ -691,14 +711,19 @@ class HomeApiService {
     // Only cache when no params are provided (default request)
     const shouldCache = !params || Object.keys(params).length === 0;
     
-    // Check cache first for default requests
+    // Check cache first for default requests only when network is available
+    // Note: Cache will be used when network fails to provide offline access
+    // If you want to disable cache when offline, check network status here
     if (shouldCache && this.isCacheValid('videoContent')) {
       console.log('✅ [CACHE] Returning cached video content');
-      return {
-        success: true,
-        data: this.cache.videoContent.data!,
-        message: 'Video content retrieved from cache',
-      };
+      // Only return cache if we have cached data (cache might be null if never loaded)
+      if (this.cache.videoContent.data && this.cache.videoContent.data.length > 0) {
+        return {
+          success: true,
+          data: this.cache.videoContent.data,
+          message: 'Video content retrieved from cache',
+        };
+      }
     }
 
     try {
@@ -739,7 +764,17 @@ class HomeApiService {
       return response.data;
     } catch (error) {
       console.error('❌ [HOME API] Video content error:', error);
-      return this.getMockVideoContent(params);
+      // Clear cache when network fails to prevent showing stale cached data offline
+      if (shouldCache) {
+        this.cache.videoContent = { data: null, timestamp: 0 };
+        console.log('🗑️ [CACHE] Cleared video content cache due to network error');
+      }
+      // Return empty response instead of mock data when network fails
+      return {
+        success: false,
+        data: [],
+        message: 'Failed to load video content. Please check your network connection.',
+      };
     }
   }
 

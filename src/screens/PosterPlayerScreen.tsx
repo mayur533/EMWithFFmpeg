@@ -121,9 +121,17 @@ const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({
 }) => {
   const handlePress = useCallback(() => onPress(item), [item, onPress]);
 
+  // Final safety check to ensure valid dimensions before rendering
+  const validCardWidth = (typeof cardWidth === 'number' && !isNaN(cardWidth) && isFinite(cardWidth) && cardWidth > 0) 
+    ? cardWidth 
+    : 100;
+  const validCardHeight = (typeof cardHeight === 'number' && !isNaN(cardHeight) && isFinite(cardHeight) && cardHeight > 0) 
+    ? cardHeight 
+    : 60;
+
   return (
     <TouchableOpacity
-      style={[styles.relatedPosterCard, { width: cardWidth, height: cardHeight }]}
+      style={[styles.relatedPosterCard, { width: validCardWidth, height: validCardHeight }]}
       onPress={handlePress}
       activeOpacity={0.8}
     >
@@ -180,10 +188,32 @@ const PosterPlayerScreen: React.FC = () => {
   const screenWidth = dimensions.width;
   const screenHeight = dimensions.height;
   
-  // Responsive scaling functions
-  const scale = (size: number) => (screenWidth / 375) * size;
-  const verticalScale = (size: number) => (screenHeight / 667) * size;
-  const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+  // Dynamic device detection that updates on rotation
+  const isTabletDevice = useMemo(() => screenWidth >= 768, [screenWidth]);
+  const isLandscapeMode = useMemo(() => screenWidth > screenHeight, [screenWidth, screenHeight]);
+  
+  // Responsive scaling functions with safety checks
+  const scale = useCallback((size: number) => {
+    if (!screenWidth || isNaN(screenWidth) || screenWidth <= 0) {
+      return size; // Fallback to original size if screenWidth is invalid
+    }
+    return (screenWidth / 375) * size;
+  }, [screenWidth]);
+  
+  const verticalScale = useCallback((size: number) => {
+    if (!screenHeight || isNaN(screenHeight) || screenHeight <= 0) {
+      return size; // Fallback to original size if screenHeight is invalid
+    }
+    return (screenHeight / 667) * size;
+  }, [screenHeight]);
+  
+  const moderateScale = useCallback((size: number, factor = 0.5) => {
+    const scaled = scale(size);
+    if (isNaN(scaled) || !isFinite(scaled)) {
+      return size; // Fallback to original size if scale returns invalid value
+    }
+    return size + (scaled - size) * factor;
+  }, [scale]);
   
   const { 
     selectedPoster: initialPoster, 
@@ -197,7 +227,7 @@ const PosterPlayerScreen: React.FC = () => {
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string | null>(null);
   const preloadedImagesRef = useRef<Set<string>>(new Set());
 
-  // Get high quality image URL for preview (full quality, no width restrictions)
+  // Get high quality image URL for preview (full quality, maximum resolution)
   const getHighQualityImageUrl = (poster: Template): string => {
     // Check if poster has a previewUrl property (cast to any to access)
     const previewUrl = (poster as any).previewUrl;
@@ -211,7 +241,7 @@ const PosterPlayerScreen: React.FC = () => {
       return contentBackground;
     }
     
-    // Otherwise, enhance the thumbnail URL for higher quality
+    // Otherwise, enhance the thumbnail URL for maximum quality
     let url = poster.thumbnail;
     
     if (!url) {
@@ -219,25 +249,59 @@ const PosterPlayerScreen: React.FC = () => {
       return '';
     }
     
-    // For Cloudinary URLs, remove all transforms to get original full quality
+    // For Cloudinary URLs, get maximum quality image
     if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
       try {
         const [prefix, remainder] = url.split('/upload/');
-        if (remainder) {
-          // Extract the version and path (everything after /upload/)
-          // Remove any existing transforms (everything before version like v123456)
-          const parts = remainder.split('/');
-          const versionIndex = parts.findIndex(p => /^v\d+/.test(p));
+        if (!remainder) {
+          return url; // Can't parse, return original
+        }
+        
+        // Split the remainder into parts
+        const parts = remainder.split('/');
+        
+        // Find the version number (starts with 'v' followed by digits)
+        // This is the reliable way to identify the actual image path in Cloudinary URLs
+        let versionIndex = -1;
+        for (let i = 0; i < parts.length; i++) {
+          if (/^v\d+/.test(parts[i])) {
+            versionIndex = i;
+            break;
+          }
+        }
+        
+        if (versionIndex >= 0) {
+          // Extract everything from version onwards (this is the actual image path)
+          const versionAndPath = parts.slice(versionIndex).join('/');
           
-          if (versionIndex >= 0) {
-            // Reconstruct URL with only version and path, no transforms = original quality
-            const versionAndPath = parts.slice(versionIndex).join('/');
-            // No transforms means original full quality image
-            return `${prefix}/upload/${versionAndPath}`;
+          // Get maximum quality image for preview
+          // Use 100% quality (q_100) for best possible quality
+          // Calculate max width based on screen size (2x for retina/high DPI displays)
+          const maxWidth = Math.max(Math.round(screenWidth * 2.5), 2400); // 2.5x for very high quality
+          
+          // Use q_100 (100% quality) for maximum quality preview
+          // c_limit preserves aspect ratio, w_ sets maximum width
+          const highQualityTransform = `q_100,c_limit,w_${maxWidth}`;
+          const highQualityUrl = `${prefix}/upload/${highQualityTransform}/${versionAndPath}`;
+          
+          // Return high quality transform URL with 100% quality
+          return highQualityUrl;
+        } else {
+          // No version found - this is unusual for Cloudinary URLs
+          // Try to extract the image path from the end
+          // The image path is usually at the end after transforms
+          const lastSegment = parts[parts.length - 1];
+          if (lastSegment && (lastSegment.includes('.') || parts.length === 1)) {
+            // Might be the image path directly
+            const imagePath = lastSegment;
+            const maxWidth = Math.max(Math.round(screenWidth * 2.5), 2400);
+            const highQualityTransform = `q_100,c_limit,w_${maxWidth}`;
+            return `${prefix}/upload/${highQualityTransform}/${imagePath}`;
           }
         }
       } catch (error) {
-        // If parsing fails, fall through to default handling
+        console.warn('⚠️ Error parsing Cloudinary URL for high quality:', error);
+        // Fall through to default handling
       }
     }
     
@@ -248,13 +312,26 @@ const PosterPlayerScreen: React.FC = () => {
       url = fullUrl;
     }
     
-    // Remove any existing quality/size parameters
-    url = url.replace(/[?&](quality|width|height|w|h|size|f_auto|q_auto|c_limit)=[^&]*/gi, '');
+    // For non-Cloudinary URLs, try to enhance quality
+    // Remove any existing quality/size parameters first
+    const urlWithoutParams = url.split('?')[0];
+    const existingParams = url.includes('?') ? url.split('?')[1] : '';
+    const params = new URLSearchParams(existingParams);
     
-    // For non-Cloudinary URLs, add high quality parameters
-    const separator = url.includes('?') ? '&' : '?';
-    const highQualityUrl = `${url}${separator}quality=high&width=2400`;
-    return highQualityUrl;
+    // Remove low-quality parameters
+    params.delete('quality');
+    params.delete('width');
+    params.delete('height');
+    params.delete('w');
+    params.delete('h');
+    params.delete('size');
+    
+    // Add high quality parameters
+    params.set('quality', '100');
+    params.set('width', '2400');
+    
+    const paramString = params.toString();
+    return paramString ? `${urlWithoutParams}?${paramString}` : urlWithoutParams;
   };
 
   // Language options
@@ -565,21 +642,97 @@ const PosterPlayerScreen: React.FC = () => {
     return Math.round(baseSize * scale);
   }, [screenWidth]);
   
-  // Responsive card dimensions
+  // Detect if fold phone is unfolded (typically width >= 900px)
+  const isFoldPhoneUnfolded = useMemo(() => screenWidth >= 900, [screenWidth]);
+  
+  // Calculate number of columns: 4 for tablets or unfolded fold phones, 3 for regular phones
+  const numColumns = useMemo(() => {
+    const columns = (isTabletDevice || isFoldPhoneUnfolded) ? 4 : 3;
+    // Ensure numColumns is always a valid number
+    return isNaN(columns) || columns <= 0 ? 3 : columns;
+  }, [isTabletDevice, isFoldPhoneUnfolded]);
+  
+  // Card dimensions matching HomeScreen.tsx exactly
+  // Use the exact same logic as HomeScreen.tsx getCardWidth()
+  // For unfolded fold phones, use standard phone width (375px) to maintain same card size as HomeScreen
   const cardWidth = useMemo(() => {
-    const numColumns = screenWidth >= 768 ? 4 : 3;
-    const padding = moderateScale(16);
-    const gaps = moderateScale(3) * (numColumns - 1);
-    return (screenWidth - padding - gaps) / numColumns;
-  }, [screenWidth]);
+    // Safety check for valid screenWidth
+    if (!screenWidth || isNaN(screenWidth) || screenWidth <= 0) {
+      return 100; // Fallback width
+    }
+    
+    let baseWidth: number;
+    
+    if (isTabletDevice) {
+      baseWidth = screenWidth * 0.15; // 6-7 cards visible on tablet
+    } else {
+      // For unfolded fold phones, use standard phone width (375px) to get HomeScreen card size
+      // For regular phones, use actual screen width
+      const referenceWidth = isFoldPhoneUnfolded ? 375 : screenWidth;
+      
+      if (referenceWidth >= 600) {
+        baseWidth = referenceWidth * 0.22; // 4 cards on medium phones
+      } else if (referenceWidth >= 400) {
+        baseWidth = referenceWidth * 0.28; // 3 cards on regular phones
+      } else {
+        baseWidth = referenceWidth * 0.32; // 3 cards on small phones with more spacing
+      }
+    }
+    
+    // Ensure baseWidth is valid
+    if (isNaN(baseWidth) || baseWidth <= 0) {
+      baseWidth = 100; // Fallback
+    }
+    
+    // For all devices, calculate card width to fill available space exactly
+    if (numColumns > 0 && !isNaN(numColumns)) {
+      // Calculate available width: screen width minus padding and gaps
+      const padding = moderateScale(8); // relatedSection paddingHorizontal
+      const gap = moderateScale(3); // gap between cards
+      
+      // Validate padding and gap
+      const validPadding = (isNaN(padding) || padding < 0) ? 8 : padding;
+      const validGap = (isNaN(gap) || gap < 0) ? 3 : gap;
+      
+      const totalGaps = validGap * (numColumns - 1);
+      const availableWidth = screenWidth - (validPadding * 2) - totalGaps;
+      
+      // Safety check for availableWidth
+      if (isNaN(availableWidth) || availableWidth <= 0) {
+        return baseWidth;
+      }
+      
+      // Calculate optimal card width to fill the space exactly
+      const optimalWidth = availableWidth / numColumns;
+      
+      // Use optimal width to fill space exactly (this eliminates empty space on the right)
+      // Only validate that it's a valid number, not that it's larger than baseWidth
+      if (isNaN(optimalWidth) || !isFinite(optimalWidth) || optimalWidth <= 0) {
+        return baseWidth; // Fallback if calculation fails
+      }
+      
+      return optimalWidth;
+    }
+    
+    return baseWidth;
+  }, [screenWidth, isTabletDevice, isFoldPhoneUnfolded, numColumns, moderateScale]);
   
   const cardHeight = useMemo(() => {
-    return verticalScale(80); // Consistent compact height
-  }, [screenHeight]);
+    // Make cards square by setting height equal to width
+    const actualCardWidth = cardWidth;
+    
+    // Safety check - ensure cardWidth is valid
+    if (!actualCardWidth || isNaN(actualCardWidth) || !isFinite(actualCardWidth) || actualCardWidth <= 0) {
+      return 100; // Fallback height
+    }
+    
+    // Return the same value as cardWidth to make it square
+    return actualCardWidth;
+  }, [cardWidth]);
   
-  // Responsive poster height
+  // Responsive poster height - dynamically adapts to screen size and rotation
   const posterHeight = useMemo(() => {
-    if (screenWidth >= 768) {
+    if (isTabletDevice) {
       return screenHeight * 0.30; // Tablet (reduced)
     } else if (screenWidth >= 600) {
       return screenHeight * 0.26; // Large phone (reduced)
@@ -588,16 +741,38 @@ const PosterPlayerScreen: React.FC = () => {
     } else {
       return screenHeight * 0.20; // Small phone (reduced)
     }
-  }, [screenWidth, screenHeight]);
+  }, [screenWidth, screenHeight, isTabletDevice]);
 
   // Derive height from image aspect ratio to fit width without stretching
+  // Also ensure it doesn't take up the whole screen (especially for fold phones when unfolded)
   const computedPreviewHeight = useMemo(() => {
     if (imageDimensions && imageDimensions.width > 0 && imageDimensions.height > 0) {
       const aspectHeight = screenWidth * (imageDimensions.height / imageDimensions.width);
-      return aspectHeight; // exact fit by aspect ratio
+      
+      // Calculate maximum allowed height to leave room for header, grid, and safe areas
+      // Reserve space for: header (~80px), top spacing, grid section (~150px), and safe areas
+      const headerHeight = moderateScale(80);
+      const topSpacing = insets.top + moderateScale(12);
+      const gridMinHeight = moderateScale(150); // Minimum space for grid
+      const bottomSpacing = insets.bottom;
+      const reservedSpace = headerHeight + topSpacing + gridMinHeight + bottomSpacing + moderateScale(30); // Extra buffer
+      
+      // Maximum poster height - larger limits to show better preview
+      const isFoldPhoneUnfolded = screenWidth >= 900; // Fold phones typically have width >= 900px when unfolded
+      
+      // Use larger max heights for better preview
+      const baseMaxPercentage = isFoldPhoneUnfolded ? 0.50 : 0.60; // 50% for fold phones, 60% for regular
+      const maxPosterHeightByPercentage = screenHeight * baseMaxPercentage;
+      const maxPosterHeightBySpace = screenHeight - reservedSpace;
+      
+      // Use the smaller of the two constraints to ensure grid is always visible
+      const maxPosterHeight = Math.min(maxPosterHeightByPercentage, maxPosterHeightBySpace);
+      
+      // Return the smaller of aspect height or max allowed height
+      return Math.min(aspectHeight, maxPosterHeight);
     }
     return posterHeight;
-  }, [imageDimensions, screenWidth, posterHeight]);
+  }, [imageDimensions, screenWidth, screenHeight, posterHeight, insets.top, insets.bottom]);
 
   // Load intrinsic image size when poster changes
   useEffect(() => {
@@ -658,11 +833,15 @@ const PosterPlayerScreen: React.FC = () => {
     const imageUrl = getHighQualityImageUrl(item);
     const languageCode = getTemplateLanguageCode(item);
     
+    // Ensure cardWidth and cardHeight are valid numbers
+    const validCardWidth = (isNaN(cardWidth) || !isFinite(cardWidth) || cardWidth <= 0) ? 100 : cardWidth;
+    const validCardHeight = (isNaN(cardHeight) || !isFinite(cardHeight) || cardHeight <= 0) ? 60 : cardHeight;
+    
     return (
       <RelatedPosterItem
         item={item}
-        cardWidth={cardWidth}
-        cardHeight={cardHeight}
+        cardWidth={validCardWidth}
+        cardHeight={validCardHeight}
         imageUrl={imageUrl}
         languageCode={languageCode}
         onPress={handlePosterSelect}
@@ -720,28 +899,49 @@ const PosterPlayerScreen: React.FC = () => {
           <TouchableOpacity
             onPress={() => navigation.goBack()}
             style={styles.headerTextButton}
-            activeOpacity={0.7}
+            activeOpacity={0.85}
           >
-            <Text style={styles.headerButtonText}>Back</Text>
+            <LinearGradient
+              colors={[theme.colors.secondary, theme.colors.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.headerTextButtonGradient}
+            >
+              <Text style={styles.headerButtonText}>Back</Text>
+            </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={() => setLanguageMenuVisible(v => !v)}
             style={styles.languageDropdownButton}
-            activeOpacity={0.8}
+            activeOpacity={0.85}
           >
-            <Text style={styles.languageDropdownText}>
-              {languages.find(l => l.id === selectedLanguage)?.name || 'Select Language'}
-            </Text>
-            <Icon name={languageMenuVisible ? 'expand-less' : 'expand-more'} size={getIconSize(14)} color="#ffffff" />
+            <LinearGradient
+              colors={[theme.colors.secondary, theme.colors.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.languageDropdownButtonGradient}
+            >
+              <Text style={styles.languageDropdownText}>
+                {languages.find(l => l.id === selectedLanguage)?.name || 'Select Language'}
+              </Text>
+              <Icon name={languageMenuVisible ? 'expand-less' : 'expand-more'} size={getIconSize(14)} color="#ffffff" />
+            </LinearGradient>
           </TouchableOpacity>
 
           <TouchableOpacity
             onPress={handleNextPress}
             style={styles.headerTextButton}
-            activeOpacity={0.7}
+            activeOpacity={0.85}
           >
-            <Text style={styles.headerButtonText}>Next</Text>
+            <LinearGradient
+              colors={[theme.colors.secondary, theme.colors.primary]}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={styles.headerTextButtonGradient}
+            >
+              <Text style={styles.headerButtonText}>Next</Text>
+            </LinearGradient>
           </TouchableOpacity>
         </View>
 
@@ -840,17 +1040,17 @@ const PosterPlayerScreen: React.FC = () => {
                data={filteredPosters}
                renderItem={renderRelatedPoster}
                keyExtractor={(item) => item.id}
-               numColumns={screenWidth >= 768 ? 4 : 3}
-               key={screenWidth >= 768 ? 'tablet-4' : 'phone-3'}
+               numColumns={numColumns}
+               key={`grid-${numColumns}`}
                columnWrapperStyle={styles.relatedGrid}
                showsVerticalScrollIndicator={true}
                contentContainerStyle={styles.relatedList}
                style={styles.relatedFlatList}
                // Performance optimizations for large lists
                removeClippedSubviews={true}
-               maxToRenderPerBatch={screenWidth >= 768 ? 12 : 8}
+               maxToRenderPerBatch={isTabletDevice ? 12 : 8}
                windowSize={10}
-               initialNumToRender={screenWidth >= 768 ? 12 : 8}
+               initialNumToRender={isTabletDevice ? 12 : 8}
                updateCellsBatchingPeriod={50}
                onViewableItemsChanged={onViewableItemsChanged}
                viewabilityConfig={viewabilityConfig.current}
@@ -875,15 +1075,13 @@ const PosterPlayerScreen: React.FC = () => {
    );
 };
 
-// Get dynamic screen dimensions
+// Get dynamic screen dimensions (static for StyleSheet - component uses dynamic dimensions)
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
-// Responsive helper functions
+// Responsive helper functions for StyleSheet (static - component has dynamic versions)
 const scale = (size: number) => (SCREEN_WIDTH / 375) * size;
 const verticalScale = (size: number) => (SCREEN_HEIGHT / 667) * size;
 const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
-
-const isTablet = SCREEN_WIDTH >= 768;
 
 const styles = StyleSheet.create({
   container: {
@@ -916,10 +1114,13 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   headerTextButton: {
+    borderRadius: moderateScale(6),
+    overflow: 'hidden',
+  },
+  headerTextButtonGradient: {
     paddingHorizontal: moderateScale(12),
     paddingVertical: moderateScale(8),
-    borderRadius: moderateScale(8),
-    backgroundColor: '#667eea',
+    borderRadius: moderateScale(6),
     justifyContent: 'center',
     alignItems: 'center',
   },
@@ -934,13 +1135,17 @@ const styles = StyleSheet.create({
     gap: moderateScale(6),
   },
   languageDropdownButton: {
+    borderRadius: moderateScale(6),
+    overflow: 'hidden',
+  },
+  languageDropdownButtonGradient: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: moderateScale(6),
     paddingHorizontal: moderateScale(10),
     paddingVertical: moderateScale(6),
-    borderRadius: moderateScale(8),
-    backgroundColor: '#667eea',
+    borderRadius: moderateScale(6),
+    justifyContent: 'center',
   },
   languageDropdownText: {
     color: '#ffffff',
