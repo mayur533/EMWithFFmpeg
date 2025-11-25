@@ -39,6 +39,7 @@ import authService from '../services/auth';
 // import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
 import OptimizedImage from '../components/OptimizedImage';
 import ComingSoonModal from '../components/ComingSoonModal';
+import HorizontalFestivalCalendar from '../components/HorizontalFestivalCalendar';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -2000,6 +2001,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 ))}
               </View>
             </View>
+          )}
+
+          {/* Festivals Calendar Section */}
+          {!isSearching && searchQuery.trim() === '' && (
+            <HorizontalFestivalCalendar />
           )}
 
           {/* Business Categories Section */}
