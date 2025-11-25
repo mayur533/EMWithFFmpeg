@@ -11,6 +11,7 @@ import {
 import { useTheme } from '../context/ThemeContext';
 import OptimizedImage from './OptimizedImage';
 import { Template } from '../services/dashboard';
+import calendarApi from '../services/calendarApi';
 
 // Festival data structure
 interface FestivalData {
@@ -310,13 +311,42 @@ const HorizontalFestivalCalendar: React.FC = () => {
   }, []);
 
   // Handle date selection
-  const handleDateSelect = useCallback((day: number) => {
+  const handleDateSelect = useCallback(async (day: number) => {
     const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     setSelectedDate(dateString);
     
-    // Get posters for the selected date
-    const posters = datePosters[dateString] || [];
-    setSelectedDatePosters(posters);
+    // First, try to get from mock data (fallback)
+    const mockPosters = datePosters[dateString] || [];
+    if (mockPosters.length > 0) {
+      setSelectedDatePosters(mockPosters);
+    }
+    
+    // Fetch posters from API
+    try {
+      const response = await calendarApi.getPostersByDate(dateString);
+      if (response.success && response.data.posters.length > 0) {
+        // Convert CalendarPoster to Template format
+        const templates: Template[] = response.data.posters.map((poster) => ({
+          id: poster.id,
+          name: poster.name || poster.title || 'Calendar Poster',
+          thumbnail: poster.thumbnail,
+          category: poster.category || 'Festival',
+          downloads: poster.downloads || 0,
+          isDownloaded: poster.isDownloaded || false,
+          tags: poster.tags || [],
+        }));
+        setSelectedDatePosters(templates);
+      } else if (mockPosters.length === 0) {
+        // Only clear if no mock data available
+        setSelectedDatePosters([]);
+      }
+    } catch (error) {
+      console.error('❌ [CALENDAR] Error fetching calendar posters:', error);
+      // Keep mock data if API fails
+      if (mockPosters.length === 0) {
+        setSelectedDatePosters([]);
+      }
+    }
   }, [currentMonth, currentYear]);
 
   // Check if date is today
@@ -347,6 +377,26 @@ const HorizontalFestivalCalendar: React.FC = () => {
     
     setTimeout(scrollToToday, 100);
   }, [SCREEN_WIDTH, isTablet, currentDay, currentMonth, currentYear]);
+
+  // Pre-load posters for the current month (optional - improves performance)
+  useEffect(() => {
+    const loadMonthPosters = async () => {
+      try {
+        const response = await calendarApi.getPostersByMonth(currentYear, currentMonth + 1);
+        if (response.success && response.data.total > 0) {
+          console.log(`✅ [CALENDAR] Pre-loaded ${response.data.total} posters for month ${currentYear}-${currentMonth + 1}`);
+          // Posters are now cached and will be available instantly when user clicks a date
+        }
+      } catch (error) {
+        // Silently fail - this is just a performance optimization
+        if (__DEV__) {
+          console.log('⚠️ [CALENDAR] Could not pre-load month posters (this is okay)');
+        }
+      }
+    };
+    
+    loadMonthPosters();
+  }, [currentYear, currentMonth]);
 
   const renderPosterCard = useCallback(({ item }: { item: Template }) => {
     const cardWidth = SCREEN_WIDTH * 0.28;
