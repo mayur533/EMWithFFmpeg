@@ -56,6 +56,340 @@ import responsiveUtils, {
 // Compact spacing multiplier to reduce all spacing
 const COMPACT_MULTIPLIER = 0.5;
 
+// Memoized Template Card Component to avoid recreating Animated.Value on every render
+interface TemplateCardProps {
+  item: Template;
+  cardWidth: number;
+  theme: any;
+  onPress: (item: Template) => void;
+}
+
+const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ item, cardWidth, theme, onPress }) => {
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.95,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
+
+  const handleCardPress = useCallback(() => {
+    onPress(item);
+  }, [item, onPress]);
+
+  return (
+    <TouchableOpacity
+      activeOpacity={1}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={handleCardPress}
+      style={styles.templateCardWrapper}
+    >
+      <Animated.View 
+        style={[
+          styles.templateCard, 
+          { 
+            backgroundColor: theme.colors.cardBackground,
+            transform: [{ scale: scaleAnim }],
+          }
+        ]}
+      >
+        <View style={[styles.templateImageContainer, { height: cardWidth }]}>
+          <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
+        </View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}, (prevProps, nextProps) => {
+  // Return true if props are equal (skip re-render), false if different (re-render)
+  if (prevProps === nextProps) return true;
+  
+  // Check item ID and thumbnail first (most likely to change)
+  if (prevProps.item.id !== nextProps.item.id) return false;
+  if (prevProps.item.thumbnail !== nextProps.item.thumbnail) return false;
+  
+  // Check dimensions
+  if (prevProps.cardWidth !== nextProps.cardWidth) return false;
+  
+  // Check theme colors (not object reference)
+  if (prevProps.theme?.colors?.cardBackground !== nextProps.theme?.colors?.cardBackground) return false;
+  
+  // All props are equal, skip re-render
+  return true;
+});
+
+TemplateCard.displayName = 'TemplateCard';
+
+// Memoized Video Template Card Component
+interface VideoTemplateCardProps {
+  item: VideoContent;
+  cardWidth: number;
+  theme: any;
+  playIconSize: number;
+  onPress: () => void;
+}
+
+const VideoTemplateCard: React.FC<VideoTemplateCardProps> = React.memo(({ item, cardWidth, theme, playIconSize, onPress }) => {
+  const scaleAnim = React.useRef(new Animated.Value(1)).current;
+
+  const handlePressIn = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 0.95,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
+
+  const handlePressOut = useCallback(() => {
+    Animated.timing(scaleAnim, {
+      toValue: 1,
+      duration: 150,
+      useNativeDriver: true,
+    }).start();
+  }, [scaleAnim]);
+
+  const handleCardPress = useCallback(() => {
+    onPress();
+  }, [onPress]);
+
+  return (
+    <TouchableOpacity
+      activeOpacity={1}
+      onPressIn={handlePressIn}
+      onPressOut={handlePressOut}
+      onPress={handleCardPress}
+      style={styles.templateCardWrapper}
+    >
+      <Animated.View 
+        style={[
+          styles.templateCard, 
+          { 
+            backgroundColor: theme.colors.cardBackground,
+            transform: [{ scale: scaleAnim }],
+          }
+        ]}
+      >
+        <View style={[styles.templateImageContainer, { height: cardWidth }]}>
+          <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
+          <View style={styles.videoPlayOverlay}>
+            <Icon name="play-arrow" size={playIconSize} color="#ffffff" />
+          </View>
+        </View>
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}, (prevProps, nextProps) => {
+  // Return true if props are equal (skip re-render), false if different (re-render)
+  if (prevProps === nextProps) return true;
+  
+  // Check item ID and thumbnail first (most likely to change)
+  if (prevProps.item.id !== nextProps.item.id) return false;
+  if (prevProps.item.thumbnail !== nextProps.item.thumbnail) return false;
+  
+  // Check dimensions and icon size
+  if (prevProps.cardWidth !== nextProps.cardWidth) return false;
+  if (prevProps.playIconSize !== nextProps.playIconSize) return false;
+  
+  // Check theme colors (not object reference)
+  if (prevProps.theme?.colors?.cardBackground !== nextProps.theme?.colors?.cardBackground) return false;
+  
+  // All props are equal, skip re-render
+  return true;
+});
+
+VideoTemplateCard.displayName = 'VideoTemplateCard';
+
+// Memoized Greeting Category Card Component
+interface GreetingCategoryCardProps {
+  item: { id: string; name: string; icon: string; color?: string };
+  cardWidth: number;
+  theme: any;
+  categoryImage: string | null;
+  onPress: (item: { id: string; name: string; icon: string; color?: string }) => void;
+}
+
+const GreetingCategoryCard: React.FC<GreetingCategoryCardProps> = React.memo(({ item, cardWidth, theme, categoryImage, onPress }) => {
+  const handlePress = useCallback(() => {
+    onPress(item);
+  }, [item, onPress]);
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.85}
+      style={[styles.businessCategoryCard, { width: cardWidth }]}
+      onPress={handlePress}
+    >
+      <View style={[
+        styles.businessCategoryCardContent, 
+        { 
+          backgroundColor: theme.colors.cardBackground,
+          height: cardWidth, // Make cards square
+        }
+      ]}>
+        <View style={styles.businessCategoryImageSection}>
+          {categoryImage ? (
+            <OptimizedImage 
+              uri={categoryImage} 
+              style={styles.businessCategoryImage}
+              resizeMode="cover"
+            />
+          ) : (
+            <View
+              style={[
+                styles.businessCategoryImage,
+                { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)' },
+              ]}
+            >
+              {item.icon ? (
+                <Text style={styles.businessCategoryIcon}>
+                  {item.icon}
+                </Text>
+              ) : null}
+            </View>
+          )}
+          <LinearGradient
+            colors={['transparent', 'rgba(0,0,0,0.75)']}
+            style={StyleSheet.absoluteFillObject}
+            pointerEvents="none"
+          />
+          <View
+            style={[
+              StyleSheet.absoluteFillObject,
+              { justifyContent: 'flex-end', padding: 6 },
+            ]}
+            pointerEvents="none"
+          >
+            <Text 
+              style={[styles.businessCategoryName, { color: '#ffffff', textAlign: 'left' }]}
+              numberOfLines={1}
+              ellipsizeMode="tail"
+            >
+              {item.name}
+            </Text>
+          </View>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}, (prevProps, nextProps) => {
+  // Return true if props are equal (skip re-render)
+  if (prevProps === nextProps) return true;
+  
+  // Check item ID and name first
+  if (prevProps.item.id !== nextProps.item.id) return false;
+  if (prevProps.item.name !== nextProps.item.name) return false;
+  if (prevProps.item.icon !== nextProps.item.icon) return false;
+  
+  // Check dimensions
+  if (prevProps.cardWidth !== nextProps.cardWidth) return false;
+  
+  // Check category image
+  if (prevProps.categoryImage !== nextProps.categoryImage) return false;
+  
+  // Check theme colors (not object reference)
+  if (prevProps.theme?.colors?.cardBackground !== nextProps.theme?.colors?.cardBackground) return false;
+  
+  // All props are equal, skip re-render
+  return true;
+});
+
+GreetingCategoryCard.displayName = 'GreetingCategoryCard';
+
+// Memoized Greeting Card Component
+interface GreetingCardProps {
+  item: any;
+  cardWidth: number;
+  theme: any;
+  categoryTemplates: any[];
+  searchQuery?: string;
+  navigation: any;
+  onCardPress?: (template: any) => void;
+}
+
+const GreetingCard: React.FC<GreetingCardProps> = React.memo(({ item, cardWidth, theme, categoryTemplates, searchQuery, navigation, onCardPress }) => {
+  const handlePress = useCallback(() => {
+    if (!item || !item.thumbnail) {
+      if (__DEV__) {
+        console.error('❌ [GREETING CARD] Invalid item:', item);
+      }
+      return;
+    }
+    
+    if (onCardPress) {
+      onCardPress(item);
+    }
+    
+    // Navigate to PosterPlayer with category-specific templates
+    const relatedTemplates = categoryTemplates.filter(t => t.id !== item.id);
+    navigation.navigate('PosterPlayer', {
+      selectedPoster: item,
+      relatedPosters: relatedTemplates,
+      searchQuery: searchQuery || '',
+      templateSource: 'greeting',
+    });
+  }, [item, categoryTemplates, searchQuery, navigation, onCardPress]);
+
+  if (!item || !item.thumbnail) {
+    return null;
+  }
+
+  return (
+    <TouchableOpacity
+      activeOpacity={0.7}
+      onPress={handlePress}
+      style={styles.templateCardWrapper}
+    >
+      <View
+        style={[
+          styles.templateCard,
+          {
+            backgroundColor: theme.colors.cardBackground,
+          }
+        ]}
+      >
+        <View style={[styles.templateImageContainer, { height: cardWidth }]}>
+          <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}, (prevProps, nextProps) => {
+  // Return true if props are equal (skip re-render)
+  if (prevProps === nextProps) return true;
+  
+  // Check item ID and thumbnail first
+  if (!prevProps.item || !nextProps.item) return false;
+  if (prevProps.item.id !== nextProps.item.id) return false;
+  if (prevProps.item.thumbnail !== nextProps.item.thumbnail) return false;
+  
+  // Check dimensions
+  if (prevProps.cardWidth !== nextProps.cardWidth) return false;
+  
+  // Check theme colors (not object reference)
+  if (prevProps.theme?.colors?.cardBackground !== nextProps.theme?.colors?.cardBackground) return false;
+  
+  // Check searchQuery
+  if (prevProps.searchQuery !== nextProps.searchQuery) return false;
+  
+  // Check categoryTemplates length (simplified check - templates array reference might change)
+  if (prevProps.categoryTemplates.length !== nextProps.categoryTemplates.length) return false;
+  
+  // All critical props are equal, skip re-render (ignore callback functions)
+  return true;
+});
+
+GreetingCard.displayName = 'GreetingCard';
+
 const convertBusinessPosterToTemplate = (poster: any, categoryName: string): Template => {
   let normalizedTags: string[] = [];
   if (Array.isArray(poster.tags)) {
@@ -194,6 +528,11 @@ const HomeScreen: React.FC = React.memo(() => {
   const [greetingCategoriesList, setGreetingCategoriesList] = useState<Array<{ id: string; name: string; icon: string; color?: string }>>([]);
   const [greetingCategoriesLoading, setGreetingCategoriesLoading] = useState(false);
   const [greetingCategoryImages, setGreetingCategoryImages] = useState<Record<string, string>>({});
+  
+  // Refs to prevent duplicate API calls
+  const apiDataLoadedRef = useRef(false);
+  const greetingCategoriesLoadedRef = useRef(false);
+  const businessCategoriesLoadedRef = useRef(false);
 
   const animateCategoryChange = useCallback(() => {
     Animated.sequence([
@@ -535,47 +874,43 @@ const HomeScreen: React.FC = React.memo(() => {
     }
   }, []);
 
+  // Load API data once on component mount only (with ref guard to prevent duplicates)
   useEffect(() => {
+    // Prevent duplicate calls even in React Strict Mode
+    if (apiDataLoadedRef.current) {
+      return;
+    }
+    apiDataLoadedRef.current = true;
+    
+    let isMounted = true;
+    
     const loadInitialData = async () => {
       setLoading(true);
       
       try {
         // Load data from APIs only - no mock data
-        await loadApiData();
+        if (isMounted) {
+          await loadApiData();
+        }
       } catch (error) {
         if (__DEV__) {
           console.log('Error loading API data:', error);
         }
       } finally {
-        setLoading(false);
+        if (isMounted) {
+          setLoading(false);
+        }
       }
     };
     
     loadInitialData();
-  }, [activeTab, loadApiData]);
-
-  // Load API data on component mount
-  useEffect(() => {
-    loadApiData();
-  }, [loadApiData]);
-
-  // Load greeting categories
-  useEffect(() => {
-    const loadCategories = async () => {
-      try {
-        const categories = await greetingTemplatesService.getCategories();
-        if (categories && categories.length > 0) {
-          setGreetingCategories(categories);
-        }
-      } catch (error) {
-        if (__DEV__) {
-          console.error('Error loading greeting categories:', error);
-        }
-      }
-    };
     
-    loadCategories();
-  }, []);
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array - only run once on mount
+
+  // Load greeting categories - consolidated with greetingCategoriesList loading below
 
 
   const fetchBusinessCategoryPreviewImages = useCallback(async (categories: BusinessCategory[]) => {
@@ -689,14 +1024,24 @@ const HomeScreen: React.FC = React.memo(() => {
     }
   }, []);
 
-  // Load greeting categories list for the section (different from rotating categories)
+  // Load greeting categories list for the section (consolidated - only called once with ref guard)
   useEffect(() => {
+    // Prevent duplicate calls even in React Strict Mode
+    if (greetingCategoriesLoadedRef.current) {
+      return;
+    }
+    greetingCategoriesLoadedRef.current = true;
+    
+    let isMounted = true;
+    
     const loadGreetingCategoriesList = async () => {
       setGreetingCategoriesLoading(true);
       try {
         const categories = await greetingTemplatesService.getCategories();
-        if (categories && categories.length > 0) {
+        if (isMounted && categories && categories.length > 0) {
+          // Set both states from single API call
           setGreetingCategoriesList(categories);
+          setGreetingCategories(categories); // Also set for rotating categories
           fetchGreetingCategoryPreviewImages(categories);
           
           if (__DEV__) {
@@ -708,20 +1053,34 @@ const HomeScreen: React.FC = React.memo(() => {
           console.error('Error loading greeting categories list:', error);
         }
       } finally {
-        setGreetingCategoriesLoading(false);
+        if (isMounted) {
+          setGreetingCategoriesLoading(false);
+        }
       }
     };
     
     loadGreetingCategoriesList();
-  }, [fetchGreetingCategoryPreviewImages]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array - only run once on mount (fetchGreetingCategoryPreviewImages is stable)
 
-  // Load business categories and filter out user's own category
+  // Load business categories and filter out user's own category (only called once on mount with ref guard)
   useEffect(() => {
+    // Prevent duplicate calls even in React Strict Mode
+    if (businessCategoriesLoadedRef.current) {
+      return;
+    }
+    businessCategoriesLoadedRef.current = true;
+    
+    let isMounted = true;
+    
     const loadBusinessCategories = async () => {
       setBusinessCategoriesLoading(true);
       try {
         const response = await businessCategoriesService.getBusinessCategories();
-        if (response.success && response.categories) {
+        if (isMounted && response.success && response.categories) {
           // Get current user's business category
           const currentUser = authService.getCurrentUser();
           const userCategory = currentUser?.category || currentUser?._originalCategory || '';
@@ -748,12 +1107,18 @@ const HomeScreen: React.FC = React.memo(() => {
           console.error('Error loading business categories:', error);
         }
       } finally {
-        setBusinessCategoriesLoading(false);
+        if (isMounted) {
+          setBusinessCategoriesLoading(false);
+        }
       }
     };
     
     loadBusinessCategories();
-  }, [fetchBusinessCategoryPreviewImages]);
+    
+    return () => {
+      isMounted = false;
+    };
+  }, []); // Empty dependency array - only run once on mount (fetchBusinessCategoryPreviewImages is stable)
 
   // Rotate categories every 3 seconds
   useEffect(() => {
@@ -1318,106 +1683,32 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                                        
 
   const renderTemplate = useCallback(({ item }: { item: Template }) => {
-    const scaleAnim = new Animated.Value(1);
-
-    const handlePressIn = () => {
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const handlePressOut = () => {
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const handleCardPress = () => {
-      handleTemplatePress(item);
-    };
-
     return (
-      <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={handleCardPress}
-        style={styles.templateCardWrapper}
-      >
-        <Animated.View 
-          style={[
-            styles.templateCard, 
-            { 
-              backgroundColor: theme.colors.cardBackground,
-              transform: [{ scale: scaleAnim }],
-            }
-          ]}
-        >
-          <View style={[styles.templateImageContainer, { height: cardWidth }]}>
-            <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
-          </View>
-        </Animated.View>
-      </TouchableOpacity>
+      <TemplateCard
+        item={item}
+        cardWidth={cardWidth}
+        theme={theme}
+        onPress={handleTemplatePress}
+      />
     );
   }, [handleTemplatePress, theme, cardWidth]);
 
 
+  const handleVideoCardPress = useCallback(() => {
+    setShowVideoComingSoonModal(true);
+  }, []);
+
   const renderVideoTemplate = useCallback(({ item }: { item: VideoContent }) => {
-    const scaleAnim = new Animated.Value(1);
-
-    const handlePressIn = () => {
-      Animated.timing(scaleAnim, {
-        toValue: 0.95,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const handlePressOut = () => {
-      Animated.timing(scaleAnim, {
-        toValue: 1,
-        duration: 150,
-        useNativeDriver: true,
-      }).start();
-    };
-
-    const handleCardPress = () => {
-      setShowVideoComingSoonModal(true);
-    };
-
-
-
     return (
-      <TouchableOpacity
-        activeOpacity={1}
-        onPressIn={handlePressIn}
-        onPressOut={handlePressOut}
-        onPress={handleCardPress}
-        style={styles.templateCardWrapper}
-      >
-        <Animated.View 
-          style={[
-            styles.templateCard, 
-            { 
-              backgroundColor: theme.colors.cardBackground,
-              transform: [{ scale: scaleAnim }],
-            }
-          ]}
-        >
-          <View style={[styles.templateImageContainer, { height: cardWidth }]}>
-            <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
-            <View style={styles.videoPlayOverlay}>
-              <Icon name="play-arrow" size={playIconSize} color="#ffffff" />
-            </View>
-          </View>
-        </Animated.View>
-      </TouchableOpacity>
+      <VideoTemplateCard
+        item={item}
+        cardWidth={cardWidth}
+        theme={theme}
+        playIconSize={playIconSize}
+        onPress={handleVideoCardPress}
+      />
     );
-  }, [theme, playIconSize, cardWidth]);
+  }, [theme, cardWidth, playIconSize, handleVideoCardPress]);
 
   const featuredCarouselItemWidth = useMemo(() => screenWidth - moderateScale(40), [screenWidth]);
   const featuredCarouselSnapInterval = useMemo(() => featuredCarouselItemWidth + moderateScale(10), [featuredCarouselItemWidth]);
@@ -1428,44 +1719,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   // Factory function to create category-specific render functions for greeting cards
   const createGreetingCardRenderer = useCallback((categoryTemplates: any[], searchQuery?: string, onCardPress?: (template: any) => void) => {
     return ({ item }: { item: any }) => {
-      if (!item || !item.thumbnail) {
-        if (__DEV__) {
-          console.error('❌ [RENDER GREETING CARD] Invalid item:', item);
-        }
-        return null;
-      }
-
       return (
-        <TouchableOpacity
-          activeOpacity={0.7}
-        onPress={() => {
-          if (onCardPress) {
-            onCardPress(item);
-          }
-            // Navigate to PosterPlayer with category-specific templates
-            const relatedTemplates = categoryTemplates.filter(template => template.id !== item.id);
-            navigation.navigate('PosterPlayer', {
-              selectedPoster: item,
-              relatedPosters: relatedTemplates,
-              searchQuery: searchQuery,
-              templateSource: 'greeting',
-            });
-          }}
-          style={styles.templateCardWrapper}
-        >
-          <View
-            style={[
-              styles.templateCard,
-              {
-                backgroundColor: theme.colors.cardBackground,
-              }
-            ]}
-          >
-            <View style={[styles.templateImageContainer, { height: cardWidth }]}>
-              <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
-            </View>
-          </View>
-        </TouchableOpacity>
+        <GreetingCard
+          item={item}
+          cardWidth={cardWidth}
+          theme={theme}
+          categoryTemplates={categoryTemplates}
+          searchQuery={searchQuery}
+          navigation={navigation}
+          onCardPress={onCardPress}
+        />
       );
     };
   }, [navigation, theme, cardWidth]);
@@ -1736,67 +1999,18 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     );
   }, [handleBusinessCategoryPress, cardWidth, theme, businessCategoryPreviews]);
 
-  // Render greeting category card
+  // Render greeting category card using memoized component
   const renderGreetingCategoryCard = useCallback(({ item }: { item: { id: string; name: string; icon: string; color?: string } }) => {
     const categoryImage = greetingCategoryImages[item.id] || null;
     
     return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={[styles.businessCategoryCard, { width: cardWidth }]}
-        onPress={() => handleGreetingCategoryPress(item)}
-      >
-        <View style={[
-          styles.businessCategoryCardContent, 
-          { 
-            backgroundColor: theme.colors.cardBackground,
-            height: cardWidth, // Make cards square
-          }
-        ]}>
-          <View style={styles.businessCategoryImageSection}>
-            {categoryImage ? (
-              <OptimizedImage 
-                uri={categoryImage} 
-                style={styles.businessCategoryImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={[
-                  styles.businessCategoryImage,
-                  { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)' },
-                ]}
-              >
-                {item.icon ? (
-                  <Text style={styles.businessCategoryIcon}>
-                    {item.icon}
-                  </Text>
-                ) : null}
-              </View>
-            )}
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.75)']}
-              style={StyleSheet.absoluteFillObject}
-              pointerEvents="none"
-            />
-            <View
-              style={[
-                StyleSheet.absoluteFillObject,
-                { justifyContent: 'flex-end', padding: moderateScale(6) },
-              ]}
-              pointerEvents="none"
-            >
-              <Text 
-                style={[styles.businessCategoryName, { color: '#ffffff', textAlign: 'left' }]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {item.name}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
+      <GreetingCategoryCard
+        item={item}
+        cardWidth={cardWidth}
+        theme={theme}
+        categoryImage={categoryImage}
+        onPress={handleGreetingCategoryPress}
+      />
     );
   }, [handleGreetingCategoryPress, cardWidth, theme, greetingCategoryImages]);
 
@@ -2020,10 +2234,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
                 contentContainerStyle={styles.horizontalList}
               />
@@ -2047,10 +2261,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
                 contentContainerStyle={styles.horizontalList}
               />
@@ -2185,10 +2399,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   showsHorizontalScrollIndicator={false}
                   nestedScrollEnabled={true}
                   removeClippedSubviews={true}
-                  maxToRenderPerBatch={10}
-                  windowSize={5}
-                  initialNumToRender={10}
-                  updateCellsBatchingPeriod={50}
+                  maxToRenderPerBatch={6}
+                  windowSize={3}
+                  initialNumToRender={6}
+                  updateCellsBatchingPeriod={100}
                   getItemLayout={getItemLayout}
                   contentContainerStyle={styles.horizontalList}
                 />
@@ -2220,10 +2434,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 showsHorizontalScrollIndicator={false}
                 nestedScrollEnabled={true}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
                 contentContainerStyle={styles.horizontalList}
               />
@@ -2251,10 +2465,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>
@@ -2287,10 +2501,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
+                getItemLayout={getItemLayout}
               />
             </View>
           )}
@@ -2316,10 +2531,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>
@@ -2346,10 +2561,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>
@@ -2376,10 +2591,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>
@@ -2406,10 +2621,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>
@@ -2436,10 +2651,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>
@@ -2466,10 +2681,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>
@@ -2496,10 +2711,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>
@@ -2526,10 +2741,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>
@@ -2556,10 +2771,10 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 nestedScrollEnabled={true}
                 contentContainerStyle={styles.horizontalList}
                 removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
+                maxToRenderPerBatch={6}
+                windowSize={3}
+                initialNumToRender={6}
+                updateCellsBatchingPeriod={100}
                 getItemLayout={getItemLayout}
               />
             </View>

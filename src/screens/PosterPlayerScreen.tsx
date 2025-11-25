@@ -201,16 +201,33 @@ const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({
   );
 }, (prevProps, nextProps) => {
   // Custom comparison function for better performance
-  return (
-    prevProps.item.id === nextProps.item.id &&
-    prevProps.item.thumbnail === nextProps.item.thumbnail &&
-    prevProps.imageUrl === nextProps.imageUrl &&
-    prevProps.languageCode === nextProps.languageCode &&
-    prevProps.cardWidth === nextProps.cardWidth &&
-    prevProps.cardHeight === nextProps.cardHeight &&
-    prevProps.isSelected === nextProps.isSelected &&
-    prevProps.overlayColors === nextProps.overlayColors
-  );
+  // Return true if props are equal (skip re-render), false if different (re-render)
+  
+  // Quick reference check first
+  if (prevProps === nextProps) return true;
+  
+  // Check item ID first (most likely to change)
+  if (prevProps.item.id !== nextProps.item.id) return false;
+  
+  // Check selection state (changes frequently)
+  if (prevProps.isSelected !== nextProps.isSelected) return false;
+  
+  // Check dimensions (rarely change)
+  if (prevProps.cardWidth !== nextProps.cardWidth || prevProps.cardHeight !== nextProps.cardHeight) return false;
+  
+  // Check computed values
+  if (prevProps.imageUrl !== nextProps.imageUrl) return false;
+  if (prevProps.languageCode !== nextProps.languageCode) return false;
+  
+  // Check overlay colors array reference (should be stable)
+  if (prevProps.overlayColors !== nextProps.overlayColors) {
+    // Deep compare if reference changed
+    if (prevProps.overlayColors.length !== nextProps.overlayColors.length) return false;
+    if (prevProps.overlayColors.some((color, i) => color !== nextProps.overlayColors[i])) return false;
+  }
+  
+  // All props are equal, skip re-render
+  return true;
 });
 
 RelatedPosterItem.displayName = 'RelatedPosterItem';
@@ -468,29 +485,37 @@ const PosterPlayerScreen: React.FC = () => {
     });
   }, []);
 
-  // Preload images when filteredPosters change
+  // Preload images when filteredPosters change (reduced batch sizes for better performance)
   useEffect(() => {
     if (filteredPosters.length > 0) {
-      // Preload first batch immediately
-      preloadImages(filteredPosters, 0, 20);
+      // Preload first batch immediately (reduced from 20 to 12 for faster initial render)
+      preloadImages(filteredPosters, 0, 12);
       
-      // Preload next batch after a short delay
+      // Preload next batch after a delay (reduced batch size)
       const timeoutId = setTimeout(() => {
-        preloadImages(filteredPosters, 20, 20);
-      }, 500);
+        if (filteredPosters.length > 12) {
+          preloadImages(filteredPosters, 12, 12);
+        }
+      }, 800); // Increased delay to reduce initial load
       
       return () => clearTimeout(timeoutId);
     }
   }, [filteredPosters, preloadImages]);
 
-  // Handle viewable items change for progressive image loading
+  // Handle viewable items change for progressive image loading (throttled for performance)
   const onViewableItemsChanged = useCallback(({ viewableItems }: any) => {
-    if (viewableItems.length > 0) {
-      const lastVisibleIndex = Math.max(...viewableItems.map((item: any) => item.index));
-      // Preload next 20 items when user scrolls near the end
-      if (lastVisibleIndex >= filteredPosters.length - 10) {
-        const nextBatchStart = Math.min(lastVisibleIndex + 1, filteredPosters.length);
-        preloadImages(filteredPosters, nextBatchStart, 20);
+    if (!viewableItems || viewableItems.length === 0) return;
+    
+    // Only preload if we have a significant number of items
+    if (filteredPosters.length < 50) return;
+    
+    const lastVisibleIndex = Math.max(...viewableItems.map((item: any) => item.index || 0));
+    // Preload next batch when user scrolls near the end (reduced from 10 to 5 items threshold)
+    if (lastVisibleIndex >= filteredPosters.length - 5 && lastVisibleIndex < filteredPosters.length - 1) {
+      const nextBatchStart = Math.min(lastVisibleIndex + 1, filteredPosters.length);
+      const batchSize = Math.min(10, filteredPosters.length - nextBatchStart); // Reduced batch size
+      if (batchSize > 0) {
+        preloadImages(filteredPosters, nextBatchStart, batchSize);
       }
     }
   }, [filteredPosters, preloadImages]);
@@ -1215,20 +1240,32 @@ const PosterPlayerScreen: React.FC = () => {
     return languageMatch?.code || 'EN';
   }, [languages]);
 
+  // Memoize current poster ID to avoid recreating render function
+  const currentPosterId = useMemo(() => currentPoster?.id, [currentPoster?.id]);
+
+  // Pre-compute image URLs and language codes for all templates to avoid recalculation during render
+  const templateMetadata = useMemo(() => {
+    const metadataMap = new Map<string, { imageUrl: string; languageCode: string }>();
+    filteredPosters.forEach(template => {
+      metadataMap.set(template.id, {
+        imageUrl: getHighQualityImageUrl(template),
+        languageCode: getTemplateLanguageCode(template),
+      });
+    });
+    return metadataMap;
+  }, [filteredPosters, getHighQualityImageUrl, getTemplateLanguageCode]);
+
   const renderRelatedPoster = useCallback(({ item }: { item: Template }) => {
-    const imageUrl = getHighQualityImageUrl(item);
-    const languageCode = getTemplateLanguageCode(item);
-  const isSelected = currentPoster?.id === item.id;
-    
-    // Ensure cardWidth and cardHeight are valid numbers
-    const validCardWidth = (isNaN(cardWidth) || !isFinite(cardWidth) || cardWidth <= 0) ? 100 : cardWidth;
-    const validCardHeight = (isNaN(cardHeight) || !isFinite(cardHeight) || cardHeight <= 0) ? 60 : cardHeight;
+    const metadata = templateMetadata.get(item.id);
+    const imageUrl = metadata?.imageUrl || item.thumbnail || '';
+    const languageCode = metadata?.languageCode || 'EN';
+    const isSelected = currentPosterId === item.id;
     
     return (
       <RelatedPosterItem
         item={item}
-        cardWidth={validCardWidth}
-        cardHeight={validCardHeight}
+        cardWidth={cardWidth}
+        cardHeight={cardHeight}
         imageUrl={imageUrl}
         languageCode={languageCode}
         onPress={handlePosterSelect}
@@ -1236,7 +1273,8 @@ const PosterPlayerScreen: React.FC = () => {
         overlayColors={previewOverlayColors}
       />
     );
-  }, [cardWidth, cardHeight, handlePosterSelect, getHighQualityImageUrl, getTemplateLanguageCode, currentPoster, previewOverlayColors]);
+  }, [cardWidth, cardHeight, handlePosterSelect, currentPosterId, templateMetadata, previewOverlayColors]);
+
 
   const renderLanguageButton = useCallback((language: typeof languages[0]) => {
     const iconSize = getIconSize(12);
@@ -1440,10 +1478,10 @@ const PosterPlayerScreen: React.FC = () => {
                style={styles.relatedFlatList}
                // Performance optimizations for large lists
                removeClippedSubviews={true}
-               maxToRenderPerBatch={isTabletDevice ? 12 : 8}
-               windowSize={10}
-               initialNumToRender={isTabletDevice ? 12 : 8}
-               updateCellsBatchingPeriod={50}
+               maxToRenderPerBatch={isTabletDevice ? 8 : 6}
+               windowSize={5}
+               initialNumToRender={isTabletDevice ? 8 : 6}
+               updateCellsBatchingPeriod={100}
                onViewableItemsChanged={onViewableItemsChanged}
                viewabilityConfig={viewabilityConfig.current}
              />
