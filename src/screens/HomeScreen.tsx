@@ -56,6 +56,9 @@ import responsiveUtils, {
 // Compact spacing multiplier to reduce all spacing
 const COMPACT_MULTIPLIER = 0.5;
 
+const devWarn = __DEV__ ? console.warn : () => {};
+const devError = __DEV__ ? console.error : () => {};
+
 // Memoized Template Card Component to avoid recreating Animated.Value on every render
 interface TemplateCardProps {
   item: Template;
@@ -129,6 +132,124 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ item, cardWidth,
 });
 
 TemplateCard.displayName = 'TemplateCard';
+
+interface BusinessCategoryCardItemProps {
+  item: BusinessCategory;
+  cardWidth: number;
+  theme: any;
+  previewTemplates?: Template[];
+  onPress: (category: BusinessCategory) => void;
+}
+
+const BusinessCategoryCardItem: React.FC<BusinessCategoryCardItemProps> = React.memo(
+  ({ item, cardWidth, theme, previewTemplates, onPress }) => {
+    const handlePress = useCallback(() => {
+      onPress(item);
+    }, [item, onPress]);
+
+    const displayImages = useMemo(() => {
+      const thumbnails =
+        previewTemplates
+          ?.map((template) => template.thumbnail)
+          .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0) ?? [];
+
+      if (thumbnails.length > 0) {
+        return thumbnails.slice(0, 5);
+      }
+
+      const fallbackImage = item.imageUrl || (item as any).image || null;
+      return fallbackImage ? [fallbackImage] : [];
+    }, [previewTemplates, item]);
+
+    return (
+      <TouchableOpacity
+        activeOpacity={0.85}
+        style={[styles.businessCategoryCard, { width: cardWidth }]}
+        onPress={handlePress}
+      >
+        <View
+          style={[
+            styles.businessCategoryCardContent,
+            {
+              backgroundColor: theme.colors.cardBackground,
+              height: cardWidth,
+            },
+          ]}
+        >
+          <View style={styles.businessCategoryImageSection}>
+            {displayImages.length > 1 ? (
+              <View style={styles.businessCategoryImageGrid}>
+                {displayImages.map((uri, index) => (
+                  <View
+                    key={`${item.id}-grid-${index}`}
+                    style={[
+                      styles.businessCategoryImageCell,
+                      index === 4 ? styles.businessCategoryImageCellFull : null,
+                    ]}
+                  >
+                    <OptimizedImage
+                      uri={uri}
+                      style={styles.businessCategoryImageCellImage}
+                      resizeMode="cover"
+                    />
+                  </View>
+                ))}
+              </View>
+            ) : displayImages.length === 1 ? (
+              <OptimizedImage
+                uri={displayImages[0]}
+                style={styles.businessCategoryImage}
+                resizeMode="cover"
+              />
+            ) : (
+              <View
+                style={[
+                  styles.businessCategoryImage,
+                  {
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    backgroundColor: 'rgba(0,0,0,0.05)',
+                  },
+                ]}
+              >
+                {item.icon ? <Text style={styles.businessCategoryIcon}>{item.icon}</Text> : null}
+              </View>
+            )}
+            <LinearGradient
+              colors={['transparent', 'rgba(0,0,0,0.75)']}
+              style={StyleSheet.absoluteFillObject}
+              pointerEvents="none"
+            />
+            <View
+              style={[
+                StyleSheet.absoluteFillObject,
+                { justifyContent: 'flex-end', padding: moderateScale(6) },
+              ]}
+              pointerEvents="none"
+            >
+              <Text
+                style={[styles.businessCategoryName, { color: '#ffffff', textAlign: 'left' }]}
+                numberOfLines={1}
+                ellipsizeMode="tail"
+              >
+                {item.name}
+              </Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+    );
+  },
+  (prev, next) => {
+    if (prev.cardWidth !== next.cardWidth) return false;
+    if (prev.item.id !== next.item.id) return false;
+    if (prev.previewTemplates !== next.previewTemplates) return false;
+    if (prev.theme?.colors?.cardBackground !== next.theme?.colors?.cardBackground) return false;
+    return true;
+  }
+);
+
+BusinessCategoryCardItem.displayName = 'BusinessCategoryCardItem';
 
 // Memoized Video Template Card Component
 interface VideoTemplateCardProps {
@@ -320,7 +441,7 @@ const GreetingCard: React.FC<GreetingCardProps> = React.memo(({ item, cardWidth,
   const handlePress = useCallback(() => {
     if (!item || !item.thumbnail) {
       if (__DEV__) {
-        console.error('❌ [GREETING CARD] Invalid item:', item);
+        devError('❌ [GREETING CARD] Invalid item:', item);
       }
       return;
     }
@@ -637,7 +758,6 @@ const HomeScreen: React.FC = React.memo(() => {
     
     try {
       if (__DEV__) {
-        console.log(isRefresh ? '🔄 Refreshing home screen data...' : '📡 Loading home screen data...');
       }
       
       // Track success count for error handling
@@ -649,7 +769,6 @@ const HomeScreen: React.FC = React.memo(() => {
       const [featuredResponse, eventsResponse, templatesResponse, videosResponse] = await Promise.allSettled([
         homeApi.getFeaturedContent({ limit: 10 }).catch(err => {
           if (__DEV__) {
-            console.log('⚠️ Featured content API error:', err?.message || err);
           }
           if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
             networkErrors.push('featured');
@@ -658,7 +777,6 @@ const HomeScreen: React.FC = React.memo(() => {
         }),
         homeApi.getUpcomingEvents({ limit: 200 }).catch(err => {
           if (__DEV__) {
-            console.log('⚠️ Events API error:', err?.message || err);
           }
           if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
             networkErrors.push('events');
@@ -667,7 +785,6 @@ const HomeScreen: React.FC = React.memo(() => {
         }),
         homeApi.getProfessionalTemplates({ limit: 200 }).catch(err => {
           if (__DEV__) {
-            console.log('⚠️ Templates API error:', err?.message || err);
           }
           if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
             networkErrors.push('templates');
@@ -676,7 +793,6 @@ const HomeScreen: React.FC = React.memo(() => {
         }),
         homeApi.getVideoContent({ limit: 20 }).catch(err => {
           if (__DEV__) {
-            console.log('⚠️ Videos API error:', err?.message || err);
           }
           if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
             networkErrors.push('videos');
@@ -703,7 +819,6 @@ const HomeScreen: React.FC = React.memo(() => {
         setFeaturedContent([]);
         setBanners([]);
         if (__DEV__ && featuredResponse.status === 'rejected') {
-          console.log('❌ Featured content failed:', featuredResponse.reason?.message);
         }
       }
 
@@ -715,7 +830,6 @@ const HomeScreen: React.FC = React.memo(() => {
       } else {
         setUpcomingEvents([]);
         if (__DEV__ && eventsResponse.status === 'rejected') {
-          console.log('❌ Events failed:', eventsResponse.reason?.message);
         }
       }
 
@@ -729,13 +843,10 @@ const HomeScreen: React.FC = React.memo(() => {
           setTemplates(templates);
         }
         if (__DEV__) {
-          console.log('✅ Business events loaded:', templates.length, 'items');
         }
       } else {
         if (__DEV__) {
-          console.log('⚠️ Business events API failed');
           if (templatesResponse.status === 'rejected') {
-            console.log('❌ Templates failed:', templatesResponse.reason?.message);
           }
         }
         setProfessionalTemplates([]);
@@ -749,13 +860,10 @@ const HomeScreen: React.FC = React.memo(() => {
         setVideoContent(videosResponse.value.data);
         successCount++;
         if (__DEV__) {
-          console.log('✅ Video content loaded:', videosResponse.value.data.length, 'items');
         }
       } else {
         if (__DEV__) {
-          console.log('⚠️ Video content API failed');
           if (videosResponse.status === 'rejected') {
-            console.log('❌ Videos failed:', videosResponse.reason?.message);
           }
         }
         setVideoContent([]);
@@ -775,13 +883,11 @@ const HomeScreen: React.FC = React.memo(() => {
       } else if (successCount === 0 && networkErrors.length === 0) {
         // All failed but not network errors - might be server issue, don't show error immediately
         if (__DEV__) {
-          console.log('⚠️ All requests failed but not network errors - might be temporary server issue');
         }
         // Only show error after retry fails or if it persists
       } else if (successCount > 0 && successCount < totalMainRequests) {
         // Partial success - don't show error, app is still functional
         if (__DEV__) {
-          console.log(`✅ Partial success: ${successCount}/${totalMainRequests} requests succeeded`);
         }
       }
 
@@ -852,11 +958,8 @@ const HomeScreen: React.FC = React.memo(() => {
 
       // Batch all state updates together (React 18+ auto-batches, but this makes it explicit)
       if (__DEV__ && greetingUpdates.motivation.raw.length > 0) {
-        console.log('✅ [MOTIVATION] Setting templates:', greetingUpdates.motivation.raw.length);
       }
       if (__DEV__ && greetingUpdates.goodMorning.raw.length > 0) {
-        console.log('✅ [GOOD MORNING] Setting templates:', greetingUpdates.goodMorning.raw.length);
-        console.log('📦 [GOOD MORNING] Sample template structure:', JSON.stringify(greetingUpdates.goodMorning.raw[0], null, 2));
       }
       
       // Update all states in a single batch
@@ -887,7 +990,7 @@ const HomeScreen: React.FC = React.memo(() => {
       // Only catch unexpected errors (like state setting errors or promise.allSettled issues)
       // Expected API errors are already handled above
       if (__DEV__) {
-        console.error('Unexpected error loading API data:', error);
+        devError('Unexpected error loading API data:', error);
       }
       // Don't set apiError here unless it's a truly unexpected error
       // Most errors should be handled by Promise.allSettled above
@@ -916,7 +1019,6 @@ const HomeScreen: React.FC = React.memo(() => {
         }
       } catch (error) {
         if (__DEV__) {
-          console.log('Error loading API data:', error);
         }
       } finally {
         if (isMounted) {
@@ -955,7 +1057,7 @@ const HomeScreen: React.FC = React.memo(() => {
             }
           } catch (error) {
             if (__DEV__) {
-              console.warn(`⚠️ Failed to fetch preview for category ${category.name}:`, error);
+              devWarn(`⚠️ Failed to fetch preview for category ${category.name}:`, error);
             }
           }
           return [category.id, undefined] as const;
@@ -972,7 +1074,7 @@ const HomeScreen: React.FC = React.memo(() => {
       setBusinessCategoryPreviews(prev => ({ ...prev, ...nextPreviews }));
     } catch (error) {
       if (__DEV__) {
-        console.error('Error fetching business category preview images:', error);
+        devError('Error fetching business category preview images:', error);
       }
     }
   }, []);
@@ -1015,16 +1117,12 @@ const HomeScreen: React.FC = React.memo(() => {
             if (previewUrl) {
               if (__DEV__) {
                 const templateAny = selectedTemplate as any;
-                console.log(`✅ [GREETING PREVIEW] Found preview for category "${category.name}":`, {
-                  templateId: selectedTemplate?.id,
-                  tags: templateAny?.tags || []
-                });
               }
               return [category.id, previewUrl] as const;
             }
           } catch (error) {
             if (__DEV__) {
-              console.warn(`⚠️ Failed to fetch preview for greeting category ${category.name}:`, error);
+              devWarn(`⚠️ Failed to fetch preview for greeting category ${category.name}:`, error);
             }
           }
           return [category.id, undefined] as const;
@@ -1041,7 +1139,7 @@ const HomeScreen: React.FC = React.memo(() => {
       setGreetingCategoryImages(prev => ({ ...prev, ...nextImages }));
     } catch (error) {
       if (__DEV__) {
-        console.error('Error fetching greeting category preview images:', error);
+        devError('Error fetching greeting category preview images:', error);
       }
     }
   }, []);
@@ -1067,12 +1165,11 @@ const HomeScreen: React.FC = React.memo(() => {
           fetchGreetingCategoryPreviewImages(categories);
           
           if (__DEV__) {
-            console.log('✅ [GENERAL CATEGORIES] Loaded:', categories.length, 'categories');
           }
         }
       } catch (error) {
         if (__DEV__) {
-          console.error('Error loading greeting categories list:', error);
+          devError('Error loading greeting categories list:', error);
         }
       } finally {
         if (isMounted) {
@@ -1109,7 +1206,7 @@ const HomeScreen: React.FC = React.memo(() => {
           
           if (!allCategories || allCategories.length === 0) {
             if (__DEV__) {
-              console.warn('⚠️ [BUSINESS CATEGORIES] No categories in response:', response);
+              devWarn('⚠️ [BUSINESS CATEGORIES] No categories in response:', response);
             }
             return;
           }
@@ -1143,30 +1240,25 @@ const HomeScreen: React.FC = React.memo(() => {
             // Reset index to 0 when categories are loaded
             setCurrentBusinessCategoryIndex(0);
             if (__DEV__) {
-              console.log('✅ [ROTATING BUSINESS CATEGORIES] Set:', rotatingCategories.length, 'categories for rotation');
-              console.log('   Categories:', rotatingCategories.map(c => c.name).join(', '));
             }
           } else {
             if (__DEV__) {
-              console.warn('⚠️ [ROTATING BUSINESS CATEGORIES] No valid categories found');
+              devWarn('⚠️ [ROTATING BUSINESS CATEGORIES] No valid categories found');
             }
           }
           
           fetchBusinessCategoryPreviewImages(filteredCategories);
           
           if (__DEV__) {
-            console.log('✅ [BUSINESS CATEGORIES] Loaded:', filteredCategories.length, 'filtered categories');
-            console.log('   Total categories from API:', allCategories.length);
-            console.log('   User category (excluded from section):', userCategory);
           }
         } else {
           if (__DEV__) {
-            console.warn('⚠️ [BUSINESS CATEGORIES] No categories in API response');
+            devWarn('⚠️ [BUSINESS CATEGORIES] No categories in API response');
           }
         }
       } catch (error) {
         if (__DEV__) {
-          console.error('Error loading business categories:', error);
+          devError('Error loading business categories:', error);
         }
       } finally {
         if (isMounted) {
@@ -1281,8 +1373,6 @@ const HomeScreen: React.FC = React.memo(() => {
     
     // Debug: Log Good Morning templates structure (dev only)
     if (__DEV__ && goodMorningTemplatesRaw.length > 0) {
-      console.log('🔍 [SEARCH] Good Morning templates count:', goodMorningTemplatesRaw.length);
-      console.log('🔍 [SEARCH] Sample Good Morning template:', JSON.stringify(converted.find(t => goodMorningTemplatesRaw.some(gm => gm.id === t.id)), null, 2));
     }
     
     return converted;
@@ -1320,10 +1410,6 @@ const HomeScreen: React.FC = React.memo(() => {
         const allTemplates = [...professionalTemplates, ...allGreetingTemplates];
         
         if (__DEV__) {
-          console.log('🔍 [SEARCH] Total templates to search:', allTemplates.length);
-          console.log('🔍 [SEARCH] Professional templates:', professionalTemplates.length);
-          console.log('🔍 [SEARCH] Greeting templates:', allGreetingTemplates.length);
-          console.log('🔍 [SEARCH] Query:', searchQuery);
         }
         
         // Use local search immediately for better performance
@@ -1351,9 +1437,7 @@ const HomeScreen: React.FC = React.memo(() => {
         });
         
         if (__DEV__) {
-          console.log('🔍 [SEARCH] Filtered results:', filtered.length);
           if (filtered.length > 0) {
-            console.log('🔍 [SEARCH] Sample result:', JSON.stringify(filtered[0], null, 2));
           }
         }
         
@@ -1392,7 +1476,7 @@ const HomeScreen: React.FC = React.memo(() => {
           } catch (error) {
             if (__DEV__) {
               if (__DEV__) {
-              console.error('Search error:', error);
+              devError('Search error:', error);
             }
             }
           }
@@ -1415,7 +1499,6 @@ const HomeScreen: React.FC = React.memo(() => {
       await loadApiData(true);
     } catch (error) {
       if (__DEV__) {
-        console.log('Error refreshing data:', error);
       }
     } finally {
       setRefreshing(false);
@@ -1438,7 +1521,6 @@ const HomeScreen: React.FC = React.memo(() => {
       setTemplates(filteredTemplates);
     } catch (error) {
       if (__DEV__) {
-        console.log('Error filtering templates for tab:', tab, error);
       }
     }
   }, [professionalTemplates]);
@@ -1463,7 +1545,7 @@ const HomeScreen: React.FC = React.memo(() => {
         await dashboardService.downloadTemplate(templateId);
       } catch (error) {
         if (__DEV__) {
-          console.error('Error downloading template:', error);
+          devError('Error downloading template:', error);
         }
       }
     }, 100);
@@ -1491,7 +1573,7 @@ const HomeScreen: React.FC = React.memo(() => {
           }
         } catch (error) {
           if (__DEV__) {
-            console.error('Search reset error:', error);
+            devError('Search reset error:', error);
           }
         }
       }, 100);
@@ -1519,7 +1601,7 @@ const HomeScreen: React.FC = React.memo(() => {
           setTemplates(results);
         }
       } catch (error) {
-        console.error('Search error:', error);
+        devError('Search error:', error);
       }
     }, 100);
   }, [searchQuery, activeTab, professionalTemplates, currentRequestId, isSearching]);
@@ -1976,7 +2058,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
       }
     } catch (error) {
       if (__DEV__) {
-        console.error('❌ Error loading category posters:', error);
+        devError('❌ Error loading category posters:', error);
       }
     }
 
@@ -2016,94 +2098,43 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   }, [navigation]);
 
   // Render business category card
-  const renderBusinessCategoryCard = useCallback(({ item }: { item: BusinessCategory }) => {
-    const previewTemplates = businessCategoryPreviews[item.id] || [];
-    const fallbackImage = previewTemplates[0]?.thumbnail || item.imageUrl || item.image || null;
-    let displayImages = previewTemplates
-      .map(template => template.thumbnail)
-      .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0)
-      .slice(0, 5);
-    if (displayImages.length === 0 && fallbackImage) {
-      displayImages = [fallbackImage];
+  const businessCategoryButtonTextCache = useRef<Record<string, string>>({});
+  const greetingCategoryButtonTextCache = useRef<Record<string, string>>({});
+
+  const getBusinessCategoryButtonLabel = useCallback(() => {
+    const fallback = 'Business';
+    if (rotatingBusinessCategories.length === 0) {
+      return businessCategoryButtonTextCache.current[fallback] || fallback;
     }
-    
-    return (
-      <TouchableOpacity
-        activeOpacity={0.85}
-        style={[styles.businessCategoryCard, { width: cardWidth }]}
-        onPress={() => handleBusinessCategoryPress(item)}
-      >
-        <View style={[
-          styles.businessCategoryCardContent, 
-          { 
-            backgroundColor: theme.colors.cardBackground,
-            height: cardWidth, // Make cards square
-          }
-        ]}>
-          <View style={styles.businessCategoryImageSection}>
-            {displayImages.length > 1 ? (
-              <View style={styles.businessCategoryImageGrid}>
-                {displayImages.map((uri, index) => (
-                  <View
-                    key={`${item.id}-grid-${index}`}
-                    style={[
-                      styles.businessCategoryImageCell,
-                      index === 4 ? styles.businessCategoryImageCellFull : null,
-                    ]}
-                  >
-                    <OptimizedImage
-                      uri={uri}
-                      style={styles.businessCategoryImageCellImage}
-                      resizeMode="cover"
-                    />
-                  </View>
-                ))}
-              </View>
-            ) : displayImages.length === 1 ? (
-              <OptimizedImage 
-                uri={displayImages[0]} 
-                style={styles.businessCategoryImage}
-                resizeMode="cover"
-              />
-            ) : (
-              <View
-                style={[
-                  styles.businessCategoryImage,
-                  { justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.05)' },
-                ]}
-              >
-                {item.icon ? (
-                  <Text style={styles.businessCategoryIcon}>
-                    {item.icon}
-                  </Text>
-                ) : null}
-              </View>
-            )}
-            <LinearGradient
-              colors={['transparent', 'rgba(0,0,0,0.75)']}
-              style={StyleSheet.absoluteFillObject}
-              pointerEvents="none"
-            />
-            <View
-              style={[
-                StyleSheet.absoluteFillObject,
-                { justifyContent: 'flex-end', padding: moderateScale(6) },
-              ]}
-              pointerEvents="none"
-            >
-              <Text 
-                style={[styles.businessCategoryName, { color: '#ffffff', textAlign: 'left' }]}
-                numberOfLines={1}
-                ellipsizeMode="tail"
-              >
-                {item.name}
-              </Text>
-            </View>
-          </View>
-        </View>
-      </TouchableOpacity>
-    );
-  }, [handleBusinessCategoryPress, cardWidth, theme, businessCategoryPreviews]);
+    const currentCategory = rotatingBusinessCategories[currentBusinessCategoryIndex];
+    const label = currentCategory?.name || fallback;
+    businessCategoryButtonTextCache.current[fallback] = label;
+    return label;
+  }, [rotatingBusinessCategories, currentBusinessCategoryIndex]);
+
+  const getGreetingCategoryButtonLabel = useCallback(() => {
+    const fallback = 'General';
+    if (greetingCategories.length === 0) {
+      return greetingCategoryButtonTextCache.current[fallback] || fallback;
+    }
+    const currentCategory = greetingCategories[currentCategoryIndex];
+    const label = currentCategory?.name || fallback;
+    greetingCategoryButtonTextCache.current[fallback] = label;
+    return label;
+  }, [greetingCategories, currentCategoryIndex]);
+
+  const renderBusinessCategoryCard = useCallback(
+    ({ item }: { item: BusinessCategory }) => (
+      <BusinessCategoryCardItem
+        item={item}
+        cardWidth={cardWidth}
+        theme={theme}
+        previewTemplates={businessCategoryPreviews[item.id]}
+        onPress={handleBusinessCategoryPress}
+      />
+    ),
+    [businessCategoryPreviews, cardWidth, theme, handleBusinessCategoryPress]
+  );
 
   // Render greeting category card using memoized component
   const renderGreetingCategoryCard = useCallback(({ item }: { item: { id: string; name: string; icon: string; color?: string } }) => {
@@ -2245,11 +2276,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         opacity: businessCategoryFadeAnim,
                       }
                     ]}>
-                      {(() => {
-                        if (rotatingBusinessCategories.length === 0) return 'Business';
-                        const currentCategory = rotatingBusinessCategories[currentBusinessCategoryIndex];
-                        return currentCategory?.name || rotatingBusinessCategories[0]?.name || 'Business';
-                      })()}
+                      {getBusinessCategoryButtonLabel()}
                     </Animated.Text>
           </View>
                 </LinearGradient>
@@ -2285,9 +2312,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         opacity: categoryFadeAnim,
                       }
                     ]}>
-                      {greetingCategories.length > 0 
-                        ? greetingCategories[currentCategoryIndex]?.name || 'General'
-                        : 'General'}
+                      {getGreetingCategoryButtonLabel()}
                     </Animated.Text>
                   </View>
                 </LinearGradient>
@@ -2508,9 +2533,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         colors={['transparent', 'rgba(0,0,0,0.7)']}
                         style={styles.upcomingEventOverlay}
                       />
-                      {/* <View style={styles.upcomingEventBadge}>
-                        <Text style={styles.upcomingEventBadgeText}>{event.category}</Text>
-                      </View> */}
                     </View>
                   </TouchableOpacity>
                 ))}
@@ -2626,10 +2648,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   goodMorningTemplatesRaw.length > 0 ? goodMorningTemplatesRaw : goodMorningTemplates,
                   'good morning',
                   () => {
-                    console.log(
-                      '📦 [GOOD MORNING] API Response:',
-                      JSON.stringify(goodMorningTemplatesRaw, null, 2)
-                    );
                   }
                 )}
                 keyExtractor={keyExtractor}
@@ -3041,22 +3059,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {/* {event.isFree ? (
-                          <LinearGradient
-                            colors={['#4ecdc4', '#44a08d']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.upcomingEventModalBadge}
-                          >
-                            <Icon name="star" size={moderateScale(9)} color="#ffffff" />
-                            <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                          </LinearGradient>
-                        ) : (
-                          <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
-                            <Icon name="star" size={moderateScale(9)} color="#FFD700" />
-                            <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
-                          </View>
-                        )} */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -3244,22 +3246,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {/* {video.isPremium ? (
-                          <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
-                            <Icon name="star" size={moderateScale(9)} color="#FFD700" />
-                            <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
-                          </View>
-                        ) : (
-                          <LinearGradient
-                            colors={['#4ecdc4', '#44a08d']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.upcomingEventModalBadge}
-                          >
-                            <Icon name="star" size={moderateScale(9)} color="#ffffff" />
-                            <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                          </LinearGradient>
-                        )} */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -3335,15 +3321,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {/* <LinearGradient
-                          colors={['#4ecdc4', '#44a08d']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.upcomingEventModalBadge}
-                        >
-                          <Icon name="star" size={12} color="#ffffff" />
-                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -3412,15 +3389,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {/* <LinearGradient
-                          colors={['#4ecdc4', '#44a08d']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.upcomingEventModalBadge}
-                        >
-                          <Icon name="star" size={12} color="#ffffff" />
-                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -3489,15 +3457,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {/* <LinearGradient
-                          colors={['#4ecdc4', '#44a08d']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.upcomingEventModalBadge}
-                        >
-                          <Icon name="star" size={12} color="#ffffff" />
-                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -3566,15 +3525,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {/* <LinearGradient
-                          colors={['#4ecdc4', '#44a08d']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.upcomingEventModalBadge}
-                        >
-                          <Icon name="star" size={12} color="#ffffff" />
-                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
@@ -3643,15 +3593,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                           colors={['transparent', 'rgba(0,0,0,0.8)']}
                           style={styles.upcomingEventModalOverlay}
                         />
-                        {/* <LinearGradient
-                          colors={['#4ecdc4', '#44a08d']}
-                          start={{ x: 0, y: 0 }}
-                          end={{ x: 1, y: 0 }}
-                          style={styles.upcomingEventModalBadge}
-                        >
-                          <Icon name="star" size={12} color="#ffffff" />
-                          <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                        </LinearGradient> */}
                       </View>
                     </TouchableOpacity>
                   )}
