@@ -523,6 +523,13 @@ const HomeScreen: React.FC = React.memo(() => {
   const [businessCategories, setBusinessCategories] = useState<BusinessCategory[]>([]);
   const [businessCategoriesLoading, setBusinessCategoriesLoading] = useState(false);
   const [businessCategoryPreviews, setBusinessCategoryPreviews] = useState<Record<string, Template[]>>({});
+  // Rotating business categories for button display
+  const [rotatingBusinessCategories, setRotatingBusinessCategories] = useState<Array<{ id: string; name: string }>>([]);
+  const [currentBusinessCategoryIndex, setCurrentBusinessCategoryIndex] = useState(0);
+  const businessCategoryFadeAnim = useRef(new Animated.Value(1)).current;
+  // Highlight state for business categories section
+  const [isBusinessCategoriesHighlighted, setIsBusinessCategoriesHighlighted] = useState(false);
+  const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Greeting categories state
   const [greetingCategoriesList, setGreetingCategoriesList] = useState<Array<{ id: string; name: string; icon: string; color?: string }>>([]);
@@ -548,6 +555,21 @@ const HomeScreen: React.FC = React.memo(() => {
       }),
     ]).start();
   }, [categoryFadeAnim]);
+
+  const animateBusinessCategoryChange = useCallback(() => {
+    Animated.sequence([
+      Animated.timing(businessCategoryFadeAnim, {
+        toValue: 0,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+      Animated.timing(businessCategoryFadeAnim, {
+        toValue: 1,
+        duration: 200,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, [businessCategoryFadeAnim]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1080,13 +1102,24 @@ const HomeScreen: React.FC = React.memo(() => {
       setBusinessCategoriesLoading(true);
       try {
         const response = await businessCategoriesService.getBusinessCategories();
-        if (isMounted && response.success && response.categories) {
+        if (isMounted && response && response.success) {
+          // Get all categories from response (for rotation)
+          // Handle both response structures: response.categories or response.data?.categories
+          const allCategories = response.categories || (response as any).data?.categories || [];
+          
+          if (!allCategories || allCategories.length === 0) {
+            if (__DEV__) {
+              console.warn('⚠️ [BUSINESS CATEGORIES] No categories in response:', response);
+            }
+            return;
+          }
+          
           // Get current user's business category
           const currentUser = authService.getCurrentUser();
           const userCategory = currentUser?.category || currentUser?._originalCategory || '';
           
-          // Filter out user's own business category
-          const filteredCategories = response.categories.filter((category: BusinessCategory) => {
+          // Filter out user's own business category (for section display only)
+          const filteredCategories = allCategories.filter((category: BusinessCategory) => {
             const categoryName = category.name?.trim() || '';
             const userCategoryName = userCategory?.trim() || '';
             // Compare both name and ID to ensure we filter correctly
@@ -1095,11 +1128,40 @@ const HomeScreen: React.FC = React.memo(() => {
           });
           
           setBusinessCategories(filteredCategories);
+          
+          // Set rotating business categories for button display (use ALL categories including user's own)
+          // This ensures we have categories to rotate through in the button
+          const rotatingCategories = allCategories
+            .filter((category: BusinessCategory) => category && category.name && category.name.trim())
+            .map((category: BusinessCategory) => ({
+              id: category.id,
+              name: category.name.trim(),
+            }));
+          
+          if (rotatingCategories.length > 0) {
+            setRotatingBusinessCategories(rotatingCategories);
+            // Reset index to 0 when categories are loaded
+            setCurrentBusinessCategoryIndex(0);
+            if (__DEV__) {
+              console.log('✅ [ROTATING BUSINESS CATEGORIES] Set:', rotatingCategories.length, 'categories for rotation');
+              console.log('   Categories:', rotatingCategories.map(c => c.name).join(', '));
+            }
+          } else {
+            if (__DEV__) {
+              console.warn('⚠️ [ROTATING BUSINESS CATEGORIES] No valid categories found');
+            }
+          }
+          
           fetchBusinessCategoryPreviewImages(filteredCategories);
           
           if (__DEV__) {
-            console.log('✅ [BUSINESS CATEGORIES] Loaded:', filteredCategories.length, 'categories');
-            console.log('   User category (excluded):', userCategory);
+            console.log('✅ [BUSINESS CATEGORIES] Loaded:', filteredCategories.length, 'filtered categories');
+            console.log('   Total categories from API:', allCategories.length);
+            console.log('   User category (excluded from section):', userCategory);
+          }
+        } else {
+          if (__DEV__) {
+            console.warn('⚠️ [BUSINESS CATEGORIES] No categories in API response');
           }
         }
       } catch (error) {
@@ -1131,6 +1193,27 @@ const HomeScreen: React.FC = React.memo(() => {
     
     return () => clearInterval(interval);
   }, [greetingCategories, animateCategoryChange]);
+
+  // Rotate business categories every 3 seconds
+  useEffect(() => {
+    if (rotatingBusinessCategories.length === 0) return;
+    
+    const interval = setInterval(() => {
+      animateBusinessCategoryChange();
+      setCurrentBusinessCategoryIndex((prevIndex) => (prevIndex + 1) % rotatingBusinessCategories.length);
+    }, 3000); // Change every 3 seconds
+    
+    return () => clearInterval(interval);
+  }, [rotatingBusinessCategories, animateBusinessCategoryChange]);
+
+  // Cleanup highlight timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (highlightTimeoutRef.current) {
+        clearTimeout(highlightTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Optimized: Use ref to cache greeting templates and only recalculate when data lengths change
   const greetingTemplatesCacheRef = useRef<{
@@ -1597,6 +1680,27 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     setIsBusinessCategoriesModalVisible(true);
   }, []);
 
+  // Store the Y position of business categories section
+  const businessCategoriesSectionY = useRef<number>(0);
+
+  const handleBusinessButtonPress = useCallback(() => {
+    setSelectedCategory('business');
+    
+    // Clear any existing highlight timeout
+    if (highlightTimeoutRef.current) {
+      clearTimeout(highlightTimeoutRef.current);
+    }
+    
+    // Highlight the business categories section
+    setIsBusinessCategoriesHighlighted(true);
+    
+    // Clear highlight after 3 seconds
+    highlightTimeoutRef.current = setTimeout(() => {
+      setIsBusinessCategoriesHighlighted(false);
+      highlightTimeoutRef.current = null;
+    }, 3000);
+  }, []);
+
   const handleViewAllGeneralCategories = useCallback(() => {
     // Navigate to GreetingTemplatesScreen which shows all general/greeting categories
     navigation.navigate('GreetingTemplates');
@@ -1754,6 +1858,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
 
   const featuredCarouselRef = useRef<FlatList<FeaturedContent>>(null);
   const [featuredCarouselIndex, setFeaturedCarouselIndex] = useState(0);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const businessCategoriesSectionRef = useRef<View>(null);
 
   useEffect(() => {
     if (!featuredContent.length) return;
@@ -2072,6 +2178,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         </View>
 
         <ScrollView 
+          ref={scrollViewRef}
           style={styles.content}
           contentContainerStyle={[styles.scrollContent, { paddingBottom: 80 + insets.bottom }]}
           showsVerticalScrollIndicator={false}
@@ -2111,7 +2218,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   styles.categoryButtonBusiness,
                   selectedCategory === 'business' && styles.categoryButtonActive,
                 ]}
-                onPress={() => setSelectedCategory('business')}
+                onPress={handleBusinessButtonPress}
                 activeOpacity={0.85}
               >
                 <LinearGradient
@@ -2130,13 +2237,20 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                       color={selectedCategory === 'business' ? '#ffffff' : '#667eea'} 
                       style={styles.categoryButtonIcon}
                     />
-                    <Text style={[
+                    <Animated.Text style={[
                       styles.categoryButtonText,
                       styles.categoryButtonTextBusiness,
-                      { color: selectedCategory === 'business' ? '#ffffff' : '#667eea' }
+                      { 
+                        color: selectedCategory === 'business' ? '#ffffff' : '#667eea',
+                        opacity: businessCategoryFadeAnim,
+                      }
                     ]}>
-                      Business
-                    </Text>
+                      {(() => {
+                        if (rotatingBusinessCategories.length === 0) return 'Business';
+                        const currentCategory = rotatingBusinessCategories[currentBusinessCategoryIndex];
+                        return currentCategory?.name || rotatingBusinessCategories[0]?.name || 'Business';
+                      })()}
+                    </Animated.Text>
           </View>
                 </LinearGradient>
               </TouchableOpacity>
@@ -2219,7 +2333,30 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
 
           {/* Business Categories Section */}
           {!isSearching && searchQuery.trim() === '' && businessCategories.length > 0 && (
-            <View style={styles.businessCategoriesSection}>
+            <View 
+              ref={businessCategoriesSectionRef} 
+              style={[
+                styles.businessCategoriesSection,
+                isBusinessCategoriesHighlighted ? styles.businessCategoriesSectionHighlighted : null
+              ]}
+              onLayout={() => {
+                // Measure absolute position relative to ScrollView
+                if (businessCategoriesSectionRef.current && scrollViewRef.current) {
+                  businessCategoriesSectionRef.current.measureLayout(
+                    scrollViewRef.current as any,
+                    (x, y) => {
+                      businessCategoriesSectionY.current = y;
+                    },
+                    () => {
+                      // Fallback: store relative position
+                      businessCategoriesSectionRef.current?.measure((x, y, width, height, pageX, pageY) => {
+                        businessCategoriesSectionY.current = pageY;
+                      });
+                    }
+                  );
+                }
+              }}
+            >
               <View style={styles.sectionHeader}>
               <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
                 Business Categories
@@ -4301,6 +4438,21 @@ const styles = StyleSheet.create({
   businessCategoriesSection: {
     paddingBottom: verticalScale(15),
     paddingHorizontal: moderateScale(8),
+  },
+  businessCategoriesSectionHighlighted: {
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+    borderRadius: moderateScale(12),
+    borderWidth: 2,
+    borderColor: '#667eea',
+    shadowColor: '#667eea',
+    shadowOffset: {
+      width: 0,
+      height: 0,
+    },
+    shadowOpacity: 0.5,
+    shadowRadius: 10,
+    elevation: 8,
+    marginVertical: moderateScale(4),
   },
   businessCategoryCard: {
     marginRight: moderateScale(3),
