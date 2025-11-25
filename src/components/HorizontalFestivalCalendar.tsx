@@ -7,11 +7,14 @@ import {
   ScrollView,
   TouchableOpacity,
   FlatList,
+  Animated,
+  Easing,
 } from 'react-native';
 import { useTheme } from '../context/ThemeContext';
 import OptimizedImage from './OptimizedImage';
 import { Template } from '../services/dashboard';
 import calendarApi from '../services/calendarApi';
+import LinearGradient from 'react-native-linear-gradient';
 
 // Festival data structure
 interface FestivalData {
@@ -282,6 +285,30 @@ const HorizontalFestivalCalendar: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedDatePosters, setSelectedDatePosters] = useState<Template[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
+  const borderAnimation = useRef(new Animated.Value(0)).current;
+
+  const gradientColors = [theme.colors.secondary, theme.colors.primary];
+  const borderThickness = 2.5;
+  const borderInset = borderThickness + 1.2;
+
+  const rotation = borderAnimation.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '360deg'],
+  });
+
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.timing(borderAnimation, {
+        toValue: 1,
+        duration: 3500,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    );
+    borderAnimation.setValue(0);
+    loop.start();
+    return () => loop.stop();
+  }, [borderAnimation]);
 
   // Use state for current date so it updates automatically
   const [currentDateState, setCurrentDateState] = useState(() => new Date());
@@ -451,17 +478,22 @@ const HorizontalFestivalCalendar: React.FC = () => {
             const festival = hasFestival(day);
             const dayOfWeek = new Date(currentYear, currentMonth, day).getDay();
 
-            return (
-              <TouchableOpacity
-                key={day}
-                style={[
-                  styles.dayCell,
-                  isCurrentDay && styles.currentDayCell,
-                  isSelected && styles.selectedDayCell,
-                  { backgroundColor: theme.colors.cardBackground },
-                ]}
-                onPress={() => handleDateSelect(day)}
-                activeOpacity={0.7}
+            const dayCellStyles = [
+              styles.dayCell,
+              { backgroundColor: theme.colors.cardBackground },
+            ];
+
+            if (isCurrentDay) {
+              dayCellStyles.push(styles.currentDayCell, styles.dayCellFill);
+            }
+
+            if (isSelected) {
+              dayCellStyles.push(isCurrentDay ? styles.selectedCurrentDayCell : styles.selectedDayCell);
+            }
+
+            const dayContent = (
+              <View
+                style={dayCellStyles}
               >
                 <Text style={[styles.dayNameText, { color: theme.colors.textSecondary }]}>
                   {dayNames[dayOfWeek]}
@@ -478,6 +510,56 @@ const HorizontalFestivalCalendar: React.FC = () => {
                 </Text>
                 {festival && (
                   <View style={[styles.festivalDot, { backgroundColor: festival.color }]} />
+                )}
+              </View>
+            );
+
+            return (
+              <TouchableOpacity
+                key={day}
+                onPress={() => handleDateSelect(day)}
+                activeOpacity={0.7}
+                style={styles.dayTouchable}
+              >
+                {isCurrentDay ? (
+                  <View style={styles.gradientBorderWrapper}>
+                    <Animated.View
+                      style={[
+                        styles.runningBorderOverlay,
+                        {
+                          transform: [{ rotate: rotation }],
+                        },
+                      ]}
+                    >
+                      <LinearGradient
+                        colors={[
+                          gradientColors[0],
+                          '#ffffff',
+                          gradientColors[1],
+                          'rgba(255,255,255,0.6)',
+                        ]}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                        style={styles.gradientBorderFill}
+                      />
+                    </Animated.View>
+                    <View
+                      style={[
+                        styles.gradientBorderInner,
+                        {
+                          backgroundColor: theme.colors.cardBackground,
+                          top: borderInset,
+                          bottom: borderInset,
+                          left: borderInset,
+                          right: borderInset,
+                        },
+                      ]}
+                    >
+                      {dayContent}
+                    </View>
+                  </View>
+                ) : (
+                  dayContent
                 )}
               </TouchableOpacity>
             );
@@ -521,24 +603,33 @@ const styles = StyleSheet.create({
   calendarScrollContent: {
     paddingHorizontal: moderateScale(3),
   },
+  dayTouchable: {
+    marginRight: moderateScale(4),
+  },
   dayCell: {
     width: isTablet ? 60 : 50,
     height: isTablet ? 75 : 65,
     justifyContent: 'center',
     alignItems: 'center',
     borderRadius: moderateScale(8),
-    marginRight: moderateScale(4),
     paddingVertical: moderateScale(6),
     borderWidth: 1,
     borderColor: 'rgba(0,0,0,0.1)',
   },
   currentDayCell: {
-    borderWidth: 2,
-    borderColor: '#667eea',
+    borderWidth: 0,
+    borderColor: 'transparent',
+  },
+  dayCellFill: {
+    width: '100%',
+    height: '100%',
   },
   selectedDayCell: {
     borderWidth: 2,
     borderColor: '#667eea',
+    backgroundColor: 'rgba(102, 126, 234, 0.1)',
+  },
+  selectedCurrentDayCell: {
     backgroundColor: 'rgba(102, 126, 234, 0.1)',
   },
   dayNameText: {
@@ -556,6 +647,31 @@ const styles = StyleSheet.create({
     width: moderateScale(6),
     height: moderateScale(6),
     borderRadius: moderateScale(3),
+  },
+  gradientBorderWrapper: {
+    width: isTablet ? 60 : 50,
+    height: isTablet ? 75 : 65,
+    borderRadius: moderateScale(10),
+    position: 'relative',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  gradientBorderInner: {
+    position: 'absolute',
+    borderRadius: moderateScale(8),
+    overflow: 'hidden',
+  },
+  runningBorderOverlay: {
+    position: 'absolute',
+    width: isTablet ? 60 : 50,
+    height: isTablet ? 75 : 65,
+    borderRadius: moderateScale(12),
+    overflow: 'hidden',
+  },
+  gradientBorderFill: {
+    ...StyleSheet.absoluteFillObject,
+    borderRadius: moderateScale(12),
   },
   postersSection: {
     marginTop: moderateScale(10),
