@@ -131,9 +131,9 @@ class GreetingTemplatesService {
   }
 
   // Get greeting templates by category
-  async getTemplatesByCategory(category: string): Promise<GreetingTemplate[]> {
+  async getTemplatesByCategory(category: string, limit: number = 200): Promise<GreetingTemplate[]> {
     try {
-      const response = await api.get(`/api/mobile/greetings/templates?category=${category}`);
+      const response = await api.get(`/api/mobile/greetings/templates?category=${category}&limit=${limit}`);
       
       if (response.data.success) {
         // API returns images in businessCategoryImages, not templates
@@ -200,7 +200,9 @@ class GreetingTemplatesService {
       if (filters?.language) params.append('language', filters.language);
       if (filters?.isPremium !== undefined) params.append('isPremium', filters.isPremium.toString());
       if (filters?.search) params.append('search', filters.search);
-      if (filters?.limit) params.append('limit', filters.limit.toString());
+      // Use limit 200 for category requests if no limit specified (for General Categories)
+      const limit = filters?.limit || (filters?.category ? 200 : undefined);
+      if (limit) params.append('limit', limit.toString());
 
       const endpoint = `/api/mobile/greetings/templates?${params.toString()}`;
       const response = await api.get(endpoint);

@@ -219,7 +219,6 @@ const HomeScreen: React.FC = React.memo(() => {
   const [currentRequestId, setCurrentRequestId] = useState(0);
   const [disableBackgroundUpdates, setDisableBackgroundUpdates] = useState(false);
   const [isUpcomingEventsModalVisible, setIsUpcomingEventsModalVisible] = useState(false);
-  const [isTemplatesModalVisible, setIsTemplatesModalVisible] = useState(false);
   const [isBusinessCategoriesModalVisible, setIsBusinessCategoriesModalVisible] = useState(false);
   const [isVideosModalVisible, setIsVideosModalVisible] = useState(false);
   const [showVideoComingSoonModal, setShowVideoComingSoonModal] = useState(false);
@@ -1123,13 +1122,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     setIsUpcomingEventsModalVisible(false);
   }, []);
 
-  const handleViewAllTemplates = useCallback(() => {
-    setIsTemplatesModalVisible(true);
-  }, []);
-
-  const closeTemplatesModal = useCallback(() => {
-    setIsTemplatesModalVisible(false);
-  }, []);
 
   const handleViewAllVideos = useCallback(() => {
     setIsVideosModalVisible(true);
@@ -1583,6 +1575,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         searchQuery: '',
         templateSource: 'professional',
         businessCategory: category.name,
+        posterLimit: 5, // Limit 5 for business categories from HomeScreen
       });
       return;
     }
@@ -1607,6 +1600,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             searchQuery: '',
             templateSource: 'professional',
             businessCategory: category.name,
+            posterLimit: 5, // Limit 5 for business categories from HomeScreen
           });
           return;
         }
@@ -1630,6 +1624,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
       searchQuery: '',
       templateSource: 'professional',
       businessCategory: category.name,
+      posterLimit: 5, // Limit 5 for business categories from HomeScreen
     });
   }, [businessCategoryPreviews, navigation]);
 
@@ -2172,34 +2167,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             </View>
           )}
 
-          {/* Templates Grid - Hidden when searching, only show if data exists */}
-          {!isSearching && searchQuery.trim() === '' && professionalTemplates.length > 0 && (
-            <View style={styles.templatesSection}>
-              <View style={styles.sectionHeader}>
-                <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
-                  Business Events
-                </Text>
-                {renderBrowseAllButton(handleViewAllTemplates)}
-              </View>
-              <FlatList
-                key={`templates-${templates.length}`}
-                data={templates.length > 0 ? templates : professionalTemplates}
-                renderItem={renderTemplate}
-                keyExtractor={keyExtractor}
-                horizontal={true}
-                showsHorizontalScrollIndicator={false}
-                nestedScrollEnabled={true}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={10}
-                windowSize={5}
-                initialNumToRender={10}
-                updateCellsBatchingPeriod={50}
-                getItemLayout={getItemLayout}
-                contentContainerStyle={styles.horizontalList}
-              />
-            </View>
-          )}
-          
           {/* Search Results - Shown only when searching */}
           {isSearching && searchQuery.trim() !== '' && (
             <View style={styles.templatesSection}>
@@ -2747,95 +2714,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           </View>
         </Modal>
 
-        {/* Business Events Modal */}
-        <Modal
-          visible={isTemplatesModalVisible}
-          transparent={true}
-          animationType="slide"
-          onRequestClose={closeTemplatesModal}
-        >
-          <View style={styles.modalOverlay}>
-            <View style={styles.upcomingEventsModalContent}>
-              <LinearGradient
-                colors={['#f5f5f5', '#ffffff']}
-                style={styles.upcomingEventsModalGradient}
-              >
-                <View style={styles.upcomingEventsModalHeader}>
-                  <View style={styles.upcomingEventsModalTitleContainer}>
-                    <Text style={styles.upcomingEventsModalTitle}>Business Events</Text>
-                  </View>
-                  <TouchableOpacity 
-                    style={styles.upcomingEventsCloseButton}
-                    onPress={closeTemplatesModal}
-                  >
-                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
-                  </TouchableOpacity>
-                </View>
-              </LinearGradient>
-              <View style={styles.upcomingEventsModalBody}>
-                <FlatList
-                  key={`templates-modal-${professionalTemplates.length}`}
-                  data={professionalTemplates}
-                  keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
-                  columnWrapperStyle={styles.upcomingEventModalRow}
-                  contentContainerStyle={styles.upcomingEventsModalScroll}
-                  showsVerticalScrollIndicator={false}
-                  removeClippedSubviews={true}
-                  maxToRenderPerBatch={10}
-                  windowSize={5}
-                  initialNumToRender={10}
-                  updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
-                    <TouchableOpacity
-                      activeOpacity={0.8}
-                      style={styles.upcomingEventModalCard}
-                      onPress={() => {
-                        closeTemplatesModal();
-                        const templateData: Template = {
-                          id: template.id,
-                          name: template.name,
-                          thumbnail: template.thumbnail,
-                          category: template.category,
-                          downloads: 0,
-                          isDownloaded: false,
-                        };
-                        navigation.navigate('PosterPlayer', {
-                          selectedPoster: templateData,
-                          relatedPosters: professionalTemplates.slice(0, 6),
-                        });
-                      }}
-                    >
-                      <View style={styles.upcomingEventModalImageContainer}>
-                        <OptimizedImage uri={template.thumbnail} style={styles.upcomingEventModalImage} resizeMode="cover" />
-                        <LinearGradient
-                          colors={['transparent', 'rgba(0,0,0,0.8)']}
-                          style={styles.upcomingEventModalOverlay}
-                        />
-                        {/* {template.isPremium ? (
-                          <View style={[styles.upcomingEventModalBadge, styles.premiumEventBadge]}>
-                            <Icon name="star" size={moderateScale(9)} color="#FFD700" />
-                            <Text style={[styles.upcomingEventModalBadgeText, styles.premiumEventBadgeText]}>Premium</Text>
-                          </View>
-                        ) : (
-                          <LinearGradient
-                            colors={['#4ecdc4', '#44a08d']}
-                            start={{ x: 0, y: 0 }}
-                            end={{ x: 1, y: 0 }}
-                            style={styles.upcomingEventModalBadge}
-                          >
-                            <Icon name="star" size={moderateScale(9)} color="#ffffff" />
-                            <Text style={styles.upcomingEventModalBadgeText}>Free</Text>
-                          </LinearGradient>
-                        )} */}
-                      </View>
-                    </TouchableOpacity>
-                  )}
-                />
-              </View>
-            </View>
-          </View>
-        </Modal>
 
         {/* Business Categories Modal */}
         <Modal

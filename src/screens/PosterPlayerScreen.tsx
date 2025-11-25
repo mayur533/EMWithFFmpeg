@@ -286,6 +286,7 @@ const PosterPlayerScreen: React.FC = () => {
     businessCategory,
     greetingCategory,
     originScreen,
+    posterLimit,
   } = route.params;
   const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
   const [allTemplates, setAllTemplates] = useState<Template[]>([]);
@@ -536,8 +537,9 @@ const PosterPlayerScreen: React.FC = () => {
 
     const fetchBusinessCategoryPosters = async () => {
       try {
-        console.log('📡 [POSTER PLAYER] Fetching business category posters for:', businessCategory);
-        const response = await businessCategoryPostersApi.getPostersByCategory(businessCategory, 5);
+        const limit = posterLimit || 5; // Default to 5 if not specified, use 200 for "My Business"
+        console.log('📡 [POSTER PLAYER] Fetching business category posters for:', businessCategory, 'with limit:', limit);
+        const response = await businessCategoryPostersApi.getPostersByCategory(businessCategory, limit);
         
         if (response.success && response.data.posters) {
           // Convert BusinessCategoryPoster to Template format (already limited to 5 by API)
@@ -586,7 +588,7 @@ const PosterPlayerScreen: React.FC = () => {
     };
 
     fetchBusinessCategoryPosters();
-  }, [businessCategory]);
+  }, [businessCategory, posterLimit]);
 
   // Fetch greeting category templates when greetingCategory is provided
   useEffect(() => {

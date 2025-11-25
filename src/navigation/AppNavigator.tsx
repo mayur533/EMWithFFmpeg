@@ -18,6 +18,9 @@ import {
   Modal,
   ActivityIndicator,
   Alert,
+  FlatList,
+  StyleSheet,
+  ScrollView,
 } from 'react-native';
 
 // Responsive scaling functions
@@ -58,6 +61,7 @@ export type MainStackParamList = {
     businessCategory?: string;
     greetingCategory?: string;
     originScreen?: string;
+    posterLimit?: number;
   };
   AboutUs: undefined;
   PrivacyPolicy: undefined;
@@ -143,9 +147,12 @@ import GreetingTemplatesScreen from '../screens/GreetingTemplatesScreen';
 import GreetingEditorScreen from '../screens/GreetingEditorScreen';
 import MyPostersScreen from '../screens/MyPostersScreen';
 import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
+import businessProfileService from '../services/businessProfile';
+import userBusinessProfilesService from '../services/userBusinessProfiles';
 import AboutUsScreen from '../screens/AboutUsScreen';
 import PrivacyPolicyScreen from '../screens/PrivacyPolicyScreen';
 import HelpSupportScreen from '../screens/HelpSupportScreen';
+import LinearGradient from 'react-native-linear-gradient';
 
 const Stack = createStackNavigator<RootStackParamList>();
 const MainStack = createStackNavigator<MainStackParamList>();
@@ -251,6 +258,9 @@ const CustomTabBar = (props: any) => {
   const { theme } = useTheme();
   const insets = useSafeAreaInsets();
   const [isLoadingPosters, setIsLoadingPosters] = React.useState(false);
+  const [isBusinessProfilesModalVisible, setIsBusinessProfilesModalVisible] = React.useState(false);
+  const [businessProfiles, setBusinessProfiles] = React.useState<any[]>([]);
+  const [isLoadingProfiles, setIsLoadingProfiles] = React.useState(false);
   const isPosterPlayerFocused = props.state.routes[props.state.index]?.name === 'PosterPlayer';
   
   // Dynamic dimensions for screen rotation/resize support
@@ -283,8 +293,9 @@ const CustomTabBar = (props: any) => {
   const fontSize = currentModerateScale(isCurrentlySmall ? 7 : 8);
   const borderWidth = currentModerateScale(0.8); // Further reduced from 1
   
-  const handlePosterPlayerShortcut = React.useCallback(async () => {
-    console.log('🖱️ [NAVBAR] Poster shortcut triggered - fetching user category posters');
+
+  // Default behavior: load posters for user's category
+  const loadPostersForUserCategory = React.useCallback(async () => {
     setIsLoadingPosters(true);
 
     try {
@@ -342,6 +353,203 @@ const CustomTabBar = (props: any) => {
       setIsLoadingPosters(false);
     }
   }, [props.navigation]);
+
+  // Handle profile selection and navigate to posters
+  const handleProfileSelection = React.useCallback(async (profile: any) => {
+    setIsBusinessProfilesModalVisible(false);
+    setIsLoadingPosters(true);
+
+    try {
+      const category = profile.category || 'General';
+      console.log(`📡 [NAVBAR] Fetching posters for category: ${category}`);
+      
+      const response = await businessCategoryPostersApi.getPostersByCategory(category, 200);
+
+      if (response?.success && response.data?.posters && response.data.posters.length > 0) {
+        // Map BusinessCategoryPoster to Template format for PosterPlayerScreen
+        const mapPosterToTemplate = (poster: any) => ({
+          id: poster.id,
+          name: poster.title || 'Poster',
+          thumbnail: poster.imageUrl || poster.thumbnail || '',
+          category: poster.category || category || 'General',
+          downloads: poster.downloads || 0,
+          isDownloaded: false,
+          languages: [],
+          tags: poster.tags || [],
+        });
+
+        const selectedPoster = mapPosterToTemplate(response.data.posters[0]);
+        const relatedPosters = response.data.posters.slice(1).map(mapPosterToTemplate);
+
+        // Navigate to PosterPlayerScreen with the posters
+        const navigationParams = {
+          selectedPoster,
+          relatedPosters,
+          searchQuery: '',
+          templateSource: 'professional' as const,
+          businessCategory: category,
+          posterLimit: 200, // Limit 200 for "My Business" navigation
+        };
+
+        if (navigationRef.isReady()) {
+          navigateService('PosterPlayer', navigationParams);
+        } else {
+          const parentNavigator = props.navigation.getParent();
+          if (parentNavigator) {
+            parentNavigator.navigate('PosterPlayer', navigationParams);
+          } else {
+            props.navigation.navigate('PosterPlayer', navigationParams);
+          }
+        }
+      } else {
+        console.warn('⚠️ [NAVBAR] No posters available for category:', category);
+        Alert.alert(
+          'No posters available',
+          `We could not find posters for ${category} category right now. Please try again later.`,
+        );
+      }
+    } catch (error) {
+      console.error('❌ [NAVBAR] Error loading category posters:', error);
+      Alert.alert(
+        'Unable to load posters',
+        'Something went wrong while loading posters. Please try again later.',
+      );
+    } finally {
+      setIsLoadingPosters(false);
+    }
+  }, [props.navigation]);
+
+  const handlePosterPlayerShortcut = React.useCallback(async () => {
+    console.log('🖱️ [NAVBAR] Poster shortcut triggered - checking for business profiles');
+    
+    // Reset modal state first
+    setIsBusinessProfilesModalVisible(false);
+    setIsLoadingProfiles(true);
+    
+    try {
+      const currentUser = authService.getCurrentUser();
+      const userId = currentUser?.id;
+      
+      let profiles: any[] = [];
+      
+      if (userId) {
+        // Try to get profiles from backend API first
+        try {
+          const backendProfiles = await businessProfileService.getUserBusinessProfiles(userId);
+          if (backendProfiles && backendProfiles.length > 0) {
+            profiles = backendProfiles;
+          }
+        } catch (error) {
+          console.log('⚠️ [NAVBAR] Backend profiles not available, trying local storage');
+        }
+
+        // Fallback to local storage profiles if backend didn't return any
+        if (profiles.length === 0) {
+          const localProfiles = await userBusinessProfilesService.getBusinessProfiles(userId);
+          profiles = localProfiles || [];
+        }
+      }
+
+      // Filter out any invalid/empty profiles
+      const validProfiles = profiles.filter(profile => 
+        profile && 
+        profile.id && 
+        (profile.name || profile.businessName) && 
+        profile.category
+      );
+      
+      console.log(`📋 [NAVBAR] Business profiles check:`, {
+        totalProfiles: profiles.length,
+        validProfiles: validProfiles.length,
+        userCategory: currentUser?.category || currentUser?._originalCategory,
+        profiles: profiles.map(p => ({ id: p?.id, name: p?.name || p?.businessName, category: p?.category }))
+      });
+      
+      setBusinessProfiles(validProfiles);
+      
+      // Handle different profile scenarios:
+      // 1. If exactly 1 profile exists, directly select it and load posters
+      // 2. If more than 1 profile exists, show modal for selection
+      // 3. If no profiles exist, directly use user's own category
+      if (validProfiles.length === 1) {
+        console.log(`📋 [NAVBAR] Found exactly 1 business profile, directly loading posters for category: ${validProfiles[0].category}`);
+        // Directly select the single profile without showing modal
+        await handleProfileSelection(validProfiles[0]);
+      } else if (validProfiles.length > 1) {
+        console.log(`📋 [NAVBAR] Found ${validProfiles.length} valid business profile(s), showing selection modal`);
+        setIsBusinessProfilesModalVisible(true);
+      } else {
+        console.log(`📋 [NAVBAR] No valid business profiles found (checked ${profiles.length} profiles), directly loading posters for user's own category`);
+        // No business profiles - directly load posters based on user's own business category
+        const userCategory = currentUser?.category || currentUser?._originalCategory || 'General';
+        console.log(`📡 [NAVBAR] No business profiles found, loading posters for user's category: ${userCategory}`);
+        
+        // Directly load posters for user's category without showing modal
+        setIsLoadingPosters(true);
+        try {
+          const response = await businessCategoryPostersApi.getPostersByCategory(userCategory, 200);
+
+          if (response?.success && response.data?.posters && response.data.posters.length > 0) {
+            // Map BusinessCategoryPoster to Template format for PosterPlayerScreen
+            const mapPosterToTemplate = (poster: any) => ({
+              id: poster.id,
+              name: poster.title || 'Poster',
+              thumbnail: poster.imageUrl || poster.thumbnail || '',
+              category: poster.category || userCategory || 'General',
+              downloads: poster.downloads || 0,
+              isDownloaded: false,
+              languages: [],
+              tags: poster.tags || [],
+            });
+
+            const selectedPoster = mapPosterToTemplate(response.data.posters[0]);
+            const relatedPosters = response.data.posters.slice(1).map(mapPosterToTemplate);
+
+            // Navigate to PosterPlayerScreen with the posters
+            const navigationParams = {
+              selectedPoster,
+              relatedPosters,
+              searchQuery: '',
+              templateSource: 'professional' as const,
+              businessCategory: userCategory,
+              posterLimit: 200, // Limit 200 for "My Business" navigation
+            };
+
+            if (navigationRef.isReady()) {
+              navigateService('PosterPlayer', navigationParams);
+            } else {
+              const parentNavigator = props.navigation.getParent();
+              if (parentNavigator) {
+                parentNavigator.navigate('PosterPlayer', navigationParams);
+              } else {
+                props.navigation.navigate('PosterPlayer', navigationParams);
+              }
+            }
+          } else {
+            console.warn('⚠️ [NAVBAR] No posters available for user category:', userCategory);
+            Alert.alert(
+              'No posters available',
+              `We could not find posters for ${userCategory} category right now. Please try again later.`,
+            );
+          }
+        } catch (error) {
+          console.error('❌ [NAVBAR] Error loading user category posters:', error);
+          Alert.alert(
+            'Unable to load posters',
+            'Something went wrong while loading posters. Please try again later.',
+          );
+        } finally {
+          setIsLoadingPosters(false);
+        }
+      }
+    } catch (error) {
+      console.error('❌ [NAVBAR] Error loading business profiles:', error);
+      // On error, fall back to default behavior
+      loadPostersForUserCategory();
+    } finally {
+      setIsLoadingProfiles(false);
+    }
+  }, [loadPostersForUserCategory, handleProfileSelection, props.navigation]);
 
   if (isPosterPlayerFocused) {
     return null;
@@ -524,6 +732,261 @@ const CustomTabBar = (props: any) => {
           >
             Loading posters...
           </Text>
+        </View>
+      </View>
+    </Modal>
+
+    {/* Business Profiles Selection Modal */}
+    <Modal
+      transparent
+      animationType="fade"
+      visible={isBusinessProfilesModalVisible}
+      onRequestClose={() => setIsBusinessProfilesModalVisible(false)}
+    >
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: 'rgba(0,0,0,0.7)',
+          justifyContent: 'flex-end',
+          alignItems: 'center',
+          paddingBottom: Math.max(insets.bottom, 20),
+        }}
+      >
+        <TouchableOpacity
+          activeOpacity={1}
+          onPress={() => setIsBusinessProfilesModalVisible(false)}
+          style={{
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+          }}
+        />
+        <View
+          style={{
+            backgroundColor: theme.colors.surface,
+            borderRadius: 20,
+            width: Math.min(SCREEN_WIDTH * 0.85, 350),
+            aspectRatio: 1,
+            maxHeight: Math.min(SCREEN_HEIGHT * 0.7, 500),
+            paddingTop: 20,
+            paddingBottom: 20,
+            paddingHorizontal: 20,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 4 },
+            shadowOpacity: 0.3,
+            shadowRadius: 15,
+            elevation: 15,
+            marginBottom: Math.max(insets.bottom, 20),
+          }}
+        >
+          {/* Modal Header */}
+          <View
+            style={{
+              flexDirection: 'row',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingBottom: 15,
+              marginBottom: 15,
+              borderBottomWidth: 1,
+              borderBottomColor: theme.colors.border,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 20,
+                fontWeight: 'bold',
+                color: theme.colors.text,
+              }}
+            >
+              Select Business Profile
+            </Text>
+            <TouchableOpacity
+              onPress={() => setIsBusinessProfilesModalVisible(false)}
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: 15,
+                backgroundColor: theme.colors.cardBackground,
+                justifyContent: 'center',
+                alignItems: 'center',
+              }}
+            >
+              <Icon name="close" size={20} color={theme.colors.text} />
+            </TouchableOpacity>
+          </View>
+
+          {/* Loading State */}
+          {isLoadingProfiles ? (
+            <View
+              style={{
+                padding: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <ActivityIndicator size="large" color={theme.colors.primary} />
+              <Text
+                style={{
+                  marginTop: 10,
+                  fontSize: 14,
+                  color: theme.colors.textSecondary,
+                }}
+              >
+                Loading profiles...
+              </Text>
+            </View>
+          ) : businessProfiles.length === 0 ? (
+            <View
+              style={{
+                padding: 40,
+                alignItems: 'center',
+                justifyContent: 'center',
+              }}
+            >
+              <Icon name="business" size={48} color={theme.colors.textSecondary} />
+              <Text
+                style={{
+                  marginTop: 15,
+                  fontSize: 16,
+                  fontWeight: '600',
+                  color: theme.colors.text,
+                  textAlign: 'center',
+                }}
+              >
+                No Business Profiles
+              </Text>
+              <Text
+                style={{
+                  marginTop: 8,
+                  fontSize: 14,
+                  color: theme.colors.textSecondary,
+                  textAlign: 'center',
+                  paddingHorizontal: 20,
+                }}
+              >
+                You don't have any business profiles yet. Create one in your Profile section.
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setIsBusinessProfilesModalVisible(false);
+                  loadPostersForUserCategory();
+                }}
+                style={{
+                  marginTop: 20,
+                  paddingHorizontal: 24,
+                  paddingVertical: 12,
+                  backgroundColor: theme.colors.primary,
+                  borderRadius: 8,
+                }}
+              >
+                <Text
+                  style={{
+                    color: '#ffffff',
+                    fontSize: 14,
+                    fontWeight: '600',
+                  }}
+                >
+                  Continue with Default
+                </Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={{ paddingVertical: 10 }}
+              showsVerticalScrollIndicator={false}
+            >
+              {businessProfiles.map((profile) => (
+                <TouchableOpacity
+                  key={profile.id}
+                  onPress={() => handleProfileSelection(profile)}
+                  style={{
+                    backgroundColor: theme.colors.cardBackground,
+                    borderRadius: 12,
+                    padding: 16,
+                    marginBottom: 12,
+                    borderWidth: 1,
+                    borderColor: theme.colors.border,
+                  }}
+                  activeOpacity={0.7}
+                >
+                  <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                    {profile.logo || profile.companyLogo ? (
+                      <Image
+                        source={{ uri: profile.logo || profile.companyLogo }}
+                        style={{
+                          width: 50,
+                          height: 50,
+                          borderRadius: 8,
+                          marginRight: 12,
+                        }}
+                        resizeMode="cover"
+                      />
+                    ) : (
+                      <View
+                        style={{
+                          width: 50,
+                          height: 50,
+                          borderRadius: 8,
+                          marginRight: 12,
+                          backgroundColor: theme.colors.primary + '20',
+                          justifyContent: 'center',
+                          alignItems: 'center',
+                        }}
+                      >
+                        <Icon
+                          name="business"
+                          size={24}
+                          color={theme.colors.primary}
+                        />
+                      </View>
+                    )}
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontSize: 16,
+                          fontWeight: '600',
+                          color: theme.colors.text,
+                          marginBottom: 4,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {profile.name || profile.businessName || 'Business Profile'}
+                      </Text>
+                      <Text
+                        style={{
+                          fontSize: 13,
+                          color: theme.colors.textSecondary,
+                          marginBottom: 4,
+                        }}
+                        numberOfLines={1}
+                      >
+                        {profile.category || 'General'}
+                      </Text>
+                      {profile.description && (
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            color: theme.colors.textSecondary,
+                          }}
+                          numberOfLines={2}
+                        >
+                          {profile.description}
+                        </Text>
+                      )}
+                    </View>
+                    <Icon
+                      name="chevron-right"
+                      size={24}
+                      color={theme.colors.textSecondary}
+                    />
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          )}
         </View>
       </View>
     </Modal>
