@@ -540,6 +540,19 @@ const HomeScreen: React.FC = React.memo(() => {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
   
+  // Get current user info
+  const currentUser = useMemo(() => authService.getCurrentUser(), []);
+  const userName = useMemo(() => currentUser?.name || currentUser?.username || 'User', [currentUser]);
+  const userInitials = useMemo(() => 
+    userName
+      .split(' ')
+      .map(n => n[0])
+      .join('')
+      .toUpperCase()
+      .slice(0, 2),
+    [userName]
+  );
+  
   // Dynamic dimensions for responsive layout
   const [dimensions, setDimensions] = useState(() => {
     const { width, height } = Dimensions.get('window');
@@ -2190,21 +2203,66 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         {/* Header */}
         <View style={styles.header}>
           <View style={styles.headerTop}>
-            <View style={styles.greeting}>
-              {/* <Text style={styles.userName}>Event Management</Text> */}
-              {apiError && (
-                <View style={styles.apiStatusIndicator}>
-                  <Icon name="wifi-off" size={statusIconSize} color="#ff9800" />
-                  <Text style={styles.apiStatusText}>Offline Mode</Text>
+            {/* User Profile Info */}
+            <TouchableOpacity 
+              style={styles.userProfileSection}
+              activeOpacity={0.7}
+            >
+              <View style={styles.userAvatarContainer}>
+                <View style={[styles.userAvatar, { backgroundColor: theme.colors.primary }]}>
+                  <Text style={styles.userAvatarText}>{userInitials}</Text>
+                </View>
+              </View>
+              <View style={styles.userInfoContainer}>
+                <Text style={[styles.userName, { color: theme.colors.text }]} numberOfLines={1}>
+                  {userName}
+                </Text>
+                {apiError && (
+                  <View style={styles.apiStatusIndicator}>
+                    <Icon name="wifi-off" size={statusIconSize} color="#ff9800" />
+                    <Text style={styles.apiStatusText}>Offline Mode</Text>
+                  </View>
+                )}
+              </View>
+            </TouchableOpacity>
+
+            {/* Header Actions */}
+            <View style={styles.headerActions}>
+              {apiLoading && (
+                <View style={styles.apiLoadingIndicator}>
+                  <ActivityIndicator size="small" color="#4CAF50" />
+                  <Text style={styles.apiLoadingText}>Loading...</Text>
                 </View>
               )}
+              
+              {/* FAQ Button */}
+              <TouchableOpacity
+                style={[styles.headerActionButton, { backgroundColor: theme.colors.cardBackground }]}
+                onPress={() => {
+                  // TODO: Navigate to FAQ screen or show FAQ modal
+                  if (__DEV__) {
+                    console.log('FAQ pressed');
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Icon name="help-outline" size={moderateScale(20)} color={theme.colors.text} />
+              </TouchableOpacity>
+
+              {/* Customer Support Button */}
+              <TouchableOpacity
+                style={[styles.headerActionButton, { backgroundColor: theme.colors.cardBackground }]}
+                onPress={() => {
+                  // TODO: Navigate to Customer Support screen or show support modal
+                  if (__DEV__) {
+                    console.log('Customer Support pressed');
+                  }
+                }}
+                activeOpacity={0.7}
+              >
+                <Icon name="support-agent" size={moderateScale(20)} color={theme.colors.text} />
+              </TouchableOpacity>
             </View>
-            {apiLoading && (
-              <View style={styles.apiLoadingIndicator}>
-                <ActivityIndicator size="small" color="#4CAF50" />
-                <Text style={styles.apiLoadingText}>Loading...</Text>
-              </View>
-            )}
           </View>
         </View>
 
@@ -2221,26 +2279,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           scrollEventThrottle={16}
           bounces={true}
         >
-          {/* Search Bar */}
-          <View style={styles.searchContainer}>
-            <View style={[styles.searchBar, { backgroundColor: theme.colors.cardBackground }]}>
-              <Icon name="search" size={searchIconSize} color={theme.colors.primary} style={styles.searchIcon} />
-              <TextInput
-                style={[styles.searchInput, { color: theme.colors.text }]}
-                placeholder="Search templates..."
-                placeholderTextColor={theme.colors.textSecondary}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                onSubmitEditing={handleSearch}
-                returnKeyType="search"
-              />
-              {searchQuery.length > 0 && (
-                <TouchableOpacity onPress={() => setSearchQuery('')}>
-                  <Icon name="close" size={searchIconSize} color={theme.colors.textSecondary} style={styles.clearIcon} />
-                </TouchableOpacity>
-              )}
-            </View>
-            
           {/* Category Buttons */}
           <View style={styles.categoryButtonsContainer}>
               <TouchableOpacity
@@ -2318,7 +2356,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 </LinearGradient>
               </TouchableOpacity>
             </View>
-          </View>
 
           {featuredContent.length > 0 && (
             <View style={styles.featuredCarouselContainer}>
@@ -4004,12 +4041,58 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   header: {
-    paddingTop: 0,
-    paddingHorizontal: moderateScale(4),
-    paddingBottom: moderateScale(3),
+    paddingTop: moderateScale(8),
+    paddingHorizontal: moderateScale(12),
+    paddingBottom: moderateScale(8),
   },
   headerTop: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  userProfileSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+    marginRight: moderateScale(8),
+  },
+  userAvatarContainer: {
+    marginRight: moderateScale(8),
+  },
+  userAvatar: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...responsiveShadow.small,
+  },
+  userAvatarText: {
+    fontSize: moderateScale(14),
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  userInfoContainer: {
+    flex: 1,
+    justifyContent: 'center',
+  },
+  userName: {
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    marginBottom: moderateScale(2),
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: moderateScale(8),
+  },
+  headerActionButton: {
+    width: moderateScale(40),
+    height: moderateScale(40),
+    borderRadius: moderateScale(20),
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...responsiveShadow.small,
   },
   greeting: {
     flex: 1,

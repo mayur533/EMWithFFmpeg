@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef, useEffect, useMemo } from 'react';
 import {
   View,
   Text,
@@ -312,12 +312,20 @@ const HorizontalFestivalCalendar: React.FC = () => {
 
   // Use state for current date so it updates automatically
   const [currentDateState, setCurrentDateState] = useState(() => new Date());
-  const currentMonth = currentDateState.getMonth();
-  const currentYear = currentDateState.getFullYear();
-  const currentDay = currentDateState.getDate();
   
-  // Get days in month
-  const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
+  // Generate dates from today to 15 days forward
+  const upcomingDates = useMemo(() => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Reset to start of day
+    
+    const dates: Date[] = [];
+    for (let i = 0; i <= 15; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(date);
+    }
+    return dates;
+  }, [currentDateState]);
 
   // Update current date periodically to handle month changes
   useEffect(() => {
@@ -338,8 +346,11 @@ const HorizontalFestivalCalendar: React.FC = () => {
   }, []);
 
   // Handle date selection
-  const handleDateSelect = useCallback(async (day: number) => {
-    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const handleDateSelect = useCallback(async (date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     setSelectedDate(dateString);
     
     // First, try to get from mock data (fallback)
@@ -374,27 +385,33 @@ const HorizontalFestivalCalendar: React.FC = () => {
         setSelectedDatePosters([]);
       }
     }
-  }, [currentMonth, currentYear]);
+  }, []);
 
   // Check if date is today
-  const isToday = useCallback((day: number) => {
-    return day === currentDay && 
-           currentMonth === currentDateState.getMonth() && 
-           currentYear === currentDateState.getFullYear();
-  }, [currentDay, currentMonth, currentYear, currentDateState]);
+  const isToday = useCallback((date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const compareDate = new Date(date);
+    compareDate.setHours(0, 0, 0, 0);
+    return compareDate.getTime() === today.getTime();
+  }, []);
 
   // Check if date has festival
-  const hasFestival = useCallback((day: number) => {
-    const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  const hasFestival = useCallback((date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
     return festivalDays[dateString];
-  }, [currentMonth, currentYear]);
+  }, []);
 
-  // Auto-scroll to today's date on component mount and when month changes
+  // Auto-scroll to today's date on component mount
   useEffect(() => {
     const scrollToToday = () => {
       if (scrollViewRef.current) {
         const itemWidth = isTablet ? 70 : 60;
-        const scrollPosition = (currentDay - 1) * itemWidth - SCREEN_WIDTH / 2 + itemWidth / 2;
+        // Today is always the first item (index 0)
+        const scrollPosition = 0 * itemWidth - SCREEN_WIDTH / 2 + itemWidth / 2;
         scrollViewRef.current.scrollTo({
           x: Math.max(0, scrollPosition),
           animated: true,
@@ -403,27 +420,35 @@ const HorizontalFestivalCalendar: React.FC = () => {
     };
     
     setTimeout(scrollToToday, 100);
-  }, [SCREEN_WIDTH, isTablet, currentDay, currentMonth, currentYear]);
+  }, [SCREEN_WIDTH, isTablet]);
 
-  // Pre-load posters for the current month (optional - improves performance)
+  // Pre-load posters for upcoming dates (optional - improves performance)
   useEffect(() => {
-    const loadMonthPosters = async () => {
+    const loadUpcomingPosters = async () => {
       try {
-        const response = await calendarApi.getPostersByMonth(currentYear, currentMonth + 1);
-        if (response.success && response.data.total > 0) {
-          console.log(`✅ [CALENDAR] Pre-loaded ${response.data.total} posters for month ${currentYear}-${currentMonth + 1}`);
-          // Posters are now cached and will be available instantly when user clicks a date
-        }
+        // Pre-load posters for all upcoming dates
+        const loadPromises = upcomingDates.map(async (date) => {
+          const year = date.getFullYear();
+          const month = date.getMonth() + 1;
+          const day = date.getDate();
+          const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          try {
+            await calendarApi.getPostersByDate(dateString);
+          } catch (error) {
+            // Silently fail for individual dates
+          }
+        });
+        await Promise.allSettled(loadPromises);
       } catch (error) {
         // Silently fail - this is just a performance optimization
         if (__DEV__) {
-          console.log('⚠️ [CALENDAR] Could not pre-load month posters (this is okay)');
+          console.log('⚠️ [CALENDAR] Could not pre-load upcoming posters (this is okay)');
         }
       }
     };
     
-    loadMonthPosters();
-  }, [currentYear, currentMonth]);
+    loadUpcomingPosters();
+  }, [upcomingDates]);
 
   const renderPosterCard = useCallback(({ item }: { item: Template }) => {
     const cardWidth = SCREEN_WIDTH * 0.28;
@@ -471,12 +496,15 @@ const HorizontalFestivalCalendar: React.FC = () => {
           showsHorizontalScrollIndicator={false}
           contentContainerStyle={styles.calendarScrollContent}
         >
-          {Array.from({ length: daysInMonth }, (_, index) => index + 1).map((day) => {
-            const dateString = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+          {upcomingDates.map((date) => {
+            const year = date.getFullYear();
+            const month = date.getMonth() + 1;
+            const day = date.getDate();
+            const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
             const isSelected = selectedDate === dateString;
-            const isCurrentDay = isToday(day);
-            const festival = hasFestival(day);
-            const dayOfWeek = new Date(currentYear, currentMonth, day).getDay();
+            const isCurrentDay = isToday(date);
+            const festival = hasFestival(date);
+            const dayOfWeek = date.getDay();
 
             const dayCellStyles = [
               styles.dayCell,
@@ -516,8 +544,8 @@ const HorizontalFestivalCalendar: React.FC = () => {
 
             return (
               <TouchableOpacity
-                key={day}
-                onPress={() => handleDateSelect(day)}
+                key={dateString}
+                onPress={() => handleDateSelect(date)}
                 activeOpacity={0.7}
                 style={styles.dayTouchable}
               >
