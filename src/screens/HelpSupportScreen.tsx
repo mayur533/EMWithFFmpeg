@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   View,
   Text,
@@ -13,7 +13,9 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { MainStackParamList } from '../navigation/AppNavigator';
 import { useTheme } from '../context/ThemeContext';
 import ComingSoonModal from '../components/ComingSoonModal';
 
@@ -68,11 +70,16 @@ interface ContactOption {
   action: () => void;
 }
 
+type HelpSupportScreenRouteProp = RouteProp<MainStackParamList, 'HelpSupport'>;
+
 const HelpSupportScreen: React.FC = () => {
-  const navigation = useNavigation();
+  const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
+  const route = useRoute<HelpSupportScreenRouteProp>();
   const { theme } = useTheme();
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
+  const scrollViewRef = useRef<ScrollView>(null);
+  const faqSectionRef = useRef<View>(null);
   
   // Dynamic dimensions for responsive layout (matching HomeScreen)
   const [dimensions, setDimensions] = useState(() => {
@@ -88,6 +95,18 @@ const HelpSupportScreen: React.FC = () => {
 
     return () => subscription?.remove();
   }, []);
+
+  // Scroll to FAQ section when navigated from FAQ button
+  const [faqSectionY, setFaqSectionY] = useState<number>(0);
+
+  useEffect(() => {
+    if (route.params?.scrollToFAQ && faqSectionY > 0 && scrollViewRef.current) {
+      // Delay to ensure the view is rendered
+      setTimeout(() => {
+        scrollViewRef.current?.scrollTo({ y: faqSectionY - 20, animated: true });
+      }, 500);
+    }
+  }, [route.params?.scrollToFAQ, faqSectionY]);
 
   const currentScreenWidth = dimensions.width;
   const currentScreenHeight = dimensions.height;
@@ -297,6 +316,7 @@ const HelpSupportScreen: React.FC = () => {
         </View>
 
         <ScrollView
+          ref={scrollViewRef}
           style={styles.scrollView}
           contentContainerStyle={[styles.scrollContent, {
             paddingHorizontal: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(8),
@@ -353,9 +373,15 @@ const HelpSupportScreen: React.FC = () => {
           </View>
 
           {/* FAQs */}
-          <View style={[styles.section, {
-            marginBottom: dynamicModerateScale(12),
-          }]}>
+          <View 
+            ref={faqSectionRef}
+            onLayout={(event) => {
+              const { y } = event.nativeEvent.layout;
+              setFaqSectionY(y);
+            }}
+            style={[styles.section, {
+              marginBottom: dynamicModerateScale(12),
+            }]}>
             <Text style={[styles.sectionTitle, { 
               color: '#333333',
               fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),

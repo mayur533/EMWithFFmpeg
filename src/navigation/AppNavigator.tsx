@@ -115,7 +115,7 @@ export type MainStackParamList = {
     template: any;
   };
   MyPosters: undefined;
-  HelpSupport: undefined;
+  HelpSupport: { scrollToFAQ?: boolean } | undefined;
 };
 
 export type TabParamList = {

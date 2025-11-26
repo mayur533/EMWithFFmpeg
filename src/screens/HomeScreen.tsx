@@ -16,9 +16,12 @@ import {
   Dimensions,
   Animated,
   Modal,
+  Linking,
+  Platform,
 } from 'react-native';
 import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
@@ -717,6 +720,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const [isBusinessCategoriesModalVisible, setIsBusinessCategoriesModalVisible] = useState(false);
   const [isVideosModalVisible, setIsVideosModalVisible] = useState(false);
   const [showVideoComingSoonModal, setShowVideoComingSoonModal] = useState(false);
+  const [isCustomerSupportModalVisible, setIsCustomerSupportModalVisible] = useState(false);
   
   // Greeting section modal states
   const [isMotivationModalVisible, setIsMotivationModalVisible] = useState(false);
@@ -1662,6 +1666,62 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     setSelectedTemplate(null);
   }, []);
 
+  // Customer Support handlers
+  const openCustomerSupportModal = useCallback(() => {
+    setIsCustomerSupportModalVisible(true);
+  }, []);
+
+  const closeCustomerSupportModal = useCallback(() => {
+    setIsCustomerSupportModalVisible(false);
+  }, []);
+
+  const handleWhatsAppPress = useCallback(async () => {
+    try {
+      const phoneNumber = '919941041415'; // Phone number without + sign for WhatsApp (9941041415 with country code 91)
+      const message = 'Hello, I need support';
+      const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+      
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        // Fallback to web WhatsApp if app is not installed
+        const webUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      if (__DEV__) {
+        devError('Error opening WhatsApp:', error);
+      }
+    }
+  }, []);
+
+  const handlePhonePress = useCallback(async () => {
+    try {
+      const phoneNumber = '9941041415'; // Phone number from HelpSupportScreen
+      const url = `tel:${phoneNumber}`;
+      await Linking.openURL(url);
+    } catch (error) {
+      if (__DEV__) {
+        devError('Error opening phone dialer:', error);
+      }
+    }
+  }, []);
+
+  const handleEmailPress = useCallback(async () => {
+    try {
+      const email = 'support@marketbrand.ai'; // Email from HelpSupportScreen
+      const subject = 'Help Request from MarketBrand App';
+      const body = 'Hello, I need support with...';
+      const url = `mailto:${email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+      await Linking.openURL(url);
+    } catch (error) {
+      if (__DEV__) {
+        devError('Error opening email client:', error);
+      }
+    }
+  }, []);
+
   const handleViewAllUpcomingEvents = useCallback(() => {
     setIsUpcomingEventsModalVisible(true);
   }, []);
@@ -2244,10 +2304,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
               <TouchableOpacity
                 style={[styles.headerActionButton, { backgroundColor: theme.colors.cardBackground }]}
                 onPress={() => {
-                  // TODO: Navigate to FAQ screen or show FAQ modal
-                  if (__DEV__) {
-                    console.log('FAQ pressed');
-                  }
+                  navigation.navigate('HelpSupport', { scrollToFAQ: true });
                 }}
                 activeOpacity={0.7}
               >
@@ -2257,12 +2314,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
               {/* Customer Support Button */}
               <TouchableOpacity
                 style={[styles.headerActionButton, { backgroundColor: theme.colors.cardBackground }]}
-                onPress={() => {
-                  // TODO: Navigate to Customer Support screen or show support modal
-                  if (__DEV__) {
-                    console.log('Customer Support pressed');
-                  }
-                }}
+                onPress={openCustomerSupportModal}
                 activeOpacity={0.7}
               >
                 <Icon name="support-agent" size={moderateScale(20)} color={theme.colors.text} />
@@ -3294,6 +3346,75 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 />
               </View>
             </View>
+          </View>
+        </Modal>
+
+        {/* Customer Support Modal */}
+        <Modal
+          visible={isCustomerSupportModalVisible}
+          transparent={true}
+          animationType="fade"
+          onRequestClose={closeCustomerSupportModal}
+        >
+          <View style={styles.customerSupportModalOverlay}>
+            <TouchableOpacity
+              style={styles.customerSupportModalBackdrop}
+              activeOpacity={1}
+              onPress={closeCustomerSupportModal}
+            >
+              <View style={styles.customerSupportModalContent}>
+                {/* Close Button */}
+                <TouchableOpacity
+                  style={styles.customerSupportCloseButton}
+                  onPress={closeCustomerSupportModal}
+                  activeOpacity={0.7}
+                >
+                  <Text style={styles.customerSupportCloseButtonText}>✕</Text>
+                </TouchableOpacity>
+
+                {/* Contact Options */}
+                <View style={styles.customerSupportOptionsContainer}>
+                  {/* WhatsApp Option */}
+                  <TouchableOpacity
+                    style={styles.customerSupportOptionButton}
+                    onPress={handleWhatsAppPress}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.customerSupportOptionIconContainer}>
+                      <MaterialCommunityIcons name="whatsapp" size={moderateScale(24)} color="#009688" />
+                    </View>
+                    <Text style={styles.customerSupportOptionText}>Click to send message</Text>
+                    <Icon name="chevron-right" size={moderateScale(24)} color="#009688" />
+                  </TouchableOpacity>
+
+                  {/* Phone Option */}
+                  <TouchableOpacity
+                    style={styles.customerSupportOptionButton}
+                    onPress={handlePhonePress}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.customerSupportOptionIconContainer}>
+                      <Icon name="phone" size={moderateScale(24)} color="#009688" />
+                    </View>
+                    <Text style={styles.customerSupportOptionText}>9941041415</Text>
+                    <Icon name="chevron-right" size={moderateScale(24)} color="#009688" />
+                  </TouchableOpacity>
+
+                  {/* Email Option */}
+                  <TouchableOpacity
+                    style={styles.customerSupportOptionButton}
+                    onPress={handleEmailPress}
+                    activeOpacity={0.7}
+                  >
+                    <View style={styles.customerSupportOptionIconContainer}>
+                      <Icon name="email" size={moderateScale(24)} color="#009688" />
+                    </View>
+                    <Text style={styles.customerSupportOptionText}>Email Us</Text>
+                    <Icon name="chevron-right" size={moderateScale(24)} color="#009688" />
+                  </TouchableOpacity>
+                </View>
+              </View>
+            </TouchableOpacity>
           </View>
         </Modal>
 
@@ -4921,6 +5042,77 @@ const styles = StyleSheet.create({
       fontSize: SCREEN_WIDTH >= 768 ? moderateScale(11) : moderateScale(10), // Reduced from 14/13
       color: '#666666',
       fontWeight: '500',
+    },
+    // Customer Support Modal Styles
+    customerSupportModalOverlay: {
+      flex: 1,
+      backgroundColor: 'rgba(0, 0, 0, 0.5)',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    customerSupportModalBackdrop: {
+      flex: 1,
+      width: '100%',
+      justifyContent: 'center',
+      alignItems: 'center',
+    },
+    customerSupportModalContent: {
+      width: SCREEN_WIDTH >= 768 ? SCREEN_WIDTH * 0.6 : SCREEN_WIDTH * 0.85,
+      maxWidth: 450,
+      minHeight: moderateScale(400), // Increased height to fit all buttons
+      backgroundColor: '#ffffff',
+      borderRadius: moderateScale(12),
+      padding: moderateScale(24),
+      paddingTop: moderateScale(50), // Extra padding for close button
+      position: 'relative',
+      ...responsiveShadow.large,
+    },
+    customerSupportCloseButton: {
+      position: 'absolute',
+      top: moderateScale(12),
+      right: moderateScale(12),
+      width: moderateScale(32),
+      height: moderateScale(32),
+      borderRadius: moderateScale(16),
+      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      zIndex: 10,
+    },
+    customerSupportCloseButtonText: {
+      fontSize: moderateScale(18),
+      color: '#333333',
+      fontWeight: 'bold',
+    },
+    customerSupportOptionsContainer: {
+      gap: moderateScale(16),
+      marginTop: moderateScale(20),
+      width: '100%',
+    },
+    customerSupportOptionButton: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      backgroundColor: '#ffffff',
+      borderRadius: moderateScale(12),
+      padding: moderateScale(16),
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      ...responsiveShadow.small,
+    },
+    customerSupportOptionIconContainer: {
+      width: moderateScale(40),
+      height: moderateScale(40),
+      borderRadius: moderateScale(20),
+      backgroundColor: '#E0F2F1',
+      justifyContent: 'center',
+      alignItems: 'center',
+      marginRight: moderateScale(12),
+    },
+    customerSupportOptionText: {
+      flex: 1,
+      fontSize: moderateScale(14),
+      fontWeight: '500',
+      color: '#333333',
     },
 
   });
