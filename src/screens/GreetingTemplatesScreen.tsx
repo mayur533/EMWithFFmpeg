@@ -359,9 +359,18 @@ const GreetingTemplatesScreen: React.FC = () => {
 
   const handleRefresh = useCallback(async () => {
     setRefreshing(true);
-    // Fetch fresh data
-    await fetchData(true);
-    setRefreshing(false);
+    try {
+      // Clear cache before refreshing to ensure deleted categories are removed
+      greetingTemplatesService.clearCache();
+      // Force refresh categories
+      await greetingTemplatesService.refreshCategories();
+      // Fetch fresh data
+      await fetchData(true);
+    } catch (error) {
+      console.error('Error refreshing:', error);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
   // Helper function to add opacity to color (reusable for all category buttons)

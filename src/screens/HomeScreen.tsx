@@ -1507,11 +1507,16 @@ const HomeScreen: React.FC = React.memo(() => {
     try {
       // Clear all caches before refreshing
       homeApi.clearCache();
+      greetingTemplatesService.clearCache(); // Clear greeting templates cache
+      
+      // Force refresh categories to ensure deleted categories are removed
+      await greetingTemplatesService.refreshCategories();
       
       // Refresh API data
       await loadApiData(true);
     } catch (error) {
       if (__DEV__) {
+        devError('Error refreshing:', error);
       }
     } finally {
       setRefreshing(false);

@@ -40,7 +40,7 @@ class GreetingTemplatesService {
   private categoriesCache: GreetingCategory[] | null = null;
   private templatesCache: GreetingTemplate[] | null = null;
   private cacheTimestamp: number = 0;
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes
+  private readonly CACHE_DURATION = 1 * 60 * 1000; // 1 minute (reduced from 5 minutes to ensure deleted categories are removed faster)
 
   /**
    * Convert relative image URLs to absolute URLs with quality parameters (optimized - minimal logging)
@@ -104,13 +104,23 @@ class GreetingTemplatesService {
           throw new Error('Invalid categories format');
         }
         
-        // Map backend response to frontend format
-        const mappedCategories = categoriesArray.map((backendCategory: any) => ({
-          id: backendCategory.id,
-          name: backendCategory.name,
-          icon: backendCategory.icon,
-          color: backendCategory.color || '#4A90E2'
-        }));
+        // Map backend response to frontend format and filter out deleted categories
+        const mappedCategories = categoriesArray
+          .filter((backendCategory: any) => {
+            // Filter out deleted categories (check for various possible deleted flags)
+            // Also filter out categories with no content (count: 0) as these are likely deleted
+            return !backendCategory.deleted && 
+                   !backendCategory.isDeleted && 
+                   backendCategory.id && 
+                   backendCategory.name &&
+                   (backendCategory.count > 0 || backendCategory.imageCount > 0 || backendCategory.videoCount > 0); // Only include categories with content
+          })
+          .map((backendCategory: any) => ({
+            id: backendCategory.id,
+            name: backendCategory.name,
+            icon: backendCategory.icon,
+            color: backendCategory.color || '#4A90E2'
+          }));
         
         // Cache the results
         this.categoriesCache = mappedCategories;
@@ -122,12 +132,20 @@ class GreetingTemplatesService {
       }
     } catch (error) {
       console.error('Error fetching greeting categories:', error);
-      // Return cached data if available, even if expired
-      if (this.categoriesCache) {
-        return this.categoriesCache;
-      }
-      return []; // Return empty array instead of mock data
+      // Don't return expired cache - clear it and return empty array to force refresh
+      // This ensures deleted categories don't persist in the UI
+      this.categoriesCache = null;
+      this.cacheTimestamp = 0;
+      return []; // Return empty array instead of stale cache
     }
+  }
+
+  // Force refresh categories by clearing cache and fetching fresh data
+  async refreshCategories(): Promise<GreetingCategory[]> {
+    // Clear cache before fetching
+    this.categoriesCache = null;
+    this.cacheTimestamp = 0;
+    return this.getCategories();
   }
 
   // Get greeting templates by category
