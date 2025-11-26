@@ -77,6 +77,7 @@ const FloatingInput = React.memo(({
         onChangeText={onChangeText}
         onFocus={onFocus}
         onBlur={onBlur}
+        placeholder=" "
         secureTextEntry={secureTextEntry}
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
@@ -253,6 +254,16 @@ const LoginScreen: React.FC = ({ navigation }: any) => {
                   </TouchableOpacity>
                 </View>
               </View>
+
+              <TouchableOpacity 
+                style={styles.forgotPasswordWrapper}
+                onPress={() => navigation.navigate('ForgotPassword')}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.forgotPasswordText, { color: theme.colors.primary }]}>
+                  Forgot Password?
+                </Text>
+              </TouchableOpacity>
 
               <TouchableOpacity 
                 style={[
@@ -560,6 +571,14 @@ const styles = StyleSheet.create({
   errorModalButtonText: {
     color: '#FFFFFF',
     fontSize: Math.min(screenWidth * 0.042, 17),
+    fontWeight: '600',
+  },
+  forgotPasswordWrapper: {
+    alignSelf: 'flex-end',
+    marginBottom: screenHeight * 0.02,
+  },
+  forgotPasswordText: {
+    fontSize: Math.min(screenWidth * 0.032, 12),
     fontWeight: '600',
   },
 });

@@ -1,4 +1,5 @@
 import api from './api';
+import cacheService from './cacheService';
 
 export interface BusinessCategory {
   id: string;
@@ -15,86 +16,72 @@ export interface BusinessCategoriesResponse {
 }
 
 class BusinessCategoriesService {
-  private categoriesCache: BusinessCategory[] | null = null;
-  private cacheTimestamp: number = 0;
-  private readonly CACHE_DURATION = 10 * 60 * 1000; // 10 minutes cache
-
   // Get all business categories
   async getBusinessCategories(): Promise<BusinessCategoriesResponse> {
-    try {
-      console.log('📡 [CATEGORY API] Calling: /api/mobile/business-categories/business');
-      const response = await api.get('/api/mobile/business-categories/business');
-      
-      console.log('✅ [CATEGORY API] Response received');
-      console.log('📊 [CATEGORY API] Full Response:', JSON.stringify(response.data, null, 2));
-      console.log('📊 [CATEGORY API] Success:', response.data.success);
-      
-      // Handle new response structure: categories are in response.data.data.categories
-      const categories = response.data.data?.categories || response.data.categories || [];
-      console.log('📊 [CATEGORY API] Categories count:', categories.length);
-      
-      if (categories && categories.length > 0) {
-        console.log('📊 [CATEGORY API] First category:', JSON.stringify(categories[0], null, 2));
-        console.log('📊 [CATEGORY API] All category names:', categories.map((cat: BusinessCategory) => cat.name));
-      }
-      
-      // Cache the categories
-      if (response.data.success && categories.length > 0) {
-        this.categoriesCache = categories;
-        this.cacheTimestamp = Date.now();
-        console.log('💾 [CATEGORY API] Categories cached successfully');
-      }
-      
-      // Return in expected format
-      return {
-        success: response.data.success || true,
-        categories: categories
-      };
-    } catch (error) {
+    const cacheKey = 'business_categories';
+    
+    return cacheService.getOrFetch(
+      cacheKey,
+      async () => {
+        console.log('📡 [CATEGORY API] Calling: /api/mobile/business-categories/business');
+        const response = await api.get('/api/mobile/business-categories/business');
+        
+        console.log('✅ [CATEGORY API] Response received');
+        console.log('📊 [CATEGORY API] Full Response:', JSON.stringify(response.data, null, 2));
+        console.log('📊 [CATEGORY API] Success:', response.data.success);
+        
+        // Handle new response structure: categories are in response.data.data.categories
+        const categories = response.data.data?.categories || response.data.categories || [];
+        console.log('📊 [CATEGORY API] Categories count:', categories.length);
+        
+        if (categories && categories.length > 0) {
+          console.log('📊 [CATEGORY API] First category:', JSON.stringify(categories[0], null, 2));
+          console.log('📊 [CATEGORY API] All category names:', categories.map((cat: BusinessCategory) => cat.name));
+        }
+        
+        // Return in expected format
+        return {
+          success: response.data.success || true,
+          categories: categories
+        };
+      },
+      10 * 60 * 1000, // 10 minutes TTL (categories rarely change)
+      true // Allow stale data
+    ).catch(error => {
       console.error('❌ [CATEGORY API] Error:', error);
       console.error('❌ [CATEGORY API] Error details:', JSON.stringify(error, null, 2));
       
-      // Return cached data if available
-      if (this.categoriesCache && (Date.now() - this.cacheTimestamp) < this.CACHE_DURATION) {
-        console.log('⚠️ [CATEGORY API] Using cached business categories due to API error');
-        console.log('💾 [CATEGORY API] Cached categories count:', this.categoriesCache.length);
-        return {
-          success: true,
-          categories: this.categoriesCache
-        };
-      }
-      
-      // Return mock data as fallback
+      // Return mock data as fallback if cache also fails
       console.log('⚠️ [CATEGORY API] Using mock business categories due to API error');
       return this.getMockCategories();
-    }
+    });
   }
 
   // Get categories using alias endpoint
   async getCategories(): Promise<BusinessCategoriesResponse> {
-    try {
-      console.log('📡 [CATEGORY API ALIAS] Calling: /api/v1/categories');
-      const response = await api.get('/api/v1/categories');
-      
-      console.log('✅ [CATEGORY API ALIAS] Response received');
-      console.log('📊 [CATEGORY API ALIAS] Full Response:', JSON.stringify(response.data, null, 2));
-      console.log('📊 [CATEGORY API ALIAS] Categories count:', response.data.categories?.length || 0);
-      
-      // Cache the categories
-      if (response.data.success && response.data.categories) {
-        this.categoriesCache = response.data.categories;
-        this.cacheTimestamp = Date.now();
-        console.log('💾 [CATEGORY API ALIAS] Categories cached successfully');
-      }
-      
-      return response.data;
-    } catch (error) {
+    const cacheKey = 'business_categories_v1';
+    
+    return cacheService.getOrFetch(
+      cacheKey,
+      async () => {
+        console.log('📡 [CATEGORY API ALIAS] Calling: /api/v1/categories');
+        const response = await api.get('/api/v1/categories');
+        
+        console.log('✅ [CATEGORY API ALIAS] Response received');
+        console.log('📊 [CATEGORY API ALIAS] Full Response:', JSON.stringify(response.data, null, 2));
+        console.log('📊 [CATEGORY API ALIAS] Categories count:', response.data.categories?.length || 0);
+        
+        return response.data;
+      },
+      10 * 60 * 1000, // 10 minutes TTL
+      true // Allow stale data
+    ).catch(error => {
       console.error('❌ [CATEGORY API ALIAS] Error:', error);
       console.log('🔄 [CATEGORY API ALIAS] Falling back to main endpoint');
       
       // Fallback to main endpoint
       return this.getBusinessCategories();
-    }
+    });
   }
 
   // Get category by ID
@@ -130,8 +117,8 @@ class BusinessCategoriesService {
 
   // Clear cache
   clearCache(): void {
-    this.categoriesCache = null;
-    this.cacheTimestamp = 0;
+    cacheService.clear('business_categories');
+    cacheService.clear('business_categories_v1');
   }
 
   // Get mock categories for fallback

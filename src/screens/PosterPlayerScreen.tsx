@@ -20,6 +20,7 @@ import { MainStackParamList } from '../navigation/AppNavigator';
 import { Template } from '../services/dashboard';
 import { useTheme } from '../context/ThemeContext';
 import OptimizedImage from '../components/OptimizedImage';
+import LazyFullImage from '../components/LazyFullImage';
 import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
 import greetingTemplatesService from '../services/greetingTemplates';
 
@@ -1379,10 +1380,15 @@ const PosterPlayerScreen: React.FC = () => {
            style={[styles.posterContainer, { height: computedPreviewHeight, width: '100%' }]}
            {...swipeResponder.panHandlers}
          >
-         <Image
-           source={{ uri: getHighQualityImageUrl(currentPoster) }}
+         <LazyFullImage
+           thumbnailUri={currentPoster.thumbnail}
+           fullImageUri={getHighQualityImageUrl(currentPoster)}
            style={styles.posterImage}
            resizeMode="contain"
+           loadOnMount={true}
+           preload={true}
+           quality="high"
+           maxWidth={2400}
          />
          <View style={styles.posterOverlay}>
            {languageMenuVisible && (

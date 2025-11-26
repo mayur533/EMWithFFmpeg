@@ -96,6 +96,11 @@ export interface PasswordResetRequest {
   email: string;
 }
 
+export interface PasswordCodeVerifyRequest {
+  email: string;
+  code: string;
+}
+
 /**
  * Password Reset Confirm Request
  * For setting new password
@@ -112,6 +117,13 @@ export interface PasswordResetConfirmRequest {
  */
 export interface ChangePasswordRequest {
   currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
+export interface PasswordResetWithCodeRequest {
+  email: string;
+  code: string;
   newPassword: string;
   confirmPassword: string;
 }
@@ -392,6 +404,52 @@ class LoginAPIsService {
       
     } catch (error: any) {
       console.error('❌ Password reset confirmation error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify password reset code
+   * Endpoint: POST /api/mobile/auth/verify-reset-code
+   * Used in: Reset code verification screen
+   */
+  async verifyResetCode(data: PasswordCodeVerifyRequest): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('🧩 Verifying password reset code for:', data.email);
+
+      const response = await api.post('/api/mobile/auth/verify-reset-code', {
+        email: data.email,
+        code: data.code,
+      });
+
+      console.log('✅ Password reset code verified');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Password reset code verification error:', error.response?.data || error.message);
+      throw error;
+    }
+  }
+
+  /**
+   * Reset password using email + code
+   * Endpoint: POST /api/mobile/auth/reset-password
+   * Used in: Create new password screen
+   */
+  async resetPasswordWithCode(data: PasswordResetWithCodeRequest): Promise<{ success: boolean; message: string }> {
+    try {
+      console.log('🔐 Resetting password with verification code');
+
+      const response = await api.post('/api/mobile/auth/reset-password', {
+        email: data.email,
+        code: data.code,
+        newPassword: data.newPassword,
+        confirmPassword: data.confirmPassword,
+      });
+
+      console.log('✅ Password updated successfully via code');
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ Password reset with code error:', error.response?.data || error.message);
       throw error;
     }
   }

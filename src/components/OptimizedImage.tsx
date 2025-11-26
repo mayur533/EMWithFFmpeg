@@ -1,6 +1,8 @@
 import React, { useMemo, useState } from 'react';
 import { View, ActivityIndicator, StyleSheet, ViewStyle, ImageStyle, Image, Text, Dimensions, StyleProp } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import ThumbnailImage from './ThumbnailImage';
+import LazyFullImage from './LazyFullImage';
 
 // Type-safe ResizeMode
 type ImageResizeMode = 'cover' | 'contain' | 'stretch' | 'center';
@@ -15,6 +17,10 @@ interface OptimizedImageProps {
   loaderColor?: string;
   loaderSize?: 'small' | 'large';
   fallbackSource?: any;
+  // New props for thumbnail/full image mode
+  mode?: 'thumbnail' | 'full' | 'auto'; // 'auto' uses thumbnail in lists, full in detail views
+  fullImageUri?: string | null; // Full resolution image URL (for lazy loading)
+  cacheKey?: string; // Cache key for thumbnail caching
 }
 
 const ensureImageUri = (input: string): string => {
@@ -114,11 +120,17 @@ const applyCloudinaryTransform = (input: string, targetWidth: number): string =>
 /**
  * OptimizedImage Component
  * 
- * A simple image component with loading indicators
+ * Smart image component that automatically chooses between thumbnail and full image
  * Features:
+ * - Automatic thumbnail caching for lists
+ * - Lazy loading of full images for detail views
  * - Loading indicators
  * - Fallback support
  * - Error handling
+ * 
+ * Usage:
+ * - Lists/Grids: Use mode="thumbnail" or mode="auto" (default)
+ * - Detail views: Use mode="full" with fullImageUri prop
  */
 const OptimizedImage: React.FC<OptimizedImageProps> = ({
   uri = '',
@@ -128,11 +140,58 @@ const OptimizedImage: React.FC<OptimizedImageProps> = ({
   loaderColor = '#667eea',
   loaderSize = 'small',
   fallbackSource = defaultFallbackSource,
+  mode = 'auto',
+  fullImageUri,
+  cacheKey,
 }) => {
+  const sanitizedUri = useMemo(() => (typeof uri === 'string' ? uri.trim() : ''), [uri]);
+  const sanitizedFullImageUri = useMemo(() => (typeof fullImageUri === 'string' ? fullImageUri.trim() : ''), [fullImageUri]);
+  
+  // Determine which mode to use
+  const actualMode = useMemo(() => {
+    if (mode !== 'auto') return mode;
+    // Auto mode: use thumbnail if no fullImageUri, otherwise use full
+    return sanitizedFullImageUri ? 'full' : 'thumbnail';
+  }, [mode, sanitizedFullImageUri]);
+
+  // Use ThumbnailImage for thumbnail mode
+  if (actualMode === 'thumbnail') {
+    return (
+      <ThumbnailImage
+        uri={sanitizedUri}
+        style={style}
+        resizeMode={resizeMode}
+        showLoader={showLoader}
+        loaderColor={loaderColor}
+        loaderSize={loaderSize}
+        fallbackSource={fallbackSource}
+        cacheKey={cacheKey}
+      />
+    );
+  }
+
+  // Use LazyFullImage for full mode
+  if (actualMode === 'full' && sanitizedFullImageUri) {
+    return (
+      <LazyFullImage
+        thumbnailUri={sanitizedUri}
+        fullImageUri={sanitizedFullImageUri}
+        style={style}
+        resizeMode={resizeMode}
+        showLoader={showLoader}
+        loaderColor={loaderColor}
+        loaderSize={loaderSize}
+        fallbackSource={fallbackSource}
+        loadOnMount={true} // Load full image immediately in full mode
+        preload={true}
+      />
+    );
+  }
+
+  // Fallback to original behavior for backward compatibility
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const targetWidth = useMemo(() => getTargetWidth(style), [style]);
-  const sanitizedUri = useMemo(() => (typeof uri === 'string' ? uri.trim() : ''), [uri]);
   const displayUri = useMemo(() => (sanitizedUri ? ensureImageUri(sanitizedUri) : ''), [sanitizedUri]);
   const optimizedUri = useMemo(
     () => (displayUri ? applyCloudinaryTransform(displayUri, targetWidth) : ''),

@@ -8,10 +8,12 @@
 import React from 'react';
 import { LogBox, Text, View, StyleSheet } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { QueryClientProvider } from '@tanstack/react-query';
 import AppNavigator from './src/navigation/AppNavigator';
 import { ThemeProvider } from './src/context/ThemeContext';
 import { SubscriptionProvider } from './src/contexts/SubscriptionContext';
 import TokenExpirationHandler from './src/components/TokenExpirationHandler';
+import { queryClient } from './src/config/queryClient';
 
 // Enable detailed logging for debugging
 LogBox.ignoreAllLogs(false);
@@ -61,14 +63,16 @@ class ErrorBoundary extends React.Component<
 const App: React.FC = () => {
   return (
     <ErrorBoundary>
-      <SafeAreaProvider>
-        <ThemeProvider>
-          <SubscriptionProvider>
-            <AppNavigator />
-            <TokenExpirationHandler />
-          </SubscriptionProvider>
-        </ThemeProvider>
-      </SafeAreaProvider>
+      <QueryClientProvider client={queryClient}>
+        <SafeAreaProvider>
+          <ThemeProvider>
+            <SubscriptionProvider>
+              <AppNavigator />
+              <TokenExpirationHandler />
+            </SubscriptionProvider>
+          </ThemeProvider>
+        </SafeAreaProvider>
+      </QueryClientProvider>
     </ErrorBoundary>
   );
 };

@@ -1,6 +1,7 @@
 import axios from 'axios';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { DeviceEventEmitter } from 'react-native';
+import cacheService from './cacheService';
 
 // Event name for token expiration
 export const TOKEN_EXPIRED_EVENT = 'TOKEN_EXPIRED';
@@ -12,6 +13,111 @@ let hasEmittedTokenExpiration = false;
 export const resetTokenExpirationFlag = () => {
   hasEmittedTokenExpiration = false;
 };
+
+// Cache configuration for different API endpoints
+// Maps URL patterns to cache keys and TTL (Time To Live) in milliseconds
+const CACHE_CONFIG: Array<{
+  pattern: string;
+  key: string;
+  ttl: number;
+  enabled: boolean;
+}> = [
+  // Business Categories - rarely change, cache longer
+  {
+    pattern: '/api/mobile/business-categories/business',
+    key: 'business_categories',
+    ttl: 10 * 60 * 1000, // 10 minutes
+    enabled: true,
+  },
+  {
+    pattern: '/api/v1/categories',
+    key: 'business_categories_v1',
+    ttl: 10 * 60 * 1000, // 10 minutes
+    enabled: true,
+  },
+  // Greeting Categories
+  {
+    pattern: '/api/mobile/greetings/categories',
+    key: 'greeting_categories',
+    ttl: 5 * 60 * 1000, // 5 minutes
+    enabled: true,
+  },
+  // Home Screen Content
+  {
+    pattern: '/api/mobile/home/featured',
+    key: 'home_featured',
+    ttl: 5 * 60 * 1000, // 5 minutes
+    enabled: true,
+  },
+  {
+    pattern: '/api/mobile/home/events',
+    key: 'home_events',
+    ttl: 2 * 60 * 1000, // 2 minutes (time-sensitive)
+    enabled: true,
+  },
+  {
+    pattern: '/api/mobile/home/templates',
+    key: 'home_templates',
+    ttl: 5 * 60 * 1000, // 5 minutes
+    enabled: true,
+  },
+  {
+    pattern: '/api/mobile/home/videos',
+    key: 'home_videos',
+    ttl: 5 * 60 * 1000, // 5 minutes
+    enabled: true,
+  },
+  // Subscription Plans - change infrequently
+  {
+    pattern: '/api/mobile/subscriptions/plans',
+    key: 'subscription_plans',
+    ttl: 15 * 60 * 1000, // 15 minutes
+    enabled: true,
+  },
+  // Calendar Posters
+  {
+    pattern: '/api/mobile/calendar/posters',
+    key: 'calendar_posters',
+    ttl: 5 * 60 * 1000, // 5 minutes
+    enabled: true,
+  },
+  // Templates
+  {
+    pattern: '/api/mobile/templates',
+    key: 'templates',
+    ttl: 5 * 60 * 1000, // 5 minutes
+    enabled: true,
+  },
+  {
+    pattern: '/api/mobile/greetings/templates',
+    key: 'greeting_templates',
+    ttl: 5 * 60 * 1000, // 5 minutes
+    enabled: true,
+  },
+];
+
+/**
+ * Get cache configuration for a given URL
+ */
+function getCacheConfig(url: string | undefined): { key: string; ttl: number } | null {
+  if (!url) return null;
+
+  for (const config of CACHE_CONFIG) {
+    if (config.enabled && url.includes(config.pattern)) {
+      // Generate cache key with query params for unique requests
+      // Extract query string manually (React Native compatible)
+      const queryIndex = url.indexOf('?');
+      const queryString = queryIndex !== -1 ? url.substring(queryIndex) : '';
+      const cacheKey = queryString ? `${config.key}_${queryString}` : config.key;
+      
+      return {
+        key: cacheKey,
+        ttl: config.ttl,
+      };
+    }
+  }
+  return null;
+}
 
 // Create axios instance with the EventMarketers backend URL
 const api = axios.create({
@@ -42,10 +148,21 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor to handle errors
+// Response interceptor to handle caching and errors
 api.interceptors.response.use(
-  (response) => {
+  async (response) => {
     console.log('✅ API Response received:', response.config.url, response.status);
+    
+    // Cache successful GET responses
+    if (response.config.method?.toLowerCase() === 'get' && response.status === 200) {
+      const cacheConfig = getCacheConfig(response.config.url);
+      if (cacheConfig) {
+        // Cache the response data
+        cacheService.set(cacheConfig.key, response.data, cacheConfig.ttl).catch(err => {
+          console.error('[API] Error caching response:', err);
+        });
+      }
+    }
     
     // Enhanced debugging for category-related endpoints
     if (response.config.url?.includes('/business-categories') || 

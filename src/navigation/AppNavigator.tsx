@@ -38,6 +38,9 @@ export type RootStackParamList = {
   MainApp: undefined;
   Login: undefined;
   Registration: undefined;
+  ForgotPassword: undefined;
+  VerifyResetCode: { email: string };
+  ResetPassword: { email: string; code: string };
   Splash: undefined;
   PrivacyPolicy: undefined;
 };
@@ -130,6 +133,9 @@ export type TabParamList = {
 import SplashScreen from '../screens/SplashScreen';
 import LoginScreen from '../screens/LoginScreen';
 import RegistrationScreen from '../screens/RegistrationScreen';
+import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
+import VerifyResetCodeScreen from '../screens/VerifyResetCodeScreen';
+import ResetPasswordScreen from '../screens/ResetPasswordScreen';
 import HomeScreen from '../screens/HomeScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import EventsScreen from '../screens/EventsScreen';
@@ -1168,14 +1174,12 @@ const AppNavigator = () => {
     <NavigationContainer ref={navigationRef}>
       <Stack.Navigator>
         {isAuthenticated ? (
-          // Authenticated user - show main app
           <Stack.Screen 
             name="MainApp" 
             component={TabNavigator}
             options={{ headerShown: false }}
           />
         ) : (
-          // Not authenticated - show auth screens
           <>
             <Stack.Screen 
               name="Login" 
@@ -1185,9 +1189,22 @@ const AppNavigator = () => {
             <Stack.Screen 
               name="Registration" 
               component={RegistrationScreen}
-              options={{ 
-                headerShown: false
-              }}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="ForgotPassword" 
+              component={ForgotPasswordScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="VerifyResetCode" 
+              component={VerifyResetCodeScreen}
+              options={{ headerShown: false }}
+            />
+            <Stack.Screen 
+              name="ResetPassword" 
+              component={ResetPasswordScreen}
+              options={{ headerShown: false }}
             />
           </>
         )}

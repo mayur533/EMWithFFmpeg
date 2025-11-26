@@ -182,6 +182,8 @@ const GreetingTemplateCard: React.FC<GreetingTemplateCardProps> = ({
           showLoader={true}
           loaderColor={theme.colors.primary}
           loaderSize="small"
+          mode="thumbnail"
+          cacheKey={`greeting_card_${template.id}`}
         />
         <LinearGradient
           colors={['transparent', 'rgba(0,0,0,0.7)']}

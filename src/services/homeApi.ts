@@ -1,4 +1,5 @@
 import api from './api';
+import cacheService from './cacheService';
 
 // ============================================================================
 // HOME SCREEN API SERVICE
@@ -164,43 +165,17 @@ export interface ActionResponse {
 class HomeApiService {
   // Base URL for converting relative paths to absolute URLs
   private readonly BASE_URL = 'https://eventmarketersbackend.onrender.com';
-  private readonly CACHE_DURATION = 5 * 60 * 1000; // 5 minutes cache
-
-  // Cache storage for all home screen data
-  private cache: {
-    featuredContent: { data: FeaturedContent[] | null; timestamp: number };
-    upcomingEvents: { data: UpcomingEvent[] | null; timestamp: number };
-    professionalTemplates: { data: ProfessionalTemplate[] | null; timestamp: number };
-    videoContent: { data: VideoContent[] | null; timestamp: number };
-  } = {
-    featuredContent: { data: null, timestamp: 0 },
-    upcomingEvents: { data: null, timestamp: 0 },
-    professionalTemplates: { data: null, timestamp: 0 },
-    videoContent: { data: null, timestamp: 0 },
-  };
 
   /**
-   * Check if cached data is still valid
+   * Clear cache for a specific key or all home screen cache
    */
-  private isCacheValid(cacheKey: keyof typeof this.cache): boolean {
-    const cached = this.cache[cacheKey];
-    return cached.data !== null && (Date.now() - cached.timestamp) < this.CACHE_DURATION;
-  }
-
-  /**
-   * Clear cache for a specific key or all cache
-   */
-  clearCache(cacheKey?: keyof typeof this.cache): void {
+  clearCache(cacheKey?: string): void {
     if (cacheKey) {
-      this.cache[cacheKey] = { data: null, timestamp: 0 };
+      cacheService.clear(cacheKey);
       console.log(`🧹 [CACHE] Cleared ${cacheKey} cache`);
     } else {
-      this.cache = {
-        featuredContent: { data: null, timestamp: 0 },
-        upcomingEvents: { data: null, timestamp: 0 },
-        professionalTemplates: { data: null, timestamp: 0 },
-        videoContent: { data: null, timestamp: 0 },
-      };
+      // Clear all home screen related cache
+      cacheService.clearPattern('home_');
       console.log('🧹 [CACHE] Cleared all home screen cache');
     }
   }
@@ -365,129 +340,109 @@ class HomeApiService {
     type?: 'banner' | 'promotion' | 'highlight' | 'all';
     active?: boolean;
   }): Promise<FeaturedContentResponse> {
-    // Only cache when no params are provided (default request)
-    const shouldCache = !params || Object.keys(params).length === 0;
+    // Generate cache key based on params
+    const paramsKey = params ? JSON.stringify(params) : 'default';
+    const cacheKey = `home_featured_${paramsKey}`;
     
-    // Check cache first for default requests only when network is available
-    // Note: Cache will be cleared when network fails to prevent showing stale data offline
-    if (shouldCache && this.isCacheValid('featuredContent')) {
-      console.log('✅ [CACHE] Returning cached featured content');
-      // Only return cache if we have cached data (cache might be null if never loaded)
-      if (this.cache.featuredContent.data && this.cache.featuredContent.data.length > 0) {
+    // Use cache service with stale-while-revalidate pattern
+    return cacheService.getOrFetch(
+      cacheKey,
+      async () => {
+        console.log('📡 [HOME API] Fetching featured content...');
+        
+        const queryParams = new URLSearchParams();
+        
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.type && params.type !== 'all') queryParams.append('type', params.type);
+        if (params?.active !== undefined) queryParams.append('active', params.active.toString());
+        
+        const queryString = queryParams.toString();
+        const url = `/api/mobile/home/featured${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await api.get(url);
+        
+        // ===== PRINT COMPLETE API RESPONSE =====
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('📦 [FEATURED CONTENT API] COMPLETE RESPONSE');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('📋 Response Status:', response.status);
+        console.log('📋 Response Headers:', JSON.stringify(response.headers, null, 2));
+        console.log('📋 Full Response Data:', JSON.stringify(response.data, null, 2));
+        console.log('═══════════════════════════════════════════════════════');
+        
+        // Validate response structure
+        if (!response.data.success) {
+          return {
+            success: false,
+            data: [],
+            message: response.data.message || 'API returned unsuccessful response',
+          };
+        }
+        
+        // Check if data exists
+        if (!response.data.data) {
+          return {
+            success: false,
+            data: [],
+            message: 'No data returned from API',
+          };
+        }
+        
+        // Extract featured content array from nested structure
+        let featuredData: FeaturedContent[];
+        
+        if (Array.isArray(response.data.data)) {
+          featuredData = response.data.data;
+        } else if (response.data.data.featured && Array.isArray(response.data.data.featured)) {
+          featuredData = response.data.data.featured;
+        } else {
+          return {
+            success: false,
+            data: [],
+            message: 'Invalid data format from API',
+          };
+        }
+        
+        const convertedData = this.convertFeaturedContentUrls(featuredData);
+        
+        console.log('✅ [FEATURED CONTENT API] Response Details:');
+        console.log('   - Success:', response.data.success);
+        console.log('   - Message:', response.data.message);
+        console.log('   - Total Items:', convertedData.length);
+        
+        // Log first featured item as example
+        if (convertedData.length > 0) {
+          console.log('📸 [FIRST FEATURED ITEM EXAMPLE]:');
+          console.log('   Raw Data:', JSON.stringify(convertedData[0], null, 2));
+          console.log('   - ID:', convertedData[0].id);
+          console.log('   - Title:', convertedData[0].title);
+          console.log('   - Type:', convertedData[0].type);
+          console.log('   - Image URL:', convertedData[0].imageUrl);
+          console.log('   - Video URL:', convertedData[0].videoUrl);
+          console.log('   - Link:', convertedData[0].link);
+          console.log('   - Is Active:', convertedData[0].isActive);
+          console.log('   - Priority:', convertedData[0].priority);
+        }
+        
+        console.log(`✅ [HOME API] Fetched ${convertedData.length} featured items`);
+        
         return {
           success: true,
-          data: this.cache.featuredContent.data,
-          message: 'Featured content retrieved from cache',
-        };
-      }
-    }
-
-    try {
-      console.log('📡 [HOME API] Fetching featured content...');
-      
-      const queryParams = new URLSearchParams();
-      
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.type && params.type !== 'all') queryParams.append('type', params.type);
-      if (params?.active !== undefined) queryParams.append('active', params.active.toString());
-      
-      const queryString = queryParams.toString();
-      const url = `/api/mobile/home/featured${queryString ? `?${queryString}` : ''}`;
-      
-      const response = await api.get(url);
-      
-      // ===== PRINT COMPLETE API RESPONSE =====
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('📦 [FEATURED CONTENT API] COMPLETE RESPONSE');
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('📋 Response Status:', response.status);
-      console.log('📋 Response Headers:', JSON.stringify(response.headers, null, 2));
-      console.log('📋 Full Response Data:', JSON.stringify(response.data, null, 2));
-      console.log('═══════════════════════════════════════════════════════');
-      
-      // Validate response structure
-      if (!response.data.success) {
-        return {
-          success: false,
-          data: [],
-          message: response.data.message || 'API returned unsuccessful response',
-        };
-      }
-      
-      // Check if data exists
-      if (!response.data.data) {
-        return {
-          success: false,
-          data: [],
-          message: 'No data returned from API',
-        };
-      }
-      
-      // Extract featured content array from nested structure
-      let featuredData: FeaturedContent[];
-      
-      if (Array.isArray(response.data.data)) {
-        featuredData = response.data.data;
-      } else if (response.data.data.featured && Array.isArray(response.data.data.featured)) {
-        featuredData = response.data.data.featured;
-      } else {
-        return {
-          success: false,
-          data: [],
-          message: 'Invalid data format from API',
-        };
-      }
-      
-      const convertedData = this.convertFeaturedContentUrls(featuredData);
-      
-      console.log('✅ [FEATURED CONTENT API] Response Details:');
-      console.log('   - Success:', response.data.success);
-      console.log('   - Message:', response.data.message);
-      console.log('   - Total Items:', convertedData.length);
-      
-      // Log first featured item as example
-      if (convertedData.length > 0) {
-        console.log('📸 [FIRST FEATURED ITEM EXAMPLE]:');
-        console.log('   Raw Data:', JSON.stringify(convertedData[0], null, 2));
-        console.log('   - ID:', convertedData[0].id);
-        console.log('   - Title:', convertedData[0].title);
-        console.log('   - Type:', convertedData[0].type);
-        console.log('   - Image URL:', convertedData[0].imageUrl);
-        console.log('   - Video URL:', convertedData[0].videoUrl);
-        console.log('   - Link:', convertedData[0].link);
-        console.log('   - Is Active:', convertedData[0].isActive);
-        console.log('   - Priority:', convertedData[0].priority);
-      }
-      
-      // Cache the result if default request
-      if (shouldCache) {
-        this.cache.featuredContent = {
           data: convertedData,
-          timestamp: Date.now(),
+          message: response.data.message || 'Featured content retrieved successfully',
         };
-      }
-      
-      console.log(`✅ [HOME API] Fetched ${convertedData.length} featured items ${shouldCache ? '(cached)' : '(not cached)'}`);
-      
-      return {
-        success: true,
-        data: convertedData,
-        message: response.data.message || 'Featured content retrieved successfully',
-      };
-    } catch (error) {
+      },
+      5 * 60 * 1000, // 5 minutes TTL
+      true // Allow stale data
+    ).catch(error => {
       console.error('❌ [HOME API] Featured content error:', error);
-      // Clear cache when network fails to prevent showing stale cached data offline
-      if (shouldCache) {
-        this.cache.featuredContent = { data: null, timestamp: 0 };
-        console.log('🗑️ [CACHE] Cleared featured content cache due to network error');
-      }
       // Return empty response when network fails
       return {
         success: false,
         data: [],
         message: 'Failed to load featured content. Please check your network connection.',
       };
-    }
+    });
   }
 
   // ============================================================================
@@ -512,67 +467,55 @@ class HomeApiService {
     dateTo?: string;
     isFree?: boolean;
   }): Promise<UpcomingEventsResponse> {
-    // Only cache when no params are provided (default request)
-    const shouldCache = !params || Object.keys(params).length === 0;
+    // Generate cache key based on params
+    const paramsKey = params ? JSON.stringify(params) : 'default';
+    const cacheKey = `home_events_${paramsKey}`;
     
-    // Check cache first for default requests
-    if (shouldCache && this.isCacheValid('upcomingEvents')) {
-      console.log('✅ [CACHE] Returning cached upcoming events');
-      return {
-        success: true,
-        data: this.cache.upcomingEvents.data!,
-        message: 'Upcoming events retrieved from cache',
-      };
-    }
-
-    try {
-      console.log('📡 [HOME API] Fetching upcoming events...');
-      
-      const queryParams = new URLSearchParams();
-      
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.category) queryParams.append('category', params.category);
-      if (params?.location) queryParams.append('location', params.location);
-      if (params?.dateFrom) queryParams.append('dateFrom', params.dateFrom);
-      if (params?.dateTo) queryParams.append('dateTo', params.dateTo);
-      if (params?.isFree !== undefined) queryParams.append('isFree', params.isFree.toString());
-      
-      const queryString = queryParams.toString();
-      const url = `/api/mobile/home/upcoming-events${queryString ? `?${queryString}` : ''}`;
-      
-      const response = await api.get(url);
-      
-      // Convert relative URLs to absolute URLs
-      if (response.data.success && response.data.data) {
-        // Ensure data is an array before converting
-        if (Array.isArray(response.data.data)) {
-          response.data.data = this.convertUpcomingEventsUrls(response.data.data);
-          
-          // Cache the result if default request
-          if (shouldCache) {
-            this.cache.upcomingEvents = {
-              data: response.data.data,
-              timestamp: Date.now(),
-            };
+    // Use cache service with stale-while-revalidate pattern (2 min TTL for time-sensitive data)
+    return cacheService.getOrFetch(
+      cacheKey,
+      async () => {
+        console.log('📡 [HOME API] Fetching upcoming events...');
+        
+        const queryParams = new URLSearchParams();
+        
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.category) queryParams.append('category', params.category);
+        if (params?.location) queryParams.append('location', params.location);
+        if (params?.dateFrom) queryParams.append('dateFrom', params.dateFrom);
+        if (params?.dateTo) queryParams.append('dateTo', params.dateTo);
+        if (params?.isFree !== undefined) queryParams.append('isFree', params.isFree.toString());
+        
+        const queryString = queryParams.toString();
+        const url = `/api/mobile/home/upcoming-events${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await api.get(url);
+        
+        // Convert relative URLs to absolute URLs
+        if (response.data.success && response.data.data) {
+          // Ensure data is an array before converting
+          if (Array.isArray(response.data.data)) {
+            response.data.data = this.convertUpcomingEventsUrls(response.data.data);
+            console.log(`✅ [HOME API] Fetched ${response.data.data.length} events`);
+          } else {
+            console.warn('⚠️ [HOME API] Expected array for upcoming events data, got:', typeof response.data.data);
+            response.data.data = [];
           }
-          
-          console.log(`✅ [HOME API] Fetched ${response.data.data.length} events ${shouldCache ? '(cached)' : '(not cached)'}`);
-        } else {
-          console.warn('⚠️ [HOME API] Expected array for upcoming events data, got:', typeof response.data.data);
-          response.data.data = [];
         }
-      }
-      
-      return response.data;
-    } catch (error) {
+        
+        return response.data;
+      },
+      2 * 60 * 1000, // 2 minutes TTL (time-sensitive)
+      true // Allow stale data
+    ).catch(error => {
       console.error('❌ [HOME API] Upcoming events error:', error);
-      // Return empty response instead of mock data when network fails
+      // Return empty response when network fails
       return {
         success: false,
         data: [],
         message: 'Failed to load upcoming events. Please check your network connection.',
       };
-    }
+    });
   }
 
   // ============================================================================
@@ -598,90 +541,79 @@ class HomeApiService {
     tags?: string[];
     language?: string;
   }): Promise<ProfessionalTemplatesResponse> {
-    // Only cache when no params are provided (default request)
-    const shouldCache = !params || Object.keys(params).length === 0;
+    // Generate cache key based on params
+    const paramsKey = params ? JSON.stringify(params) : 'default';
+    const cacheKey = `home_templates_${paramsKey}`;
     
-    // Check cache first for default requests
-    if (shouldCache && this.isCacheValid('professionalTemplates')) {
-      console.log('✅ [CACHE] Returning cached professional templates');
-      return {
-        success: true,
-        data: this.cache.professionalTemplates.data!,
-        message: 'Professional templates retrieved from cache',
-      };
-    }
-
-    try {
-      console.log('📡 [HOME API] Fetching professional templates...');
-      
-      const queryParams = new URLSearchParams();
-      
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.category) queryParams.append('category', params.category);
-      if (params?.subcategory) queryParams.append('subcategory', params.subcategory);
-      if (params?.isPremium !== undefined) queryParams.append('isPremium', params.isPremium.toString());
-      if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-      if (params?.tags && params.tags.length > 0) {
-        params.tags.forEach(tag => queryParams.append('tags', tag));
-      }
-      if (params?.language) queryParams.append('language', params.language);
-      
-      const queryString = queryParams.toString();
-      const url = `/api/mobile/home/templates${queryString ? `?${queryString}` : ''}`;
-      
-      const response = await api.get(url);
-      
-      // ===== PRINT COMPLETE API RESPONSE =====
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('📦 [BUSINESS EVENTS API] COMPLETE RESPONSE');
-      console.log('═══════════════════════════════════════════════════════');
-      console.log('📋 Response Status:', response.status);
-      console.log('📋 Response Headers:', JSON.stringify(response.headers, null, 2));
-      console.log('📋 Full Response Data:', JSON.stringify(response.data, null, 2));
-      console.log('═══════════════════════════════════════════════════════');
-      
-      // Convert relative URLs to absolute URLs
-      if (response.data.success && response.data.data) {
-        response.data.data = this.convertProfessionalTemplatesUrls(response.data.data);
+    // Use cache service with stale-while-revalidate pattern
+    return cacheService.getOrFetch(
+      cacheKey,
+      async () => {
+        console.log('📡 [HOME API] Fetching professional templates...');
         
-        console.log('✅ [BUSINESS EVENTS API] Response Details:');
-        console.log('   - Success:', response.data.success);
-        console.log('   - Message:', response.data.message);
-        console.log('   - Total Templates:', response.data.data.length);
+        const queryParams = new URLSearchParams();
         
-        // Log first template as example
-        if (response.data.data.length > 0) {
-          console.log('📸 [FIRST TEMPLATE EXAMPLE]:');
-          console.log('   Raw Data:', JSON.stringify(response.data.data[0], null, 2));
-          console.log('   - ID:', response.data.data[0].id);
-          console.log('   - Name:', response.data.data[0].name);
-          console.log('   - Category:', response.data.data[0].category);
-          console.log('   - Thumbnail URL:', response.data.data[0].thumbnail);
-          console.log('   - Is Premium:', response.data.data[0].isPremium);
-          console.log('   - Downloads:', response.data.data[0].downloads);
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.category) queryParams.append('category', params.category);
+        if (params?.subcategory) queryParams.append('subcategory', params.subcategory);
+        if (params?.isPremium !== undefined) queryParams.append('isPremium', params.isPremium.toString());
+        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params?.tags && params.tags.length > 0) {
+          params.tags.forEach(tag => queryParams.append('tags', tag));
+        }
+        if (params?.language) queryParams.append('language', params.language);
+        
+        const queryString = queryParams.toString();
+        const url = `/api/mobile/home/templates${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await api.get(url);
+        
+        // ===== PRINT COMPLETE API RESPONSE =====
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('📦 [BUSINESS EVENTS API] COMPLETE RESPONSE');
+        console.log('═══════════════════════════════════════════════════════');
+        console.log('📋 Response Status:', response.status);
+        console.log('📋 Response Headers:', JSON.stringify(response.headers, null, 2));
+        console.log('📋 Full Response Data:', JSON.stringify(response.data, null, 2));
+        console.log('═══════════════════════════════════════════════════════');
+        
+        // Convert relative URLs to absolute URLs
+        if (response.data.success && response.data.data) {
+          response.data.data = this.convertProfessionalTemplatesUrls(response.data.data);
+          
+          console.log('✅ [BUSINESS EVENTS API] Response Details:');
+          console.log('   - Success:', response.data.success);
+          console.log('   - Message:', response.data.message);
+          console.log('   - Total Templates:', response.data.data.length);
+          
+          // Log first template as example
+          if (response.data.data.length > 0) {
+            console.log('📸 [FIRST TEMPLATE EXAMPLE]:');
+            console.log('   Raw Data:', JSON.stringify(response.data.data[0], null, 2));
+            console.log('   - ID:', response.data.data[0].id);
+            console.log('   - Name:', response.data.data[0].name);
+            console.log('   - Category:', response.data.data[0].category);
+            console.log('   - Thumbnail URL:', response.data.data[0].thumbnail);
+            console.log('   - Is Premium:', response.data.data[0].isPremium);
+            console.log('   - Downloads:', response.data.data[0].downloads);
+          }
+          
+          console.log(`✅ [HOME API] Fetched ${response.data.data.length} templates`);
         }
         
-        // Cache the result if default request
-        if (shouldCache) {
-          this.cache.professionalTemplates = {
-            data: response.data.data,
-            timestamp: Date.now(),
-          };
-        }
-        
-        console.log(`✅ [HOME API] Fetched ${response.data.data.length} templates ${shouldCache ? '(cached)' : '(not cached)'}`);
-      }
-      
-      return response.data;
-    } catch (error) {
+        return response.data;
+      },
+      5 * 60 * 1000, // 5 minutes TTL
+      true // Allow stale data
+    ).catch(error => {
       console.error('❌ [HOME API] Professional templates error:', error);
-      // Return empty response instead of mock data when network fails
+      // Return empty response when network fails
       return {
         success: false,
         data: [],
         message: 'Failed to load professional templates. Please check your network connection.',
       };
-    }
+    });
   }
 
   // ============================================================================
@@ -708,74 +640,52 @@ class HomeApiService {
     duration?: 'short' | 'medium' | 'long';
     tags?: string[];
   }): Promise<VideoContentResponse> {
-    // Only cache when no params are provided (default request)
-    const shouldCache = !params || Object.keys(params).length === 0;
+    // Generate cache key based on params
+    const paramsKey = params ? JSON.stringify(params) : 'default';
+    const cacheKey = `home_videos_${paramsKey}`;
     
-    // Check cache first for default requests only when network is available
-    // Note: Cache will be used when network fails to provide offline access
-    // If you want to disable cache when offline, check network status here
-    if (shouldCache && this.isCacheValid('videoContent')) {
-      console.log('✅ [CACHE] Returning cached video content');
-      // Only return cache if we have cached data (cache might be null if never loaded)
-      if (this.cache.videoContent.data && this.cache.videoContent.data.length > 0) {
-        return {
-          success: true,
-          data: this.cache.videoContent.data,
-          message: 'Video content retrieved from cache',
-        };
-      }
-    }
-
-    try {
-      console.log('📡 [HOME API] Fetching video content...');
-      
-      const queryParams = new URLSearchParams();
-      
-      if (params?.limit) queryParams.append('limit', params.limit.toString());
-      if (params?.category) queryParams.append('category', params.category);
-      if (params?.language) queryParams.append('language', params.language);
-      if (params?.isPremium !== undefined) queryParams.append('isPremium', params.isPremium.toString());
-      if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
-      if (params?.duration) queryParams.append('duration', params.duration);
-      if (params?.tags && params.tags.length > 0) {
-        params.tags.forEach(tag => queryParams.append('tags', tag));
-      }
-      
-      const queryString = queryParams.toString();
-      const url = `/api/mobile/home/video-content${queryString ? `?${queryString}` : ''}`;
-      
-      const response = await api.get(url);
-      
-      // Convert relative URLs to absolute URLs
-      if (response.data.success && response.data.data) {
-        response.data.data = this.convertVideoContentUrls(response.data.data);
+    // Use cache service with stale-while-revalidate pattern
+    return cacheService.getOrFetch(
+      cacheKey,
+      async () => {
+        console.log('📡 [HOME API] Fetching video content...');
         
-        // Cache the result if default request
-        if (shouldCache) {
-          this.cache.videoContent = {
-            data: response.data.data,
-            timestamp: Date.now(),
-          };
+        const queryParams = new URLSearchParams();
+        
+        if (params?.limit) queryParams.append('limit', params.limit.toString());
+        if (params?.category) queryParams.append('category', params.category);
+        if (params?.language) queryParams.append('language', params.language);
+        if (params?.isPremium !== undefined) queryParams.append('isPremium', params.isPremium.toString());
+        if (params?.sortBy) queryParams.append('sortBy', params.sortBy);
+        if (params?.duration) queryParams.append('duration', params.duration);
+        if (params?.tags && params.tags.length > 0) {
+          params.tags.forEach(tag => queryParams.append('tags', tag));
         }
         
-        console.log(`✅ [HOME API] Fetched ${response.data.data.length} videos ${shouldCache ? '(cached)' : '(not cached)'}`);
-      }
-      
-      return response.data;
-    } catch (error) {
+        const queryString = queryParams.toString();
+        const url = `/api/mobile/home/video-content${queryString ? `?${queryString}` : ''}`;
+        
+        const response = await api.get(url);
+        
+        // Convert relative URLs to absolute URLs
+        if (response.data.success && response.data.data) {
+          response.data.data = this.convertVideoContentUrls(response.data.data);
+          console.log(`✅ [HOME API] Fetched ${response.data.data.length} videos`);
+        }
+        
+        return response.data;
+      },
+      5 * 60 * 1000, // 5 minutes TTL
+      true // Allow stale data
+    ).catch(error => {
       console.error('❌ [HOME API] Video content error:', error);
-      // Clear cache when network fails to prevent showing stale cached data offline
-      if (shouldCache) {
-        this.cache.videoContent = { data: null, timestamp: 0 };
-        console.log('🗑️ [CACHE] Cleared video content cache due to network error');
-      }
-      // Return empty response instead of mock data when network fails
+      // Return empty response when network fails
       return {
         success: false,
         data: [],
         message: 'Failed to load video content. Please check your network connection.',
       };
-    }
+    });
   }
 
   // ============================================================================

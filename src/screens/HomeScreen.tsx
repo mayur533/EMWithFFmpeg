@@ -111,7 +111,13 @@ const TemplateCard: React.FC<TemplateCardProps> = React.memo(({ item, cardWidth,
         ]}
       >
         <View style={[styles.templateImageContainer, { height: cardWidth }]}>
-          <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
+          <OptimizedImage 
+            uri={item.thumbnail} 
+            style={styles.templateImage} 
+            resizeMode="cover" 
+            mode="thumbnail"
+            cacheKey={`template_${item.id}`}
+          />
         </View>
       </Animated.View>
     </TouchableOpacity>
@@ -194,6 +200,8 @@ const BusinessCategoryCardItem: React.FC<BusinessCategoryCardItemProps> = React.
                       uri={uri}
                       style={styles.businessCategoryImageCellImage}
                       resizeMode="cover"
+                      mode="thumbnail"
+                      cacheKey={`category_${item.id}_${index}`}
                     />
                   </View>
                 ))}
@@ -203,6 +211,8 @@ const BusinessCategoryCardItem: React.FC<BusinessCategoryCardItemProps> = React.
                 uri={displayImages[0]}
                 style={styles.businessCategoryImage}
                 resizeMode="cover"
+                mode="thumbnail"
+                cacheKey={`category_${item.id}`}
               />
             ) : (
               <View
@@ -304,7 +314,13 @@ const VideoTemplateCard: React.FC<VideoTemplateCardProps> = React.memo(({ item, 
         ]}
       >
         <View style={[styles.templateImageContainer, { height: cardWidth }]}>
-          <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
+          <OptimizedImage 
+            uri={item.thumbnail} 
+            style={styles.templateImage} 
+            resizeMode="cover" 
+            mode="thumbnail"
+            cacheKey={`video_${item.id}`}
+          />
           <View style={styles.videoPlayOverlay}>
             <Icon name="play-arrow" size={playIconSize} color="#ffffff" />
           </View>
@@ -366,6 +382,8 @@ const GreetingCategoryCard: React.FC<GreetingCategoryCardProps> = React.memo(({ 
               uri={categoryImage} 
               style={styles.businessCategoryImage}
               resizeMode="cover"
+              mode="thumbnail"
+              cacheKey={`greeting_category_${item.id}`}
             />
           ) : (
             <View
@@ -482,7 +500,13 @@ const GreetingCard: React.FC<GreetingCardProps> = React.memo(({ item, cardWidth,
         ]}
       >
         <View style={[styles.templateImageContainer, { height: cardWidth }]}>
-          <OptimizedImage uri={item.thumbnail} style={styles.templateImage} resizeMode="cover" />
+          <OptimizedImage 
+            uri={item.thumbnail} 
+            style={styles.templateImage} 
+            resizeMode="cover" 
+            mode="thumbnail"
+            cacheKey={`template_${item.id}`}
+          />
         </View>
       </View>
     </TouchableOpacity>
@@ -549,7 +573,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const userInitials = useMemo(() => 
     userName
       .split(' ')
-      .map(n => n[0])
+      .map((n: string) => n[0])
       .join('')
       .toUpperCase()
       .slice(0, 2),
@@ -4202,11 +4226,6 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
   },
-  userName: {
-    fontSize: moderateScale(14),
-    fontWeight: '600',
-    marginBottom: moderateScale(2),
-  },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -4229,8 +4248,9 @@ const styles = StyleSheet.create({
     marginBottom: moderateScale(1.5),
   },
   userName: {
-    fontSize: moderateScale(12),
-    fontWeight: 'bold',
+    fontSize: moderateScale(14),
+    fontWeight: '600',
+    marginBottom: moderateScale(2),
   },
   apiStatusIndicator: {
     flexDirection: 'row',

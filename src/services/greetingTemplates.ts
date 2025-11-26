@@ -1,4 +1,5 @@
 import api from './api';
+import cacheService from './cacheService';
 
 export interface GreetingTemplate {
   id: string;
@@ -35,12 +36,6 @@ export interface GreetingFilters {
 
 class GreetingTemplatesService {
   private readonly BASE_URL = 'https://eventmarketersbackend.onrender.com';
-  
-  // Cache for faster subsequent loads
-  private categoriesCache: GreetingCategory[] | null = null;
-  private templatesCache: GreetingTemplate[] | null = null;
-  private cacheTimestamp: number = 0;
-  private readonly CACHE_DURATION = 1 * 60 * 1000; // 1 minute (reduced from 5 minutes to ensure deleted categories are removed faster)
 
   /**
    * Convert relative image URLs to absolute URLs with quality parameters (optimized - minimal logging)
@@ -72,79 +67,64 @@ class GreetingTemplatesService {
     return absoluteUrl;
   }
 
-  // Check if cache is still valid
-  private isCacheValid(): boolean {
-    if (!this.cacheTimestamp) return false;
-    const timeSinceCache = Date.now() - this.cacheTimestamp;
-    return timeSinceCache < this.CACHE_DURATION;
-  }
-
   // Clear cache
   clearCache(): void {
-    this.categoriesCache = null;
-    this.templatesCache = null;
-    this.cacheTimestamp = 0;
+    cacheService.clear('greeting_categories');
+    cacheService.clearPattern('greeting_templates_');
   }
 
   // Get all greeting categories
   async getCategories(): Promise<GreetingCategory[]> {
-    // Return cached data if available and valid
-    if (this.categoriesCache && this.isCacheValid()) {
-      return this.categoriesCache;
-    }
+    const cacheKey = 'greeting_categories';
     
-    try {
-      const response = await api.get('/api/mobile/greetings/categories');
-      
-      if (response.data.success) {
-        // Extract categories array - backend returns { data: { categories: [...] } }
-        const categoriesArray = response.data.data.categories || response.data.data;
+    return cacheService.getOrFetch(
+      cacheKey,
+      async () => {
+        const response = await api.get('/api/mobile/greetings/categories');
         
-        if (!Array.isArray(categoriesArray)) {
-          throw new Error('Invalid categories format');
+        if (response.data.success) {
+          // Extract categories array - backend returns { data: { categories: [...] } }
+          const categoriesArray = response.data.data.categories || response.data.data;
+          
+          if (!Array.isArray(categoriesArray)) {
+            throw new Error('Invalid categories format');
+          }
+          
+          // Map backend response to frontend format and filter out deleted categories
+          const mappedCategories = categoriesArray
+            .filter((backendCategory: any) => {
+              // Filter out deleted categories (check for various possible deleted flags)
+              // Also filter out categories with no content (count: 0) as these are likely deleted
+              return !backendCategory.deleted && 
+                     !backendCategory.isDeleted && 
+                     backendCategory.id && 
+                     backendCategory.name &&
+                     (backendCategory.count > 0 || backendCategory.imageCount > 0 || backendCategory.videoCount > 0); // Only include categories with content
+            })
+            .map((backendCategory: any) => ({
+              id: backendCategory.id,
+              name: backendCategory.name,
+              icon: backendCategory.icon,
+              color: backendCategory.color || '#4A90E2'
+            }));
+          
+          return mappedCategories;
+        } else {
+          throw new Error('API returned unsuccessful response');
         }
-        
-        // Map backend response to frontend format and filter out deleted categories
-        const mappedCategories = categoriesArray
-          .filter((backendCategory: any) => {
-            // Filter out deleted categories (check for various possible deleted flags)
-            // Also filter out categories with no content (count: 0) as these are likely deleted
-            return !backendCategory.deleted && 
-                   !backendCategory.isDeleted && 
-                   backendCategory.id && 
-                   backendCategory.name &&
-                   (backendCategory.count > 0 || backendCategory.imageCount > 0 || backendCategory.videoCount > 0); // Only include categories with content
-          })
-          .map((backendCategory: any) => ({
-            id: backendCategory.id,
-            name: backendCategory.name,
-            icon: backendCategory.icon,
-            color: backendCategory.color || '#4A90E2'
-          }));
-        
-        // Cache the results
-        this.categoriesCache = mappedCategories;
-        this.cacheTimestamp = Date.now();
-        
-        return mappedCategories;
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
-    } catch (error) {
+      },
+      5 * 60 * 1000, // 5 minutes TTL
+      false // Don't allow stale data - we want fresh categories to ensure deleted ones are removed
+    ).catch(error => {
       console.error('Error fetching greeting categories:', error);
-      // Don't return expired cache - clear it and return empty array to force refresh
-      // This ensures deleted categories don't persist in the UI
-      this.categoriesCache = null;
-      this.cacheTimestamp = 0;
-      return []; // Return empty array instead of stale cache
-    }
+      return []; // Return empty array on error
+    });
   }
 
   // Force refresh categories by clearing cache and fetching fresh data
   async refreshCategories(): Promise<GreetingCategory[]> {
     // Clear cache before fetching
-    this.categoriesCache = null;
-    this.cacheTimestamp = 0;
+    cacheService.clear('greeting_categories');
     return this.getCategories();
   }
 
@@ -207,84 +187,78 @@ class GreetingTemplatesService {
 
   // Get all greeting templates with filters
   async getTemplates(filters?: GreetingFilters): Promise<GreetingTemplate[]> {
-    // Return cached data if available, valid, and no filters applied
-    if (!filters && this.templatesCache && this.isCacheValid()) {
-      return this.templatesCache;
-    }
+    // Generate cache key based on filters
+    const filtersKey = filters ? JSON.stringify(filters) : 'default';
+    const cacheKey = `greeting_templates_${filtersKey}`;
     
-    try {
-      const params = new URLSearchParams();
-      if (filters?.category) params.append('category', filters.category);
-      if (filters?.language) params.append('language', filters.language);
-      if (filters?.isPremium !== undefined) params.append('isPremium', filters.isPremium.toString());
-      if (filters?.search) params.append('search', filters.search);
-      // Use limit 200 for category requests if no limit specified (for General Categories)
-      const limit = filters?.limit || (filters?.category ? 200 : undefined);
-      if (limit) params.append('limit', limit.toString());
+    return cacheService.getOrFetch(
+      cacheKey,
+      async () => {
+        const params = new URLSearchParams();
+        if (filters?.category) params.append('category', filters.category);
+        if (filters?.language) params.append('language', filters.language);
+        if (filters?.isPremium !== undefined) params.append('isPremium', filters.isPremium.toString());
+        if (filters?.search) params.append('search', filters.search);
+        // Use limit 200 for category requests if no limit specified (for General Categories)
+        const limit = filters?.limit || (filters?.category ? 200 : undefined);
+        if (limit) params.append('limit', limit.toString());
 
-      const endpoint = `/api/mobile/greetings/templates?${params.toString()}`;
-      const response = await api.get(endpoint);
-      
-      if (response.data.success) {
-        // API returns images in businessCategoryImages, not templates
-        const templates = response.data.data?.templates || [];
-        const businessCategoryImages = response.data.data?.businessCategoryImages || [];
+        const endpoint = `/api/mobile/greetings/templates?${params.toString()}`;
+        const response = await api.get(endpoint);
         
-        // Use businessCategoryImages if templates is empty
-        const dataToMap = businessCategoryImages.length > 0 ? businessCategoryImages : templates;
-        
-        if (dataToMap.length === 0) {
-          return [];
-        }
-        
-        // Map backend response to frontend format with URL conversion
-        const mappedTemplates = dataToMap.map((backendTemplate: any) => {
-          // For businessCategoryImages: prefer url, then thumbnailUrl
-          // For templates: use imageUrl or thumbnail
-          let imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
-          let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
+        if (response.data.success) {
+          // API returns images in businessCategoryImages, not templates
+          const templates = response.data.data?.templates || [];
+          const businessCategoryImages = response.data.data?.businessCategoryImages || [];
           
-          const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl, true);
-          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl, true);
-          const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85';
-          const finalBackground = absoluteImageUrl || absoluteThumbnailUrl || finalThumbnail;
+          // Use businessCategoryImages if templates is empty
+          const dataToMap = businessCategoryImages.length > 0 ? businessCategoryImages : templates;
           
-          return {
-            id: backendTemplate.id,
-            name: backendTemplate.title,
-            thumbnail: finalThumbnail,
-            category: backendTemplate.business_categories?.name || backendTemplate.category || 'General',
-            categoryId: backendTemplate.business_categories?.id || backendTemplate.businessCategoryId || undefined,
-            content: {
-              text: backendTemplate.description || '',
-              background: finalBackground,
-              layout: 'vertical' as const
-            },
-            downloads: backendTemplate.downloads || 0,
-            isDownloaded: false,
-            isPremium: backendTemplate.isPremium || false,
-            tags: Array.isArray(backendTemplate.tags) ? backendTemplate.tags : [],
-          };
-        });
-        
-        // Cache the results if no filters were applied
-        if (!filters) {
-          this.templatesCache = mappedTemplates;
-          this.cacheTimestamp = Date.now();
+          if (dataToMap.length === 0) {
+            return [];
+          }
+          
+          // Map backend response to frontend format with URL conversion
+          const mappedTemplates = dataToMap.map((backendTemplate: any) => {
+            // For businessCategoryImages: prefer url, then thumbnailUrl
+            // For templates: use imageUrl or thumbnail
+            let imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
+            let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
+            
+            const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl, true);
+            const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl, true);
+            const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85';
+            const finalBackground = absoluteImageUrl || absoluteThumbnailUrl || finalThumbnail;
+            
+            return {
+              id: backendTemplate.id,
+              name: backendTemplate.title,
+              thumbnail: finalThumbnail,
+              category: backendTemplate.business_categories?.name || backendTemplate.category || 'General',
+              categoryId: backendTemplate.business_categories?.id || backendTemplate.businessCategoryId || undefined,
+              content: {
+                text: backendTemplate.description || '',
+                background: finalBackground,
+                layout: 'vertical' as const
+              },
+              downloads: backendTemplate.downloads || 0,
+              isDownloaded: false,
+              isPremium: backendTemplate.isPremium || false,
+              tags: Array.isArray(backendTemplate.tags) ? backendTemplate.tags : [],
+            };
+          });
+          
+          return mappedTemplates;
+        } else {
+          throw new Error('API returned unsuccessful response');
         }
-        
-        return mappedTemplates;
-      } else {
-        throw new Error('API returned unsuccessful response');
-      }
-    } catch (error: any) {
+      },
+      5 * 60 * 1000, // 5 minutes TTL
+      true // Allow stale data
+    ).catch(error => {
       console.error('Error fetching greeting templates:', error);
-      // Return cached data if available, even if expired
-      if (!filters && this.templatesCache) {
-        return this.templatesCache;
-      }
-      return []; // Return empty array instead of mock data
-    }
+      return []; // Return empty array on error
+    });
   }
 
   // Search greeting templates

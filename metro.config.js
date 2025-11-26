@@ -16,6 +16,10 @@ const config = {
     ],
     // Add support for additional file extensions
     assetExts: ['bin', 'txt', 'jpg', 'png', 'json', 'gif', 'webp', 'svg', 'mp4', 'mov', 'avi', 'mkv'],
+    // Enable package exports resolution for modern packages like React Query
+    unstable_enablePackageExports: true,
+    // Resolve .js files from package exports
+    sourceExts: ['jsx', 'js', 'ts', 'tsx', 'json'],
   },
   transformer: {
     // Optimize for large projects

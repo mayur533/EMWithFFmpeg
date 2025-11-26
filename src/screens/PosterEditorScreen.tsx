@@ -2349,6 +2349,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
       position: 'absolute' as const,
       zIndex: layer.zIndex,
       transform: baseTransforms,
+      width: layer.size?.width ?? 'auto',
+      minWidth: 10,
+      maxWidth: layer.size?.width ?? '100%',
     };
 
     const handleLayerPress = () => {
@@ -2439,6 +2442,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                 fontWeight: layer.style?.fontWeight as any,
                 padding: 0,
                 margin: 0,
+                flexWrap: 'wrap',
+                width: '100%',
               }}>
                 {layer.content}
               </Text>

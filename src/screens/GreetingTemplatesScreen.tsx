@@ -12,7 +12,6 @@ import {
   Dimensions,
   ScrollView,
   Modal,
-  Image,
   ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -26,6 +25,7 @@ import greetingTemplatesService, { GreetingTemplate, GreetingCategory } from '..
 import { useTheme } from '../context/ThemeContext';
 import { useSubscription } from '../contexts/SubscriptionContext';
 import ComingSoonModal from '../components/ComingSoonModal';
+import LazyFullImage from '../components/LazyFullImage';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -557,10 +557,14 @@ const GreetingTemplatesScreen: React.FC = () => {
             {/* Template Preview */}
             {selectedPremiumTemplate && (
               <View style={styles.templatePreview}>
-                <Image 
-                  source={{ uri: selectedPremiumTemplate.thumbnail }} 
+                <LazyFullImage
+                  thumbnailUri={selectedPremiumTemplate.thumbnail || (selectedPremiumTemplate as any).content?.background}
+                  fullImageUri={getHighQualityImageUrl(selectedPremiumTemplate)}
                   style={styles.templatePreviewImage}
                   resizeMode="cover"
+                  loadOnMount={true}
+                  preload={true}
+                  quality="high"
                 />
                 <View style={styles.templatePreviewOverlay}>
                   <Text style={styles.templatePreviewTitle}>{selectedPremiumTemplate.name}</Text>
