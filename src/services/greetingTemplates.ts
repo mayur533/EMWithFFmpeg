@@ -36,6 +36,8 @@ export interface GreetingFilters {
 
 class GreetingTemplatesService {
   private readonly BASE_URL = 'https://eventmarketersbackend.onrender.com';
+  private readonly FALLBACK_THUMBNAIL =
+    'https://images.unsplash.com/photo-1552664730-d307ca884978?w=600&h=600&fit=crop&q=60&auto=format';
 
   /**
    * Convert relative image URLs to absolute URLs with quality parameters (optimized - minimal logging)
@@ -65,6 +67,62 @@ class GreetingTemplatesService {
     }
     
     return absoluteUrl;
+  }
+
+  private applyImageTransform(
+    url: string | undefined,
+    qualityPreset: 'best' | 'balanced' | 'eco',
+    maxWidth: number,
+  ): string | undefined {
+    if (!url) {
+      return undefined;
+    }
+
+    if (url.includes('res.cloudinary.com') && url.includes('/upload/')) {
+      try {
+        const [prefix, remainder] = url.split('/upload/');
+        if (!remainder) {
+          return url;
+        }
+        const transformMap: Record<typeof qualityPreset, string> = {
+          best: `f_auto,q_auto:best,c_limit,w_${maxWidth}`,
+          balanced: `f_auto,q_auto,c_limit,w_${maxWidth}`,
+          eco: `f_auto,q_auto:eco,c_limit,w_${maxWidth}`,
+        };
+        return `${prefix}/upload/${transformMap[qualityPreset]}/${remainder}`;
+      } catch {
+        return url;
+      }
+    }
+
+    const [base, existingQuery] = url.split('?');
+    const params = new URLSearchParams(existingQuery || '');
+    params.set('auto', 'format');
+    params.set('fit', 'crop');
+    params.set('w', maxWidth.toString());
+    const qualityValue = qualityPreset === 'best' ? '90' : qualityPreset === 'balanced' ? '80' : '60';
+    params.set('q', qualityValue);
+    return `${base}?${params.toString()}`;
+  }
+
+  private getOptimizedImageUrls(
+    rawImageUrl?: string | null,
+    rawThumbnailUrl?: string | null,
+  ): { thumbnail: string; background: string } {
+    const absoluteImage = this.convertToAbsoluteUrl(rawImageUrl, true);
+    const absoluteThumbnail = this.convertToAbsoluteUrl(rawThumbnailUrl, true);
+
+    const background =
+      this.applyImageTransform(absoluteImage || absoluteThumbnail, 'best', 1400) || this.FALLBACK_THUMBNAIL;
+    const thumbnail =
+      this.applyImageTransform(absoluteThumbnail || absoluteImage, 'eco', 420) ||
+      background ||
+      this.FALLBACK_THUMBNAIL;
+
+    return {
+      thumbnail,
+      background: background || thumbnail,
+    };
   }
 
   // Clear cache
@@ -147,25 +205,19 @@ class GreetingTemplatesService {
         
         // Map backend response to frontend format with URL conversion
         const mappedTemplates = dataToMap.map((backendTemplate: any) => {
-          // For businessCategoryImages: prefer url, then thumbnailUrl
-          // For templates: use imageUrl or thumbnail
-          let imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
-          let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
-          
-          const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl, true);
-          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl, true);
-          const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85';
-          const finalBackground = absoluteImageUrl || absoluteThumbnailUrl || finalThumbnail;
-          
+          const imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
+          const thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
+          const optimized = this.getOptimizedImageUrls(imageUrl, thumbnailUrl);
+
           return {
             id: backendTemplate.id,
             name: backendTemplate.title,
-            thumbnail: finalThumbnail,
+            thumbnail: optimized.thumbnail,
             category: backendTemplate.business_categories?.name || backendTemplate.category || 'General',
             categoryId: backendTemplate.business_categories?.id || backendTemplate.businessCategoryId || undefined,
             content: {
               text: backendTemplate.description || '',
-              background: finalBackground,
+              background: optimized.background,
               layout: 'vertical' as const
             },
             downloads: backendTemplate.downloads || 0,
@@ -220,25 +272,19 @@ class GreetingTemplatesService {
           
           // Map backend response to frontend format with URL conversion
           const mappedTemplates = dataToMap.map((backendTemplate: any) => {
-            // For businessCategoryImages: prefer url, then thumbnailUrl
-            // For templates: use imageUrl or thumbnail
-            let imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
-            let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
-            
-            const absoluteImageUrl = this.convertToAbsoluteUrl(imageUrl, true);
-            const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl, true);
-            const finalThumbnail = absoluteThumbnailUrl || absoluteImageUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85';
-            const finalBackground = absoluteImageUrl || absoluteThumbnailUrl || finalThumbnail;
-            
+            const imageUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail;
+            const thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl;
+            const optimized = this.getOptimizedImageUrls(imageUrl, thumbnailUrl);
+
             return {
               id: backendTemplate.id,
               name: backendTemplate.title,
-              thumbnail: finalThumbnail,
+              thumbnail: optimized.thumbnail,
               category: backendTemplate.business_categories?.name || backendTemplate.category || 'General',
               categoryId: backendTemplate.business_categories?.id || backendTemplate.businessCategoryId || undefined,
               content: {
                 text: backendTemplate.description || '',
-                background: finalBackground,
+                background: optimized.background,
                 layout: 'vertical' as const
               },
               downloads: backendTemplate.downloads || 0,
@@ -287,31 +333,29 @@ class GreetingTemplatesService {
         
         // Map backend response to frontend format
         const mappedTemplates = dataToMap.map((backendTemplate: any) => {
-          // For businessCategoryImages: prefer url (full quality), then thumbnailUrl
-          // For templates: use imageUrl or thumbnail
-          let fullUrl = backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnailUrl || backendTemplate.thumbnail || backendTemplate.image;
-          let thumbnailUrl = backendTemplate.thumbnailUrl || backendTemplate.url || backendTemplate.imageUrl || backendTemplate.thumbnail || backendTemplate.image;
-          
-          // If thumbnail URL is missing extension, use the full URL instead
-          if (thumbnailUrl && !thumbnailUrl.match(/\.(jpg|jpeg|png|gif|webp)$/i)) {
-            thumbnailUrl = fullUrl;
-          }
-          
-          // Convert to absolute URLs with high quality
-          const absoluteFullUrl = this.convertToAbsoluteUrl(fullUrl, true);
-          const absoluteThumbnailUrl = this.convertToAbsoluteUrl(thumbnailUrl, true);
-          
-          const finalBackground = absoluteFullUrl || absoluteThumbnailUrl || 'https://images.unsplash.com/photo-1552664730-d307ca884978?w=1200&h=800&fit=crop&q=85';
-          const finalThumbnail = absoluteThumbnailUrl || absoluteFullUrl || finalBackground;
-          
+          const fullUrl =
+            backendTemplate.url ||
+            backendTemplate.imageUrl ||
+            backendTemplate.thumbnailUrl ||
+            backendTemplate.thumbnail ||
+            backendTemplate.image;
+          const thumbnailUrl =
+            backendTemplate.thumbnailUrl ||
+            backendTemplate.url ||
+            backendTemplate.imageUrl ||
+            backendTemplate.thumbnail ||
+            backendTemplate.image;
+
+          const optimized = this.getOptimizedImageUrls(fullUrl, thumbnailUrl);
+
           return {
             id: backendTemplate.id,
             name: backendTemplate.title,
-            thumbnail: finalThumbnail,
+            thumbnail: optimized.thumbnail,
             category: backendTemplate.business_categories?.name || backendTemplate.category || 'General',
             content: {
               text: backendTemplate.description || '',
-              background: finalBackground,
+              background: optimized.background,
               layout: 'vertical' as const
             },
             downloads: backendTemplate.downloads || 0,
