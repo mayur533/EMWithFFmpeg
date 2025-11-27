@@ -581,8 +581,24 @@ const HomeScreen: React.FC = React.memo(() => {
   const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
   
   // Get current user info
-  const currentUser = useMemo(() => authService.getCurrentUser(), []);
-  const userName = useMemo(() => currentUser?.name || currentUser?.username || 'User', [currentUser]);
+  const [userProfile, setUserProfile] = useState(() => authService.getCurrentUser());
+
+  useEffect(() => {
+    const unsubscribe = authService.onAuthStateChanged(user => {
+      setUserProfile(user);
+    });
+    return unsubscribe;
+  }, []);
+
+  const userName = useMemo(() => {
+    return (
+      userProfile?.displayName ||
+      userProfile?.name ||
+      userProfile?.companyName ||
+      userProfile?.username ||
+      'User'
+    );
+  }, [userProfile]);
   const userInitials = useMemo(() => 
     userName
       .split(' ')
@@ -592,6 +608,16 @@ const HomeScreen: React.FC = React.memo(() => {
       .slice(0, 2),
     [userName]
   );
+  const userAvatarUri = useMemo(() => {
+    return (
+      userProfile?.photo ||
+      userProfile?.photoURL ||
+      userProfile?.logo ||
+      userProfile?.companyLogo ||
+      userProfile?.avatar ||
+      null
+    );
+  }, [userProfile]);
   
   // Dynamic dimensions for responsive layout
   const [dimensions, setDimensions] = useState(() => {
@@ -1755,7 +1781,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
 
   const handleWhatsAppPress = useCallback(async () => {
     try {
-      const phoneNumber = '919941041415'; // Phone number without + sign for WhatsApp (9941041415 with country code 91)
+      const phoneNumber = '918551941415'; // Phone number without + sign for WhatsApp (8551941415 with country code 91)
       const message = 'Hello, I need support';
       const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
       
@@ -1776,7 +1802,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
 
   const handlePhonePress = useCallback(async () => {
     try {
-      const phoneNumber = '9941041415'; // Phone number from HelpSupportScreen
+      const phoneNumber = '8551941415'; // Updated phone number
       const url = `tel:${phoneNumber}`;
       await Linking.openURL(url);
     } catch (error) {
@@ -2342,10 +2368,20 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             <TouchableOpacity 
               style={styles.userProfileSection}
               activeOpacity={0.7}
+              onPress={() => navigation.navigate('BusinessProfiles')}
             >
               <View style={styles.userAvatarContainer}>
                 <View style={[styles.userAvatar, { backgroundColor: theme.colors.primary }]}>
-                  <Text style={styles.userAvatarText}>{userInitials}</Text>
+                  {userAvatarUri ? (
+                    <OptimizedImage
+                      uri={userAvatarUri}
+                      style={styles.userAvatarImage}
+                      resizeMode="cover"
+                      cacheKey="user_avatar"
+                    />
+                  ) : (
+                    <Text style={styles.userAvatarText}>{userInitials}</Text>
+                  )}
                 </View>
               </View>
               <View style={styles.userInfoContainer}>
@@ -4222,6 +4258,11 @@ const styles = StyleSheet.create({
     fontSize: moderateScale(14),
     fontWeight: 'bold',
     color: '#ffffff',
+  },
+  userAvatarImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: moderateScale(20),
   },
   userInfoContainer: {
     flex: 1,
