@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useTransition } from 'react';
 import {
   View,
   Text,
@@ -77,6 +77,15 @@ const GreetingTemplatesScreen: React.FC = () => {
   const [selectedPremiumTemplate, setSelectedPremiumTemplate] = useState<GreetingTemplate | null>(null);
   const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
+  const [isFiltering, startTransition] = useTransition();
+  const isMountedRef = useRef(true);
+  const searchRequestIdRef = useRef(0);
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const getTemplateTags = useCallback((template: GreetingTemplate): string[] => {
     if (Array.isArray((template as any).tags)) {
@@ -105,8 +114,8 @@ const GreetingTemplatesScreen: React.FC = () => {
     tags: getTemplateTags(template),
   }), [getTemplateTags]);
 
-  // Optimized data fetching - removed dependency to prevent re-renders
-  const fetchData = async (isRefresh: boolean = false) => {
+  // Optimized data fetching - memoized to avoid re-creation
+  const fetchData = useCallback(async (isRefresh: boolean = false) => {
     try {
       // Fetch categories and templates in parallel
       // Cache will make this instant on subsequent loads
@@ -122,7 +131,6 @@ const GreetingTemplatesScreen: React.FC = () => {
       
       if (templatesData.length > 0) {
         setAllTemplates(templatesData);
-        setFilteredTemplates(templatesData);
       }
       
       setInitialLoading(false);
@@ -133,7 +141,7 @@ const GreetingTemplatesScreen: React.FC = () => {
         Alert.alert('Error', 'Failed to load greeting templates. Please try again.');
       }
     }
-  };
+  }, []);
 
   // Client-side filtering for instant category switching
   const filterTemplatesByCategory = useCallback((categoryFilter: string, templates: GreetingTemplate[]) => {
@@ -159,43 +167,52 @@ const GreetingTemplatesScreen: React.FC = () => {
     return filtered;
   }, [categories]);
 
-  // Optimized search functionality with debouncing
-  const searchTemplates = useCallback(async (query: string) => {
-    if (!query.trim()) {
-      // If no search query, show templates filtered by current category
-      const categoryFiltered = filterTemplatesByCategory(selectedCategory, allTemplates);
-      setFilteredTemplates(categoryFiltered);
-      return;
-    }
-
-    try {
-      const results = await greetingTemplatesService.searchTemplates(query);
-      setFilteredTemplates(results);
-    } catch (error) {
-      console.error('Error searching templates:', error);
-    }
-  }, [allTemplates, selectedCategory, filterTemplatesByCategory]);
-
   // Effects - load data on mount only
   useEffect(() => {
     fetchData();
-  }, []); // Only run once on mount
+  }, [fetchData]); // Only run once on mount
 
+  const categoryFilteredTemplates = useMemo(() => {
+    return filterTemplatesByCategory(selectedCategory, allTemplates);
+  }, [filterTemplatesByCategory, selectedCategory, allTemplates]);
 
+  const normalizedSearchQuery = searchQuery.trim();
 
-  // Optimized search effect with better debouncing
+  // Keep filtered list in sync when no active search query
   useEffect(() => {
-    if (searchQuery) {
-      const timeoutId = setTimeout(() => {
-        searchTemplates(searchQuery);
-      }, 300);
-      return () => clearTimeout(timeoutId);
-    } else {
-      // If no search query, filter by current category
-      const categoryFiltered = filterTemplatesByCategory(selectedCategory, allTemplates);
-      setFilteredTemplates(categoryFiltered);
+    if (normalizedSearchQuery) {
+      return;
     }
-  }, [searchQuery, selectedCategory, allTemplates]); // Removed function dependencies to prevent loops
+
+    startTransition(() => {
+      if (isMountedRef.current) {
+        setFilteredTemplates(categoryFilteredTemplates);
+      }
+    });
+  }, [categoryFilteredTemplates, normalizedSearchQuery, startTransition]);
+
+  // Optimized search effect with debouncing and request guards
+  useEffect(() => {
+    if (!normalizedSearchQuery) {
+      return;
+    }
+
+    const currentRequestId = ++searchRequestIdRef.current;
+    const timeoutId = setTimeout(async () => {
+      try {
+        const results = await greetingTemplatesService.searchTemplates(normalizedSearchQuery);
+        if (isMountedRef.current && currentRequestId === searchRequestIdRef.current) {
+          startTransition(() => {
+            setFilteredTemplates(results);
+          });
+        }
+      } catch (error) {
+        console.error('Error searching templates:', error);
+      }
+    }, 300);
+
+    return () => clearTimeout(timeoutId);
+  }, [normalizedSearchQuery, startTransition]);
 
   // Get high quality image URL for greeting templates
   const getHighQualityImageUrl = useCallback((template: GreetingTemplate): string => {
@@ -298,12 +315,10 @@ const GreetingTemplatesScreen: React.FC = () => {
   // Instant category switching - no API calls
   const handleCategorySelect = useCallback((categoryFilter: string) => {
     setSelectedCategory(categoryFilter);
-    setSearchQuery('');
-    
-    // Instant client-side filtering
-    const categoryFiltered = filterTemplatesByCategory(categoryFilter, allTemplates);
-    setFilteredTemplates(categoryFiltered);
-  }, [filterTemplatesByCategory, allTemplates]);
+    if (searchQuery) {
+      setSearchQuery('');
+    }
+  }, [searchQuery]);
 
   const getPrimaryTagForTemplate = useCallback((template: GreetingTemplate): string => {
     const templateTags = getTemplateTags(template);
@@ -371,7 +386,7 @@ const GreetingTemplatesScreen: React.FC = () => {
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [fetchData]);
 
   // Helper function to add opacity to color (reusable for all category buttons)
   const addOpacityToColor = useCallback((color: string, opacity: number): string => {
@@ -788,6 +803,20 @@ const GreetingTemplatesScreen: React.FC = () => {
                   }
                 ]}>
                   Loading templates...
+                </Text>
+              </View>
+            ) : isFiltering ? (
+              <View style={[styles.loadingContainer, { paddingTop: moderateScale(20) }]}>
+                <ActivityIndicator size="small" color={theme.colors.primary} />
+                <Text style={[
+                  styles.loadingText, 
+                  { 
+                    color: theme.colors.textSecondary,
+                    marginTop: moderateScale(6),
+                    fontSize: moderateScale(9),
+                  }
+                ]}>
+                  Updating templates...
                 </Text>
               </View>
             ) : (

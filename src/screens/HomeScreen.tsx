@@ -18,6 +18,7 @@ import {
   Modal,
   Linking,
   Platform,
+  InteractionManager,
 } from 'react-native';
 import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/MaterialIcons';
@@ -39,10 +40,15 @@ import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
 import businessCategoriesService, { BusinessCategory } from '../services/businessCategoriesService';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
+import { performanceMonitor } from '../utils/performanceMonitor';
+import { requestDeduplication } from '../utils/requestDeduplication';
+import { RequestDeduplication } from '../utils/requestDeduplication';
 // import SimpleFestivalCalendar from '../components/SimpleFestivalCalendar';
 import OptimizedImage from '../components/OptimizedImage';
 import ComingSoonModal from '../components/ComingSoonModal';
 import HorizontalFestivalCalendar from '../components/HorizontalFestivalCalendar';
+import BusinessCategoriesSection from '../components/sections/BusinessCategoriesSection';
+import GeneralCategoriesSection from '../components/sections/GeneralCategoriesSection';
 import responsiveUtils, { 
   responsiveSpacing, 
   responsiveFontSize, 
@@ -459,6 +465,11 @@ interface GreetingCardProps {
 }
 
 const GreetingCard: React.FC<GreetingCardProps> = React.memo(({ item, cardWidth, theme, categoryTemplates, searchQuery, navigation, onCardPress }) => {
+  // Pre-compute related templates to avoid filtering on every press
+  const relatedTemplates = useMemo(() => {
+    return categoryTemplates.filter(t => t.id !== item.id);
+  }, [categoryTemplates, item.id]);
+
   const handlePress = useCallback(() => {
     if (!item || !item.thumbnail) {
       if (__DEV__) {
@@ -467,19 +478,21 @@ const GreetingCard: React.FC<GreetingCardProps> = React.memo(({ item, cardWidth,
       return;
     }
     
-    if (onCardPress) {
-      onCardPress(item);
-    }
-    
-    // Navigate to PosterPlayer with category-specific templates
-    const relatedTemplates = categoryTemplates.filter(t => t.id !== item.id);
+    // Navigate immediately - related templates already computed
     navigation.navigate('PosterPlayer', {
       selectedPoster: item,
       relatedPosters: relatedTemplates,
       searchQuery: searchQuery || '',
       templateSource: 'greeting',
     });
-  }, [item, categoryTemplates, searchQuery, navigation, onCardPress]);
+    
+    // Call onCardPress after navigation to avoid blocking
+    if (onCardPress) {
+      requestAnimationFrame(() => {
+        onCardPress(item);
+      });
+    }
+  }, [item, relatedTemplates, searchQuery, navigation, onCardPress]);
 
   if (!item || !item.thumbnail) {
     return null;
@@ -792,47 +805,60 @@ const HomeScreen: React.FC = React.memo(() => {
   const [celebratesMomentsTemplates, setCelebratesMomentsTemplates] = useState<any[]>([]);
   const [celebratesMomentsTemplatesRaw, setCelebratesMomentsTemplatesRaw] = useState<any[]>([]);
   
-  // Load data from APIs with caching for instant loads
+  // Load data from APIs with caching for instant loads and request deduplication
   const loadApiData = useCallback(async (isRefresh: boolean = false) => {
-    setApiLoading(true);
-    setApiError(null);
-    
-    try {
-      if (__DEV__) {
-      }
+    return performanceMonitor.measureAsync('loadApiData', async () => {
+      setApiLoading(true);
+      setApiError(null);
       
-      // Track success count for error handling
-      let successCount = 0;
-      let totalMainRequests = 4;
-      const networkErrors: string[] = [];
-      
-      // Load all 4 APIs in parallel (cache will make this instant on repeat loads)
-      const [featuredResponse, eventsResponse, templatesResponse, videosResponse] = await Promise.allSettled([
-        homeApi.getFeaturedContent({ limit: 10 }).catch(err => {
+      try {
+        if (__DEV__) {
+        }
+        
+        // Track success count for error handling
+        let successCount = 0;
+        let totalMainRequests = 4;
+        const networkErrors: string[] = [];
+        
+        // Load all 4 APIs in parallel with request deduplication
+        const [featuredResponse, eventsResponse, templatesResponse, videosResponse] = await Promise.allSettled([
+          requestDeduplication.deduplicate(
+            RequestDeduplication.generateKey('featuredContent', { limit: 10 }),
+            () => homeApi.getFeaturedContent({ limit: 10 })
+          ).catch(err => {
           if (__DEV__) {
           }
           if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
             networkErrors.push('featured');
           }
           throw err;
-        }),
-        homeApi.getUpcomingEvents({ limit: 200 }).catch(err => {
-          if (__DEV__) {
-          }
-          if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
-            networkErrors.push('events');
-          }
-          throw err;
-        }),
-        homeApi.getProfessionalTemplates({ limit: 200 }).catch(err => {
-          if (__DEV__) {
-          }
-          if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
-            networkErrors.push('templates');
-          }
-          throw err;
-        }),
-        homeApi.getVideoContent({ limit: 20 }).catch(err => {
+          }),
+          requestDeduplication.deduplicate(
+            RequestDeduplication.generateKey('upcomingEvents', { limit: 200 }),
+            () => homeApi.getUpcomingEvents({ limit: 200 })
+          ).catch(err => {
+            if (__DEV__) {
+            }
+            if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
+              networkErrors.push('events');
+            }
+            throw err;
+          }),
+          requestDeduplication.deduplicate(
+            RequestDeduplication.generateKey('professionalTemplates', { limit: 200 }),
+            () => homeApi.getProfessionalTemplates({ limit: 200 })
+          ).catch(err => {
+            if (__DEV__) {
+            }
+            if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
+              networkErrors.push('templates');
+            }
+            throw err;
+          }),
+          requestDeduplication.deduplicate(
+            RequestDeduplication.generateKey('videoContent', { limit: 20 }),
+            () => homeApi.getVideoContent({ limit: 20 })
+          ).catch(err => {
           if (__DEV__) {
           }
           if (err?.message === 'NETWORK_ERROR' || err?.message === 'TIMEOUT') {
@@ -997,35 +1023,32 @@ const HomeScreen: React.FC = React.memo(() => {
           : { display: [], raw: [] },
       };
 
-      // Batch all state updates together (React 18+ auto-batches, but this makes it explicit)
-      if (__DEV__ && greetingUpdates.motivation.raw.length > 0) {
-      }
-      if (__DEV__ && greetingUpdates.goodMorning.raw.length > 0) {
-      }
-      
-      // Update all states in a single batch
-      setMotivationTemplates(greetingUpdates.motivation.display);
-      setMotivationTemplatesRaw(greetingUpdates.motivation.raw);
-      setGoodMorningTemplates(greetingUpdates.goodMorning.display);
-      setGoodMorningTemplatesRaw(greetingUpdates.goodMorning.raw);
-      setBusinessEthicsTemplates(greetingUpdates.businessEthics.display);
-      setBusinessEthicsTemplatesRaw(greetingUpdates.businessEthics.raw);
-      setDevotionalTemplates(greetingUpdates.devotional.display);
-      setDevotionalTemplatesRaw(greetingUpdates.devotional.raw);
-      setLeaderQuotesTemplates(greetingUpdates.leaderQuotes.display);
-      setLeaderQuotesTemplatesRaw(greetingUpdates.leaderQuotes.raw);
-      setAtmanirbharBharatTemplates(greetingUpdates.atmanirbharBharat.display);
-      setAtmanirbharBharatTemplatesRaw(greetingUpdates.atmanirbharBharat.raw);
-      setGoodThoughtsTemplates(greetingUpdates.goodThoughts.display);
-      setGoodThoughtsTemplatesRaw(greetingUpdates.goodThoughts.raw);
-      setTrendingTemplates(greetingUpdates.trending.display);
-      setTrendingTemplatesRaw(greetingUpdates.trending.raw);
-      setBhagvatGitaTemplates(greetingUpdates.bhagvatGita.display);
-      setBhagvatGitaTemplatesRaw(greetingUpdates.bhagvatGita.raw);
-      setBooksTemplates(greetingUpdates.books.display);
-      setBooksTemplatesRaw(greetingUpdates.books.raw);
-      setCelebratesMomentsTemplates(greetingUpdates.celebratesMoments.display);
-      setCelebratesMomentsTemplatesRaw(greetingUpdates.celebratesMoments.raw);
+      // Batch all state updates together using React.startTransition for non-urgent updates
+      // This ensures UI remains responsive during large state updates
+      React.startTransition(() => {
+        setMotivationTemplates(greetingUpdates.motivation.display);
+        setMotivationTemplatesRaw(greetingUpdates.motivation.raw);
+        setGoodMorningTemplates(greetingUpdates.goodMorning.display);
+        setGoodMorningTemplatesRaw(greetingUpdates.goodMorning.raw);
+        setBusinessEthicsTemplates(greetingUpdates.businessEthics.display);
+        setBusinessEthicsTemplatesRaw(greetingUpdates.businessEthics.raw);
+        setDevotionalTemplates(greetingUpdates.devotional.display);
+        setDevotionalTemplatesRaw(greetingUpdates.devotional.raw);
+        setLeaderQuotesTemplates(greetingUpdates.leaderQuotes.display);
+        setLeaderQuotesTemplatesRaw(greetingUpdates.leaderQuotes.raw);
+        setAtmanirbharBharatTemplates(greetingUpdates.atmanirbharBharat.display);
+        setAtmanirbharBharatTemplatesRaw(greetingUpdates.atmanirbharBharat.raw);
+        setGoodThoughtsTemplates(greetingUpdates.goodThoughts.display);
+        setGoodThoughtsTemplatesRaw(greetingUpdates.goodThoughts.raw);
+        setTrendingTemplates(greetingUpdates.trending.display);
+        setTrendingTemplatesRaw(greetingUpdates.trending.raw);
+        setBhagvatGitaTemplates(greetingUpdates.bhagvatGita.display);
+        setBhagvatGitaTemplatesRaw(greetingUpdates.bhagvatGita.raw);
+        setBooksTemplates(greetingUpdates.books.display);
+        setBooksTemplatesRaw(greetingUpdates.books.raw);
+        setCelebratesMomentsTemplates(greetingUpdates.celebratesMoments.display);
+        setCelebratesMomentsTemplatesRaw(greetingUpdates.celebratesMoments.raw);
+      });
 
     } catch (error) {
       // Only catch unexpected errors (like state setting errors or promise.allSettled issues)
@@ -1038,6 +1061,7 @@ const HomeScreen: React.FC = React.memo(() => {
     } finally {
       setApiLoading(false);
     }
+    });
   }, []);
 
   // Load API data once on component mount only (with ref guard to prevent duplicates)
@@ -1315,10 +1339,11 @@ const HomeScreen: React.FC = React.memo(() => {
     };
   }, []); // Empty dependency array - only run once on mount (fetchBusinessCategoryPreviewImages is stable)
 
-  // Rotate categories every 3 seconds
+  // Rotate categories every 3 seconds - optimized for immediate rendering
   useEffect(() => {
     if (greetingCategories.length === 0) return;
     
+    // Start rotation immediately when categories are available
     const interval = setInterval(() => {
       animateCategoryChange();
       setCurrentCategoryIndex((prevIndex) => (prevIndex + 1) % greetingCategories.length);
@@ -1327,10 +1352,11 @@ const HomeScreen: React.FC = React.memo(() => {
     return () => clearInterval(interval);
   }, [greetingCategories, animateCategoryChange]);
 
-  // Rotate business categories every 3 seconds
+  // Rotate business categories every 3 seconds - optimized for immediate rendering
   useEffect(() => {
     if (rotatingBusinessCategories.length === 0) return;
     
+    // Start rotation immediately when categories are available
     const interval = setInterval(() => {
       animateBusinessCategoryChange();
       setCurrentBusinessCategoryIndex((prevIndex) => (prevIndex + 1) % rotatingBusinessCategories.length);
@@ -1652,10 +1678,36 @@ const HomeScreen: React.FC = React.memo(() => {
     }, 100);
   }, [searchQuery, activeTab, professionalTemplates, currentRequestId, isSearching]);
 
+  // Memoized lookup maps for O(1) access instead of O(n) find operations
+const videoContentMap = useMemo(() => {
+  const map = new Map();
+  videoContent.forEach(video => map.set(video.id, video));
+  return map;
+}, [videoContent]);
+
+const professionalTemplatesMap = useMemo(() => {
+  const map = new Map();
+  professionalTemplates.forEach(template => map.set(template.id, template));
+  return map;
+}, [professionalTemplates]);
+
+// Memoize business category previews to prevent unnecessary re-renders
+const memoizedBusinessCategoryPreviews = useMemo(() => {
+  return businessCategoryPreviews;
+}, [businessCategoryPreviews]);
+
+// Memoize greeting category images to prevent unnecessary re-renders
+const memoizedGreetingCategoryImages = useMemo(() => {
+  return greetingCategoryImages;
+}, [greetingCategoryImages]);
+
 const handleTemplatePress = useCallback((template: Template | VideoContent | any) => {
-  const matchedVideo = videoContent.find(video => video.id === template.id);
+  // Navigate immediately using optimized O(1) lookups
+  // Check for video match using O(1) lookup
+  const matchedVideo = videoContentMap.get(template.id);
 
   if (matchedVideo) {
+    // Pre-filter related videos for faster access
     const related = videoContent.filter(video => video.id !== matchedVideo.id);
     navigation.navigate('VideoPlayer', {
       selectedVideo: matchedVideo,
@@ -1666,6 +1718,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
 
   // Check if it's a greeting template
   if (template.isGreeting && template.originalTemplate) {
+    // Navigate immediately with pre-computed related templates
     const relatedTemplates = allGreetingTemplates.filter(t => t.id !== template.id);
     navigation.navigate('PosterPlayer', {
       selectedPoster: template.originalTemplate,
@@ -1676,14 +1729,15 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     return;
   }
 
-  const matchedPoster = professionalTemplates.find(poster => poster.id === template.id);
-  const related = professionalTemplates.filter(poster => poster.id !== (matchedPoster?.id ?? template.id));
+  // Use O(1) lookup instead of O(n) find
+  const matchedPoster = professionalTemplatesMap.get(template.id) || template;
+  const related = professionalTemplates.filter(poster => poster.id !== template.id);
 
   navigation.navigate('PosterPlayer', {
-    selectedPoster: (matchedPoster ?? template) as Template,
+    selectedPoster: matchedPoster as Template,
     relatedPosters: related,
   });
-}, [videoContent, professionalTemplates, allGreetingTemplates, navigation, searchQuery]);
+}, [videoContentMap, professionalTemplatesMap, videoContent, professionalTemplates, allGreetingTemplates, navigation, searchQuery]);
 
   const closeModal = useCallback(() => {
     setIsModalVisible(false);
@@ -1866,6 +1920,25 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
 
   // Store the Y position of business categories section
   const businessCategoriesSectionY = useRef<number>(0);
+
+  // Memoize onLayout callback for business categories section
+  const handleBusinessCategoriesLayout = useCallback(() => {
+    // Measure absolute position relative to ScrollView
+    if (businessCategoriesSectionRef.current && scrollViewRef.current) {
+      businessCategoriesSectionRef.current.measureLayout(
+        scrollViewRef.current as any,
+        (x, y) => {
+          businessCategoriesSectionY.current = y;
+        },
+        () => {
+          // Fallback: store relative position
+          businessCategoriesSectionRef.current?.measure((x, y, width, height, pageX, pageY) => {
+            businessCategoriesSectionY.current = pageY;
+          });
+        }
+      );
+    }
+  }, []);
 
   const handleBusinessButtonPress = useCallback(() => {
     setSelectedCategory('business');
@@ -2063,7 +2136,28 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     return () => clearInterval(interval);
   }, [featuredContent]);
 
+  // Pre-compute related featured templates to avoid filtering on every press
+  const relatedFeaturedTemplatesMap = useMemo(() => {
+    const map = new Map<string, Template[]>();
+    featuredContent.forEach(item => {
+      const related = featuredContent
+        .filter(fc => fc.id !== item.id)
+        .map(fc => ({
+          id: fc.id,
+          name: fc.title,
+          thumbnail: fc.imageUrl,
+          category: fc.type || 'Featured Content',
+          downloads: 0,
+          isDownloaded: false,
+          tags: [],
+        }));
+      map.set(item.id, related);
+    });
+    return map;
+  }, [featuredContent]);
+
   const handleFeaturedCarouselPress = useCallback((item: FeaturedContent) => {
+    // Navigate immediately with pre-computed data
     const selectedTemplate: Template = {
       id: item.id,
       name: item.title,
@@ -2074,23 +2168,13 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
       tags: [],
     };
 
-    const relatedTemplates = featuredContent
-      .filter(fc => fc.id !== item.id)
-      .map(fc => ({
-        id: fc.id,
-        name: fc.title,
-        thumbnail: fc.imageUrl,
-        category: fc.type || 'Featured Content',
-        downloads: 0,
-        isDownloaded: false,
-        tags: [],
-      }));
+    const relatedTemplates = relatedFeaturedTemplatesMap.get(item.id) || [];
 
     navigation.navigate('PosterPlayer', {
       selectedPoster: selectedTemplate,
       relatedPosters: relatedTemplates,
     });
-  }, [featuredContent, navigation]);
+  }, [relatedFeaturedTemplatesMap, navigation]);
 
   const handleFeaturedCarouselScrollFailure = useCallback((info: { index: number }) => {
     requestAnimationFrame(() => {
@@ -2121,6 +2205,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   const handleBusinessCategoryPress = useCallback(async (category: BusinessCategory) => {
     const cachedTemplates = businessCategoryPreviews[category.id];
 
+    // Navigate immediately if we have cached templates
     if (cachedTemplates && cachedTemplates.length > 0) {
       navigation.navigate('PosterPlayer', {
         selectedPoster: cachedTemplates[0],
@@ -2133,37 +2218,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
       return;
     }
 
-    try {
-      const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 5);
-
-      if (response?.success && Array.isArray(response.data?.posters) && response.data.posters.length > 0) {
-        const templates = response.data.posters
-          .map(poster => convertBusinessPosterToTemplate(poster, category.name))
-          .filter(template => template.thumbnail);
-
-        if (templates.length > 0) {
-          setBusinessCategoryPreviews(prev => ({
-            ...prev,
-            [category.id]: templates,
-          }));
-
-          navigation.navigate('PosterPlayer', {
-            selectedPoster: templates[0],
-            relatedPosters: templates.slice(1),
-            searchQuery: '',
-            templateSource: 'professional',
-            businessCategory: category.name,
-            posterLimit: 5, // Limit 5 for business categories from HomeScreen
-          });
-          return;
-        }
-      }
-    } catch (error) {
-      if (__DEV__) {
-        devError('❌ Error loading category posters:', error);
-      }
-    }
-
+    // Navigate immediately with loading state, then load data in background
     navigation.navigate('PosterPlayer', {
       selectedPoster: {
         id: 'loading',
@@ -2178,6 +2233,30 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
       templateSource: 'professional',
       businessCategory: category.name,
       posterLimit: 5, // Limit 5 for business categories from HomeScreen
+    });
+
+    // Load data in background after navigation
+    InteractionManager.runAfterInteractions(async () => {
+      try {
+        const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 5);
+
+        if (response?.success && Array.isArray(response.data?.posters) && response.data.posters.length > 0) {
+          const templates = response.data.posters
+            .map(poster => convertBusinessPosterToTemplate(poster, category.name))
+            .filter(template => template.thumbnail);
+
+          if (templates.length > 0) {
+            setBusinessCategoryPreviews(prev => ({
+              ...prev,
+              [category.id]: templates,
+            }));
+          }
+        }
+      } catch (error) {
+        if (__DEV__) {
+          devError('❌ Error loading category posters:', error);
+        }
+      }
     });
   }, [businessCategoryPreviews, navigation]);
 
@@ -2199,59 +2278,26 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     });
   }, [navigation]);
 
-  // Render business category card
-  const businessCategoryButtonTextCache = useRef<Record<string, string>>({});
-  const greetingCategoryButtonTextCache = useRef<Record<string, string>>({});
-
-  const getBusinessCategoryButtonLabel = useCallback(() => {
+  // Memoized category button labels - computed only when dependencies change
+  const businessCategoryButtonLabel = useMemo(() => {
     const fallback = 'Business';
     if (rotatingBusinessCategories.length === 0) {
-      return businessCategoryButtonTextCache.current[fallback] || fallback;
+      return fallback;
     }
     const currentCategory = rotatingBusinessCategories[currentBusinessCategoryIndex];
-    const label = currentCategory?.name || fallback;
-    businessCategoryButtonTextCache.current[fallback] = label;
-    return label;
+    return currentCategory?.name || fallback;
   }, [rotatingBusinessCategories, currentBusinessCategoryIndex]);
 
-  const getGreetingCategoryButtonLabel = useCallback(() => {
+  const greetingCategoryButtonLabel = useMemo(() => {
     const fallback = 'General';
     if (greetingCategories.length === 0) {
-      return greetingCategoryButtonTextCache.current[fallback] || fallback;
+      return fallback;
     }
     const currentCategory = greetingCategories[currentCategoryIndex];
-    const label = currentCategory?.name || fallback;
-    greetingCategoryButtonTextCache.current[fallback] = label;
-    return label;
+    return currentCategory?.name || fallback;
   }, [greetingCategories, currentCategoryIndex]);
 
-  const renderBusinessCategoryCard = useCallback(
-    ({ item }: { item: BusinessCategory }) => (
-      <BusinessCategoryCardItem
-        item={item}
-        cardWidth={cardWidth}
-        theme={theme}
-        previewTemplates={businessCategoryPreviews[item.id]}
-        onPress={handleBusinessCategoryPress}
-      />
-    ),
-    [businessCategoryPreviews, cardWidth, theme, handleBusinessCategoryPress]
-  );
-
-  // Render greeting category card using memoized component
-  const renderGreetingCategoryCard = useCallback(({ item }: { item: { id: string; name: string; icon: string; color?: string } }) => {
-    const categoryImage = greetingCategoryImages[item.id] || null;
-    
-    return (
-      <GreetingCategoryCard
-        item={item}
-        cardWidth={cardWidth}
-        theme={theme}
-        categoryImage={categoryImage}
-        onPress={handleGreetingCategoryPress}
-      />
-    );
-  }, [handleGreetingCategoryPress, cardWidth, theme, greetingCategoryImages]);
+  // Render functions moved to extracted components for better performance
 
   if (loading) {
     return (
@@ -2395,7 +2441,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         opacity: businessCategoryFadeAnim,
                       }
                     ]}>
-                      {getBusinessCategoryButtonLabel()}
+                      {businessCategoryButtonLabel}
                     </Animated.Text>
           </View>
                 </LinearGradient>
@@ -2431,7 +2477,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         opacity: categoryFadeAnim,
                       }
                     ]}>
-                      {getGreetingCategoryButtonLabel()}
+                      {greetingCategoryButtonLabel}
                     </Animated.Text>
                   </View>
                 </LinearGradient>
@@ -2476,79 +2522,33 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
 
           {/* Business Categories Section */}
           {!isSearching && searchQuery.trim() === '' && businessCategories.length > 0 && (
-            <View 
-              ref={businessCategoriesSectionRef} 
-              style={[
-                styles.businessCategoriesSection,
-                isBusinessCategoriesHighlighted ? styles.businessCategoriesSectionHighlighted : null
-              ]}
-              onLayout={() => {
-                // Measure absolute position relative to ScrollView
-                if (businessCategoriesSectionRef.current && scrollViewRef.current) {
-                  businessCategoriesSectionRef.current.measureLayout(
-                    scrollViewRef.current as any,
-                    (x, y) => {
-                      businessCategoriesSectionY.current = y;
-                    },
-                    () => {
-                      // Fallback: store relative position
-                      businessCategoriesSectionRef.current?.measure((x, y, width, height, pageX, pageY) => {
-                        businessCategoriesSectionY.current = pageY;
-                      });
-                    }
-                  );
-                }
-              }}
-            >
-              <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
-                Business Categories
-              </Text>
-                {renderBrowseAllButton(handleViewAllBusinessCategories)}
-              </View>
-              <FlatList
-                data={businessCategories}
-                renderItem={renderBusinessCategoryCard}
-                keyExtractor={(item) => item.id}
-                horizontal={true}
-                showsHorizontalScrollIndicator={false}
-                nestedScrollEnabled={true}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={6}
-                windowSize={3}
-                initialNumToRender={6}
-                updateCellsBatchingPeriod={100}
-                getItemLayout={getItemLayout}
-                contentContainerStyle={styles.horizontalList}
-              />
-            </View>
+            <BusinessCategoriesSection
+              businessCategories={businessCategories}
+              businessCategoryPreviews={memoizedBusinessCategoryPreviews}
+              isHighlighted={isBusinessCategoriesHighlighted}
+              cardWidth={cardWidth}
+              theme={theme}
+              getItemLayout={getItemLayout}
+              onCategoryPress={handleBusinessCategoryPress}
+              onViewAllPress={handleViewAllBusinessCategories}
+              renderBrowseAllButton={renderBrowseAllButton}
+              sectionRef={businessCategoriesSectionRef}
+              onLayout={handleBusinessCategoriesLayout}
+            />
           )}
 
           {/* General Categories Section */}
           {!isSearching && searchQuery.trim() === '' && greetingCategoriesList.length > 0 && (
-            <View style={styles.businessCategoriesSection}>
-              <View style={styles.sectionHeader}>
-              <Text style={[styles.sectionTitle, { paddingHorizontal: 0, color: theme.colors.text, fontWeight: 'bold' }]}>
-                General Categories
-              </Text>
-                {renderBrowseAllButton(handleViewAllGeneralCategories)}
-              </View>
-              <FlatList
-                data={greetingCategoriesList}
-                renderItem={renderGreetingCategoryCard}
-                keyExtractor={(item) => item.id}
-                horizontal={true}
-                showsHorizontalScrollIndicator={false}
-                nestedScrollEnabled={true}
-                removeClippedSubviews={true}
-                maxToRenderPerBatch={6}
-                windowSize={3}
-                initialNumToRender={6}
-                updateCellsBatchingPeriod={100}
-                getItemLayout={getItemLayout}
-                contentContainerStyle={styles.horizontalList}
-              />
-            </View>
+            <GeneralCategoriesSection
+              greetingCategoriesList={greetingCategoriesList}
+              greetingCategoryImages={memoizedGreetingCategoryImages}
+              cardWidth={cardWidth}
+              theme={theme}
+              getItemLayout={getItemLayout}
+              onCategoryPress={handleGreetingCategoryPress}
+              onViewAllPress={handleViewAllGeneralCategories}
+              renderBrowseAllButton={renderBrowseAllButton}
+            />
           )}
 
           {/* Festival Calendar - Commented out for now */}
@@ -2681,6 +2681,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   initialNumToRender={6}
                   updateCellsBatchingPeriod={100}
                   getItemLayout={getItemLayout}
+                  maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
                   contentContainerStyle={styles.horizontalList}
                 />
               ) : (

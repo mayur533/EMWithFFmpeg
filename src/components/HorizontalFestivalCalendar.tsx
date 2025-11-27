@@ -351,12 +351,12 @@ const HorizontalFestivalCalendar: React.FC = () => {
     const month = date.getMonth() + 1;
     const day = date.getDate();
     const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-    setSelectedDate(dateString);
+    let resolvedPosters: Template[] = [];
     
     // First, try to get from mock data (fallback)
     const mockPosters = datePosters[dateString] || [];
     if (mockPosters.length > 0) {
-      setSelectedDatePosters(mockPosters);
+      resolvedPosters = mockPosters;
     }
     
     // Fetch posters from API
@@ -373,17 +373,19 @@ const HorizontalFestivalCalendar: React.FC = () => {
           isDownloaded: poster.isDownloaded || false,
           tags: poster.tags || [],
         }));
-        setSelectedDatePosters(templates);
-      } else if (mockPosters.length === 0) {
-        // Only clear if no mock data available
-        setSelectedDatePosters([]);
+        resolvedPosters = templates;
       }
     } catch (error) {
       console.error('❌ [CALENDAR] Error fetching calendar posters:', error);
       // Keep mock data if API fails
-      if (mockPosters.length === 0) {
-        setSelectedDatePosters([]);
-      }
+    }
+    
+    if (resolvedPosters.length > 0) {
+      setSelectedDate(dateString);
+      setSelectedDatePosters(resolvedPosters);
+    } else {
+      setSelectedDate('');
+      setSelectedDatePosters([]);
     }
   }, []);
 

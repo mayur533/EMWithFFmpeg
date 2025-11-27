@@ -2,6 +2,14 @@ import { Dimensions, Platform } from 'react-native';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Scale function for responsive sizing
+const scale = (size: number) => (screenWidth / 375) * size;
+const verticalScale = (size: number) => (screenHeight / 667) * size;
+
+// Moderate scale function - balances between scale and original size
+export const moderateScale = (size: number, factor = 0.5) => size + (scale(size) - size) * factor;
+export const moderateVerticalScale = (size: number, factor = 0.5) => size + (verticalScale(size) - size) * factor;
+
 // Screen size breakpoints
 export const isSmallScreen = screenWidth < 375;
 export const isMediumScreen = screenWidth >= 375 && screenWidth < 414;
@@ -275,6 +283,10 @@ export default {
   isLargeScreen,
   isTablet,
   isLandscape,
+  
+  // Scaling functions
+  moderateScale,
+  moderateVerticalScale,
   
   // Responsive systems
   responsiveSpacing,
