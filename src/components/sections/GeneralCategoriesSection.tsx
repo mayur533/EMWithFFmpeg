@@ -13,7 +13,7 @@ import { moderateScale } from '../../utils/responsiveUtils';
 
 // Memoized Greeting Category Card Component
 interface GreetingCategoryCardProps {
-  item: { id: string; name: string; icon: string; color?: string };
+  item: { id: string; name: string; icon: string; color?: string; imageUrl?: string };
   cardWidth: number;
   theme: any;
   categoryImage: string | null;
@@ -111,6 +111,7 @@ interface GeneralCategory {
   name: string;
   icon: string;
   color?: string;
+  imageUrl?: string;
 }
 
 interface GeneralCategoriesSectionProps {
@@ -140,7 +141,7 @@ const GeneralCategoriesSection: React.FC<GeneralCategoriesSectionProps> = React.
   }, [greetingCategoryImages]);
 
   const renderGreetingCategoryCard = useCallback(({ item }: { item: GeneralCategory }) => {
-    const categoryImage = categoryImagesMap[item.id] || null;
+    const categoryImage = categoryImagesMap[item.id] || item.imageUrl || null;
     
     return (
       <GreetingCategoryCard

@@ -52,6 +52,7 @@ const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
   const [cachedUri, setCachedUri] = useState<string | null>(null);
+  const [uriVariant, setUriVariant] = useState<'optimized' | 'low' | 'original'>('optimized');
   
   const sanitizedUri = useMemo(() => (typeof uri === 'string' ? uri.trim() : ''), [uri]);
   const storageKey = useMemo(() => {
@@ -68,8 +69,6 @@ const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
       try {
         const [prefix, remainder] = sanitizedUri.split('/upload/');
         if (remainder && !remainder.includes('w_')) {
-          // High quality thumbnail: 800px width, best quality, auto format
-          // This provides excellent quality while still being smaller than full images
           const transform = 'f_auto,q_auto:best,c_limit,w_800';
           return `${prefix}/upload/${transform}/${remainder}`;
         }
@@ -88,10 +87,49 @@ const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
     return sanitizedUri;
   }, [sanitizedUri]);
 
+  const lowResThumbnailUri = useMemo(() => {
+    if (!sanitizedUri) return '';
+
+    if (sanitizedUri.includes('res.cloudinary.com') && sanitizedUri.includes('/upload/')) {
+      try {
+        const [prefix, remainder] = sanitizedUri.split('/upload/');
+        if (remainder) {
+          const transform = 'f_auto,q_auto:eco,c_limit,w_400';
+          return `${prefix}/upload/${transform}/${remainder}`;
+        }
+      } catch (error) {
+        // ignore
+      }
+    }
+
+    if (sanitizedUri.includes('?')) {
+      return `${sanitizedUri}&w=400&q=70`;
+    }
+
+    return `${sanitizedUri}?w=400&q=70`;
+  }, [sanitizedUri]);
+
+  // Reset retry flag whenever the incoming URI changes
+  useEffect(() => {
+    setUriVariant('optimized');
+    setError(false);
+    setCachedUri(null);
+  }, [sanitizedUri, optimizedThumbnailUri]);
+
+  const targetUri = useMemo(() => {
+    if (uriVariant === 'low') {
+      return lowResThumbnailUri || optimizedThumbnailUri || sanitizedUri;
+    }
+    if (uriVariant === 'original') {
+      return sanitizedUri;
+    }
+    return optimizedThumbnailUri || sanitizedUri;
+  }, [uriVariant, optimizedThumbnailUri, lowResThumbnailUri, sanitizedUri]);
+
   // Check cache on mount
   useEffect(() => {
-    if (!cacheEnabled || !storageKey || !sanitizedUri) {
-      setCachedUri(optimizedThumbnailUri);
+    if (!cacheEnabled || !storageKey || !targetUri) {
+      setCachedUri(targetUri || null);
       return;
     }
 
@@ -103,7 +141,7 @@ const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
           const now = Date.now();
           
           // Check if cache is still valid
-          if (now < entry.expiresAt && entry.uri === optimizedThumbnailUri) {
+          if (now < entry.expiresAt && entry.uri === targetUri) {
             // Cache hit - use cached URI
             setCachedUri(entry.uri);
             setLoading(false);
@@ -115,24 +153,26 @@ const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
         }
         
         // Cache miss - use optimized URI
-        setCachedUri(optimizedThumbnailUri);
+        setCachedUri(targetUri);
       } catch (error) {
         console.warn('Error checking thumbnail cache:', error);
-        setCachedUri(optimizedThumbnailUri);
+        setCachedUri(targetUri);
       }
     };
 
     checkCache();
-  }, [storageKey, optimizedThumbnailUri, cacheEnabled, sanitizedUri]);
+  }, [storageKey, targetUri, cacheEnabled]);
 
   // Save to cache on successful load
   const handleLoadEnd = () => {
     setLoading(false);
     
-    if (cacheEnabled && storageKey && optimizedThumbnailUri) {
+    const uriToCache = targetUri;
+    
+    if (cacheEnabled && storageKey && uriToCache) {
       // Save to cache in background
       const cacheEntry: CacheEntry = {
-        uri: optimizedThumbnailUri,
+        uri: uriToCache,
         cachedAt: Date.now(),
         expiresAt: Date.now() + CACHE_EXPIRY,
       };
@@ -153,19 +193,39 @@ const ThumbnailImage: React.FC<ThumbnailImageProps> = ({
   };
 
   const handleError = (err?: any) => {
+    const nativeError = err?.nativeEvent?.error || err?.message || 'Unknown error';
+
+    if (uriVariant === 'optimized' && lowResThumbnailUri && lowResThumbnailUri !== optimizedThumbnailUri) {
+      setUriVariant('low');
+      setLoading(true);
+      setError(false);
+      setCachedUri(null);
+      return;
+    }
+
+    if (uriVariant !== 'original' && sanitizedUri && targetUri !== sanitizedUri) {
+      setUriVariant('original');
+      setLoading(true);
+      setError(false);
+      setCachedUri(null);
+      return;
+    }
+
     setLoading(false);
     setError(true);
     
-    if (__DEV__ && !err?.message?.includes('network') && !err?.message?.includes('timeout')) {
+    if (__DEV__ && !nativeError.toLowerCase().includes('network') && !nativeError.toLowerCase().includes('timeout')) {
       console.warn('⚠️ [THUMBNAIL IMAGE ERROR]', {
         uri: sanitizedUri,
         optimizedUri: optimizedThumbnailUri,
-        error: err?.message || 'Unknown error',
+        retriedWithOriginal: uriVariant === 'original',
+        downgradedQuality: uriVariant === 'low',
+        error: nativeError,
       });
     }
   };
 
-  const displayUri = cachedUri || optimizedThumbnailUri;
+  const displayUri = cachedUri || targetUri || sanitizedUri;
   const shouldShowFallback = error || !sanitizedUri;
 
   return (

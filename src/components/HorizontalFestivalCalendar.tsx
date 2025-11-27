@@ -275,6 +275,19 @@ const datePosters: DatePosters = {
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const isTablet = SCREEN_WIDTH >= 768;
 
+const getGeneralCategoryCardWidth = () => {
+  if (SCREEN_WIDTH >= 768) {
+    return SCREEN_WIDTH * 0.15;
+  }
+  if (SCREEN_WIDTH >= 600) {
+    return SCREEN_WIDTH * 0.22;
+  }
+  if (SCREEN_WIDTH >= 400) {
+    return SCREEN_WIDTH * 0.28;
+  }
+  return SCREEN_WIDTH * 0.32;
+};
+
 const moderateScale = (size: number, factor = 0.5) => {
   const scale = (s: number) => (SCREEN_WIDTH / 375) * s;
   return size + (scale(size) - size) * factor;
@@ -312,6 +325,8 @@ const HorizontalFestivalCalendar: React.FC = () => {
 
   // Use state for current date so it updates automatically
   const [currentDateState, setCurrentDateState] = useState(() => new Date());
+  const autoSelectRef = useRef<string | null>(null);
+  const generalCategoryCardWidth = useMemo(() => getGeneralCategoryCardWidth(), []);
   
   // Generate dates from today to 15 days forward
   const upcomingDates = useMemo(() => {
@@ -326,6 +341,13 @@ const HorizontalFestivalCalendar: React.FC = () => {
     }
     return dates;
   }, [currentDateState]);
+
+  const formatDateKey = useCallback((date: Date) => {
+    const year = date.getFullYear();
+    const month = date.getMonth() + 1;
+    const day = date.getDate();
+    return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }, []);
 
   // Update current date periodically to handle month changes
   useEffect(() => {
@@ -347,10 +369,7 @@ const HorizontalFestivalCalendar: React.FC = () => {
 
   // Handle date selection
   const handleDateSelect = useCallback(async (date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateString = formatDateKey(date);
     let resolvedPosters: Template[] = [];
     
     // First, try to get from mock data (fallback)
@@ -380,14 +399,9 @@ const HorizontalFestivalCalendar: React.FC = () => {
       // Keep mock data if API fails
     }
     
-    if (resolvedPosters.length > 0) {
-      setSelectedDate(dateString);
-      setSelectedDatePosters(resolvedPosters);
-    } else {
-      setSelectedDate('');
-      setSelectedDatePosters([]);
-    }
-  }, []);
+    setSelectedDate(dateString);
+    setSelectedDatePosters(resolvedPosters);
+  }, [formatDateKey]);
 
   // Check if date is today
   const isToday = useCallback((date: Date) => {
@@ -400,12 +414,9 @@ const HorizontalFestivalCalendar: React.FC = () => {
 
   // Check if date has festival
   const hasFestival = useCallback((date: Date) => {
-    const year = date.getFullYear();
-    const month = date.getMonth() + 1;
-    const day = date.getDate();
-    const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    const dateString = formatDateKey(date);
     return festivalDays[dateString];
-  }, []);
+  }, [formatDateKey]);
 
   // Auto-scroll to today's date on component mount
   useEffect(() => {
@@ -452,32 +463,35 @@ const HorizontalFestivalCalendar: React.FC = () => {
     loadUpcomingPosters();
   }, [upcomingDates]);
 
+  useEffect(() => {
+    if (upcomingDates.length === 0) {
+      return;
+    }
+    const todayDate = upcomingDates[0];
+    const todayKey = formatDateKey(todayDate);
+    if (autoSelectRef.current === todayKey) {
+      return;
+    }
+    autoSelectRef.current = todayKey;
+    handleDateSelect(todayDate);
+  }, [upcomingDates, handleDateSelect, formatDateKey]);
+
   const renderPosterCard = useCallback(({ item }: { item: Template }) => {
-    const cardWidth = SCREEN_WIDTH * 0.28;
-    
     return (
-      <TouchableOpacity
-        style={[styles.posterCard, { width: cardWidth }]}
-        activeOpacity={0.8}
+      <View
+        style={[
+          styles.posterCard,
+          { width: generalCategoryCardWidth, height: generalCategoryCardWidth },
+        ]}
       >
-        <View style={styles.posterImageContainer}>
-          <OptimizedImage 
-            uri={item.thumbnail} 
-            style={styles.posterImage} 
-            resizeMode="cover" 
-          />
-        </View>
-        <View style={styles.posterInfo}>
-          <Text style={[styles.posterTitle, { color: theme.colors.text }]} numberOfLines={1}>
-            {item.name}
-          </Text>
-          <Text style={[styles.posterCategory, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-            {item.category}
-          </Text>
-        </View>
-      </TouchableOpacity>
+        <OptimizedImage 
+          uri={item.thumbnail} 
+          style={styles.posterImage} 
+          resizeMode="cover" 
+        />
+      </View>
     );
-  }, [theme, SCREEN_WIDTH]);
+  }, [generalCategoryCardWidth]);
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 
@@ -499,10 +513,8 @@ const HorizontalFestivalCalendar: React.FC = () => {
           contentContainerStyle={styles.calendarScrollContent}
         >
           {upcomingDates.map((date) => {
-            const year = date.getFullYear();
-            const month = date.getMonth() + 1;
             const day = date.getDate();
-            const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+            const dateString = formatDateKey(date);
             const isSelected = selectedDate === dateString;
             const isCurrentDay = isToday(date);
             const festival = hasFestival(date);
@@ -711,32 +723,15 @@ const styles = StyleSheet.create({
     paddingVertical: moderateScale(5),
   },
   posterCard: {
-    marginRight: moderateScale(8),
+    marginRight: moderateScale(3),
+    borderRadius: moderateScale(8),
+    overflow: 'hidden',
     backgroundColor: 'transparent',
-    borderRadius: moderateScale(8),
-    overflow: 'hidden',
-  },
-  posterImageContainer: {
-    width: '100%',
-    aspectRatio: 0.75,
-    borderRadius: moderateScale(8),
-    overflow: 'hidden',
-    marginBottom: moderateScale(4),
   },
   posterImage: {
     width: '100%',
     height: '100%',
-  },
-  posterInfo: {
-    paddingHorizontal: moderateScale(4),
-  },
-  posterTitle: {
-    fontSize: moderateScale(11),
-    fontWeight: '600',
-    marginBottom: moderateScale(2),
-  },
-  posterCategory: {
-    fontSize: moderateScale(9),
+    borderRadius: moderateScale(8),
   },
 });
 

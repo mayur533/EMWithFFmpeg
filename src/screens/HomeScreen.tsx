@@ -20,6 +20,7 @@ import {
   Platform,
   InteractionManager,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import Video from 'react-native-video';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -38,6 +39,7 @@ import homeApi, {
 import greetingTemplatesService from '../services/greetingTemplates';
 import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
 import businessCategoriesService, { BusinessCategory } from '../services/businessCategoriesService';
+import businessProfileService, { BusinessProfile } from '../services/businessProfile';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 import { performanceMonitor } from '../utils/performanceMonitor';
@@ -581,7 +583,13 @@ const HomeScreen: React.FC = React.memo(() => {
   const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
   
   // Get current user info
+  const userProfileSectionRef = useRef<View>(null);
   const [userProfile, setUserProfile] = useState(() => authService.getCurrentUser());
+  const [userBusinessProfiles, setUserBusinessProfiles] = useState<BusinessProfile[]>([]);
+  const [businessProfilesLoadingState, setBusinessProfilesLoadingState] = useState(false);
+  const [selectedBusinessProfileId, setSelectedBusinessProfileId] = useState<string | null>(null);
+  const [isBusinessProfileDropdownVisible, setIsBusinessProfileDropdownVisible] = useState(false);
+  const [businessProfileDropdownPosition, setBusinessProfileDropdownPosition] = useState<{ top: number; left: number; width: number } | null>(null);
 
   useEffect(() => {
     const unsubscribe = authService.onAuthStateChanged(user => {
@@ -589,6 +597,47 @@ const HomeScreen: React.FC = React.memo(() => {
     });
     return unsubscribe;
   }, []);
+
+  useEffect(() => {
+    let isMounted = true;
+    const loadBusinessProfiles = async () => {
+      const currentUserId = userProfile?.id || authService.getCurrentUser()?.id;
+      if (!currentUserId) {
+        return;
+      }
+      setBusinessProfilesLoadingState(true);
+      try {
+        const profiles = await businessProfileService.getUserBusinessProfiles(currentUserId);
+        if (!isMounted) {
+          return;
+        }
+        setUserBusinessProfiles(profiles);
+        const storedProfileId = await AsyncStorage.getItem('selectedBusinessProfileId');
+        let resolvedProfileId: string | null = null;
+        if (storedProfileId && profiles.some(profile => profile.id === storedProfileId)) {
+          resolvedProfileId = storedProfileId;
+        } else if (profiles.length > 0) {
+          resolvedProfileId = profiles[0].id;
+        }
+        if (resolvedProfileId) {
+          setSelectedBusinessProfileId(resolvedProfileId);
+        }
+      } catch (error) {
+        if (__DEV__) {
+          devError('Error loading business profiles for dropdown:', error);
+        }
+      } finally {
+        if (isMounted) {
+          setBusinessProfilesLoadingState(false);
+        }
+      }
+    };
+
+    loadBusinessProfiles();
+    return () => {
+      isMounted = false;
+    };
+  }, [userProfile?.id]);
 
   const userName = useMemo(() => {
     return (
@@ -599,6 +648,10 @@ const HomeScreen: React.FC = React.memo(() => {
       'User'
     );
   }, [userProfile]);
+  const selectedBusinessProfile = useMemo(
+    () => userBusinessProfiles.find(profile => profile.id === selectedBusinessProfileId) || null,
+    [userBusinessProfiles, selectedBusinessProfileId]
+  );
   const userInitials = useMemo(() => 
     userName
       .split(' ')
@@ -618,6 +671,14 @@ const HomeScreen: React.FC = React.memo(() => {
       null
     );
   }, [userProfile]);
+  useEffect(() => {
+    if (selectedBusinessProfileId) {
+      AsyncStorage.setItem('selectedBusinessProfileId', selectedBusinessProfileId).catch(() => {});
+    }
+    if (selectedBusinessProfile?.category) {
+      AsyncStorage.setItem('selectedBusinessProfileCategory', selectedBusinessProfile.category).catch(() => {});
+    }
+  }, [selectedBusinessProfileId, selectedBusinessProfile?.category]);
   
   // Dynamic dimensions for responsive layout
   const [dimensions, setDimensions] = useState(() => {
@@ -671,6 +732,7 @@ const HomeScreen: React.FC = React.memo(() => {
     const scale = (s: number) => (screenWidth / 375) * s;
     return size + (scale(size) - size) * factor;
   }, [screenWidth]);
+
   
   // Helper function for getResponsiveValue (matches the one defined at bottom of file)
   const getResponsiveValue = useCallback((small: number, medium: number, large: number) => {
@@ -732,13 +794,57 @@ const HomeScreen: React.FC = React.memo(() => {
   const highlightTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Greeting categories state
-  const [greetingCategoriesList, setGreetingCategoriesList] = useState<Array<{ id: string; name: string; icon: string; color?: string }>>([]);
+  const [greetingCategoriesList, setGreetingCategoriesList] = useState<Array<{ id: string; name: string; icon: string; color?: string; imageUrl?: string }>>([]);
   const [greetingCategoriesLoading, setGreetingCategoriesLoading] = useState(false);
   const [greetingCategoryImages, setGreetingCategoryImages] = useState<Record<string, string>>({});
+  const memoizedGreetingCategoryImages = useMemo(() => greetingCategoryImages, [greetingCategoryImages]);
+  const generalCategoryModalColumns = 4;
+  const {
+    generalCategoryModalCardWidth,
+    generalCategoryModalContentWidth,
+    generalCategoryModalGap,
+    generalCategoryModalHorizontalPadding,
+    generalCategoryModalRowHeight,
+  } = useMemo(() => {
+    const containerWidth = isTabletDevice ? screenWidth * 0.9 : screenWidth * 0.96;
+    const horizontalPadding = getModerateScale(16);
+    const gap = getModerateScale(3);
+    const totalSpacing = horizontalPadding * 2 + gap * (generalCategoryModalColumns - 1);
+    const cardWidth = (containerWidth - totalSpacing) / generalCategoryModalColumns;
+    const rowHeight = cardWidth + getModerateScale(12); // card height + spacing
+    
+    return {
+      generalCategoryModalCardWidth: cardWidth,
+      generalCategoryModalContentWidth: containerWidth,
+      generalCategoryModalGap: gap,
+      generalCategoryModalHorizontalPadding: horizontalPadding,
+      generalCategoryModalRowHeight: rowHeight,
+    };
+  }, [isTabletDevice, screenWidth, getModerateScale]);
+
+  const generalCategoryModalInitialRenderCount = useMemo(() => {
+    const defaultCount = generalCategoryModalColumns * 2;
+    const listLength = greetingCategoriesList.length;
+    if (listLength === 0) {
+      return defaultCount;
+    }
+    return Math.min(listLength, defaultCount);
+  }, [greetingCategoriesList.length, generalCategoryModalColumns]);
+
+  const getGeneralCategoryModalItemLayout = useCallback((_: any, index: number) => {
+    const rowIndex = Math.floor(index / generalCategoryModalColumns);
+    const offset = rowIndex * generalCategoryModalRowHeight;
+    return {
+      length: generalCategoryModalRowHeight,
+      offset,
+      index,
+    };
+  }, [generalCategoryModalColumns, generalCategoryModalRowHeight]);
   
   // Refs to prevent duplicate API calls
   const apiDataLoadedRef = useRef(false);
   const greetingCategoriesLoadedRef = useRef(false);
+  const greetingModalPrefetchInProgressRef = useRef(false);
   const businessCategoriesLoadedRef = useRef(false);
 
   const animateCategoryChange = useCallback(() => {
@@ -798,6 +904,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const [isBooksModalVisible, setIsBooksModalVisible] = useState(false);
   const [isCelebratesMomentsModalVisible, setIsCelebratesMomentsModalVisible] = useState(false);
   const [isFeaturedContentModalVisible, setIsFeaturedContentModalVisible] = useState(false);
+  const [isGeneralCategoriesModalVisible, setIsGeneralCategoriesModalVisible] = useState(false);
 
   // New API data states
   const [featuredContent, setFeaturedContent] = useState<FeaturedContent[]>([]);
@@ -1137,12 +1244,12 @@ const HomeScreen: React.FC = React.memo(() => {
       const imageEntries = await Promise.all(
         categories.map(async category => {
           try {
-            const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 5);
+            const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 6);
             const posters = response.data?.posters || [];
             const templates = posters
               .map((poster: any) => convertBusinessPosterToTemplate(poster, category.name))
               .filter((template: Template) => !!template.thumbnail)
-              .slice(0, 5);
+              .slice(0, 6);
             if (templates.length > 0) {
               return [category.id, templates] as const;
             }
@@ -1170,7 +1277,7 @@ const HomeScreen: React.FC = React.memo(() => {
     }
   }, []);
 
-  const fetchGreetingCategoryPreviewImages = useCallback(async (categories: Array<{ id: string; name: string }>) => {
+  const fetchGreetingCategoryPreviewImages = useCallback(async (categories: Array<{ id: string; name: string; icon?: string; imageUrl?: string }>) => {
     if (!categories || categories.length === 0) {
       return;
     }
@@ -1216,7 +1323,7 @@ const HomeScreen: React.FC = React.memo(() => {
               devWarn(`⚠️ Failed to fetch preview for greeting category ${category.name}:`, error);
             }
           }
-          return [category.id, undefined] as const;
+          return [category.id, category.imageUrl] as const;
         })
       );
 
@@ -1250,10 +1357,18 @@ const HomeScreen: React.FC = React.memo(() => {
       try {
         const categories = await greetingTemplatesService.getCategories();
         if (isMounted && categories && categories.length > 0) {
+          const mappedCategories = categories.map(category => ({
+            id: category.id,
+            name: category.name,
+            icon: category.icon,
+            color: (category as any).color,
+            imageUrl: (category as any).imageUrl || (category as any).image || (category as any).thumbnail || ''
+          }));
+
           // Set both states from single API call
-          setGreetingCategoriesList(categories);
-          setGreetingCategories(categories); // Also set for rotating categories
-          fetchGreetingCategoryPreviewImages(categories);
+          setGreetingCategoriesList(mappedCategories);
+          setGreetingCategories(mappedCategories.map(({ id, name, icon }) => ({ id, name, icon }))); // Also set for rotating categories
+          fetchGreetingCategoryPreviewImages(mappedCategories);
           
           if (__DEV__) {
           }
@@ -1275,6 +1390,42 @@ const HomeScreen: React.FC = React.memo(() => {
       isMounted = false;
     };
   }, []); // Empty dependency array - only run once on mount (fetchGreetingCategoryPreviewImages is stable)
+
+  // Lazy-load missing general category thumbnails only when the modal is opened
+  useEffect(() => {
+    if (!isGeneralCategoriesModalVisible) {
+      return;
+    }
+    if (greetingModalPrefetchInProgressRef.current) {
+      return;
+    }
+
+    const missingCategories = greetingCategoriesList.filter(category => {
+      const hasMemoizedImage = Boolean(memoizedGreetingCategoryImages[category.id]);
+      const hasInlineImage = Boolean((category as any).imageUrl);
+      return !hasMemoizedImage && !hasInlineImage;
+    });
+
+    if (missingCategories.length === 0) {
+      return;
+    }
+
+    greetingModalPrefetchInProgressRef.current = true;
+    fetchGreetingCategoryPreviewImages(missingCategories)
+      .catch(error => {
+        if (__DEV__) {
+          devWarn('⚠️ [GENERAL CATEGORIES MODAL] Failed to preload thumbnails:', error);
+        }
+      })
+      .finally(() => {
+        greetingModalPrefetchInProgressRef.current = false;
+      });
+  }, [
+    isGeneralCategoriesModalVisible,
+    greetingCategoriesList,
+    memoizedGreetingCategoryImages,
+    fetchGreetingCategoryPreviewImages,
+  ]);
 
   // Load business categories and filter out user's own category (only called once on mount with ref guard)
   useEffect(() => {
@@ -1722,11 +1873,6 @@ const memoizedBusinessCategoryPreviews = useMemo(() => {
   return businessCategoryPreviews;
 }, [businessCategoryPreviews]);
 
-// Memoize greeting category images to prevent unnecessary re-renders
-const memoizedGreetingCategoryImages = useMemo(() => {
-  return greetingCategoryImages;
-}, [greetingCategoryImages]);
-
 const handleTemplatePress = useCallback((template: Template | VideoContent | any) => {
   // Navigate immediately using optimized O(1) lookups
   // Check for video match using O(1) lookup
@@ -1778,6 +1924,37 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   const closeCustomerSupportModal = useCallback(() => {
     setIsCustomerSupportModalVisible(false);
   }, []);
+
+  const closeBusinessProfileDropdown = useCallback(() => {
+    setIsBusinessProfileDropdownVisible(false);
+    setBusinessProfileDropdownPosition(null);
+  }, []);
+
+  const toggleBusinessProfileDropdown = useCallback(() => {
+    if (userBusinessProfiles.length === 0) {
+      return;
+    }
+    if (isBusinessProfileDropdownVisible) {
+      closeBusinessProfileDropdown();
+      return;
+    }
+    if (userProfileSectionRef.current) {
+      userProfileSectionRef.current.measureInWindow((x, y, width, height) => {
+        setBusinessProfileDropdownPosition({
+          top: y + height + moderateScale(4),
+          left: x,
+          width,
+        });
+        setIsBusinessProfileDropdownVisible(true);
+      });
+    }
+  }, [userBusinessProfiles.length, isBusinessProfileDropdownVisible, closeBusinessProfileDropdown]);
+
+  const handleBusinessProfileSelect = useCallback((profileId: string) => {
+    setSelectedBusinessProfileId(profileId);
+    closeBusinessProfileDropdown();
+    businessCategoryPostersApi.clearCache();
+  }, [closeBusinessProfileDropdown]);
 
   const handleWhatsAppPress = useCallback(async () => {
     try {
@@ -1985,9 +2162,12 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   }, []);
 
   const handleViewAllGeneralCategories = useCallback(() => {
-    // Navigate to GreetingTemplatesScreen which shows all general/greeting categories
-    navigation.navigate('GreetingTemplates');
-  }, [navigation]);
+    setIsGeneralCategoriesModalVisible(true);
+  }, []);
+
+  const closeGeneralCategoriesModal = useCallback(() => {
+    setIsGeneralCategoriesModalVisible(false);
+  }, []);
 
   // Memoized render functions to prevent unnecessary re-renders
   const renderBanner = useCallback(({ item }: { item: Banner }) => {
@@ -2239,7 +2419,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         searchQuery: '',
         templateSource: 'professional',
         businessCategory: category.name,
-        posterLimit: 5, // Limit 5 for business categories from HomeScreen
+        posterLimit: 6, // Limit 6 for business categories from HomeScreen
       });
       return;
     }
@@ -2258,13 +2438,13 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
       searchQuery: '',
       templateSource: 'professional',
       businessCategory: category.name,
-      posterLimit: 5, // Limit 5 for business categories from HomeScreen
+      posterLimit: 6, // Limit 6 for business categories from HomeScreen
     });
 
     // Load data in background after navigation
     InteractionManager.runAfterInteractions(async () => {
       try {
-        const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 5);
+        const response = await businessCategoryPostersApi.getPostersByCategory(category.name, 6);
 
         if (response?.success && Array.isArray(response.data?.posters) && response.data.posters.length > 0) {
           const templates = response.data.posters
@@ -2344,6 +2524,140 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     );
   }
 
+  const renderBusinessProfileDropdown = () => {
+    if (!isBusinessProfileDropdownVisible || !businessProfileDropdownPosition) {
+      return null;
+    }
+
+    const desiredWidth = Math.max(moderateScale(220), businessProfileDropdownPosition.width * 0.7);
+    const dropdownWidth = Math.min(desiredWidth, screenWidth - moderateScale(32));
+    const dropdownLeft = Math.min(
+      Math.max(businessProfileDropdownPosition.left, moderateScale(16)),
+      screenWidth - dropdownWidth - moderateScale(16),
+    );
+
+    return (
+      <View pointerEvents="box-none" style={styles.businessProfileDropdownOverlay}>
+        <TouchableOpacity
+          style={styles.businessProfileDropdownBackdrop}
+          activeOpacity={1}
+          onPress={closeBusinessProfileDropdown}
+        />
+        <View
+          style={[
+            styles.businessProfileDropdownContent,
+            {
+              top: businessProfileDropdownPosition.top,
+              left: dropdownLeft,
+              width: dropdownWidth,
+            },
+          ]}
+        >
+          {businessProfilesLoadingState ? (
+            <View style={styles.businessProfileDropdownLoading}>
+              <ActivityIndicator size="small" color={theme.colors.primary} />
+              <Text style={[styles.businessProfileDropdownLoadingText, { color: theme.colors.textSecondary }]}>
+                Loading profiles...
+              </Text>
+            </View>
+          ) : userBusinessProfiles.length === 0 ? (
+            <View style={styles.businessProfileDropdownEmpty}>
+              <Text style={[styles.businessProfileDropdownEmptyText, { color: theme.colors.textSecondary }]}>
+                No business profiles yet.
+              </Text>
+              <TouchableOpacity
+                style={styles.businessProfileDropdownManageButton}
+                onPress={() => {
+                  closeBusinessProfileDropdown();
+                  navigation.navigate('BusinessProfiles');
+                }}
+              >
+                <Text style={styles.businessProfileDropdownManageButtonText}>Create Profile</Text>
+              </TouchableOpacity>
+            </View>
+          ) : (
+            <>
+              <View style={styles.businessProfileDropdownHeader}>
+                <Text style={[styles.businessProfileDropdownTitle, { color: theme.colors.text }]}>
+                  Select Business Profile
+                </Text>
+                <TouchableOpacity onPress={closeBusinessProfileDropdown}>
+                  <Icon name="close" size={moderateScale(16)} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              </View>
+              <ScrollView style={styles.businessProfileDropdownList}>
+                    {userBusinessProfiles.map(profile => {
+                      const isActive = profile.id === selectedBusinessProfileId;
+                      const profileLogo = profile.logo || profile.companyLogo || profile.banner;
+                      const initials = profile.name ? profile.name.split(' ').map(part => part[0]).join('').slice(0, 2).toUpperCase() : 'MB';
+                      return (
+                        <TouchableOpacity
+                          key={profile.id}
+                          style={[
+                            styles.businessProfileDropdownItem,
+                            isActive && styles.businessProfileDropdownItemActive,
+                          ]}
+                          onPress={() => handleBusinessProfileSelect(profile.id)}
+                        >
+                          <View style={styles.businessProfileDropdownItemContent}>
+                            <View style={styles.businessProfileDropdownAvatar}>
+                              {profileLogo ? (
+                                <OptimizedImage
+                                  uri={profileLogo}
+                                  style={styles.businessProfileDropdownAvatarImage}
+                                  resizeMode="cover"
+                                  cacheKey={`business_profile_${profile.id}`}
+                                />
+                              ) : (
+                                <Text style={styles.businessProfileDropdownAvatarText}>{initials}</Text>
+                              )}
+                            </View>
+                            <View style={styles.businessProfileDropdownTextContainer}>
+                              <View style={styles.businessProfileDropdownItemHeader}>
+                                <Text
+                                  style={[
+                                    styles.businessProfileDropdownItemName,
+                                    { color: theme.colors.text },
+                                  ]}
+                                  numberOfLines={1}
+                                >
+                                  {profile.name}
+                                </Text>
+                                {isActive && (
+                                  <Icon name="check" size={moderateScale(16)} color={theme.colors.primary} />
+                                )}
+                              </View>
+                              <Text
+                                style={[
+                                  styles.businessProfileDropdownItemCategory,
+                                  { color: theme.colors.textSecondary },
+                                ]}
+                                numberOfLines={1}
+                              >
+                                {profile.category || 'General'}
+                              </Text>
+                            </View>
+                          </View>
+                        </TouchableOpacity>
+                      );
+                    })}
+              </ScrollView>
+              <TouchableOpacity
+                style={styles.businessProfileDropdownManageButton}
+                onPress={() => {
+                  closeBusinessProfileDropdown();
+                  navigation.navigate('BusinessProfiles');
+                }}
+              >
+                <Text style={styles.businessProfileDropdownManageButtonText}>Manage Profiles</Text>
+              </TouchableOpacity>
+            </>
+          )}
+        </View>
+      </View>
+    );
+  };
+
   return (
     <SafeAreaView 
       style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#e8e8e8' }]}
@@ -2368,7 +2682,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             <TouchableOpacity 
               style={styles.userProfileSection}
               activeOpacity={0.7}
-              onPress={() => navigation.navigate('BusinessProfiles')}
+              onPress={toggleBusinessProfileDropdown}
+              ref={userProfileSectionRef}
             >
               <View style={styles.userAvatarContainer}>
                 <View style={[styles.userAvatar, { backgroundColor: theme.colors.primary }]}>
@@ -2393,6 +2708,28 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                     <Icon name="wifi-off" size={statusIconSize} color="#ff9800" />
                     <Text style={styles.apiStatusText}>Offline Mode</Text>
                   </View>
+                )}
+                {userBusinessProfiles.length > 0 && (
+                  <TouchableOpacity
+                    style={styles.businessProfilePill}
+                    onPress={toggleBusinessProfileDropdown}
+                    activeOpacity={0.8}
+                  >
+                    {businessProfilesLoadingState ? (
+                      <ActivityIndicator size="small" color={theme.colors.primary} />
+                    ) : (
+                      <>
+                        <Text style={styles.businessProfilePillText} numberOfLines={1}>
+                          {selectedBusinessProfile?.name || 'Select business'}
+                        </Text>
+                        <Icon
+                          name={isBusinessProfileDropdownVisible ? 'expand-less' : 'expand-more'}
+                          size={moderateScale(14)}
+                          color={theme.colors.primary}
+                        />
+                      </>
+                    )}
+                  </TouchableOpacity>
                 )}
               </View>
             </TouchableOpacity>
@@ -2428,6 +2765,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
             </View>
           </View>
         </View>
+
+        {renderBusinessProfileDropdown()}
 
         <ScrollView 
           ref={scrollViewRef}
@@ -3223,7 +3562,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           </View>
         </Modal>
 
-
         {/* Business Categories Modal */}
         <Modal
           visible={isBusinessCategoriesModalVisible}
@@ -3269,7 +3607,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                     let displayImages = previewTemplates
                       .map(template => template.thumbnail)
                       .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0)
-                      .slice(0, 5);
+                      .slice(0, 6);
                     if (displayImages.length === 0 && fallbackImage) {
                       displayImages = [fallbackImage];
                     }
@@ -3330,6 +3668,82 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                       </TouchableOpacity>
                     );
                   }}
+                />
+              </View>
+            </View>
+          </View>
+        </Modal>
+
+        {/* General Categories Modal */}
+        <Modal
+          visible={isGeneralCategoriesModalVisible}
+          transparent={true}
+          animationType="slide"
+          onRequestClose={closeGeneralCategoriesModal}
+        >
+          <View style={styles.modalOverlay}>
+            <View style={styles.upcomingEventsModalContent}>
+              <LinearGradient
+                colors={['#f5f5f5', '#ffffff']}
+                style={styles.upcomingEventsModalGradient}
+              >
+                <View style={styles.upcomingEventsModalHeader}>
+                  <View style={styles.upcomingEventsModalTitleContainer}>
+                    <Text style={styles.upcomingEventsModalTitle}>General Categories</Text>
+                  </View>
+                  <TouchableOpacity 
+                    style={styles.upcomingEventsCloseButton}
+                    onPress={closeGeneralCategoriesModal}
+                  >
+                    <Text style={styles.upcomingEventsCloseButtonText}>✕</Text>
+                  </TouchableOpacity>
+                </View>
+              </LinearGradient>
+              <View style={styles.upcomingEventsModalBody}>
+                <FlatList
+                  key={`general-categories-modal-${generalCategoryModalColumns}-${greetingCategoriesList.length}`}
+                  data={greetingCategoriesList}
+                  keyExtractor={(item) => item.id}
+                  numColumns={generalCategoryModalColumns}
+                  columnWrapperStyle={styles.generalCategoryModalRow}
+                  contentContainerStyle={[
+                    styles.generalCategoryModalList,
+                    {
+                      width: generalCategoryModalContentWidth,
+                      paddingHorizontal: generalCategoryModalHorizontalPadding,
+                      alignSelf: 'center',
+                    },
+                  ]}
+                  showsVerticalScrollIndicator={false}
+                  initialNumToRender={generalCategoryModalInitialRenderCount}
+                  maxToRenderPerBatch={generalCategoryModalColumns * 2}
+                  windowSize={5}
+                  updateCellsBatchingPeriod={80}
+                  removeClippedSubviews={true}
+                  getItemLayout={getGeneralCategoryModalItemLayout}
+                  maintainVisibleContentPosition={{ minIndexForVisible: 0 }}
+                  renderItem={({ item, index }) => (
+                    <View
+                      style={[
+                        styles.generalCategoryModalCardWrapper,
+                        {
+                          width: generalCategoryModalCardWidth,
+                          marginRight: (index + 1) % generalCategoryModalColumns === 0 ? 0 : generalCategoryModalGap,
+                        },
+                      ]}
+                    >
+                      <GreetingCategoryCard
+                        item={item}
+                        cardWidth={generalCategoryModalCardWidth}
+                        theme={theme}
+                        categoryImage={memoizedGreetingCategoryImages[item.id] || null}
+                        onPress={(category) => {
+                          closeGeneralCategoriesModal();
+                          handleGreetingCategoryPress(category);
+                        }}
+                      />
+                    </View>
+                  )}
                 />
               </View>
             </View>
@@ -5175,6 +5589,159 @@ const styles = StyleSheet.create({
       fontSize: moderateScale(14),
       fontWeight: '500',
       color: '#333333',
+    },
+    businessProfilePill: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      alignSelf: 'flex-start',
+      marginTop: moderateScale(4),
+      paddingHorizontal: moderateScale(10),
+      paddingVertical: moderateScale(4),
+      borderRadius: moderateScale(20),
+      backgroundColor: 'rgba(102, 126, 234, 0.12)',
+      gap: moderateScale(4),
+    },
+    businessProfilePillText: {
+      fontSize: moderateScale(10),
+      fontWeight: '600',
+      color: '#667eea',
+      maxWidth: moderateScale(140),
+    },
+    businessProfileDropdownOverlay: {
+      ...StyleSheet.absoluteFillObject,
+      zIndex: 50,
+    },
+    businessProfileDropdownBackdrop: {
+      ...StyleSheet.absoluteFillObject,
+      backgroundColor: 'transparent',
+    },
+    businessProfileDropdownContent: {
+      position: 'absolute',
+      borderRadius: moderateScale(12),
+      borderWidth: 1,
+      borderColor: 'rgba(0,0,0,0.12)',
+      ...responsiveShadow.small,
+      paddingVertical: moderateScale(14),
+      paddingHorizontal: moderateScale(12),
+      backgroundColor: '#ffffff',
+      maxHeight: moderateScale(260),
+    },
+    businessProfileDropdownTitle: {
+      fontSize: moderateScale(14),
+      fontWeight: '700',
+      marginBottom: moderateScale(10),
+    },
+    businessProfileDropdownHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: moderateScale(8),
+    },
+    businessProfileDropdownList: {
+      maxHeight: moderateScale(210),
+      marginBottom: moderateScale(12),
+    },
+    businessProfileDropdownItem: {
+      borderWidth: 1,
+      borderColor: '#E0E0E0',
+      borderRadius: moderateScale(12),
+      paddingHorizontal: moderateScale(12),
+      paddingVertical: moderateScale(10),
+      marginBottom: moderateScale(8),
+      backgroundColor: '#ffffff',
+    },
+    businessProfileDropdownItemActive: {
+      borderColor: '#667eea',
+      backgroundColor: 'rgba(102, 126, 234, 0.08)',
+    },
+    businessProfileDropdownItemHeader: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      marginBottom: moderateScale(4),
+    },
+    businessProfileDropdownItemContent: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: moderateScale(10),
+    },
+    businessProfileDropdownAvatar: {
+      width: moderateScale(36),
+      height: moderateScale(36),
+      borderRadius: moderateScale(18),
+      backgroundColor: 'rgba(102, 126, 234, 0.12)',
+      justifyContent: 'center',
+      alignItems: 'center',
+      overflow: 'hidden',
+    },
+    businessProfileDropdownAvatarImage: {
+      width: '100%',
+      height: '100%',
+    },
+    businessProfileDropdownAvatarText: {
+      fontSize: moderateScale(12),
+      fontWeight: '700',
+      color: '#667eea',
+    },
+    businessProfileDropdownTextContainer: {
+      flex: 1,
+    },
+    businessProfileDropdownItemName: {
+      fontSize: moderateScale(12),
+      fontWeight: '600',
+      flex: 1,
+      marginRight: moderateScale(6),
+    },
+    businessProfileDropdownItemCategory: {
+      fontSize: moderateScale(10),
+      fontWeight: '500',
+    },
+    businessProfileDropdownManageButton: {
+      paddingVertical: moderateScale(10),
+      borderRadius: moderateScale(24),
+      backgroundColor: '#667eea',
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    businessProfileDropdownManageButtonText: {
+      color: '#ffffff',
+      fontSize: moderateScale(12),
+      fontWeight: '600',
+    },
+    businessProfileDropdownLoading: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: moderateScale(20),
+      gap: moderateScale(6),
+    },
+    businessProfileDropdownLoadingText: {
+      fontSize: moderateScale(10),
+      fontWeight: '500',
+    },
+    businessProfileDropdownEmpty: {
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingVertical: moderateScale(20),
+      gap: moderateScale(10),
+    },
+    businessProfileDropdownEmptyText: {
+      fontSize: moderateScale(11),
+      textAlign: 'center',
+      fontWeight: '500',
+    },
+    generalCategoryModalRow: {
+      justifyContent: 'flex-start',
+      marginBottom: moderateScale(6),
+      paddingHorizontal: 0,
+    },
+    generalCategoryModalList: {
+      paddingHorizontal: moderateScale(8),
+      paddingTop: moderateScale(8),
+      paddingBottom: moderateScale(12),
+    },
+    generalCategoryModalCardWrapper: {
+      marginRight: 0,
+      marginBottom: moderateScale(6),
     },
 
   });

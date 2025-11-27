@@ -1,3 +1,4 @@
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import api from './api';
 import authService from './auth';
 
@@ -173,15 +174,29 @@ class BusinessCategoryPostersApiService {
         return this.getPostersByCategory('General');
       }
 
+      const preferredProfileId = await AsyncStorage.getItem('selectedBusinessProfileId');
+      const preferredCategory = await AsyncStorage.getItem('selectedBusinessProfileCategory');
+
       // Get user's business profiles to determine category
       const businessProfileService = (await import('./businessProfile')).default;
       const userProfiles = await businessProfileService.getUserBusinessProfiles(userId);
 
       if (userProfiles.length > 0) {
-        const primaryCategory = userProfiles[0].category;
-        console.log(`✅ [USER CATEGORY POSTERS] Using primary category: ${primaryCategory}`);
+        let profileToUse = userProfiles[0];
+        if (preferredProfileId) {
+          const matchedProfile = userProfiles.find(profile => profile.id === preferredProfileId);
+          if (matchedProfile) {
+            profileToUse = matchedProfile;
+          }
+        }
+        const primaryCategory = profileToUse.category;
+        console.log(`✅ [USER CATEGORY POSTERS] Using category from profile ${profileToUse.name}: ${primaryCategory}`);
         return this.getPostersByCategory(primaryCategory);
       } else {
+        if (preferredCategory) {
+          console.log(`⚠️ [USER CATEGORY POSTERS] No profiles found, using stored category: ${preferredCategory}`);
+          return this.getPostersByCategory(preferredCategory);
+        }
         console.log('⚠️ [USER CATEGORY POSTERS] No profiles found, using General category');
         return this.getPostersByCategory('General');
       }

@@ -10,6 +10,7 @@ import {
   FlatList,
   ScrollView,
   PanResponder,
+  Modal,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
@@ -137,7 +138,6 @@ interface RelatedPosterItemProps {
   cardWidth: number;
   cardHeight: number;
   imageUrl: string;
-  languageCode: string;
   onPress: (item: Template) => void;
   isSelected: boolean;
   overlayColors: string[];
@@ -148,7 +148,6 @@ const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({
   cardWidth, 
   cardHeight,
   imageUrl,
-  languageCode,
   onPress,
   isSelected,
   overlayColors
@@ -193,11 +192,6 @@ const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({
           <Text style={styles.selectedPosterBadgeText}>Previewing</Text>
         </View>
       )}
-      <View style={styles.relatedPosterLanguageBadge}>
-        <Text style={styles.relatedPosterLanguageText}>
-          {languageCode}
-        </Text>
-      </View>
     </TouchableOpacity>
   );
 }, (prevProps, nextProps) => {
@@ -218,7 +212,6 @@ const RelatedPosterItem: React.FC<RelatedPosterItemProps> = React.memo(({
   
   // Check computed values
   if (prevProps.imageUrl !== nextProps.imageUrl) return false;
-  if (prevProps.languageCode !== nextProps.languageCode) return false;
   
   // Check overlay colors array reference (should be stable)
   if (prevProps.overlayColors !== nextProps.overlayColors) {
@@ -312,6 +305,7 @@ const PosterPlayerScreen: React.FC = () => {
   const [languageMenuVisible, setLanguageMenuVisible] = useState<boolean>(false);
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string | null>(null);
+  const [isBusinessProfileReminderVisible, setIsBusinessProfileReminderVisible] = useState(false);
   const preloadedImagesRef = useRef<Set<string>>(new Set());
 
   // Get high quality image URL for preview (full quality, maximum resolution)
@@ -1204,7 +1198,7 @@ const PosterPlayerScreen: React.FC = () => {
     }
   }, [navigation, originScreen]);
 
-  const handleNextPress = useCallback(() => {
+  const navigateToPosterEditor = useCallback(() => {
     navigation.navigate('PosterEditor', {
       selectedImage: {
         uri: getHighQualityImageUrl(currentPoster),
@@ -1214,52 +1208,47 @@ const PosterPlayerScreen: React.FC = () => {
       selectedLanguage: selectedLanguage,
       selectedTemplateId: currentPoster.id,
     });
-  }, [navigation, currentPoster, selectedLanguage]);
+  }, [navigation, currentPoster, selectedLanguage, getHighQualityImageUrl]);
 
-  const getTemplateLanguageCode = useCallback((template: Template) => {
-    const templateLanguages = Array.isArray(template.languages)
-      ? template.languages
-          .filter((lang): lang is string => typeof lang === 'string')
-          .map(lang => lang.toLowerCase())
-      : [];
-
-    const firstMatch = templateLanguages.find(langId =>
-      languages.some(lang => lang.id === langId)
-    );
-    if (firstMatch) {
-      return languages.find(lang => lang.id === firstMatch)?.code || 'EN';
+  const handleNextPress = useCallback(() => {
+    if (businessCategory) {
+      setIsBusinessProfileReminderVisible(true);
+      return;
     }
+    navigateToPosterEditor();
+  }, [businessCategory, navigateToPosterEditor]);
 
-    const templateTags = Array.isArray(template.tags)
-      ? template.tags.filter((tag): tag is string => typeof tag === 'string')
-      : [];
-    const languageMatch = languages.find(lang =>
-      (LANGUAGE_KEYWORDS[lang.id] || [lang.id]).some(keyword =>
-        templateTags.some(tag => tag.toLowerCase().includes(keyword))
-      )
-    );
-    return languageMatch?.code || 'EN';
-  }, [languages]);
+  const handleBusinessProfileReminderClose = useCallback(() => {
+    setIsBusinessProfileReminderVisible(false);
+  }, []);
+
+  const handleBusinessProfileAddPress = useCallback(() => {
+    setIsBusinessProfileReminderVisible(false);
+    navigation.navigate('BusinessProfiles');
+  }, [navigation]);
+
+  const handleBusinessProfileContinue = useCallback(() => {
+    setIsBusinessProfileReminderVisible(false);
+    navigateToPosterEditor();
+  }, [navigateToPosterEditor]);
 
   // Memoize current poster ID to avoid recreating render function
   const currentPosterId = useMemo(() => currentPoster?.id, [currentPoster?.id]);
 
   // Pre-compute image URLs and language codes for all templates to avoid recalculation during render
   const templateMetadata = useMemo(() => {
-    const metadataMap = new Map<string, { imageUrl: string; languageCode: string }>();
+    const metadataMap = new Map<string, { imageUrl: string }>();
     filteredPosters.forEach(template => {
       metadataMap.set(template.id, {
         imageUrl: getHighQualityImageUrl(template),
-        languageCode: getTemplateLanguageCode(template),
       });
     });
     return metadataMap;
-  }, [filteredPosters, getHighQualityImageUrl, getTemplateLanguageCode]);
+  }, [filteredPosters, getHighQualityImageUrl]);
 
   const renderRelatedPoster = useCallback(({ item }: { item: Template }) => {
     const metadata = templateMetadata.get(item.id);
     const imageUrl = metadata?.imageUrl || item.thumbnail || '';
-    const languageCode = metadata?.languageCode || 'EN';
     const isSelected = currentPosterId === item.id;
     
     return (
@@ -1268,7 +1257,6 @@ const PosterPlayerScreen: React.FC = () => {
         cardWidth={cardWidth}
         cardHeight={cardHeight}
         imageUrl={imageUrl}
-        languageCode={languageCode}
         onPress={handlePosterSelect}
         isSelected={isSelected}
         overlayColors={previewOverlayColors}
@@ -1507,6 +1495,38 @@ const PosterPlayerScreen: React.FC = () => {
          {/* Safe Area Bottom Spacing */}
          <View style={{ height: insets.bottom }} />
        </LinearGradient>
+
+      <Modal
+        visible={isBusinessProfileReminderVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={handleBusinessProfileReminderClose}
+      >
+        <View style={styles.businessProfileModalOverlay}>
+          <View style={styles.businessProfileModalContent}>
+            <Text style={styles.businessProfileModalTitle}>Add More Business Profiles</Text>
+            <Text style={styles.businessProfileModalSubtitle}>
+              Create additional business profiles to unlock more tailored poster suggestions.
+            </Text>
+            <View style={styles.businessProfileModalActions}>
+              <TouchableOpacity
+                style={[styles.businessProfileModalButton, styles.businessProfileModalSecondary]}
+                onPress={handleBusinessProfileAddPress}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.businessProfileModalSecondaryText}>Add Profile</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.businessProfileModalButton, styles.businessProfileModalPrimary]}
+                onPress={handleBusinessProfileContinue}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.businessProfileModalPrimaryText}>Continue</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
      </View>
    );
 };
@@ -1900,20 +1920,6 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     textAlign: 'center',
   },
-  relatedPosterLanguageBadge: {
-    position: 'absolute',
-    top: moderateScale(4), // Compact
-    right: moderateScale(4),
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    paddingHorizontal: moderateScale(4), // Compact
-    paddingVertical: moderateScale(2),
-    borderRadius: moderateScale(6),
-  },
-  relatedPosterLanguageText: {
-    color: '#ffffff',
-    fontSize: moderateScale(6), // Compact
-    fontWeight: '600',
-  },
   serviceFilterContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2045,6 +2051,70 @@ const styles = StyleSheet.create({
   },
   languageButtonTextSelected: {
     fontWeight: '700',
+  },
+  businessProfileModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: moderateScale(24),
+  },
+  businessProfileModalContent: {
+    width: '100%',
+    maxWidth: 360,
+    backgroundColor: '#ffffff',
+    borderRadius: moderateScale(16),
+    paddingVertical: moderateScale(24),
+    paddingHorizontal: moderateScale(20),
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.15,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  businessProfileModalTitle: {
+    fontSize: moderateScale(16),
+    fontWeight: '700',
+    color: '#333333',
+    marginBottom: moderateScale(8),
+    textAlign: 'center',
+  },
+  businessProfileModalSubtitle: {
+    fontSize: moderateScale(12),
+    color: '#666666',
+    textAlign: 'center',
+    marginBottom: moderateScale(20),
+    lineHeight: moderateScale(18),
+  },
+  businessProfileModalActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: moderateScale(10),
+  },
+  businessProfileModalButton: {
+    flex: 1,
+    paddingVertical: moderateScale(10),
+    borderRadius: moderateScale(25),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  businessProfileModalSecondary: {
+    borderWidth: 1,
+    borderColor: '#667eea',
+    backgroundColor: '#ffffff',
+  },
+  businessProfileModalSecondaryText: {
+    color: '#667eea',
+    fontSize: moderateScale(12),
+    fontWeight: '600',
+  },
+  businessProfileModalPrimary: {
+    backgroundColor: '#667eea',
+  },
+  businessProfileModalPrimaryText: {
+    color: '#ffffff',
+    fontSize: moderateScale(12),
+    fontWeight: '600',
   },
 });
 
