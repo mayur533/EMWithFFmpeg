@@ -878,7 +878,6 @@ const HomeScreen: React.FC = React.memo(() => {
   }, [businessCategoryFadeAnim]);
   const [banners, setBanners] = useState<Banner[]>([]);
   const [templates, setTemplates] = useState<Template[]>([]);
-  const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedTemplate, setSelectedTemplate] = useState<Template | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -1208,8 +1207,7 @@ const HomeScreen: React.FC = React.memo(() => {
     let isMounted = true;
     
     const loadInitialData = async () => {
-      setLoading(true);
-      
+
       try {
         // Load data from APIs only - no mock data
         if (isMounted) {
@@ -1217,10 +1215,6 @@ const HomeScreen: React.FC = React.memo(() => {
         }
       } catch (error) {
         if (__DEV__) {
-        }
-      } finally {
-        if (isMounted) {
-          setLoading(false);
         }
       }
     };
@@ -2504,25 +2498,6 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   }, [greetingCategories, currentCategoryIndex]);
 
   // Render functions moved to extracted components for better performance
-
-  if (loading) {
-    return (
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.gradient[0] || '#e8e8e8' }]}>
-        <StatusBar 
-          barStyle="dark-content"
-          backgroundColor="transparent" 
-          translucent={true}
-        />
-        <LinearGradient
-          colors={theme.colors.gradient}
-          style={styles.loadingContainer}
-        >
-          <ActivityIndicator size="large" color="#667eea" />
-          <Text style={[styles.loadingText, { color: theme.colors.text }]}>Getting things ready...</Text>
-        </LinearGradient>
-      </SafeAreaView>
-    );
-  }
 
   const renderBusinessProfileDropdown = () => {
     if (!isBusinessProfileDropdownVisible || !businessProfileDropdownPosition) {
@@ -4645,16 +4620,6 @@ const styles = StyleSheet.create({
   },
   gradientBackground: {
     flex: 1,
-  },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  loadingText: {
-    marginTop: 20,
-    fontSize: 18,
-    fontWeight: '600',
   },
   header: {
     paddingTop: moderateScale(8),
