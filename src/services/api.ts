@@ -211,13 +211,15 @@ api.interceptors.response.use(
         const hasToken = await AsyncStorage.getItem('authToken');
         
         // Only emit once to prevent multiple modals, and only if user had a token
+        // IMPORTANT: Do NOT clear auth data here - let user stay logged in until they explicitly sign out
+        // The TokenExpirationHandler will handle logout only when user confirms
         if (!hasEmittedTokenExpiration && hasToken) {
           hasEmittedTokenExpiration = true;
-          console.log('🔴 Token expired or invalid, clearing auth data');
-          await AsyncStorage.removeItem('authToken');
-          await AsyncStorage.removeItem('currentUser');
+          console.log('🔴 Token expired or invalid - showing modal but keeping user logged in');
+          console.log('ℹ️ User will remain logged in until they explicitly sign out');
           
           // Emit token expiration event using React Native's DeviceEventEmitter
+          // This will show a modal, but won't automatically log the user out
           DeviceEventEmitter.emit(TOKEN_EXPIRED_EVENT);
         }
       }

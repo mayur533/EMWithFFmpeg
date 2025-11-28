@@ -39,10 +39,10 @@ const TokenExpirationHandler: React.FC = () => {
     };
   }, []);
 
-  const handleOk = async () => {
+  const handleSignOut = async () => {
     setShowModal(false);
     
-    // Sign out user
+    // Sign out user only when they explicitly choose to
     await authService.signOut();
     
     // Navigate to login screen using navigation ref
@@ -56,18 +56,24 @@ const TokenExpirationHandler: React.FC = () => {
     }
   };
 
+  const handleContinue = () => {
+    // Just dismiss the modal - user stays logged in
+    // They can continue using the app, but may need to sign in again for API calls
+    setShowModal(false);
+  };
+
   return (
     <Modal
       visible={showModal}
       transparent={true}
       animationType="fade"
-      onRequestClose={handleOk}
+      onRequestClose={handleContinue}
       statusBarTranslucent={true}
     >
       <TouchableOpacity 
         style={styles.modalOverlay}
         activeOpacity={1}
-        onPress={handleOk}
+        onPress={handleContinue}
       >
         <TouchableOpacity 
           activeOpacity={1}
@@ -75,8 +81,8 @@ const TokenExpirationHandler: React.FC = () => {
         >
           <View style={[styles.errorModalContainer, { backgroundColor: theme.colors.surface }]}>
             <View style={styles.errorModalHeader}>
-              <View style={[styles.errorIconContainer, { backgroundColor: '#ff444420' }]}>
-                <Icon name="error-outline" size={Math.min(screenWidth * 0.08, 32)} color="#ff4444" />
+              <View style={[styles.errorIconContainer, { backgroundColor: '#ff980020' }]}>
+                <Icon name="info-outline" size={Math.min(screenWidth * 0.08, 32)} color="#ff9800" />
               </View>
               <Text 
                 style={[styles.errorModalTitle, { color: theme.colors.text }]}
@@ -87,16 +93,27 @@ const TokenExpirationHandler: React.FC = () => {
             
             <View style={styles.errorModalContent}>
               <Text style={[styles.errorModalMessage, { color: theme.colors.text }]}>
-                Your session has expired. Please log in again to continue.
+                Your session has expired. You can continue using the app, but you may need to sign in again for some features.
               </Text>
             </View>
             
-            <TouchableOpacity 
-              style={[styles.errorModalButton, { backgroundColor: '#ff4444' }]}
-              onPress={handleOk}
-            >
-              <Text style={styles.errorModalButtonText}>OK</Text>
-            </TouchableOpacity>
+            <View style={styles.errorModalButtons}>
+              <TouchableOpacity 
+                style={[styles.errorModalButton, styles.errorModalButtonSecondary, { 
+                  backgroundColor: theme.colors.cardBackground,
+                  borderColor: theme.colors.border || '#e0e0e0',
+                }]}
+                onPress={handleContinue}
+              >
+                <Text style={[styles.errorModalButtonText, { color: theme.colors.text }]}>Continue</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.errorModalButton, { backgroundColor: '#ff4444' }]}
+                onPress={handleSignOut}
+              >
+                <Text style={styles.errorModalButtonText}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </TouchableOpacity>
       </TouchableOpacity>
@@ -151,7 +168,12 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     lineHeight: Math.min(screenWidth * 0.06, 24),
   },
+  errorModalButtons: {
+    flexDirection: 'row',
+    gap: screenWidth * 0.03,
+  },
   errorModalButton: {
+    flex: 1,
     paddingVertical: screenHeight * 0.018,
     borderRadius: 12,
     alignItems: 'center',
@@ -163,6 +185,9 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+  },
+  errorModalButtonSecondary: {
+    borderWidth: 1,
   },
   errorModalButtonText: {
     color: '#FFFFFF',

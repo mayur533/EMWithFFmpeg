@@ -2162,8 +2162,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   }, []);
 
   const handleViewAllGeneralCategories = useCallback(() => {
-    setIsGeneralCategoriesModalVisible(true);
-  }, []);
+    navigation.navigate('GreetingTemplates');
+  }, [navigation]);
 
   const closeGeneralCategoriesModal = useCallback(() => {
     setIsGeneralCategoriesModalVisible(false);
@@ -2844,14 +2844,20 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                       color="#ffffff" 
                       style={styles.categoryButtonIcon}
                     />
-                    <Animated.Text style={[
-                      styles.categoryButtonText,
-                      styles.categoryButtonRotatingText,
-                      { 
-                        color: '#ffffff',
-                        opacity: categoryFadeAnim,
-                      }
-                    ]}>
+                    <Animated.Text 
+                      style={[
+                        styles.categoryButtonText,
+                        styles.categoryButtonRotatingText,
+                        { 
+                          color: '#ffffff',
+                          opacity: categoryFadeAnim,
+                          flexShrink: 1,
+                          minWidth: 0,
+                        }
+                      ]}
+                      numberOfLines={1}
+                      ellipsizeMode="tail"
+                    >
                       {greetingCategoryButtonLabel}
                     </Animated.Text>
                   </View>
@@ -3871,7 +3877,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                     <View style={styles.customerSupportOptionIconContainer}>
                       <Icon name="phone" size={moderateScale(24)} color="#009688" />
                     </View>
-                    <Text style={styles.customerSupportOptionText}>9941041415</Text>
+                    <Text style={styles.customerSupportOptionText}>8551941415</Text>
                     <Icon name="chevron-right" size={moderateScale(24)} color="#009688" />
                   </TouchableOpacity>
 
@@ -4907,6 +4913,7 @@ const styles = StyleSheet.create({
     textShadowColor: 'rgba(0, 0, 0, 0.15)',
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 3,
+    flexShrink: 1,
   },
   tabsContainer: {
     flexDirection: 'row',

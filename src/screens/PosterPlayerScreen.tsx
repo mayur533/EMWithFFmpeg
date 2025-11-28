@@ -301,8 +301,7 @@ const PosterPlayerScreen: React.FC = () => {
   } = route.params;
   const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
   const [allTemplates, setAllTemplates] = useState<Template[]>([]);
-  const [selectedLanguage, setSelectedLanguage] = useState<string>('english');
-  const [languageMenuVisible, setLanguageMenuVisible] = useState<boolean>(false);
+  const [selectedLanguage, setSelectedLanguage] = useState<string>('all');
   const [imageDimensions, setImageDimensions] = useState<{ width: number; height: number } | null>(null);
   const [selectedServiceFilter, setSelectedServiceFilter] = useState<string | null>(null);
   const [isBusinessProfileReminderVisible, setIsBusinessProfileReminderVisible] = useState(false);
@@ -417,6 +416,7 @@ const PosterPlayerScreen: React.FC = () => {
 
   // Language options
   const languages = useMemo(() => [
+    { id: 'all', name: 'All', code: 'ALL' },
     { id: 'english', name: 'English', code: 'EN' },
     { id: 'marathi', name: 'Marathi', code: 'MR' },
     { id: 'hindi', name: 'Hindi', code: 'HI' },
@@ -449,14 +449,20 @@ const PosterPlayerScreen: React.FC = () => {
 
 
   const filteredPosters = useMemo(() => {
-    // First filter by language - if no matches, return empty array
-    const languageFiltered = allTemplates.filter(template =>
-      templateContainsLanguage(template, selectedLanguage),
-    );
-    
-    // If no language matches, show nothing
-    if (languageFiltered.length === 0) {
-      return [];
+    // If "All" is selected, skip language filtering
+    let languageFiltered: Template[];
+    if (selectedLanguage === 'all') {
+      languageFiltered = allTemplates;
+    } else {
+      // Filter by language - if no matches, return empty array
+      languageFiltered = allTemplates.filter(template =>
+        templateContainsLanguage(template, selectedLanguage),
+      );
+      
+      // If no language matches, show nothing
+      if (languageFiltered.length === 0) {
+        return [];
+      }
     }
     
     // Then apply service filter if applicable
@@ -796,7 +802,8 @@ const PosterPlayerScreen: React.FC = () => {
     });
     
     // If a language is detected, switch to it
-    if (detectedLanguage) {
+    // Only auto-detect if currently on "All" to avoid overriding user's manual selection
+    if (detectedLanguage && selectedLanguage === 'all') {
       setSelectedLanguage(detectedLanguage);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -852,8 +859,9 @@ const PosterPlayerScreen: React.FC = () => {
     });
     
     // If a language is detected and it's different from current selection, switch to it
+    // Only auto-detect if currently on "All" to avoid overriding user's manual selection
     if (detectedLanguage) {
-      if (detectedLanguage !== selectedLanguage) {
+      if (detectedLanguage !== selectedLanguage && selectedLanguage === 'all') {
         console.log(`🔄 [LANGUAGE DETECTION] Switching language from ${selectedLanguage} to ${detectedLanguage}`, {
           detectedLanguages: allDetectedLanguages,
           tags: posterTags
@@ -863,11 +871,8 @@ const PosterPlayerScreen: React.FC = () => {
         console.log(`✅ [LANGUAGE DETECTION] Language already set to ${detectedLanguage}`);
       }
     } else {
-      console.log('⚠️ [LANGUAGE DETECTION] No language detected from tags:', posterTags, 'Defaulting to English');
-      // Default to English if no language detected
-      if (selectedLanguage !== 'english') {
-        setSelectedLanguage('english');
-      }
+      console.log('⚠️ [LANGUAGE DETECTION] No language detected from tags:', posterTags);
+      // Keep current selection, don't auto-switch
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPoster?.id, businessCategory, greetingCategory]); // Run when current poster changes for category
@@ -882,6 +887,14 @@ const PosterPlayerScreen: React.FC = () => {
       const resolvedPrevious = previousPoster
         ? allTemplates.find(template => template.id === previousPoster.id) || previousPoster
         : null;
+
+      // If "All" is selected, show any template
+      if (selectedLanguage === 'all') {
+        if (resolvedPrevious) {
+          return resolvedPrevious;
+        }
+        return allTemplates[0];
+      }
 
       if (resolvedPrevious && templateContainsLanguage(resolvedPrevious, selectedLanguage)) {
         return resolvedPrevious;
@@ -939,7 +952,8 @@ const PosterPlayerScreen: React.FC = () => {
     });
     
     // If a language is detected and it's different from current selection, switch to it
-    if (detectedLanguage && detectedLanguage !== selectedLanguage) {
+    // Only auto-detect if currently on "All" to avoid overriding user's manual selection
+    if (detectedLanguage && detectedLanguage !== selectedLanguage && selectedLanguage === 'all') {
       setSelectedLanguage(detectedLanguage);
     }
     
@@ -1011,7 +1025,6 @@ const PosterPlayerScreen: React.FC = () => {
 
   const handleLanguageChange = useCallback((languageId: string) => {
     setSelectedLanguage(languageId);
-    setLanguageMenuVisible(false);
 
     /*
      * API-based language filtering has been disabled.
@@ -1020,6 +1033,15 @@ const PosterPlayerScreen: React.FC = () => {
      *   - homeApi.getProfessionalTemplates({ language: ... })
      * Language filtering is now handled locally using template tags (see templateContainsLanguage).
      */
+
+    // If "All" is selected, show first template from all templates
+    if (languageId === 'all') {
+      if (allTemplates.length > 0) {
+        const firstTemplate = mergeTemplateLanguages(allTemplates[0]);
+        setCurrentPoster(firstTemplate);
+      }
+      return;
+    }
 
     const firstMatchingTemplate = allTemplates
       .map(template => mergeTemplateLanguages(template))
@@ -1310,40 +1332,35 @@ const PosterPlayerScreen: React.FC = () => {
         {/* Safe Area Top Spacing */}
         <View style={{ height: insets.top + moderateScale(12) }} />
 
-        {/* Header with Back, Language Dropdown, Next */}
+        {/* Header with Back Arrow, Category Name, and Next */}
         <View style={styles.topHeader}>
           <TouchableOpacity
             onPress={handleBackPress}
-            style={styles.headerTextButton}
+            style={styles.backArrowButton}
             activeOpacity={0.85}
           >
             <LinearGradient
               colors={[theme.colors.secondary, theme.colors.primary]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.headerTextButtonGradient}
-          >
-            <Text style={styles.headerButtonText}>Back</Text>
+              style={styles.backArrowButtonGradient}
+            >
+              <Icon name="chevron-left" size={getIconSize(20)} color="#ffffff" />
             </LinearGradient>
           </TouchableOpacity>
 
-          <TouchableOpacity
-            onPress={() => setLanguageMenuVisible(v => !v)}
-            style={styles.languageDropdownButton}
-            activeOpacity={0.85}
-          >
+          <View style={styles.headerTitleContainer}>
             <LinearGradient
               colors={[theme.colors.secondary, theme.colors.primary]}
               start={{ x: 0, y: 0 }}
               end={{ x: 1, y: 0 }}
-              style={styles.languageDropdownButtonGradient}
-          >
-            <Text style={styles.languageDropdownText}>
-              {languages.find(l => l.id === selectedLanguage)?.name || 'Select Language'}
-            </Text>
-            <Icon name={languageMenuVisible ? 'expand-less' : 'expand-more'} size={getIconSize(14)} color="#ffffff" />
+              style={styles.headerTitleGradient}
+            >
+              <Text style={styles.headerCategoryTitle} numberOfLines={1} ellipsizeMode="tail">
+                {businessCategory || greetingCategory || currentPoster?.category || 'Templates'}
+              </Text>
             </LinearGradient>
-          </TouchableOpacity>
+          </View>
 
           <TouchableOpacity
             onPress={handleNextPress}
@@ -1361,8 +1378,6 @@ const PosterPlayerScreen: React.FC = () => {
           </TouchableOpacity>
         </View>
 
-        {/* Dropdown will render over the preview instead of full-width */}
-
          {/* Compact Poster Section */}
          <View
            style={[styles.posterContainer, { height: computedPreviewHeight, width: '100%' }]}
@@ -1378,30 +1393,41 @@ const PosterPlayerScreen: React.FC = () => {
            quality="high"
            maxWidth={2400}
          />
-         <View style={styles.posterOverlay}>
-           {languageMenuVisible && (
-             <View style={styles.languageDropdownMenuSmall}>
-               {languages.map((lang) => (
-                 <TouchableOpacity
-                   key={lang.id}
-                   style={[styles.languageDropdownItem, selectedLanguage === lang.id && styles.languageDropdownItemSelected]}
-                   onPress={() => {
-                     handleLanguageChange(lang.id);
-                     setLanguageMenuVisible(false);
-                   }}
-                   activeOpacity={0.8}
-                 >
-                   <Text style={[styles.languageDropdownItemText, selectedLanguage === lang.id && styles.languageDropdownItemTextSelected]}>
-                     {lang.name}
-                   </Text>
-                   {selectedLanguage === lang.id && (
-                     <Icon name="check" size={getIconSize(12)} color="#ffffff" />
-                   )}
-                 </TouchableOpacity>
-               ))}
-             </View>
-           )}
          </View>
+
+         {/* Language Filter Buttons - Horizontal below preview */}
+         <View style={styles.languageFilterContainer}>
+           {languages.map((language) => {
+             const isSelected = selectedLanguage === language.id;
+             return (
+               <TouchableOpacity
+                 key={language.id}
+                 style={[
+                   styles.languageFilterButton,
+                   isSelected && styles.languageFilterButtonSelected
+                 ]}
+                 onPress={() => handleLanguageChange(language.id)}
+                 activeOpacity={0.8}
+               >
+                 <LinearGradient
+                   colors={isSelected 
+                     ? [theme.colors.secondary, theme.colors.primary]
+                     : ['rgba(0,0,0,0.05)', 'rgba(0,0,0,0.05)']
+                   }
+                   start={{ x: 0, y: 0 }}
+                   end={{ x: 1, y: 0 }}
+                   style={styles.languageFilterButtonGradient}
+                 >
+                   <Text style={[
+                     styles.languageFilterButtonText,
+                     isSelected && styles.languageFilterButtonTextSelected
+                   ]}>
+                     {language.name}
+                   </Text>
+                 </LinearGradient>
+               </TouchableOpacity>
+             );
+           })}
          </View>
 
          {/* Service filter buttons for Event Planners */}
@@ -1447,18 +1473,8 @@ const PosterPlayerScreen: React.FC = () => {
            </View>
          )}
 
-         {/* Language selection moved to header */}
-
          {/* Compact Related Posters Section */}
         <View style={styles.relatedSection}>
-          <View style={styles.relatedHeader}>
-            {!isEventPlannerCategory && (
-              <Text style={styles.relatedTitle}>
-                Related Templates
-              </Text>
-            )}
-          </View>
-           
            {filteredPosters.length > 0 ? (
              <FlatList
                data={filteredPosters}
@@ -1481,13 +1497,25 @@ const PosterPlayerScreen: React.FC = () => {
              />
            ) : (
              <View style={styles.noPostersContainer}>
-
-               <Text style={styles.noPostersText}>
-                 No templates available in {languages.find(lang => lang.id === selectedLanguage)?.name}
-               </Text>
-               <Text style={styles.noPostersSubtext}>
-                 Try selecting a different language
-               </Text>
+               {selectedLanguage === 'all' ? (
+                 <>
+                   <Text style={styles.noPostersText}>
+                     No templates available
+                   </Text>
+                   <Text style={styles.noPostersSubtext}>
+                     Try refreshing or selecting a different category
+                   </Text>
+                 </>
+               ) : (
+                 <>
+                   <Text style={styles.noPostersText}>
+                     No templates available in {languages.find(lang => lang.id === selectedLanguage)?.name}
+                   </Text>
+                   <Text style={styles.noPostersSubtext}>
+                     Try selecting "All" or a different language
+                   </Text>
+                 </>
+               )}
              </View>
            )}
          </View>
@@ -1560,6 +1588,39 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: moderateScale(8),
     paddingBottom: moderateScale(6),
+    gap: moderateScale(8),
+  },
+  backArrowButton: {
+    borderRadius: moderateScale(6),
+    overflow: 'hidden',
+  },
+  backArrowButtonGradient: {
+    width: moderateScale(36),
+    height: moderateScale(36),
+    borderRadius: moderateScale(6),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  headerTitleContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: moderateScale(8),
+  },
+  headerTitleGradient: {
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(8),
+    borderRadius: moderateScale(6),
+    justifyContent: 'center',
+    alignItems: 'center',
+    minWidth: moderateScale(100),
+  },
+  headerCategoryTitle: {
+    fontSize: moderateScale(11),
+    fontWeight: '700',
+    color: '#ffffff',
+    textAlign: 'center',
+    letterSpacing: 0.3,
   },
   headerIconButton: {
     width: moderateScale(32),
@@ -2050,6 +2111,43 @@ const styles = StyleSheet.create({
     textAlignVertical: 'center',
   },
   languageButtonTextSelected: {
+    fontWeight: '700',
+  },
+  languageFilterContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: moderateScale(8),
+    paddingVertical: moderateScale(8),
+    gap: moderateScale(6),
+    marginBottom: moderateScale(4),
+  },
+  languageFilterButton: {
+    borderRadius: moderateScale(8),
+    overflow: 'hidden',
+    minWidth: moderateScale(60),
+  },
+  languageFilterButtonSelected: {
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  languageFilterButtonGradient: {
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(6),
+    borderRadius: moderateScale(8),
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  languageFilterButtonText: {
+    fontSize: moderateScale(10),
+    fontWeight: '600',
+    color: '#666666',
+  },
+  languageFilterButtonTextSelected: {
+    color: '#ffffff',
     fontWeight: '700',
   },
   businessProfileModalOverlay: {
