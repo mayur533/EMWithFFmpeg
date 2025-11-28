@@ -3844,7 +3844,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
               onPress={closeCustomerSupportModal}
             >
               <View style={styles.customerSupportModalContent}>
-                {/* Close Button */}
+                {/* Customer Support Image - Positioned at top */}
+                <View style={styles.customerSupportImageContainer}>
+                  <Image
+                    source={require('../assets/icons/customerSupport.png')}
+                    style={styles.customerSupportImage}
+                    resizeMode="cover"
+                  />
+                </View>
+
+                {/* Close Button - Overlaps the image */}
                 <TouchableOpacity
                   style={styles.customerSupportCloseButton}
                   onPress={closeCustomerSupportModal}
@@ -5546,9 +5555,24 @@ const styles = StyleSheet.create({
       backgroundColor: '#ffffff',
       borderRadius: moderateScale(12),
       padding: moderateScale(24),
-      paddingTop: moderateScale(50), // Extra padding for close button
+      paddingTop: 0, // No top padding since image is at top
+      paddingHorizontal: 0, // No horizontal padding to allow image to stretch
       position: 'relative',
+      overflow: 'hidden', // Ensure image respects border radius
       ...responsiveShadow.large,
+    },
+    customerSupportImageContainer: {
+      width: '100%',
+      height: moderateScale(200),
+      position: 'relative',
+      marginTop: 0,
+      marginBottom: moderateScale(8),
+      marginLeft: 0,
+      marginRight: 0,
+    },
+    customerSupportImage: {
+      width: '100%',
+      height: '100%',
     },
     customerSupportCloseButton: {
       position: 'absolute',
@@ -5557,10 +5581,15 @@ const styles = StyleSheet.create({
       width: moderateScale(32),
       height: moderateScale(32),
       borderRadius: moderateScale(16),
-      backgroundColor: 'rgba(0, 0, 0, 0.1)',
+      backgroundColor: 'rgba(255, 255, 255, 0.9)',
       justifyContent: 'center',
       alignItems: 'center',
-      zIndex: 10,
+      zIndex: 20, // Higher z-index to overlap image
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.2,
+      shadowRadius: 4,
+      elevation: 5,
     },
     customerSupportCloseButtonText: {
       fontSize: moderateScale(18),
@@ -5571,6 +5600,7 @@ const styles = StyleSheet.create({
       gap: moderateScale(16),
       marginTop: moderateScale(20),
       width: '100%',
+      paddingHorizontal: moderateScale(24), // Add horizontal padding for buttons
     },
     customerSupportOptionButton: {
       flexDirection: 'row',

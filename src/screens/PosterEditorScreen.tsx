@@ -1027,6 +1027,8 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   const scaleValues = useRef<{ [key: string]: Animated.Value }>({}).current;
   
   // State for field visibility
+  // Logo, Company Name, Footer BG, phone (mobile number), email, and website are visible by default
+  // All other fields must be manually toggled to show
   const [visibleFields, setVisibleFields] = useState<{[key: string]: boolean}>({
     logo: true,
     companyName: true,
@@ -1034,8 +1036,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
     phone: true,
     email: true,
     website: true,
-    category: true,
-    address: true,
+    category: false,
+    address: false,
+    services: false,
   });
   
   // Store original layers for frame removal
@@ -1422,7 +1425,9 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         id: generateId(),
         type: 'text',
         content: `📞 ${profile.phone}`,
-        position: { x: Math.round(219 * scaleX), y: Math.round(425 * scaleY) },
+        // Position set to X: 419.2, Y: 501.0 (for 560x560 canvas)
+        // Base values: 539.3 for X, 436.0 for Y (calculated from target position)
+        position: { x: 539.3 * scaleX, y: 436.0 * scaleY },
         size: { width: (canvasWidth - 40) / 2, height: contactLineHeight },
         rotation: 0,
         zIndex: 10,
