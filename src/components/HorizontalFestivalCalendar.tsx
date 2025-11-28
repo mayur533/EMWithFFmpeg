@@ -15,6 +15,9 @@ import OptimizedImage from './OptimizedImage';
 import { Template } from '../services/dashboard';
 import calendarApi from '../services/calendarApi';
 import LinearGradient from 'react-native-linear-gradient';
+import { useNavigation } from '@react-navigation/native';
+import { StackNavigationProp } from '@react-navigation/stack';
+import { MainStackParamList } from '../navigation/AppNavigator';
 
 // Festival data structure
 interface FestivalData {
@@ -295,6 +298,7 @@ const moderateScale = (size: number, factor = 0.5) => {
 
 const HorizontalFestivalCalendar: React.FC = () => {
   const { theme } = useTheme();
+  const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
   const [selectedDate, setSelectedDate] = useState<string>('');
   const [selectedDatePosters, setSelectedDatePosters] = useState<Template[]>([]);
   const scrollViewRef = useRef<ScrollView>(null);
@@ -476,22 +480,33 @@ const HorizontalFestivalCalendar: React.FC = () => {
     handleDateSelect(todayDate);
   }, [upcomingDates, handleDateSelect, formatDateKey]);
 
+  const handlePosterPress = useCallback((poster: Template, dateString: string) => {
+    navigation.navigate('PosterPlayer', {
+      selectedPoster: poster,
+      relatedPosters: selectedDatePosters.filter(p => p.id !== poster.id),
+      calendarDate: dateString,
+      originScreen: 'Calendar',
+    });
+  }, [navigation, selectedDatePosters]);
+
   const renderPosterCard = useCallback(({ item }: { item: Template }) => {
     return (
-      <View
+      <TouchableOpacity
         style={[
           styles.posterCard,
           { width: generalCategoryCardWidth, height: generalCategoryCardWidth },
         ]}
+        onPress={() => handlePosterPress(item, selectedDate)}
+        activeOpacity={0.8}
       >
         <OptimizedImage 
           uri={item.thumbnail} 
           style={styles.posterImage} 
           resizeMode="cover" 
         />
-      </View>
+      </TouchableOpacity>
     );
-  }, [generalCategoryCardWidth]);
+  }, [generalCategoryCardWidth, handlePosterPress, selectedDate]);
 
   const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
 

@@ -24,6 +24,7 @@ import OptimizedImage from '../components/OptimizedImage';
 import LazyFullImage from '../components/LazyFullImage';
 import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
 import greetingTemplatesService from '../services/greetingTemplates';
+import calendarApi from '../services/calendarApi';
 
 const LANGUAGE_KEYWORDS: Record<string, string[]> = {
   english: ['english', 'en'],
@@ -298,6 +299,7 @@ const PosterPlayerScreen: React.FC = () => {
     greetingCategory,
     originScreen,
     posterLimit,
+    calendarDate,
   } = route.params;
   const [currentPoster, setCurrentPoster] = useState<Template>(initialPoster);
   const [allTemplates, setAllTemplates] = useState<Template[]>([]);
@@ -418,7 +420,6 @@ const PosterPlayerScreen: React.FC = () => {
   const languages = useMemo(() => [
     { id: 'all', name: 'All', code: 'ALL' },
     { id: 'english', name: 'English', code: 'EN' },
-    { id: 'marathi', name: 'Marathi', code: 'MR' },
     { id: 'hindi', name: 'Hindi', code: 'HI' },
   ], []);
 
@@ -721,10 +722,65 @@ const PosterPlayerScreen: React.FC = () => {
     fetchGreetingCategoryTemplates();
   }, [greetingCategory]);
 
-  // Sync state when route params change (only if businessCategory or greetingCategory is not provided)
+  // Fetch calendar posters when calendarDate is provided
   useEffect(() => {
-    // Skip if business category or greeting category is provided (handled by separate useEffects above)
-    if (businessCategory || greetingCategory) {
+    if (!calendarDate) {
+      return;
+    }
+
+    const fetchCalendarPosters = async () => {
+      try {
+        console.log('📡 [POSTER PLAYER] Fetching calendar posters for date:', calendarDate);
+        const response = await calendarApi.getPostersByDate(calendarDate);
+        
+        if (response.success && response.data.posters.length > 0) {
+          // Convert CalendarPoster to Template format
+          const convertedTemplates: Template[] = response.data.posters.map((poster: any) => {
+            // Normalize tags to ensure they're in the correct format
+            let normalizedTags: string[] = [];
+            if (Array.isArray(poster.tags)) {
+              normalizedTags = poster.tags.map((tag: any) => String(tag).trim()).filter((tag: string) => tag.length > 0);
+            } else if (typeof poster.tags === 'string') {
+              normalizedTags = poster.tags.split(',').map((tag: string) => tag.trim()).filter((tag: string) => tag.length > 0);
+            }
+
+            const template: Template = {
+              id: poster.id,
+              name: poster.name || poster.title || 'Calendar Poster',
+              thumbnail: poster.thumbnail || poster.thumbnailUrl || poster.imageUrl || '',
+              category: poster.category || 'Festival',
+              downloads: poster.downloads || 0,
+              isDownloaded: poster.isDownloaded || false,
+              tags: normalizedTags,
+            };
+
+            return template;
+          });
+
+          if (convertedTemplates.length > 0) {
+            // Set first poster as current poster and others as related
+            const ensuredTemplates = convertedTemplates.map(t => mergeTemplateLanguages(t));
+            setAllTemplates(ensuredTemplates);
+            
+            // Use the initial poster if it exists in the list, otherwise use the first one
+            const matchingPoster = ensuredTemplates.find(t => t.id === initialPoster.id);
+            setCurrentPoster(matchingPoster || ensuredTemplates[0]);
+            
+            console.log('✅ [POSTER PLAYER] Loaded', ensuredTemplates.length, 'calendar posters for date:', calendarDate);
+          }
+        }
+      } catch (error) {
+        console.error('❌ [POSTER PLAYER] Error fetching calendar posters:', error);
+      }
+    };
+
+    fetchCalendarPosters();
+  }, [calendarDate, initialPoster]);
+
+  // Sync state when route params change (only if businessCategory, greetingCategory, or calendarDate is not provided)
+  useEffect(() => {
+    // Skip if business category, greeting category, or calendar date is provided (handled by separate useEffects above)
+    if (businessCategory || greetingCategory || calendarDate) {
       return;
     }
 
@@ -766,7 +822,7 @@ const PosterPlayerScreen: React.FC = () => {
       const foundPoster = updatedTemplates.find(t => t.id === prevPoster.id);
       return foundPoster || ensuredInitialPoster;
     });
-  }, [initialPoster, initialRelatedPosters, selectedLanguage, businessCategory, greetingCategory]);
+  }, [initialPoster, initialRelatedPosters, selectedLanguage, businessCategory, greetingCategory, calendarDate]);
 
   // Detect language from initial poster on mount
   useEffect(() => {
@@ -782,7 +838,7 @@ const PosterPlayerScreen: React.FC = () => {
     const allPosterLanguages = Array.from(new Set([...posterLanguages, ...languagesFromTags.map(l => l.toLowerCase())]));
     
     // Available language IDs that we support
-    const availableLanguageIds = ['english', 'marathi', 'hindi'];
+    const availableLanguageIds = ['english', 'hindi'];
     
     // Find the first matching language from available languages
     const detectedLanguage = availableLanguageIds.find(langId => {
@@ -849,8 +905,8 @@ const PosterPlayerScreen: React.FC = () => {
     // Combine both sources
     const allDetectedLanguages = Array.from(new Set([...languagesFromTags, ...posterLanguages]));
     
-    // Available language IDs that we support (priority order: hindi, marathi, english)
-    const availableLanguageIds = ['hindi', 'marathi', 'english'];
+    // Available language IDs that we support (priority order: hindi, english)
+    const availableLanguageIds = ['hindi', 'english'];
     
     // Find the first matching language from available languages (prioritizing hindi/marathi over english)
     const detectedLanguage = availableLanguageIds.find(langId => {
@@ -932,7 +988,7 @@ const PosterPlayerScreen: React.FC = () => {
     const allPosterLanguages = Array.from(new Set([...posterLanguages, ...languagesFromTags.map(l => l.toLowerCase())]));
     
     // Available language IDs that we support
-    const availableLanguageIds = ['english', 'marathi', 'hindi'];
+    const availableLanguageIds = ['english', 'hindi'];
     
     // Find the first matching language from available languages
     const detectedLanguage = availableLanguageIds.find(langId => {
@@ -1357,7 +1413,12 @@ const PosterPlayerScreen: React.FC = () => {
               style={styles.headerTitleGradient}
             >
               <Text style={styles.headerCategoryTitle} numberOfLines={1} ellipsizeMode="tail">
-                {businessCategory || greetingCategory || currentPoster?.category || 'Templates'}
+                {calendarDate 
+                  ? (() => {
+                      const date = new Date(calendarDate);
+                      return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+                    })()
+                  : businessCategory || greetingCategory || currentPoster?.category || 'Templates'}
               </Text>
             </LinearGradient>
           </View>

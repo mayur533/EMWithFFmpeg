@@ -12,7 +12,7 @@ import {
   RefreshControl,
   ActivityIndicator,
 } from 'react-native';
-import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets, Edge } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
 import LinearGradient from 'react-native-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
@@ -74,12 +74,16 @@ const createPlaceholderPoster = (category: GreetingCategory): Template => ({
   tags: [category.name],
 });
 
+const SMALL_SCREEN_WIDTH_THRESHOLD = 450;
+
 const GreetingTemplatesScreen: React.FC = () => {
   const { theme } = useTheme();
   const navigation = useNavigation<StackNavigationProp<MainStackParamList>>();
   const insets = useSafeAreaInsets();
 
+  const isSmallScreen = screenWidth <= SMALL_SCREEN_WIDTH_THRESHOLD;
   const [categories, setCategories] = useState<GreetingCategory[]>([]);
+  const safeAreaEdges = useMemo<Edge[]>(() => (isSmallScreen ? ['left', 'right'] : ['top', 'left', 'right']), [isSmallScreen]);
   const [refreshing, setRefreshing] = useState(false);
   const [initialLoading, setInitialLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -495,7 +499,7 @@ const GreetingTemplatesScreen: React.FC = () => {
   return (
     <SafeAreaView 
       style={[styles.container, { backgroundColor: theme.colors.background }]}
-      edges={['top', 'left', 'right']}
+      edges={safeAreaEdges}
     >
       <StatusBar 
         barStyle="dark-content"
@@ -513,8 +517,8 @@ const GreetingTemplatesScreen: React.FC = () => {
           style={[
           styles.header, 
           { 
-            paddingTop: insets.top + moderateScale(0),
-            paddingBottom: moderateScale(3),
+            paddingTop: isSmallScreen ? moderateScale(57) : insets.top + moderateScale(2),
+            paddingBottom: isSmallScreen ? moderateScale(2) : moderateScale(3),
             paddingHorizontal: moderateScale(4),
             },
           ]}
@@ -524,12 +528,12 @@ const GreetingTemplatesScreen: React.FC = () => {
               style={[
               styles.headerTitle,
               { 
-                fontSize: moderateScale(12),
+                fontSize: isSmallScreen ? Math.max(moderateScale(16), 18) : Math.max(moderateScale(12), 14),
                 color: theme.colors.text,
                 },
               ]}
             >
-              Greeting Categories
+              General Categories
             </Text>
             <TouchableOpacity
               style={styles.headerIconButton}
@@ -538,7 +542,7 @@ const GreetingTemplatesScreen: React.FC = () => {
             >
               <Icon
                 name={isSearchVisible ? 'close' : 'search'}
-                size={moderateScale(14)}
+                size={isSmallScreen ? moderateScale(20) : moderateScale(14)}
                 color={theme.colors.text}
               />
             </TouchableOpacity>
@@ -634,9 +638,9 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   header: {
-    paddingTop: moderateScale(4),
-    paddingBottom: moderateScale(3),
-    paddingHorizontal: moderateScale(4),
+    paddingTop: 0,
+    paddingBottom: 0,
+    paddingHorizontal: 0,
   },
   headerContent: {
     flexDirection: 'row',

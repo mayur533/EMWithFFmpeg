@@ -65,6 +65,7 @@ export type MainStackParamList = {
     greetingCategory?: string;
     originScreen?: string;
     posterLimit?: number;
+    calendarDate?: string;
   };
   AboutUs: undefined;
   PrivacyPolicy: undefined;
