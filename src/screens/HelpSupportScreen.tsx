@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -13,11 +13,11 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/MaterialIcons';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import { useNavigation, useRoute, RouteProp } from '@react-navigation/native';
 import { StackNavigationProp } from '@react-navigation/stack';
 import { MainStackParamList } from '../navigation/AppNavigator';
 import { useTheme } from '../context/ThemeContext';
-import ComingSoonModal from '../components/ComingSoonModal';
 
 // Compact spacing multiplier to reduce all spacing (matching HomeScreen)
 const COMPACT_MULTIPLIER = 0.5;
@@ -77,7 +77,6 @@ const HelpSupportScreen: React.FC = () => {
   const route = useRoute<HelpSupportScreenRouteProp>();
   const { theme } = useTheme();
   const [expandedFAQ, setExpandedFAQ] = useState<number | null>(null);
-  const [showComingSoonModal, setShowComingSoonModal] = useState(false);
   const scrollViewRef = useRef<ScrollView>(null);
   const faqSectionRef = useRef<View>(null);
   
@@ -160,6 +159,35 @@ const HelpSupportScreen: React.FC = () => {
     },
   ];
 
+  const handleWhatsAppPress = useCallback(async () => {
+    try {
+      const phoneNumber = '918551941415'; // Phone number without + sign for WhatsApp (8551941415 with country code 91)
+      const message = 'Hello, I need support';
+      const url = `whatsapp://send?phone=${phoneNumber}&text=${encodeURIComponent(message)}`;
+      
+      // Try to open WhatsApp app
+      const canOpen = await Linking.canOpenURL(url);
+      if (canOpen) {
+        await Linking.openURL(url);
+      } else {
+        // Fallback to web WhatsApp if app is not installed
+        const webUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        await Linking.openURL(webUrl);
+      }
+    } catch (error) {
+      console.error('Error opening WhatsApp:', error);
+      // Try direct web fallback on error
+      try {
+        const phoneNumber = '918551941415';
+        const message = 'Hello, I need support';
+        const webUrl = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+        await Linking.openURL(webUrl);
+      } catch (fallbackError) {
+        console.error('Error opening WhatsApp fallback:', fallbackError);
+      }
+    }
+  }, []);
+
   const contactOptions: ContactOption[] = [
     {
       id: 'email',
@@ -182,10 +210,10 @@ const HelpSupportScreen: React.FC = () => {
     {
       id: 'whatsapp',
       title: 'WhatsApp',
-      description: 'Chat with us',
+      description: 'Click to send message',
       icon: 'chat',
       action: () => {
-        setShowComingSoonModal(true);
+        handleWhatsAppPress();
       },
     },
     {
@@ -216,13 +244,25 @@ const HelpSupportScreen: React.FC = () => {
       activeOpacity={0.7}
     >
       <View style={[styles.contactIconContainer, { 
-        backgroundColor: theme.colors.primary + '20',
+        backgroundColor: option.id === 'whatsapp' ? '#00968820' : theme.colors.primary + '20',
         width: isTabletDevice ? dynamicModerateScale(44) : dynamicModerateScale(38),
         height: isTabletDevice ? dynamicModerateScale(44) : dynamicModerateScale(38),
         borderRadius: isTabletDevice ? dynamicModerateScale(22) : dynamicModerateScale(19),
         marginRight: dynamicModerateScale(10),
       }]}>
-        <Icon name={option.icon} size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color={theme.colors.primary} />
+        {option.id === 'whatsapp' ? (
+          <MaterialCommunityIcons 
+            name="whatsapp" 
+            size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
+            color="#009688" 
+          />
+        ) : (
+          <Icon 
+            name={option.icon} 
+            size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
+            color={theme.colors.primary} 
+          />
+        )}
       </View>
       <View style={styles.contactInfo}>
         <Text style={[styles.contactTitle, { 
@@ -465,14 +505,6 @@ const HelpSupportScreen: React.FC = () => {
           </View>
         </ScrollView>
       </LinearGradient>
-
-      {/* Coming Soon Modal for WhatsApp */}
-      <ComingSoonModal
-        visible={showComingSoonModal}
-        onClose={() => setShowComingSoonModal(false)}
-        title="WhatsApp Support"
-        subtitle="WhatsApp support will be available soon! For now, please use Email or Call Us for assistance."
-      />
     </SafeAreaView>
   );
 };

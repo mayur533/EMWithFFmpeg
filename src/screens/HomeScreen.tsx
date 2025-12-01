@@ -40,6 +40,7 @@ import greetingTemplatesService from '../services/greetingTemplates';
 import businessCategoryPostersApi from '../services/businessCategoryPostersApi';
 import businessCategoriesService, { BusinessCategory } from '../services/businessCategoriesService';
 import businessProfileService, { BusinessProfile } from '../services/businessProfile';
+import calendarApi, { CalendarPoster } from '../services/calendarApi';
 import { useTheme } from '../context/ThemeContext';
 import authService from '../services/auth';
 import { performanceMonitor } from '../utils/performanceMonitor';
@@ -164,18 +165,17 @@ const BusinessCategoryCardItem: React.FC<BusinessCategoryCardItemProps> = React.
       onPress(item);
     }, [item, onPress]);
 
-    const displayImages = useMemo(() => {
+    const displayImage = useMemo(() => {
       const thumbnails =
         previewTemplates
           ?.map((template) => template.thumbnail)
           .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0) ?? [];
 
       if (thumbnails.length > 0) {
-        return thumbnails.slice(0, 5);
+        return thumbnails[0]; // Only use the first image
       }
 
-      const fallbackImage = item.imageUrl || (item as any).image || null;
-      return fallbackImage ? [fallbackImage] : [];
+      return item.imageUrl || (item as any).image || null;
     }, [previewTemplates, item]);
 
     return (
@@ -194,29 +194,9 @@ const BusinessCategoryCardItem: React.FC<BusinessCategoryCardItemProps> = React.
           ]}
         >
           <View style={styles.businessCategoryImageSection}>
-            {displayImages.length > 1 ? (
-              <View style={styles.businessCategoryImageGrid}>
-                {displayImages.map((uri, index) => (
-                  <View
-                    key={`${item.id}-grid-${index}`}
-                    style={[
-                      styles.businessCategoryImageCell,
-                      index === 4 ? styles.businessCategoryImageCellFull : null,
-                    ]}
-                  >
-                    <OptimizedImage
-                      uri={uri}
-                      style={styles.businessCategoryImageCellImage}
-                      resizeMode="cover"
-                      mode="thumbnail"
-                      cacheKey={`category_${item.id}_${index}`}
-                    />
-                  </View>
-                ))}
-              </View>
-            ) : displayImages.length === 1 ? (
+            {displayImage ? (
               <OptimizedImage
-                uri={displayImages[0]}
+                uri={displayImage}
                 style={styles.businessCategoryImage}
                 resizeMode="cover"
                 mode="thumbnail"
@@ -773,6 +753,23 @@ const HomeScreen: React.FC = React.memo(() => {
   const statusIconSize = getIconSize(8);
   const playIconSize = getIconSize(16);
 
+  // Responsive modal columns: 2 for phones, 4 for tablets
+  const modalColumns = useMemo(() => isTabletDevice ? 4 : 2, [isTabletDevice]);
+
+  // Responsive modal card width calculation
+  const modalCardWidth = useMemo(() => {
+    const containerWidth = isTabletDevice ? screenWidth * 0.90 : screenWidth * 0.96;
+    const rowPadding = getModerateScale(8) * 2; // Equal padding on both sides of row
+    const gap = getModerateScale(3);
+    const gapsCount = modalColumns - 1; // Number of gaps between columns
+    const totalSpacing = rowPadding + gap * gapsCount;
+    const cardWidth = (containerWidth - totalSpacing) / modalColumns;
+    return cardWidth;
+  }, [isTabletDevice, screenWidth, modalColumns, getModerateScale]);
+  
+  // Gap between cards (for spacing)
+  const modalCardGap = useMemo(() => getModerateScale(3), [getModerateScale]);
+
 
   const [activeTab, setActiveTab] = useState('trending');
   const [selectedCategory, setSelectedCategory] = useState<'business' | 'general'>('business');
@@ -799,7 +796,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const [greetingCategoriesLoading, setGreetingCategoriesLoading] = useState(false);
   const [greetingCategoryImages, setGreetingCategoryImages] = useState<Record<string, string>>({});
   const memoizedGreetingCategoryImages = useMemo(() => greetingCategoryImages, [greetingCategoryImages]);
-  const generalCategoryModalColumns = 4;
+  const generalCategoryModalColumns = modalColumns;
   const {
     generalCategoryModalCardWidth,
     generalCategoryModalContentWidth,
@@ -911,6 +908,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const [upcomingEvents, setUpcomingEvents] = useState<UpcomingEvent[]>([]);
   const [professionalTemplates, setProfessionalTemplates] = useState<ProfessionalTemplate[]>([]);
   const [videoContent, setVideoContent] = useState<VideoContent[]>([]);
+  const [calendarPosters, setCalendarPosters] = useState<Template[]>([]);
   const [apiLoading, setApiLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
 
@@ -1197,6 +1195,62 @@ const HomeScreen: React.FC = React.memo(() => {
     });
   }, []);
 
+  // Load calendar posters for upcoming dates
+  const loadCalendarPosters = useCallback(async () => {
+    try {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      
+      // Fetch posters for next 15 days (same as calendar component)
+      const datePromises: Promise<Template[]>[] = [];
+      for (let i = 0; i <= 15; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() + i);
+        const year = date.getFullYear();
+        const month = date.getMonth() + 1;
+        const day = date.getDate();
+        const dateString = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+        
+        datePromises.push(
+          calendarApi.getPostersByDate(dateString)
+            .then(response => {
+              if (response.success && response.data.posters.length > 0) {
+                // Convert CalendarPoster to Template format
+                return response.data.posters.map((poster: CalendarPoster) => ({
+                  id: poster.id,
+                  name: poster.name || poster.title || 'Calendar Poster',
+                  thumbnail: poster.thumbnail || poster.imageUrl || '',
+                  category: poster.category || 'Festival',
+                  downloads: poster.downloads || 0,
+                  isDownloaded: poster.isDownloaded || false,
+                  tags: poster.tags || [],
+                  description: poster.description || '',
+                  date: poster.date,
+                  festivalName: poster.festivalName,
+                }));
+              }
+              return [];
+            })
+            .catch(() => [])
+        );
+      }
+      
+      const results = await Promise.all(datePromises);
+      const allCalendarPosters = results.flat();
+      
+      // Remove duplicates based on id
+      const uniquePosters = Array.from(
+        new Map(allCalendarPosters.map(poster => [poster.id, poster])).values()
+      );
+      
+      setCalendarPosters(uniquePosters);
+    } catch (error) {
+      if (__DEV__) {
+        devError('Error loading calendar posters:', error);
+      }
+    }
+  }, []);
+
   // Load API data once on component mount only (with ref guard to prevent duplicates)
   useEffect(() => {
     // Prevent duplicate calls even in React Strict Mode
@@ -1213,6 +1267,8 @@ const HomeScreen: React.FC = React.memo(() => {
         // Load data from APIs only - no mock data
         if (isMounted) {
           await loadApiData();
+          // Load calendar posters in parallel
+          await loadCalendarPosters();
         }
       } catch (error) {
         if (__DEV__) {
@@ -1225,7 +1281,7 @@ const HomeScreen: React.FC = React.memo(() => {
     return () => {
       isMounted = false;
     };
-  }, []); // Empty dependency array - only run once on mount
+  }, [loadApiData, loadCalendarPosters]); // Include loadCalendarPosters in dependencies
 
   // Load greeting categories - consolidated with greetingCategoriesList loading below
 
@@ -1631,101 +1687,115 @@ const HomeScreen: React.FC = React.memo(() => {
 
   // Debounced search handler - triggers search after user stops typing
   useEffect(() => {
-    // Clear any existing timeout
+    // If search query is empty, reset immediately (no debounce delay)
+    if (searchQuery.trim() === '') {
+      setTemplates(professionalTemplates);
+      setIsSearching(false);
+      setDisableBackgroundUpdates(false);
+      return;
+    }
+
+    // For non-empty queries, apply debounce delay
     const timeoutId = setTimeout(() => {
+      // Double-check query is still not empty (user might have cleared it during debounce)
       if (searchQuery.trim() === '') {
-        // Reset to show all business events from API
         setTemplates(professionalTemplates);
         setIsSearching(false);
         setDisableBackgroundUpdates(false);
-      } else {
-        // Trigger search after debounce delay
-        const requestId = currentRequestId + 1;
-        setCurrentRequestId(requestId);
-        setIsSearching(true);
-        setDisableBackgroundUpdates(true);
-        
-        // Combine professional templates and greeting templates for unified search
-        const allTemplates = [...professionalTemplates, ...allGreetingTemplates];
-        
-        if (__DEV__) {
-        }
-        
-        // Use local search immediately for better performance
-        // Search in name, category, description, and tags
-        const searchLower = searchQuery.toLowerCase();
-        const filtered = allTemplates.filter(template => {
-          // Search in name
-          if (template.name?.toLowerCase().includes(searchLower)) return true;
-          
-          // Search in category
-          if (template.category?.toLowerCase().includes(searchLower)) return true;
-          
-          // Search in description
-          if (template.description?.toLowerCase().includes(searchLower)) return true;
-          
-          // Search in tags array
-          if (template.tags && Array.isArray(template.tags)) {
-            const tagMatch = template.tags.some((tag: string) => 
-              tag?.toLowerCase().includes(searchLower)
-            );
-            if (tagMatch) return true;
-          }
-          
-          return false;
-        });
-        
-        if (__DEV__) {
-          if (filtered.length > 0) {
-          }
-        }
-        
-        setTemplates(filtered);
-        
-        // Try API search in background for professional templates
-        setTimeout(async () => {
-          if (currentRequestId !== requestId) return;
-          try {
-            // Search professional templates via API
-            const professionalResults = await dashboardService.searchTemplates(searchQuery);
-            
-            // Search greeting templates via API
-            const greetingResults = await greetingTemplatesService.searchTemplates(searchQuery);
-            
-            // Convert greeting results to Template format
-            const convertedGreetingResults = greetingResults.map(greetingTemplate => ({
-              id: greetingTemplate.id,
-              name: greetingTemplate.name || '',
-              thumbnail: greetingTemplate.thumbnail || '',
-              category: greetingTemplate.category || 'Greeting',
-              downloads: greetingTemplate.downloads || 0,
-              isDownloaded: greetingTemplate.isDownloaded || false,
-              description: greetingTemplate.content?.text || '',
-              tags: (greetingTemplate as any).tags || [],
-              isGreeting: true,
-              originalTemplate: greetingTemplate,
-            }));
-            
-            // Combine results
-            const combinedResults = [...professionalResults, ...convertedGreetingResults];
-            
-            if (currentRequestId === requestId) {
-              setTemplates(combinedResults);
-            }
-          } catch (error) {
-            if (__DEV__) {
-              if (__DEV__) {
-              devError('Search error:', error);
-            }
-            }
-          }
-        }, 100);
+        return;
       }
+
+      // Trigger search after debounce delay
+      const requestId = currentRequestId + 1;
+      setCurrentRequestId(requestId);
+      setIsSearching(true);
+      setDisableBackgroundUpdates(true);
+      
+      // Combine professional templates, greeting templates, and calendar posters for unified search
+      const allTemplates = [...professionalTemplates, ...allGreetingTemplates, ...calendarPosters];
+      
+      if (__DEV__) {
+      }
+      
+      // Use local search immediately for better performance
+      // Search in name, category, description, and tags
+      const searchLower = searchQuery.toLowerCase();
+      const filtered = allTemplates.filter(template => {
+        // Search in name
+        if (template.name?.toLowerCase().includes(searchLower)) return true;
+        
+        // Search in category
+        if (template.category?.toLowerCase().includes(searchLower)) return true;
+        
+        // Search in description
+        if (template.description?.toLowerCase().includes(searchLower)) return true;
+        
+        // Search in tags array (including calendar posters tags)
+        if (template.tags && Array.isArray(template.tags)) {
+          const tagMatch = template.tags.some((tag: string) => 
+            tag?.toLowerCase().includes(searchLower)
+          );
+          if (tagMatch) return true;
+        }
+        
+        // Search in festival name for calendar posters
+        if ((template as any).festivalName && (template as any).festivalName.toLowerCase().includes(searchLower)) {
+          return true;
+        }
+        
+        return false;
+      });
+      
+      if (__DEV__) {
+        if (filtered.length > 0) {
+        }
+      }
+      
+      setTemplates(filtered);
+      
+      // Try API search in background for professional templates
+      setTimeout(async () => {
+        if (currentRequestId !== requestId) return;
+        try {
+          // Search professional templates via API
+          const professionalResults = await dashboardService.searchTemplates(searchQuery);
+          
+          // Search greeting templates via API
+          const greetingResults = await greetingTemplatesService.searchTemplates(searchQuery);
+          
+          // Convert greeting results to Template format
+          const convertedGreetingResults = greetingResults.map(greetingTemplate => ({
+            id: greetingTemplate.id,
+            name: greetingTemplate.name || '',
+            thumbnail: greetingTemplate.thumbnail || '',
+            category: greetingTemplate.category || 'Greeting',
+            downloads: greetingTemplate.downloads || 0,
+            isDownloaded: greetingTemplate.isDownloaded || false,
+            description: greetingTemplate.content?.text || '',
+            tags: (greetingTemplate as any).tags || [],
+            isGreeting: true,
+            originalTemplate: greetingTemplate,
+          }));
+          
+          // Combine results
+          const combinedResults = [...professionalResults, ...convertedGreetingResults];
+          
+          if (currentRequestId === requestId) {
+            setTemplates(combinedResults);
+          }
+        } catch (error) {
+          if (__DEV__) {
+            if (__DEV__) {
+            devError('Search error:', error);
+          }
+          }
+        }
+      }, 100);
     }, 300); // 300ms debounce delay
 
     // Cleanup timeout on unmount or when searchQuery changes
     return () => clearTimeout(timeoutId);
-  }, [searchQuery, professionalTemplates, allGreetingTemplates, currentRequestId]);
+  }, [searchQuery, professionalTemplates, allGreetingTemplates, calendarPosters, currentRequestId]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -2769,7 +2839,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
               <Icon name="search" size={searchIconSize} color={theme.colors.textSecondary} style={styles.searchIcon} />
               <TextInput
                 style={[styles.searchInput, { color: theme.colors.text }]}
-                placeholder="Search by tags, name, or category..."
+                placeholder="Search"
                 placeholderTextColor={theme.colors.textSecondary}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -2807,90 +2877,92 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
           bounces={true}
         >
           {/* Category Buttons */}
-          <View style={styles.categoryButtonsContainer}>
-              <TouchableOpacity
-                style={[
-                  styles.categoryButton,
-                  styles.categoryButtonBusiness,
-                  selectedCategory === 'business' && styles.categoryButtonActive,
-                ]}
-                onPress={handleBusinessButtonPress}
-                activeOpacity={0.85}
-              >
-                <LinearGradient
-                  colors={selectedCategory === 'business' 
-                    ? ['#667eea', '#764ba2']
-                    : ['rgba(102, 126, 234, 0.1)', 'rgba(118, 75, 162, 0.05)']
-                  }
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.categoryButtonGradient}
+          {!isSearching && searchQuery.trim() === '' && (
+            <View style={styles.categoryButtonsContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.categoryButton,
+                    styles.categoryButtonBusiness,
+                    selectedCategory === 'business' && styles.categoryButtonActive,
+                  ]}
+                  onPress={handleBusinessButtonPress}
+                  activeOpacity={0.85}
                 >
-                  <View style={styles.categoryButtonContent}>
-                    <Icon 
-                      name="business" 
-                      size={moderateScale(14)} 
-                      color={selectedCategory === 'business' ? '#ffffff' : '#667eea'} 
-                      style={styles.categoryButtonIcon}
-                    />
-                    <Animated.Text style={[
-                      styles.categoryButtonText,
-                      styles.categoryButtonTextBusiness,
-                      { 
-                        color: selectedCategory === 'business' ? '#ffffff' : '#667eea',
-                        opacity: businessCategoryFadeAnim,
-                      }
-                    ]}>
-                      {businessCategoryButtonLabel}
-                    </Animated.Text>
-          </View>
-                </LinearGradient>
-              </TouchableOpacity>
-              
-              <TouchableOpacity
-                style={[
-                  styles.categoryButton,
-                  styles.categoryButtonRotating,
-                  selectedCategory === 'general' && styles.categoryButtonActive,
-                ]}
-                onPress={() => navigation.navigate('GreetingTemplates')}
-                activeOpacity={0.85}
-              >
-                <LinearGradient
-                  colors={['#f093fb', '#f5576c']}
-                  start={{ x: 0, y: 0 }}
-                  end={{ x: 1, y: 1 }}
-                  style={styles.categoryButtonGradient}
-                >
-                  <View style={styles.categoryButtonContent}>
-                    <Icon 
-                      name="auto-awesome" 
-                      size={moderateScale(14)} 
-                      color="#ffffff" 
-                      style={styles.categoryButtonIcon}
-                    />
-                    <Animated.Text 
-                      style={[
+                  <LinearGradient
+                    colors={selectedCategory === 'business' 
+                      ? ['#667eea', '#764ba2']
+                      : ['rgba(102, 126, 234, 0.1)', 'rgba(118, 75, 162, 0.05)']
+                    }
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.categoryButtonGradient}
+                  >
+                    <View style={styles.categoryButtonContent}>
+                      <Icon 
+                        name="business" 
+                        size={moderateScale(14)} 
+                        color={selectedCategory === 'business' ? '#ffffff' : '#667eea'} 
+                        style={styles.categoryButtonIcon}
+                      />
+                      <Animated.Text style={[
                         styles.categoryButtonText,
-                        styles.categoryButtonRotatingText,
+                        styles.categoryButtonTextBusiness,
                         { 
-                          color: '#ffffff',
-                          opacity: categoryFadeAnim,
-                          flexShrink: 1,
-                          minWidth: 0,
+                          color: selectedCategory === 'business' ? '#ffffff' : '#667eea',
+                          opacity: businessCategoryFadeAnim,
                         }
-                      ]}
-                      numberOfLines={1}
-                      ellipsizeMode="tail"
-                    >
-                      {greetingCategoryButtonLabel}
-                    </Animated.Text>
-                  </View>
-                </LinearGradient>
-              </TouchableOpacity>
+                      ]}>
+                        {businessCategoryButtonLabel}
+                      </Animated.Text>
             </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+                
+                <TouchableOpacity
+                  style={[
+                    styles.categoryButton,
+                    styles.categoryButtonRotating,
+                    selectedCategory === 'general' && styles.categoryButtonActive,
+                  ]}
+                  onPress={() => navigation.navigate('GreetingTemplates')}
+                  activeOpacity={0.85}
+                >
+                  <LinearGradient
+                    colors={['#f093fb', '#f5576c']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.categoryButtonGradient}
+                  >
+                    <View style={styles.categoryButtonContent}>
+                      <Icon 
+                        name="auto-awesome" 
+                        size={moderateScale(14)} 
+                        color="#ffffff" 
+                        style={styles.categoryButtonIcon}
+                      />
+                      <Animated.Text 
+                        style={[
+                          styles.categoryButtonText,
+                          styles.categoryButtonRotatingText,
+                          { 
+                            color: '#ffffff',
+                            opacity: categoryFadeAnim,
+                            flexShrink: 1,
+                            minWidth: 0,
+                          }
+                        ]}
+                        numberOfLines={1}
+                        ellipsizeMode="tail"
+                      >
+                        {greetingCategoryButtonLabel}
+                      </Animated.Text>
+                    </View>
+                  </LinearGradient>
+                </TouchableOpacity>
+              </View>
+          )}
 
-          {featuredContent.length > 0 && (
+          {!isSearching && searchQuery.trim() === '' && featuredContent.length > 0 && (
             <View style={styles.featuredCarouselContainer}>
               <FlatList
                 ref={featuredCarouselRef}
@@ -3544,7 +3616,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`upcoming-events-modal-${upcomingEvents.length}`}
                   data={upcomingEvents}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -3553,10 +3625,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: event }) => (
+                  renderItem={({ item: event, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      style={styles.upcomingEventModalCard}
+                      style={[
+                        styles.upcomingEventModalCard, 
+                        { width: modalCardWidth },
+                        !isLastInRow && { marginRight: modalCardGap }
+                      ]}
                       onPress={() => {
                         // Convert upcoming event to template format for navigation
                         const eventTemplate: Template = {
@@ -3586,7 +3664,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         />
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -3623,7 +3702,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`business-categories-modal-${businessCategories.length}`}
                   data={businessCategories}
                   keyExtractor={(item) => item.id}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -3632,48 +3711,33 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item }) => {
+                  renderItem={({ item, index }) => {
                     const previewTemplates = businessCategoryPreviews[item.id] || [];
-                    const fallbackImage = previewTemplates[0]?.thumbnail || item.imageUrl || item.image || null;
-                    let displayImages = previewTemplates
+                    const thumbnails = previewTemplates
                       .map(template => template.thumbnail)
-                      .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0)
-                      .slice(0, 6);
-                    if (displayImages.length === 0 && fallbackImage) {
-                      displayImages = [fallbackImage];
-                    }
+                      .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0);
+                    
+                    // Only use the first image
+                    const displayImage = thumbnails[0] || item.imageUrl || item.image || null;
+                    const isLastInRow = (index + 1) % modalColumns === 0;
 
                     return (
                       <TouchableOpacity
                         activeOpacity={0.8}
-                        style={styles.upcomingEventModalCard}
+                        style={[
+                          styles.upcomingEventModalCard, 
+                          { width: modalCardWidth },
+                          !isLastInRow && { marginRight: modalCardGap }
+                        ]}
                         onPress={() => {
                           closeBusinessCategoriesModal();
                           handleBusinessCategoryPress(item);
                         }}
                       >
                         <View style={styles.upcomingEventModalImageContainer}>
-                          {displayImages.length > 1 ? (
-                            <View style={styles.businessCategoryModalGrid}>
-                              {displayImages.map((uri, index) => (
-                                <View
-                                  key={`${item.id}-modal-grid-${index}`}
-                                  style={[
-                                    styles.businessCategoryModalCell,
-                                    index === 4 ? styles.businessCategoryModalCellFull : null,
-                                  ]}
-                                >
-                                  <OptimizedImage
-                                    uri={uri}
-                                    style={styles.businessCategoryModalCellImage}
-                                    resizeMode="cover"
-                                  />
-                                </View>
-                              ))}
-                            </View>
-                          ) : displayImages.length === 1 ? (
+                          {displayImage ? (
                             <OptimizedImage 
-                              uri={displayImages[0]} 
+                              uri={displayImage} 
                               style={styles.upcomingEventModalImage} 
                               resizeMode="cover" 
                             />
@@ -3811,7 +3875,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`videos-modal-${videoContent.length}`}
                   data={videoContent}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -3820,10 +3884,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: video }) => (
+                  renderItem={({ item: video, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      style={styles.upcomingEventModalCard}
+                      style={[
+                        styles.upcomingEventModalCard, 
+                        { width: modalCardWidth },
+                        !isLastInRow && { marginRight: modalCardGap }
+                      ]}
                       onPress={() => {
                         closeVideosModal();
                         const videoData: Template = {
@@ -3848,7 +3918,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         />
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -3898,7 +3969,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                     <View style={styles.customerSupportOptionIconContainer}>
                       <MaterialCommunityIcons name="whatsapp" size={moderateScale(24)} color="#009688" />
                     </View>
-                    <Text style={styles.customerSupportOptionText}>Click to send message</Text>
+                    <Text style={styles.customerSupportOptionText}>Whatsapp Us</Text>
                     <Icon name="chevron-right" size={moderateScale(24)} color="#009688" />
                   </TouchableOpacity>
 
@@ -3911,7 +3982,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                     <View style={styles.customerSupportOptionIconContainer}>
                       <Icon name="phone" size={moderateScale(24)} color="#009688" />
                     </View>
-                    <Text style={styles.customerSupportOptionText}>8551941415</Text>
+                    <Text style={styles.customerSupportOptionText}>Call Our Team</Text>
                     <Icon name="chevron-right" size={moderateScale(24)} color="#009688" />
                   </TouchableOpacity>
 
@@ -3970,7 +4041,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`motivation-modal-${motivationTemplatesRaw.length > 0 ? motivationTemplatesRaw.length : motivationTemplates.length}`}
                   data={motivationTemplatesRaw.length > 0 ? motivationTemplatesRaw : motivationTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -3979,10 +4050,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      style={styles.upcomingEventModalCard}
+                      style={[
+                        styles.upcomingEventModalCard, 
+                        { width: modalCardWidth },
+                        !isLastInRow && { marginRight: modalCardGap }
+                      ]}
                       onPress={() => {
                         closeMotivationModal();
                         navigation.navigate('PosterPlayer', {
@@ -4001,7 +4078,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         />
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4038,7 +4116,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`goodmorning-modal-${goodMorningTemplatesRaw.length > 0 ? goodMorningTemplatesRaw.length : goodMorningTemplates.length}`}
                   data={goodMorningTemplatesRaw.length > 0 ? goodMorningTemplatesRaw : goodMorningTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4047,10 +4125,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      style={styles.upcomingEventModalCard}
+                      style={[
+                        styles.upcomingEventModalCard, 
+                        { width: modalCardWidth },
+                        !isLastInRow && { marginRight: modalCardGap }
+                      ]}
                       onPress={() => {
                         closeGoodMorningModal();
                         navigation.navigate('PosterPlayer', {
@@ -4069,7 +4153,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         />
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4106,7 +4191,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`businessethics-modal-${businessEthicsTemplatesRaw.length > 0 ? businessEthicsTemplatesRaw.length : businessEthicsTemplates.length}`}
                   data={businessEthicsTemplatesRaw.length > 0 ? businessEthicsTemplatesRaw : businessEthicsTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4115,10 +4200,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      style={styles.upcomingEventModalCard}
+                      style={[
+                        styles.upcomingEventModalCard, 
+                        { width: modalCardWidth },
+                        !isLastInRow && { marginRight: modalCardGap }
+                      ]}
                       onPress={() => {
                         closeBusinessEthicsModal();
                         navigation.navigate('PosterPlayer', {
@@ -4137,7 +4228,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         />
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4174,7 +4266,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`devotional-modal-${devotionalTemplatesRaw.length > 0 ? devotionalTemplatesRaw.length : devotionalTemplates.length}`}
                   data={devotionalTemplatesRaw.length > 0 ? devotionalTemplatesRaw : devotionalTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4183,10 +4275,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      style={styles.upcomingEventModalCard}
+                      style={[
+                        styles.upcomingEventModalCard, 
+                        { width: modalCardWidth },
+                        !isLastInRow && { marginRight: modalCardGap }
+                      ]}
                       onPress={() => {
                         closeDevotionalModal();
                         navigation.navigate('PosterPlayer', {
@@ -4205,7 +4303,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         />
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4242,7 +4341,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`leaderquotes-modal-${leaderQuotesTemplatesRaw.length > 0 ? leaderQuotesTemplatesRaw.length : leaderQuotesTemplates.length}`}
                   data={leaderQuotesTemplatesRaw.length > 0 ? leaderQuotesTemplatesRaw : leaderQuotesTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4251,10 +4350,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
                     <TouchableOpacity
                       activeOpacity={0.8}
-                      style={styles.upcomingEventModalCard}
+                      style={[
+                        styles.upcomingEventModalCard, 
+                        { width: modalCardWidth },
+                        !isLastInRow && { marginRight: modalCardGap }
+                      ]}
                       onPress={() => {
                         closeLeaderQuotesModal();
                         navigation.navigate('PosterPlayer', {
@@ -4273,7 +4378,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         />
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4299,7 +4405,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`atmanirbhar-modal-${atmanirbharBharatTemplatesRaw.length > 0 ? atmanirbharBharatTemplatesRaw.length : atmanirbharBharatTemplates.length}`}
                   data={atmanirbharBharatTemplatesRaw.length > 0 ? atmanirbharBharatTemplatesRaw : atmanirbharBharatTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4308,8 +4414,14 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
-                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
+                    <TouchableOpacity activeOpacity={0.8} style={[
+                      styles.upcomingEventModalCard, 
+                      { width: modalCardWidth },
+                      !isLastInRow && { marginRight: modalCardGap }
+                    ]} onPress={() => {
                       closeAtmanirbharBharatModal();
                       navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (atmanirbharBharatTemplatesRaw.length > 0 ? atmanirbharBharatTemplatesRaw : atmanirbharBharatTemplates).filter(t => t.id !== template.id) });
                     }}>
@@ -4322,7 +4434,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         </LinearGradient>
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4348,7 +4461,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`goodthoughts-modal-${goodThoughtsTemplatesRaw.length > 0 ? goodThoughtsTemplatesRaw.length : goodThoughtsTemplates.length}`}
                   data={goodThoughtsTemplatesRaw.length > 0 ? goodThoughtsTemplatesRaw : goodThoughtsTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4357,8 +4470,14 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
-                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
+                    <TouchableOpacity activeOpacity={0.8} style={[
+                      styles.upcomingEventModalCard, 
+                      { width: modalCardWidth },
+                      !isLastInRow && { marginRight: modalCardGap }
+                    ]} onPress={() => {
                       closeGoodThoughtsModal();
                       navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (goodThoughtsTemplatesRaw.length > 0 ? goodThoughtsTemplatesRaw : goodThoughtsTemplates).filter(t => t.id !== template.id) });
                     }}>
@@ -4371,7 +4490,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         </LinearGradient>
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4397,7 +4517,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`trending-modal-${trendingTemplatesRaw.length > 0 ? trendingTemplatesRaw.length : trendingTemplates.length}`}
                   data={trendingTemplatesRaw.length > 0 ? trendingTemplatesRaw : trendingTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4406,8 +4526,14 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
-                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
+                    <TouchableOpacity activeOpacity={0.8} style={[
+                      styles.upcomingEventModalCard, 
+                      { width: modalCardWidth },
+                      !isLastInRow && { marginRight: modalCardGap }
+                    ]} onPress={() => {
                       closeTrendingModal();
                       navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (trendingTemplatesRaw.length > 0 ? trendingTemplatesRaw : trendingTemplates).filter(t => t.id !== template.id) });
                     }}>
@@ -4420,7 +4546,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         </LinearGradient>
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4446,7 +4573,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`bhagvatgita-modal-${bhagvatGitaTemplatesRaw.length > 0 ? bhagvatGitaTemplatesRaw.length : bhagvatGitaTemplates.length}`}
                   data={bhagvatGitaTemplatesRaw.length > 0 ? bhagvatGitaTemplatesRaw : bhagvatGitaTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4455,8 +4582,14 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
-                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
+                    <TouchableOpacity activeOpacity={0.8} style={[
+                      styles.upcomingEventModalCard, 
+                      { width: modalCardWidth },
+                      !isLastInRow && { marginRight: modalCardGap }
+                    ]} onPress={() => {
                       closeBhagvatGitaModal();
                       navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (bhagvatGitaTemplatesRaw.length > 0 ? bhagvatGitaTemplatesRaw : bhagvatGitaTemplates).filter(t => t.id !== template.id) });
                     }}>
@@ -4469,7 +4602,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         </LinearGradient>
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4495,7 +4629,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`books-modal-${booksTemplatesRaw.length > 0 ? booksTemplatesRaw.length : booksTemplates.length}`}
                   data={booksTemplatesRaw.length > 0 ? booksTemplatesRaw : booksTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4504,8 +4638,14 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
-                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
+                    <TouchableOpacity activeOpacity={0.8} style={[
+                      styles.upcomingEventModalCard, 
+                      { width: modalCardWidth },
+                      !isLastInRow && { marginRight: modalCardGap }
+                    ]} onPress={() => {
                       closeBooksModal();
                       navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (booksTemplatesRaw.length > 0 ? booksTemplatesRaw : booksTemplates).filter(t => t.id !== template.id) });
                     }}>
@@ -4518,7 +4658,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         </LinearGradient>
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4544,7 +4685,7 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`celebrates-modal-${celebratesMomentsTemplatesRaw.length > 0 ? celebratesMomentsTemplatesRaw.length : celebratesMomentsTemplates.length}`}
                   data={celebratesMomentsTemplatesRaw.length > 0 ? celebratesMomentsTemplatesRaw : celebratesMomentsTemplates}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
@@ -4553,8 +4694,14 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   windowSize={5}
                   initialNumToRender={10}
                   updateCellsBatchingPeriod={50}
-                  renderItem={({ item: template }) => (
-                    <TouchableOpacity activeOpacity={0.8} style={styles.upcomingEventModalCard} onPress={() => {
+                  renderItem={({ item: template, index }) => {
+                    const isLastInRow = (index + 1) % modalColumns === 0;
+                    return (
+                    <TouchableOpacity activeOpacity={0.8} style={[
+                      styles.upcomingEventModalCard, 
+                      { width: modalCardWidth },
+                      !isLastInRow && { marginRight: modalCardGap }
+                    ]} onPress={() => {
                       closeCelebratesMomentsModal();
                       navigation.navigate('PosterPlayer', { selectedPoster: template, relatedPosters: (celebratesMomentsTemplatesRaw.length > 0 ? celebratesMomentsTemplatesRaw : celebratesMomentsTemplates).filter(t => t.id !== template.id) });
                     }}>
@@ -4567,7 +4714,8 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                         </LinearGradient>
                       </View>
                     </TouchableOpacity>
-                  )}
+                    );
+                  }}
                 />
               </View>
             </View>
@@ -4593,11 +4741,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                   key={`featured-content-modal-${featuredContent.length}`}
                   data={featuredContent}
                   keyExtractor={(item) => item.id.toString()}
-                  numColumns={4}
+                  numColumns={modalColumns}
                   columnWrapperStyle={styles.upcomingEventModalRow}
                   contentContainerStyle={styles.upcomingEventsModalScroll}
                   showsVerticalScrollIndicator={false}
-                  renderItem={({ item: featured }) => {
+                  renderItem={({ item: featured, index }) => {
                     // Convert featured content to Template format for navigation
                     const convertFeaturedContentToTemplate = (fc: FeaturedContent): Template => ({
                       id: fc.id,
@@ -4613,11 +4761,16 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                     const relatedTemplates = featuredContent
                       .filter(fc => fc.id !== featured.id)
                       .map(convertFeaturedContentToTemplate);
+                    const isLastInRow = (index + 1) % modalColumns === 0;
 
                     return (
                       <TouchableOpacity 
                         activeOpacity={0.8} 
-                        style={styles.upcomingEventModalCard} 
+                        style={[
+                          styles.upcomingEventModalCard, 
+                          { width: modalCardWidth },
+                          !isLastInRow && { marginRight: modalCardGap }
+                        ]} 
                         onPress={() => {
                           closeFeaturedContentModal();
                           navigation.navigate('PosterPlayer', {
@@ -5461,20 +5614,19 @@ const styles = StyleSheet.create({
       backgroundColor: '#f8f9fa',
     },
     upcomingEventsModalScroll: {
-      paddingHorizontal: moderateScale(8), // Further reduced for symmetry
+      paddingHorizontal: 0, // Remove padding from container, add to rows instead
       paddingTop: moderateScale(12),
       paddingBottom: moderateScale(12),
     },
     upcomingEventModalRow: {
       justifyContent: 'flex-start', // Changed from space-between to align items from left
       marginBottom: moderateScale(6),
-      paddingHorizontal: 0,
+      paddingLeft: moderateScale(8), // Left padding
+      paddingRight: moderateScale(8), // Right padding - equal to left
     },
     upcomingEventModalCard: {
-      width: SCREEN_WIDTH >= 768
-        ? (SCREEN_WIDTH * 0.90 - moderateScale(16) - moderateScale(9)) / 4 // Account for spacing between items (3 gaps * 3 = 9)
-        : (SCREEN_WIDTH * 0.96 - moderateScale(16) - moderateScale(9)) / 4, // Account for spacing between items (3 gaps * 3 = 9)
-      marginRight: moderateScale(3), // Add spacing between items
+      // Width is set dynamically via inline styles based on modalColumns
+      // Note: marginRight is applied conditionally in renderItem to avoid extra space on last card
       backgroundColor: '#ffffff',
       borderRadius: moderateScale(8),
       ...responsiveShadow.small,

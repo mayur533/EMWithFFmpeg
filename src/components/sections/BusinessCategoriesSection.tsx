@@ -28,18 +28,17 @@ const BusinessCategoryCardItem: React.FC<BusinessCategoryCardItemProps> = React.
       onPress(item);
     }, [item, onPress]);
 
-    const displayImages = useMemo(() => {
+    const displayImage = useMemo(() => {
       const thumbnails =
         previewTemplates
           ?.map((template: Template) => template.thumbnail)
           .filter((uri): uri is string => typeof uri === 'string' && uri.length > 0) ?? [];
 
       if (thumbnails.length > 0) {
-        return thumbnails.slice(0, 5);
+        return thumbnails[0]; // Only use the first image
       }
 
-      const fallbackImage = item.imageUrl || (item as any).image || null;
-      return fallbackImage ? [fallbackImage] : [];
+      return item.imageUrl || (item as any).image || null;
     }, [previewTemplates, item]);
 
     return (
@@ -58,29 +57,9 @@ const BusinessCategoryCardItem: React.FC<BusinessCategoryCardItemProps> = React.
           ]}
         >
           <View style={styles.businessCategoryImageSection}>
-            {displayImages.length > 1 ? (
-              <View style={styles.businessCategoryImageGrid}>
-                {displayImages.map((uri, index) => (
-                  <View
-                    key={`${item.id}-grid-${index}`}
-                    style={[
-                      styles.businessCategoryImageCell,
-                      index === 4 ? styles.businessCategoryImageCellFull : null,
-                    ]}
-                  >
-                    <OptimizedImage
-                      uri={uri}
-                      style={styles.businessCategoryImageCellImage}
-                      resizeMode="cover"
-                      mode="thumbnail"
-                      cacheKey={`category_${item.id}_${index}`}
-                    />
-                  </View>
-                ))}
-              </View>
-            ) : displayImages.length === 1 ? (
+            {displayImage ? (
               <OptimizedImage
-                uri={displayImages[0]}
+                uri={displayImage}
                 style={styles.businessCategoryImage}
                 resizeMode="cover"
                 mode="thumbnail"
