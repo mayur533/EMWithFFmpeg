@@ -777,6 +777,7 @@ const HomeScreen: React.FC = React.memo(() => {
   const [activeTab, setActiveTab] = useState('trending');
   const [selectedCategory, setSelectedCategory] = useState<'business' | 'general'>('business');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchBarVisible, setIsSearchBarVisible] = useState(false);
   const [greetingCategories, setGreetingCategories] = useState<Array<{ id: string; name: string }>>([]);
   const [currentCategoryIndex, setCurrentCategoryIndex] = useState(0);
   const categoryFadeAnim = useRef(new Animated.Value(1)).current;
@@ -1997,6 +1998,22 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
     }
   }, []);
 
+  const toggleSearchBar = useCallback(() => {
+    setIsSearchBarVisible(prev => {
+      if (!prev) {
+        // When opening search, clear any existing search
+        return true;
+      } else {
+        // When closing search, clear search query and reset
+        setSearchQuery('');
+        setIsSearching(false);
+        setDisableBackgroundUpdates(false);
+        setTemplates(professionalTemplates);
+        return false;
+      }
+    });
+  }, [professionalTemplates]);
+
   const handleViewAllUpcomingEvents = useCallback(() => {
     setIsUpcomingEventsModalVisible(true);
   }, []);
@@ -2718,15 +2735,17 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 </View>
               )}
               
-              {/* FAQ Button */}
+              {/* Search Button */}
               <TouchableOpacity
                 style={[styles.headerActionButton, { backgroundColor: theme.colors.cardBackground }]}
-                onPress={() => {
-                  navigation.navigate('HelpSupport', { scrollToFAQ: true });
-                }}
+                onPress={toggleSearchBar}
                 activeOpacity={0.7}
               >
-                <Icon name="help-outline" size={moderateScale(20)} color={theme.colors.text} />
+                <Icon 
+                  name={isSearchBarVisible ? "close" : "search"} 
+                  size={moderateScale(20)} 
+                  color={theme.colors.text} 
+                />
               </TouchableOpacity>
 
               {/* Customer Support Button */}
@@ -2742,6 +2761,37 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
         </View>
 
         {renderBusinessProfileDropdown()}
+
+        {/* Search Bar */}
+        {isSearchBarVisible && (
+          <View style={styles.searchContainer}>
+            <View style={[styles.searchBar, { backgroundColor: theme.colors.cardBackground }]}>
+              <Icon name="search" size={searchIconSize} color={theme.colors.textSecondary} style={styles.searchIcon} />
+              <TextInput
+                style={[styles.searchInput, { color: theme.colors.text }]}
+                placeholder="Search by tags, name, or category..."
+                placeholderTextColor={theme.colors.textSecondary}
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                autoFocus={true}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setSearchQuery('');
+                    setIsSearching(false);
+                    setDisableBackgroundUpdates(false);
+                    setTemplates(professionalTemplates);
+                  }}
+                  style={styles.clearIcon}
+                >
+                  <Icon name="close" size={searchIconSize} color={theme.colors.textSecondary} />
+                </TouchableOpacity>
+              )}
+            </View>
+          </View>
+        )}
 
         <ScrollView 
           ref={scrollViewRef}
@@ -4724,8 +4774,10 @@ const styles = StyleSheet.create({
     paddingBottom: 100, // Fixed padding for tab bar
   },
   searchContainer: {
-    paddingHorizontal: moderateScale(8),
-    marginBottom: moderateScale(3),
+    paddingHorizontal: moderateScale(12),
+    paddingTop: moderateScale(8),
+    paddingBottom: moderateScale(8),
+    marginBottom: moderateScale(4),
   },
   calendarSection: {
     marginHorizontal: moderateScale(8),
@@ -4735,16 +4787,17 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     borderRadius: moderateScale(14),
-    paddingHorizontal: moderateScale(8),
-    paddingVertical: verticalScale(0),
+    paddingHorizontal: moderateScale(12),
+    paddingVertical: moderateScale(10),
+    minHeight: moderateScale(44),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 1,
+      height: 2,
     },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   searchIcon: {
     marginLeft: moderateScale(2),
@@ -4752,7 +4805,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: moderateScale(10), // Reduced from 11
+    fontSize: moderateScale(14),
     fontWeight: '500',
   },
   clearIcon: {
