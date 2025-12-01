@@ -749,7 +749,7 @@ const HomeScreen: React.FC = React.memo(() => {
   }, [screenWidth, getResponsiveValue, getModerateScale]);
   
   // Responsive icon sizes for different UI elements
-  const searchIconSize = getIconSize(14);
+  const searchIconSize = getIconSize(12);
   const statusIconSize = getIconSize(8);
   const playIconSize = getIconSize(16);
 
@@ -4928,8 +4928,8 @@ const styles = StyleSheet.create({
   },
   searchContainer: {
     paddingHorizontal: moderateScale(12),
-    paddingTop: moderateScale(8),
-    paddingBottom: moderateScale(8),
+    paddingTop: moderateScale(6),
+    paddingBottom: moderateScale(6),
     marginBottom: moderateScale(4),
   },
   calendarSection: {
@@ -4939,10 +4939,10 @@ const styles = StyleSheet.create({
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
-    borderRadius: moderateScale(14),
-    paddingHorizontal: moderateScale(12),
-    paddingVertical: moderateScale(10),
-    minHeight: moderateScale(44),
+    borderRadius: moderateScale(12),
+    paddingHorizontal: moderateScale(10),
+    paddingVertical: moderateScale(6),
+    minHeight: moderateScale(36),
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -4958,7 +4958,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     flex: 1,
-    fontSize: moderateScale(14),
+    fontSize: moderateScale(12),
     fontWeight: '500',
   },
   clearIcon: {

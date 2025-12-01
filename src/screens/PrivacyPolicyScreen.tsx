@@ -93,9 +93,19 @@ const PrivacyPolicyScreen = () => {
   const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
   const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
   
-  // Responsive icon sizes (compact - 60% of original)
+  // Responsive icon sizes (compact - 60% of original, slightly larger for small screens)
   const getIconSize = (baseSize: number) => {
-    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+    const isCurrentlySmall = currentScreenWidth < 375;
+    const multiplier = isCurrentlySmall ? 0.75 : 0.6; // Increased from 0.7 to 0.75 for small screens
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * multiplier));
+  };
+  
+  // Responsive text size helper (slightly larger for small screens)
+  const getFontSize = (baseSize: number) => {
+    const isCurrentlySmall = currentScreenWidth < 375;
+    const baseFontSize = dynamicModerateScale(baseSize);
+    // Add small boost for small screens (increased from +1 to +2px)
+    return isCurrentlySmall ? baseFontSize + 2 : baseFontSize;
   };
   
   // Device size detection
@@ -437,19 +447,19 @@ const PrivacyPolicyScreen = () => {
           paddingBottom: dynamicModerateScale(6),
         }]}>
           <TouchableOpacity onPress={goBack} style={[styles.backButton, {
-            width: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
-            height: isTabletDevice ? dynamicModerateScale(32) : dynamicModerateScale(28),
+            width: isTabletDevice ? dynamicModerateScale(32) : (currentScreenWidth < 375 ? dynamicModerateScale(32) : dynamicModerateScale(28)),
+            height: isTabletDevice ? dynamicModerateScale(32) : (currentScreenWidth < 375 ? dynamicModerateScale(32) : dynamicModerateScale(28)),
             justifyContent: 'center',
             alignItems: 'center',
           }]}>
             <Icon 
               name="arrow-back" 
-              size={isTabletDevice ? getIconSize(20) : getIconSize(18)} 
+              size={isTabletDevice ? getIconSize(20) : (currentScreenWidth < 375 ? getIconSize(22) : getIconSize(18))} 
               color={theme.colors.text} 
             />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, {
-            fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+            fontSize: isTabletDevice ? getFontSize(12) : getFontSize(11),
             color: theme.colors.text,
           }]}>Privacy Policy</Text>
         </View>
@@ -476,12 +486,12 @@ const PrivacyPolicyScreen = () => {
               marginBottom: dynamicModerateScale(6),
             }]} />
             <Text style={[styles.heroTitle, {
-              fontSize: isTabletDevice ? dynamicModerateScale(16) : dynamicModerateScale(14),
+              fontSize: isTabletDevice ? getFontSize(16) : getFontSize(14),
               marginBottom: dynamicModerateScale(6),
               color: theme.colors.text,
             }]}>Your Privacy Matters</Text>
             <Text style={[styles.heroSubtitle, {
-              fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
               lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               paddingHorizontal: dynamicModerateScale(8),
               color: theme.colors.textSecondary,
@@ -496,7 +506,7 @@ const PrivacyPolicyScreen = () => {
           }]} />
 
           <Text style={[styles.lastUpdated, {
-            fontSize: isTabletDevice ? dynamicModerateScale(7) : dynamicModerateScale(6.5),
+            fontSize: isTabletDevice ? getFontSize(7) : getFontSize(6.5),
             marginBottom: dynamicModerateScale(8),
             color: theme.colors.textSecondary,
           }]}>
@@ -514,11 +524,11 @@ const PrivacyPolicyScreen = () => {
                 marginRight: dynamicModerateScale(6),
               }} />
               <Text style={[styles.sectionTitle, {
-                fontSize: isTabletDevice ? dynamicModerateScale(11) : dynamicModerateScale(10),
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
               }]}>Introduction</Text>
             </View>
             <Text style={[styles.sectionContent, {
-              fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
               lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginBottom: dynamicModerateScale(6),
               color: theme.colors.text,
@@ -528,7 +538,7 @@ const PrivacyPolicyScreen = () => {
               (collectively, the "Service").
             </Text>
             <Text style={[styles.sectionContent, {
-              fontSize: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(7.5),
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
               lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginBottom: dynamicModerateScale(6),
               color: theme.colors.text,
@@ -547,10 +557,14 @@ const PrivacyPolicyScreen = () => {
               <Icon name="folder-open" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={{
                 marginRight: dynamicModerateScale(6),
               }} />
-              <Text style={styles.sectionTitle}>Information We Collect</Text>
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
+              }]}>Information We Collect</Text>
             </View>
             
             <Text style={[styles.sectionContent, styles.highlight, {
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginBottom: dynamicModerateScale(4),
               color: theme.colors.text,
             }]}>Personal Information:</Text>
@@ -583,6 +597,8 @@ const PrivacyPolicyScreen = () => {
             </View>
 
             <Text style={[styles.sectionContent, styles.highlight, { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginTop: dynamicModerateScale(8),
               marginBottom: dynamicModerateScale(4),
               color: theme.colors.text,
@@ -618,6 +634,8 @@ const PrivacyPolicyScreen = () => {
             </View>
 
             <Text style={[styles.sectionContent, styles.highlight, { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
               marginTop: dynamicModerateScale(8),
               marginBottom: dynamicModerateScale(4),
               color: theme.colors.text,
@@ -648,9 +666,15 @@ const PrivacyPolicyScreen = () => {
           <HoverableCard>
             <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
               <Icon name="settings" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
-              <Text style={styles.sectionTitle}>How We Use Your Information</Text>
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
+              }]}>How We Use Your Information</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              color: theme.colors.text 
+            }]}>
               We use the information we collect to:
             </Text>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
@@ -683,9 +707,15 @@ const PrivacyPolicyScreen = () => {
           <HoverableCard>
             <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
               <Icon name="share" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
-              <Text style={styles.sectionTitle}>Information Sharing</Text>
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
+              }]}>Information Sharing</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              color: theme.colors.text 
+            }]}>
               We do not sell, trade, or otherwise transfer your personal information to third parties, except:
             </Text>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
@@ -710,9 +740,15 @@ const PrivacyPolicyScreen = () => {
           <HoverableCard>
             <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
               <Icon name="verified-user" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
-              <Text style={styles.sectionTitle}>Data Security</Text>
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
+              }]}>Data Security</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              color: theme.colors.text 
+            }]}>
               We implement appropriate security measures to protect your personal information against unauthorized 
               access, alteration, disclosure, or destruction. This includes:
             </Text>
@@ -738,9 +774,15 @@ const PrivacyPolicyScreen = () => {
           <HoverableCard>
             <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
               <Icon name="account-circle" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
-              <Text style={styles.sectionTitle}>Your Rights and Choices</Text>
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
+              }]}>Your Rights and Choices</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              color: theme.colors.text 
+            }]}>
               You have the right to:
             </Text>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
@@ -769,9 +811,15 @@ const PrivacyPolicyScreen = () => {
           <HoverableCard>
             <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
               <Icon name="cookie" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
-              <Text style={styles.sectionTitle}>Cookies and Tracking</Text>
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
+              }]}>Cookies and Tracking</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              color: theme.colors.text 
+            }]}>
               We may use cookies and similar tracking technologies to enhance your experience, 
               analyze usage patterns, and provide personalized content. You can control these 
               through your device settings.
@@ -782,9 +830,15 @@ const PrivacyPolicyScreen = () => {
           <HoverableCard>
             <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
               <Icon name="extension" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
-              <Text style={styles.sectionTitle}>Third-Party Services</Text>
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
+              }]}>Third-Party Services</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              color: theme.colors.text 
+            }]}>
               Our Service integrates with third-party services including:
             </Text>
             <View style={[styles.bulletPoint, getBulletPointStyle()]}>
@@ -808,9 +862,15 @@ const PrivacyPolicyScreen = () => {
           <HoverableCard>
             <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
               <Icon name="child-care" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
-              <Text style={styles.sectionTitle}>Children's Privacy</Text>
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
+              }]}>Children's Privacy</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              color: theme.colors.text 
+            }]}>
               Our Service is not intended for children under 13 years of age. We do not knowingly 
               collect personal information from children under 13. If we become aware that we have 
               collected personal information from a child under 13, we will take steps to delete such information.
@@ -821,9 +881,15 @@ const PrivacyPolicyScreen = () => {
           <HoverableCard>
             <View style={[styles.sectionHeader, getSectionHeaderStyle()]}>
               <Icon name="update" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color="#667eea" style={getIconStyle()} />
-              <Text style={styles.sectionTitle}>Changes to This Privacy Policy</Text>
+              <Text style={[styles.sectionTitle, {
+                fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
+              }]}>Changes to This Privacy Policy</Text>
             </View>
-            <Text style={[styles.sectionContent, getContentStyle(), { color: theme.colors.text }]}>
+            <Text style={[styles.sectionContent, getContentStyle(), { 
+              fontSize: isTabletDevice ? getFontSize(8) : getFontSize(7.5),
+              lineHeight: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              color: theme.colors.text 
+            }]}>
               We may update this Privacy Policy from time to time. We will notify you of any changes 
               by posting the new Privacy Policy in the app and updating the "Last updated" date. 
               You are advised to review this Privacy Policy periodically for any changes.

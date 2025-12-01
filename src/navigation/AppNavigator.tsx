@@ -292,8 +292,8 @@ const CustomTabBar = (props: any) => {
   const tabBarHeight = currentModerateScale(isCurrentlySmall ? 40 : 44); // Increased for small devices
   const tabBarPaddingTop = currentModerateScale(0);
   const tabBarPaddingBottom = Math.max(currentModerateScale(6), insets.bottom + currentModerateScale(2));
-  const iconSize = currentModerateScale(isCurrentlySmall ? 22 : 20); // Increased from 18 to 22 for small devices
-  const fontSize = currentModerateScale(isCurrentlySmall ? 9 : 8); // Increased from 7 to 9 for small devices
+  const iconSize = currentModerateScale(isCurrentlySmall ? 24 : 20); // Increased from 22 to 24 for small devices
+  const fontSize = currentModerateScale(isCurrentlySmall ? 10 : 8); // Increased from 9 to 10 for small devices
   const borderWidth = currentModerateScale(0.8); // Further reduced from 1
   
 

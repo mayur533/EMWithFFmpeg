@@ -87,9 +87,11 @@ const SubscriptionScreen: React.FC = () => {
   const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
   const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
   
-  // Responsive icon sizes (compact - 60% of original)
+  // Responsive icon sizes (compact - 60% of original, slightly larger for small screens)
   const getIconSize = (baseSize: number) => {
-    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+    const isCurrentlySmall = currentScreenWidth < 375;
+    const multiplier = isCurrentlySmall ? 0.75 : 0.6; // Increased from 0.6 to 0.75 for small screens
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * multiplier));
   };
   
   // Device size detection (matching TransactionHistoryScreen)
@@ -639,12 +641,12 @@ const SubscriptionScreen: React.FC = () => {
        >
         <TouchableOpacity
           style={[styles.backButton, {
-            padding: isTabletDevice ? dynamicModerateScale(8) : dynamicModerateScale(6),
+            padding: isTabletDevice ? dynamicModerateScale(10) : (currentScreenWidth < 375 ? dynamicModerateScale(9) : dynamicModerateScale(7)),
             borderRadius: dynamicModerateScale(10),
           }]}
           onPress={() => navigation.goBack()}
         >
-          <Icon name="arrow-back" size={isTabletDevice ? getIconSize(20) : getIconSize(18)} color={theme.colors.text} />
+          <Icon name="arrow-back" size={isTabletDevice ? getIconSize(22) : (currentScreenWidth < 375 ? getIconSize(22) : getIconSize(18))} color={theme.colors.text} />
         </TouchableOpacity>
                  <View style={styles.headerContent}>
            <Text style={[styles.headerTitle, {

@@ -144,9 +144,19 @@ const ProfileScreen: React.FC = () => {
     return url;
   };
   
-  // Responsive icon sizes (compact - 60% of original)
+  // Responsive icon sizes (compact - 60% of original, slightly larger for small screens)
   const getIconSize = (baseSize: number) => {
-    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+    const isCurrentlySmall = currentScreenWidth < 375;
+    const multiplier = isCurrentlySmall ? 0.75 : 0.6; // Increased from 0.7 to 0.75 for small screens
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * multiplier));
+  };
+  
+  // Responsive text size helper (slightly larger for small screens)
+  const getFontSize = (baseSize: number) => {
+    const isCurrentlySmall = currentScreenWidth < 375;
+    const baseFontSize = dynamicModerateScale(baseSize);
+    // Add small boost for small screens (increased from +1 to +2px)
+    return isCurrentlySmall ? baseFontSize + 2 : baseFontSize;
   };
   
   const [notificationsEnabled, setNotificationsEnabled] = useState(true);
@@ -1531,11 +1541,11 @@ const ProfileScreen: React.FC = () => {
         <View style={styles.menuItemContent}>
           <Text style={[styles.menuItemText, { 
             color: theme.colors.text,
-            fontSize: dynamicModerateScale(10),
+            fontSize: getFontSize(10),
           }]}>{title}</Text>
           {subtitle && <Text style={[styles.menuItemSubtext, { 
             color: theme.colors.textSecondary,
-            fontSize: dynamicModerateScale(8),
+            fontSize: getFontSize(8),
             marginTop: dynamicModerateScale(0.5),
           }]}>{subtitle}</Text>}
         </View>
@@ -1669,7 +1679,7 @@ const ProfileScreen: React.FC = () => {
                     }]}
                   >
                     <Text style={[styles.avatarText, {
-                      fontSize: dynamicModerateScale(24),
+                      fontSize: getFontSize(24),
                     }]}>
                       {(currentUser?.companyName || currentUser?.displayName)?.charAt(0) || currentUser?.email?.charAt(0) || 'U'}
                     </Text>
@@ -1692,14 +1702,14 @@ const ProfileScreen: React.FC = () => {
               <View style={styles.profileInfo}>
                 <Text style={[styles.userName, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(10),
+                  fontSize: getFontSize(10),
                   marginBottom: dynamicModerateScale(2),
                 }]}>
                   {currentUser?.companyName || currentUser?.displayName || currentUser?.name || 'MarketBrand'}
                 </Text>
                 <Text style={[styles.userEmail, { 
                   color: theme.colors.textSecondary,
-                  fontSize: dynamicModerateScale(8),
+                  fontSize: getFontSize(8),
                   marginBottom: dynamicModerateScale(4),
                 }]}>
                   {currentUser?.email || 'eventmarketer@example.com'}
@@ -1710,11 +1720,11 @@ const ProfileScreen: React.FC = () => {
                   }]}>
                     <Text style={[styles.statNumber, { 
                       color: theme.colors.primary,
-                      fontSize: dynamicModerateScale(12),
+                      fontSize: getFontSize(12),
                     }]}>{posterStats.total}</Text>
                     <Text style={[styles.statLabel, { 
                       color: theme.colors.textSecondary,
-                      fontSize: dynamicModerateScale(7),
+                      fontSize: getFontSize(7),
                       marginTop: dynamicModerateScale(0.5),
                     }]}>Downloads</Text>
                   </View>
@@ -1729,11 +1739,11 @@ const ProfileScreen: React.FC = () => {
                   }]}>
                     <Text style={[styles.statNumber, { 
                       color: theme.colors.primary,
-                      fontSize: dynamicModerateScale(12),
+                      fontSize: getFontSize(12),
                     }]}>{businessProfileStats.total}</Text>
                     <Text style={[styles.statLabel, { 
                       color: theme.colors.textSecondary,
-                      fontSize: dynamicModerateScale(7),
+                      fontSize: getFontSize(7),
                       marginTop: dynamicModerateScale(0.5),
                     }]}>Business</Text>
                   </View>
@@ -1753,7 +1763,7 @@ const ProfileScreen: React.FC = () => {
             >
               <Icon name="edit" size={getIconSize(12)} color="#ffffff" />
               <Text style={[styles.editProfileButtonText, {
-                fontSize: dynamicModerateScale(9),
+                fontSize: getFontSize(9),
               }]}>Edit Profile</Text>
             </TouchableOpacity>
           </View>
@@ -1763,7 +1773,7 @@ const ProfileScreen: React.FC = () => {
             marginBottom: dynamicModerateScale(12),
           }]}>
             <Text style={[styles.sectionTitle, {
-              fontSize: dynamicModerateScale(10),
+              fontSize: getFontSize(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
               color: theme.colors.text,
@@ -1778,7 +1788,7 @@ const ProfileScreen: React.FC = () => {
             marginBottom: dynamicModerateScale(12),
           }]}>
             <Text style={[styles.sectionTitle, {
-              fontSize: dynamicModerateScale(10),
+              fontSize: getFontSize(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
               color: theme.colors.text,
@@ -1808,13 +1818,13 @@ const ProfileScreen: React.FC = () => {
                   <View style={styles.myPostersInfo}>
                     <Text style={[styles.myPostersTitle, { 
                       color: theme.colors.text,
-                      fontSize: dynamicModerateScale(10),
+                      fontSize: getFontSize(10),
                     }]}>
                       Downloaded Posters
                     </Text>
                     <Text style={[styles.myPostersSubtitle, { 
                       color: theme.colors.textSecondary,
-                      fontSize: dynamicModerateScale(8),
+                      fontSize: getFontSize(8),
                       marginTop: dynamicModerateScale(0.5),
                     }]}>
                       {posterStats.total} posters • {posterStats.recentCount} recent
@@ -1832,7 +1842,7 @@ const ProfileScreen: React.FC = () => {
             marginBottom: dynamicModerateScale(12),
           }]}>
             <Text style={[styles.sectionTitle, {
-              fontSize: dynamicModerateScale(10),
+              fontSize: getFontSize(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
               color: theme.colors.text,
@@ -1866,7 +1876,7 @@ const ProfileScreen: React.FC = () => {
                   <View style={styles.subscriptionInfo}>
                     <Text style={[styles.subscriptionTitle, { 
                       color: theme.colors.text,
-                      fontSize: dynamicModerateScale(10),
+                      fontSize: getFontSize(10),
                     }]}>
                       {isSubscribed 
                         ? (subscriptionStatus?.planName || 'Pro Subscription')
@@ -1874,7 +1884,7 @@ const ProfileScreen: React.FC = () => {
                     </Text>
                     <Text style={[styles.subscriptionSubtitle, { 
                       color: theme.colors.textSecondary,
-                      fontSize: dynamicModerateScale(8),
+                      fontSize: getFontSize(8),
                       marginTop: dynamicModerateScale(0.5),
                     }]}>
                       {isSubscribed 
@@ -1920,13 +1930,13 @@ const ProfileScreen: React.FC = () => {
                   <View style={styles.transactionHistoryInfo}>
                     <Text style={[styles.transactionHistoryTitle, { 
                       color: theme.colors.text,
-                      fontSize: dynamicModerateScale(10),
+                      fontSize: getFontSize(10),
                     }]}>
                       Transaction History
                     </Text>
                     <Text style={[styles.transactionHistorySubtitle, { 
                       color: theme.colors.textSecondary,
-                      fontSize: dynamicModerateScale(8),
+                      fontSize: getFontSize(8),
                       marginTop: dynamicModerateScale(0.5),
                     }]}>
                       {transactionStats.total} transactions • View payment history
@@ -1943,7 +1953,7 @@ const ProfileScreen: React.FC = () => {
              marginBottom: dynamicModerateScale(12),
            }]}>
              <Text style={[styles.sectionTitle, {
-               fontSize: dynamicModerateScale(10),
+               fontSize: getFontSize(10),
                marginBottom: dynamicModerateScale(5),
                paddingHorizontal: dynamicModerateScale(8),
                color: theme.colors.text,
@@ -1956,7 +1966,7 @@ const ProfileScreen: React.FC = () => {
             marginBottom: dynamicModerateScale(12),
           }]}>
             <Text style={[styles.sectionTitle, {
-              fontSize: dynamicModerateScale(10),
+              fontSize: getFontSize(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
               color: theme.colors.text,
@@ -1971,7 +1981,7 @@ const ProfileScreen: React.FC = () => {
             marginBottom: dynamicModerateScale(12),
           }]}>
             <Text style={[styles.sectionTitle, {
-              fontSize: dynamicModerateScale(10),
+              fontSize: getFontSize(10),
               marginBottom: dynamicModerateScale(5),
               paddingHorizontal: dynamicModerateScale(8),
               color: theme.colors.text,
@@ -2001,13 +2011,13 @@ const ProfileScreen: React.FC = () => {
                   <View style={styles.shareAppInfo}>
                     <Text style={[styles.shareAppTitle, { 
                       color: theme.colors.text,
-                      fontSize: dynamicModerateScale(10),
+                      fontSize: getFontSize(10),
                     }]}>
                       Share MarketBrand
                     </Text>
                     <Text style={[styles.shareAppSubtitle, { 
                       color: theme.colors.textSecondary,
-                      fontSize: dynamicModerateScale(8),
+                      fontSize: getFontSize(8),
                       marginTop: dynamicModerateScale(0.5),
                     }]}>
                       Help others discover amazing event posters
@@ -2036,14 +2046,14 @@ const ProfileScreen: React.FC = () => {
             }]} />
             <Text style={[styles.signOutText, { 
               color: '#ffffff',
-              fontSize: dynamicModerateScale(10),
+              fontSize: getFontSize(10),
             }]}>Sign Out</Text>
           </TouchableOpacity>
 
           {/* App Version */}
             <Text style={[styles.versionText, { 
             color: theme.colors.textSecondary,
-            fontSize: dynamicModerateScale(8),
+            fontSize: getFontSize(8),
             marginTop: dynamicModerateScale(14),
           }]}>Version 1.0.0</Text>
         </ScrollView>
@@ -2068,7 +2078,7 @@ const ProfileScreen: React.FC = () => {
             }]}>
               <Text style={[styles.modalTitle, { 
                 color: theme.colors.text,
-                fontSize: dynamicModerateScale(12),
+                fontSize: getFontSize(12),
               }]}>Edit Profile</Text>
               <TouchableOpacity onPress={handleCancelEdit} style={[styles.modalCloseButton, {
                 padding: dynamicModerateScale(3),
@@ -2087,7 +2097,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.inputLabel, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(9),
+                  fontSize: getFontSize(9),
                   marginBottom: dynamicModerateScale(3),
                 }]}>Company Name *</Text>
                 <TextInput
@@ -2098,7 +2108,7 @@ const ProfileScreen: React.FC = () => {
                     color: theme.colors.text,
                     paddingHorizontal: dynamicModerateScale(10),
                     paddingVertical: dynamicModerateScale(7),
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                     borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.name}
@@ -2116,7 +2126,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.inputLabel, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(9),
+                  fontSize: getFontSize(9),
                   marginBottom: dynamicModerateScale(3),
                 }]}>Description</Text>
                 <TextInput
@@ -2127,7 +2137,7 @@ const ProfileScreen: React.FC = () => {
                     color: theme.colors.text,
                     paddingHorizontal: dynamicModerateScale(10),
                     paddingVertical: dynamicModerateScale(7),
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                     borderRadius: dynamicModerateScale(10),
                     minHeight: dynamicModerateScale(55),
                   }]}
@@ -2151,7 +2161,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.inputLabel, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(9),
+                  fontSize: getFontSize(9),
                   marginBottom: dynamicModerateScale(3),
                 }]}>Business Category *</Text>
                 
@@ -2168,7 +2178,7 @@ const ProfileScreen: React.FC = () => {
                         backgroundColor: theme.colors.surface,
                         paddingHorizontal: dynamicModerateScale(10),
                         paddingVertical: dynamicModerateScale(8),
-                        fontSize: dynamicModerateScale(10),
+                        fontSize: getFontSize(10),
                         borderRadius: dynamicModerateScale(10),
                       }
                     ]}
@@ -2220,7 +2230,7 @@ const ProfileScreen: React.FC = () => {
                       styles.categoryOptionText,
                       { 
                         color: theme.colors.text,
-                        fontSize: dynamicModerateScale(9),
+                        fontSize: getFontSize(9),
                       },
                       editFormData.category === category && [
                         styles.categoryOptionTextSelected, 
@@ -2241,7 +2251,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.inputLabel, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(9),
+                  fontSize: getFontSize(9),
                   marginBottom: dynamicModerateScale(3),
                 }]}>Phone Number *</Text>
                 <TextInput
@@ -2252,7 +2262,7 @@ const ProfileScreen: React.FC = () => {
                     color: theme.colors.text,
                     paddingHorizontal: dynamicModerateScale(10),
                     paddingVertical: dynamicModerateScale(7),
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                     borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.phone}
@@ -2275,7 +2285,7 @@ const ProfileScreen: React.FC = () => {
                 {phoneValidationError ? (
                   <Text style={[styles.validationError, { 
                     color: '#ff4444',
-                    fontSize: dynamicModerateScale(8),
+                    fontSize: getFontSize(8),
                     marginTop: dynamicModerateScale(2),
                     marginLeft: dynamicModerateScale(2),
                   }]}>
@@ -2285,7 +2295,7 @@ const ProfileScreen: React.FC = () => {
                 {!phoneValidationError && editFormData.phone.trim() && editFormData.phone.replace(/\D/g, '').length === 10 ? (
                   <Text style={[styles.validationSuccess, { 
                     color: '#4CAF50',
-                    fontSize: dynamicModerateScale(8),
+                    fontSize: getFontSize(8),
                     marginTop: dynamicModerateScale(2),
                     marginLeft: dynamicModerateScale(2),
                   }]}>
@@ -2300,7 +2310,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.inputLabel, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(9),
+                  fontSize: getFontSize(9),
                   marginBottom: dynamicModerateScale(3),
                 }]}>Alternate Phone</Text>
                 <TextInput
@@ -2311,7 +2321,7 @@ const ProfileScreen: React.FC = () => {
                     color: theme.colors.text,
                     paddingHorizontal: dynamicModerateScale(10),
                     paddingVertical: dynamicModerateScale(7),
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                     borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.alternatePhone}
@@ -2338,7 +2348,7 @@ const ProfileScreen: React.FC = () => {
                 {alternatePhoneValidationError ? (
                   <Text style={[styles.validationError, { 
                     color: '#ff4444',
-                    fontSize: dynamicModerateScale(8),
+                    fontSize: getFontSize(8),
                     marginTop: dynamicModerateScale(2),
                     marginLeft: dynamicModerateScale(2),
                   }]}>
@@ -2348,7 +2358,7 @@ const ProfileScreen: React.FC = () => {
                 {!alternatePhoneValidationError && editFormData.alternatePhone.trim() && editFormData.alternatePhone.replace(/\D/g, '').length === 10 ? (
                   <Text style={[styles.validationSuccess, { 
                     color: '#4CAF50',
-                    fontSize: dynamicModerateScale(8),
+                    fontSize: getFontSize(8),
                     marginTop: dynamicModerateScale(2),
                     marginLeft: dynamicModerateScale(2),
                   }]}>
@@ -2363,7 +2373,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.inputLabel, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(9),
+                  fontSize: getFontSize(9),
                   marginBottom: dynamicModerateScale(3),
                 }]}>Email *</Text>
                 <TextInput
@@ -2374,7 +2384,7 @@ const ProfileScreen: React.FC = () => {
                     color: theme.colors.text,
                     paddingHorizontal: dynamicModerateScale(10),
                     paddingVertical: dynamicModerateScale(7),
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                     borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.email}
@@ -2394,7 +2404,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.inputLabel, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(9),
+                  fontSize: getFontSize(9),
                   marginBottom: dynamicModerateScale(3),
                 }]}>Website</Text>
                 <TextInput
@@ -2405,7 +2415,7 @@ const ProfileScreen: React.FC = () => {
                     color: theme.colors.text,
                     paddingHorizontal: dynamicModerateScale(10),
                     paddingVertical: dynamicModerateScale(7),
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                     borderRadius: dynamicModerateScale(10),
                   }]}
                   value={editFormData.website}
@@ -2425,7 +2435,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.inputLabel, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(9),
+                  fontSize: getFontSize(9),
                   marginBottom: dynamicModerateScale(3),
                 }]}>Address</Text>
                 <TextInput
@@ -2436,7 +2446,7 @@ const ProfileScreen: React.FC = () => {
                     color: theme.colors.text,
                     paddingHorizontal: dynamicModerateScale(10),
                     paddingVertical: dynamicModerateScale(7),
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                     borderRadius: dynamicModerateScale(10),
                     minHeight: dynamicModerateScale(55),
                   }]}
@@ -2471,7 +2481,7 @@ const ProfileScreen: React.FC = () => {
               >
                 <Text style={[styles.modalButtonText, { 
                   color: theme.colors.textSecondary,
-                  fontSize: dynamicModerateScale(10),
+                  fontSize: getFontSize(10),
                 }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity 
@@ -2485,12 +2495,12 @@ const ProfileScreen: React.FC = () => {
               >
                 {isUpdating ? (
                   <Text style={[styles.modalButtonText, {
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                   }]}>Updating...</Text>
                 ) : (
                   <Text style={[styles.modalButtonText, { 
                     color: '#ffffff',
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                   }]}>Save Changes</Text>
                 )}
               </TouchableOpacity>
@@ -2536,7 +2546,7 @@ const ProfileScreen: React.FC = () => {
                 <Text 
                   style={[styles.successModalTitle, { 
                     color: theme.colors.text,
-                    fontSize: dynamicModerateScale(14),
+                    fontSize: getFontSize(14),
                   }]}
                 >
                   Success
@@ -2562,7 +2572,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.successModalMessage, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(10),
+                  fontSize: getFontSize(10),
                   lineHeight: dynamicModerateScale(16),
                 }]}>
                   {successMessage}
@@ -2578,7 +2588,7 @@ const ProfileScreen: React.FC = () => {
                 onPress={() => setShowSuccessModal(false)}
               >
                 <Text style={[styles.successModalButtonText, {
-                  fontSize: dynamicModerateScale(10),
+                  fontSize: getFontSize(10),
                 }]}>OK</Text>
               </TouchableOpacity>
             </View>
@@ -2623,7 +2633,7 @@ const ProfileScreen: React.FC = () => {
                 <Text 
                   style={[styles.signOutModalTitle, { 
                     color: theme.colors.text,
-                    fontSize: dynamicModerateScale(14),
+                    fontSize: getFontSize(14),
                   }]}
                 >
                   Sign Out
@@ -2649,7 +2659,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.signOutModalMessage, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(10),
+                  fontSize: getFontSize(10),
                   lineHeight: dynamicModerateScale(16),
                 }]}>
                   Are you sure you want to sign out? This will clear all your local data.
@@ -2669,7 +2679,7 @@ const ProfileScreen: React.FC = () => {
                 >
                   <Text style={[styles.signOutCancelButtonText, { 
                     color: theme.colors.text,
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                   }]}>Cancel</Text>
                 </TouchableOpacity>
                 
@@ -2682,7 +2692,7 @@ const ProfileScreen: React.FC = () => {
                   onPress={confirmSignOut}
                 >
                   <Text style={[styles.signOutConfirmButtonText, {
-                    fontSize: dynamicModerateScale(10),
+                    fontSize: getFontSize(10),
                   }]}>Sign Out</Text>
                 </TouchableOpacity>
               </View>
@@ -2728,7 +2738,7 @@ const ProfileScreen: React.FC = () => {
                 <Text 
                   style={[styles.errorModalTitle, { 
                     color: theme.colors.text,
-                    fontSize: dynamicModerateScale(14),
+                    fontSize: getFontSize(14),
                   }]}
                 >
                   Error
@@ -2754,7 +2764,7 @@ const ProfileScreen: React.FC = () => {
               }]}>
                 <Text style={[styles.errorModalMessage, { 
                   color: theme.colors.text,
-                  fontSize: dynamicModerateScale(10),
+                  fontSize: getFontSize(10),
                   lineHeight: dynamicModerateScale(16),
                 }]}>
                   {errorModalMessage}
@@ -2770,7 +2780,7 @@ const ProfileScreen: React.FC = () => {
                 onPress={() => setShowErrorModal(false)}
               >
                 <Text style={[styles.errorModalButtonText, {
-                  fontSize: dynamicModerateScale(10),
+                  fontSize: getFontSize(10),
                 }]}>OK</Text>
               </TouchableOpacity>
             </View>

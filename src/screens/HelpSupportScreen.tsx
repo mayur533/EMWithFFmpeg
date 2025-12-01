@@ -115,9 +115,19 @@ const HelpSupportScreen: React.FC = () => {
   const dynamicVerticalScale = (size: number) => (currentScreenHeight / 667) * size;
   const dynamicModerateScale = (size: number, factor = 0.5) => size + (dynamicScale(size) - size) * factor;
   
-  // Responsive icon sizes (compact - 60% of original)
+  // Responsive icon sizes (compact - 60% of original, slightly larger for small screens)
   const getIconSize = (baseSize: number) => {
-    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * 0.6));
+    const isCurrentlySmall = currentScreenWidth < 375;
+    const multiplier = isCurrentlySmall ? 0.75 : 0.6; // Increased from 0.7 to 0.75 for small screens
+    return Math.max(10, Math.round(baseSize * (currentScreenWidth / 375) * multiplier));
+  };
+  
+  // Responsive text size helper (slightly larger for small screens)
+  const getFontSize = (baseSize: number) => {
+    const isCurrentlySmall = currentScreenWidth < 375;
+    const baseFontSize = dynamicModerateScale(baseSize);
+    // Add small boost for small screens (increased from +1 to +2px)
+    return isCurrentlySmall ? baseFontSize + 2 : baseFontSize;
   };
   
   // Device size detection
@@ -267,12 +277,12 @@ const HelpSupportScreen: React.FC = () => {
       <View style={styles.contactInfo}>
         <Text style={[styles.contactTitle, { 
           color: theme.colors.text,
-          fontSize: isTabletDevice ? dynamicModerateScale(11) : dynamicModerateScale(10),
+          fontSize: isTabletDevice ? getFontSize(11) : getFontSize(10),
           marginBottom: dynamicModerateScale(1),
         }]}>{option.title}</Text>
         <Text style={[styles.contactDescription, { 
           color: theme.colors.textSecondary,
-          fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+          fontSize: isTabletDevice ? getFontSize(9) : getFontSize(8),
         }]}>
           {option.description}
         </Text>
@@ -299,7 +309,7 @@ const HelpSupportScreen: React.FC = () => {
         <View style={styles.faqHeader}>
           <Text style={[styles.faqQuestion, { 
             color: theme.colors.text,
-            fontSize: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(9),
+            fontSize: isTabletDevice ? getFontSize(10) : getFontSize(9),
             marginRight: dynamicModerateScale(8),
             lineHeight: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(13),
           }]}>{item.question}</Text>
@@ -312,7 +322,7 @@ const HelpSupportScreen: React.FC = () => {
         {isExpanded && (
           <Text style={[styles.faqAnswer, { 
             color: theme.colors.textSecondary,
-            fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+            fontSize: isTabletDevice ? getFontSize(9) : getFontSize(8),
             marginTop: dynamicModerateScale(8),
             lineHeight: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(13),
           }]}>{item.answer}</Text>
@@ -338,16 +348,16 @@ const HelpSupportScreen: React.FC = () => {
         }]}>
           <TouchableOpacity
             style={[styles.backButton, {
-              width: isTabletDevice ? dynamicModerateScale(26) : dynamicModerateScale(22),
-              height: isTabletDevice ? dynamicModerateScale(26) : dynamicModerateScale(22),
+              width: isTabletDevice ? dynamicModerateScale(30) : (currentScreenWidth < 375 ? dynamicModerateScale(30) : dynamicModerateScale(24)),
+              height: isTabletDevice ? dynamicModerateScale(30) : (currentScreenWidth < 375 ? dynamicModerateScale(30) : dynamicModerateScale(24)),
             }]}
             onPress={() => navigation.goBack()}
             activeOpacity={0.7}
           >
-            <Icon name="arrow-back" size={isTabletDevice ? getIconSize(16) : getIconSize(14)} color="#333333" />
+            <Icon name="arrow-back" size={isTabletDevice ? getIconSize(18) : (currentScreenWidth < 375 ? getIconSize(20) : getIconSize(16))} color="#333333" />
           </TouchableOpacity>
           <Text style={[styles.headerTitle, {
-            fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(10),
+            fontSize: isTabletDevice ? getFontSize(12) : getFontSize(10),
           }]}>Help & Support</Text>
           <View style={[styles.backButton, {
             width: isTabletDevice ? dynamicModerateScale(26) : dynamicModerateScale(22),
@@ -382,14 +392,14 @@ const HelpSupportScreen: React.FC = () => {
             </View>
             <Text style={[styles.welcomeTitle, { 
               color: theme.colors.text,
-              fontSize: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12),
+              fontSize: isTabletDevice ? getFontSize(14) : getFontSize(12),
               marginBottom: dynamicModerateScale(6),
             }]}>
               How can we help you?
             </Text>
             <Text style={[styles.welcomeSubtitle, { 
               color: theme.colors.textSecondary,
-              fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+              fontSize: isTabletDevice ? getFontSize(9) : getFontSize(8),
               lineHeight: isTabletDevice ? dynamicModerateScale(14) : dynamicModerateScale(12),
             }]}>
               We're here to assist you with any questions or issues you may have
@@ -402,7 +412,7 @@ const HelpSupportScreen: React.FC = () => {
           }]}>
             <Text style={[styles.sectionTitle, { 
               color: '#333333',
-              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              fontSize: isTabletDevice ? getFontSize(12) : getFontSize(11),
               marginBottom: dynamicModerateScale(8),
             }]}>Contact Us</Text>
             <View style={[styles.contactGrid, {
@@ -424,7 +434,7 @@ const HelpSupportScreen: React.FC = () => {
             }]}>
             <Text style={[styles.sectionTitle, { 
               color: '#333333',
-              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              fontSize: isTabletDevice ? getFontSize(12) : getFontSize(11),
               marginBottom: dynamicModerateScale(8),
             }]}>
               Frequently Asked Questions
@@ -442,7 +452,7 @@ const HelpSupportScreen: React.FC = () => {
           }]}>
             <Text style={[styles.sectionTitle, { 
               color: '#333333',
-              fontSize: isTabletDevice ? dynamicModerateScale(12) : dynamicModerateScale(11),
+              fontSize: isTabletDevice ? getFontSize(12) : getFontSize(11),
               marginBottom: dynamicModerateScale(8),
             }]}>Quick Links</Text>
             <TouchableOpacity
@@ -458,7 +468,7 @@ const HelpSupportScreen: React.FC = () => {
               <Icon name="privacy-tip" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.primary} />
               <Text style={[styles.quickLinkText, { 
                 color: theme.colors.text,
-                fontSize: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(9),
+                fontSize: isTabletDevice ? getFontSize(10) : getFontSize(9),
                 marginLeft: dynamicModerateScale(10),
               }]}>Privacy Policy</Text>
               <Icon name="chevron-right" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.textSecondary} />
@@ -477,7 +487,7 @@ const HelpSupportScreen: React.FC = () => {
               <Icon name="card-membership" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.primary} />
               <Text style={[styles.quickLinkText, { 
                 color: theme.colors.text,
-                fontSize: isTabletDevice ? dynamicModerateScale(10) : dynamicModerateScale(9),
+                fontSize: isTabletDevice ? getFontSize(10) : getFontSize(9),
                 marginLeft: dynamicModerateScale(10),
               }]}>Subscription Plans</Text>
               <Icon name="chevron-right" size={isTabletDevice ? getIconSize(18) : getIconSize(16)} color={theme.colors.textSecondary} />
@@ -491,14 +501,14 @@ const HelpSupportScreen: React.FC = () => {
           }]}>
             <Text style={[styles.footerText, { 
               color: 'rgba(51, 51, 51, 0.7)',
-              fontSize: isTabletDevice ? dynamicModerateScale(9) : dynamicModerateScale(8),
+              fontSize: isTabletDevice ? getFontSize(9) : getFontSize(8),
               marginBottom: dynamicModerateScale(2),
             }]}>
               Powered by RSL Solution Private Limited
             </Text>
             <Text style={[styles.footerVersion, { 
               color: 'rgba(102, 102, 102, 0.8)',
-              fontSize: isTabletDevice ? dynamicModerateScale(7.5) : dynamicModerateScale(7),
+              fontSize: isTabletDevice ? getFontSize(7.5) : getFontSize(7),
             }]}>
               Version 1.0.0
             </Text>
