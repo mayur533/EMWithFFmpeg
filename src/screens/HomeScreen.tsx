@@ -2404,23 +2404,43 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
   const [featuredCarouselIndex, setFeaturedCarouselIndex] = useState(0);
   const scrollViewRef = useRef<ScrollView>(null);
   const businessCategoriesSectionRef = useRef<View>(null);
+  const autoScrollIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const isUserScrollingRef = useRef(false);
 
   useEffect(() => {
     if (!featuredContent.length) return;
 
-    const interval = setInterval(() => {
-      setFeaturedCarouselIndex(prevIndex => {
-        const nextIndex = (prevIndex + 1) % featuredContent.length;
-        featuredCarouselRef.current?.scrollToIndex({
-          index: nextIndex,
-          animated: true,
-          viewPosition: 0.5,
-        });
-        return nextIndex;
-      });
-    }, 4000);
+    // Clear any existing interval
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+    }
 
-    return () => clearInterval(interval);
+    // Only start auto-scroll if user is not manually scrolling
+    const startAutoScroll = () => {
+      if (isUserScrollingRef.current) return;
+      
+      autoScrollIntervalRef.current = setInterval(() => {
+        if (isUserScrollingRef.current) return;
+        
+        setFeaturedCarouselIndex(prevIndex => {
+          const nextIndex = (prevIndex + 1) % featuredContent.length;
+          featuredCarouselRef.current?.scrollToIndex({
+            index: nextIndex,
+            animated: true,
+            viewPosition: 0.5,
+          });
+          return nextIndex;
+        });
+      }, 4000);
+    };
+
+    startAutoScroll();
+
+    return () => {
+      if (autoScrollIntervalRef.current) {
+        clearInterval(autoScrollIntervalRef.current);
+      }
+    };
   }, [featuredContent]);
 
   // Pre-compute related featured templates to avoid filtering on every press
@@ -2471,6 +2491,69 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
       });
     });
   }, [featuredCarouselSnapInterval]);
+
+  const handleFeaturedCarouselScroll = useCallback((event: any) => {
+    const scrollOffset = event.nativeEvent.contentOffset.x;
+    // Calculate index - use Math.round for better accuracy with snap intervals
+    const calculatedIndex = scrollOffset / featuredCarouselSnapInterval;
+    const currentIndex = Math.round(calculatedIndex);
+    
+    // Update immediately if within valid range
+    // Only update if index actually changed to prevent unnecessary re-renders
+    if (currentIndex >= 0 && currentIndex < featuredContent.length) {
+      setFeaturedCarouselIndex(prevIndex => {
+        return currentIndex !== prevIndex ? currentIndex : prevIndex;
+      });
+    }
+  }, [featuredCarouselSnapInterval, featuredContent.length]);
+
+  const handleFeaturedCarouselMomentumScrollEnd = useCallback((event: any) => {
+    const scrollOffset = event.nativeEvent.contentOffset.x;
+    // Use the same calculation method as onScroll for consistency
+    const calculatedIndex = scrollOffset / featuredCarouselSnapInterval;
+    const currentIndex = Math.round(calculatedIndex);
+    
+    // Update to final position - this should match what onScroll already set
+    if (currentIndex >= 0 && currentIndex < featuredContent.length) {
+      setFeaturedCarouselIndex(currentIndex);
+    }
+    
+    // Mark that user scrolling has ended
+    isUserScrollingRef.current = false;
+    
+    // Restart auto-scroll after a delay
+    setTimeout(() => {
+      if (!isUserScrollingRef.current && featuredContent.length > 0 && !autoScrollIntervalRef.current) {
+        autoScrollIntervalRef.current = setInterval(() => {
+          if (isUserScrollingRef.current) return;
+          
+          setFeaturedCarouselIndex(prevIndex => {
+            const nextIndex = (prevIndex + 1) % featuredContent.length;
+            featuredCarouselRef.current?.scrollToIndex({
+              index: nextIndex,
+              animated: true,
+              viewPosition: 0.5,
+            });
+            return nextIndex;
+          });
+        }, 4000);
+      }
+    }, 3000);
+  }, [featuredCarouselSnapInterval, featuredContent.length]);
+
+  const handleFeaturedCarouselScrollBeginDrag = useCallback(() => {
+    // Pause auto-scroll when user starts dragging
+    isUserScrollingRef.current = true;
+    if (autoScrollIntervalRef.current) {
+      clearInterval(autoScrollIntervalRef.current);
+      autoScrollIntervalRef.current = null;
+    }
+  }, []);
+
+  const handleFeaturedCarouselScrollEndDrag = useCallback(() => {
+    // Keep isUserScrollingRef true until momentum scroll ends
+    // Don't restart auto-scroll here - let onMomentumScrollEnd handle it
+  }, []);
 
   const getFeaturedCarouselItemLayout = useCallback((_: any, index: number) => ({
     length: featuredCarouselSnapInterval,
@@ -2977,6 +3060,11 @@ const handleTemplatePress = useCallback((template: Template | VideoContent | any
                 decelerationRate="fast"
                 getItemLayout={getFeaturedCarouselItemLayout}
                 onScrollToIndexFailed={handleFeaturedCarouselScrollFailure}
+                onScroll={handleFeaturedCarouselScroll}
+                onScrollBeginDrag={handleFeaturedCarouselScrollBeginDrag}
+                onScrollEndDrag={handleFeaturedCarouselScrollEndDrag}
+                onMomentumScrollEnd={handleFeaturedCarouselMomentumScrollEnd}
+                scrollEventThrottle={8}
                 contentContainerStyle={styles.featuredCarouselList}
               />
               <View style={styles.featuredCarouselIndicators}>
