@@ -369,17 +369,80 @@ class LoginAPIsService {
    */
   async requestPasswordReset(data: PasswordResetRequest): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('📧 Requesting password reset for:', data.email);
+      if (__DEV__) {
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('📧 FORGET PASSWORD API REQUEST');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('📧 Requesting password reset for:', data.email);
+        console.log('📤 Request Body:', JSON.stringify({ email: data.email }, null, 2));
+        console.log('🌐 API Endpoint: POST /api/mobile/auth/forgot-password');
+      }
       
       const response = await api.post('/api/mobile/auth/forgot-password', {
         email: data.email,
       });
       
-      console.log('✅ Password reset request sent');
+      if (__DEV__) {
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('✅ FORGET PASSWORD API RESPONSE (SUCCESS)');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('📊 Response Status:', response.status);
+        console.log('📊 Status Text:', response.statusText);
+        console.log('🔗 Full URL:', (response.config?.baseURL || '') + (response.config?.url || ''));
+        console.log('📋 Response Headers:', JSON.stringify(response.headers, null, 2));
+        console.log('📦 Response Data:', JSON.stringify(response.data, null, 2));
+        console.log('📦 Response Data Type:', typeof response.data);
+        console.log('📦 Response Data Keys:', Object.keys(response.data || {}));
+        if (response.data?.success !== undefined) {
+          console.log('✅ Success Flag:', response.data.success);
+        }
+        if (response.data?.message) {
+          console.log('💬 Message:', response.data.message);
+        }
+        console.log('═══════════════════════════════════════════════════════════');
+      }
+      
       return response.data;
       
     } catch (error: any) {
-      console.error('❌ Password reset request error:', error.response?.data || error.message);
+      if (__DEV__) {
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('❌ FORGET PASSWORD API ERROR');
+        console.log('═══════════════════════════════════════════════════════════');
+        console.log('🔴 Error Type:', error.name || 'Unknown');
+        console.log('🔴 Error Message:', error.message);
+        console.log('🔴 Error Code:', error.code);
+        
+        if (error.config) {
+          console.log('📤 Request Details:');
+          console.log('   Method:', error.config.method?.toUpperCase());
+          console.log('   URL:', (error.config?.baseURL || '') + (error.config?.url || ''));
+          console.log('   Request Headers:', JSON.stringify(error.config.headers, null, 2));
+          console.log('   Request Data:', JSON.stringify(error.config.data, null, 2));
+        }
+        
+        if (error.response) {
+          console.log('📊 Error Response Status:', error.response.status);
+          console.log('📊 Error Status Text:', error.response.statusText);
+          console.log('📋 Error Response Headers:', JSON.stringify(error.response.headers, null, 2));
+          console.log('📦 Error Response Data:', JSON.stringify(error.response.data, null, 2));
+          console.log('📦 Error Response Data Type:', typeof error.response.data);
+          if (error.response.data) {
+            console.log('📦 Error Response Data Keys:', Object.keys(error.response.data));
+          }
+        } else {
+          console.log('⚠️ No response received from server');
+          console.log('   This usually means a network error or server is unreachable');
+        }
+        
+        if (error.request) {
+          console.log('📡 Request Object:', error.request);
+        }
+        
+        console.log('🔍 Full Error Object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+        console.log('═══════════════════════════════════════════════════════════');
+      }
+      
       throw error;
     }
   }
@@ -391,7 +454,9 @@ class LoginAPIsService {
    */
   async confirmPasswordReset(data: PasswordResetConfirmRequest): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('🔑 Confirming password reset');
+      if (__DEV__) {
+        console.log('🔑 Confirming password reset');
+      }
       
       const response = await api.post('/api/mobile/auth/reset-password', {
         token: data.token,
@@ -399,11 +464,15 @@ class LoginAPIsService {
         confirmPassword: data.confirmPassword,
       });
       
-      console.log('✅ Password reset confirmed');
+      if (__DEV__) {
+        console.log('✅ Password reset confirmed');
+      }
       return response.data;
       
     } catch (error: any) {
-      console.error('❌ Password reset confirmation error:', error.response?.data || error.message);
+      if (__DEV__) {
+        console.error('❌ Password reset confirmation error:', error.response?.data || error.message);
+      }
       throw error;
     }
   }
@@ -415,17 +484,23 @@ class LoginAPIsService {
    */
   async verifyResetCode(data: PasswordCodeVerifyRequest): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('🧩 Verifying password reset code for:', data.email);
+      if (__DEV__) {
+        console.log('🧩 Verifying password reset code for:', data.email);
+      }
 
       const response = await api.post('/api/mobile/auth/verify-reset-code', {
         email: data.email,
         code: data.code,
       });
 
-      console.log('✅ Password reset code verified');
+      if (__DEV__) {
+        console.log('✅ Password reset code verified');
+      }
       return response.data;
     } catch (error: any) {
-      console.error('❌ Password reset code verification error:', error.response?.data || error.message);
+      if (__DEV__) {
+        console.error('❌ Password reset code verification error:', error.response?.data || error.message);
+      }
       throw error;
     }
   }
@@ -437,7 +512,9 @@ class LoginAPIsService {
    */
   async resetPasswordWithCode(data: PasswordResetWithCodeRequest): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('🔐 Resetting password with verification code');
+      if (__DEV__) {
+        console.log('🔐 Resetting password with verification code');
+      }
 
       const response = await api.post('/api/mobile/auth/reset-password', {
         email: data.email,
@@ -446,10 +523,14 @@ class LoginAPIsService {
         confirmPassword: data.confirmPassword,
       });
 
-      console.log('✅ Password updated successfully via code');
+      if (__DEV__) {
+        console.log('✅ Password updated successfully via code');
+      }
       return response.data;
     } catch (error: any) {
-      console.error('❌ Password reset with code error:', error.response?.data || error.message);
+      if (__DEV__) {
+        console.error('❌ Password reset with code error:', error.response?.data || error.message);
+      }
       throw error;
     }
   }
@@ -461,7 +542,9 @@ class LoginAPIsService {
    */
   async changePassword(data: ChangePasswordRequest): Promise<{ success: boolean; message: string }> {
     try {
-      console.log('🔐 Changing password');
+      if (__DEV__) {
+        console.log('🔐 Changing password');
+      }
       
       const response = await api.put('/api/mobile/auth/change-password', {
         currentPassword: data.currentPassword,
@@ -469,11 +552,15 @@ class LoginAPIsService {
         confirmPassword: data.confirmPassword,
       });
       
-      console.log('✅ Password changed successfully');
+      if (__DEV__) {
+        console.log('✅ Password changed successfully');
+      }
       return response.data;
       
     } catch (error: any) {
-      console.error('❌ Change password error:', error.response?.data || error.message);
+      if (__DEV__) {
+        console.error('❌ Change password error:', error.response?.data || error.message);
+      }
       throw error;
     }
   }

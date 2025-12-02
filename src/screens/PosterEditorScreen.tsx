@@ -350,6 +350,7 @@ interface Layer {
   rotation: number;
   zIndex: number;
   fieldType?: string; // Add field type identifier
+  isCircular?: boolean; // Toggle between circle and square for logos
   style?: {
     fontSize?: number;
     color?: string;
@@ -1025,6 +1026,12 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
   
   // Scale values for zooming
   const scaleValues = useRef<{ [key: string]: Animated.Value }>({}).current;
+  
+  // BorderRadius values for logo shape animation
+  const borderRadiusValues = useRef<{ [key: string]: Animated.Value }>({}).current;
+  
+  // Selection border radius values (borderRadius + 3)
+  const selectionBorderRadiusValues = useRef<{ [key: string]: Animated.Value }>({}).current;
   
   // State for field visibility
   // Logo, Company Name, Footer BG, phone (mobile number), email, and website are visible by default
@@ -2333,6 +2340,16 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         y: new Animated.Value(0)
       };
     }
+    
+    // Initialize borderRadius animated value for logos
+    if (layer.type === 'logo' && !borderRadiusValues[layer.id]) {
+      const initialRadius = layer.isCircular 
+        ? Math.min(layer.size.width, layer.size.height) / 2 
+        : 0;
+      borderRadiusValues[layer.id] = new Animated.Value(initialRadius);
+      selectionBorderRadiusValues[layer.id] = new Animated.Value(initialRadius + 3);
+    }
+    
     ensureSnapOffsets(layer.id);
 
     const baseTransforms = [
@@ -2361,6 +2378,41 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
 
     const handleLayerPress = () => {
       setSelectedLayer(layer.id);
+      // Toggle circular/square shape for logos with smooth animation
+      if (layer.type === 'logo') {
+        const newIsCircular = !layer.isCircular;
+        const targetRadius = newIsCircular 
+          ? Math.min(layer.size.width, layer.size.height) / 2 
+          : 0;
+        
+        // Initialize borderRadius value if it doesn't exist
+        if (!borderRadiusValues[layer.id]) {
+          const currentRadius = layer.isCircular 
+            ? Math.min(layer.size.width, layer.size.height) / 2 
+            : 0;
+          borderRadiusValues[layer.id] = new Animated.Value(currentRadius);
+          selectionBorderRadiusValues[layer.id] = new Animated.Value(currentRadius + 3);
+        }
+        
+        // Animate the borderRadius change
+        const targetSelectionRadius = targetRadius + 3;
+        Animated.parallel([
+          Animated.timing(borderRadiusValues[layer.id], {
+            toValue: targetRadius,
+            duration: 300,
+            useNativeDriver: false, // borderRadius doesn't support native driver
+          }),
+          Animated.timing(selectionBorderRadiusValues[layer.id], {
+            toValue: targetSelectionRadius,
+            duration: 300,
+            useNativeDriver: false,
+          })
+        ]).start();
+        
+        setLayers(prev => prev.map(l => 
+          l.id === layer.id ? { ...l, isCircular: newIsCircular } : l
+        ));
+      }
     };
 
     switch (layer.type) {
@@ -2472,6 +2524,16 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
         );
       case 'image':
       case 'logo':
+        // Use animated borderRadius for logos, static for images
+        const animatedBorderRadius = layer.type === 'logo' && borderRadiusValues[layer.id]
+          ? borderRadiusValues[layer.id]
+          : 0;
+        
+        // Selection border radius (borderRadius + 3 for logos)
+        const animatedSelectionBorderRadius = layer.type === 'logo' && selectionBorderRadiusValues[layer.id]
+          ? selectionBorderRadiusValues[layer.id]
+          : 8;
+        
         return (
           <Animated.View
             style={[
@@ -2480,18 +2542,34 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
               draggedLayer === layer.id && styles.draggedLayer
             ]}
           >
-            <TouchableOpacity
-              style={styles.layerTouchable}
-              onPress={handleLayerPress}
+            <Animated.View
+              style={[
+                styles.layerTouchable,
+                { 
+                  overflow: 'hidden',
+                  borderRadius: layer.type === 'logo' ? animatedBorderRadius : 0
+                }
+              ]}
             >
-              <Image
-                source={{ uri: layer.content }}
-                style={styles.layerImage}
-                resizeMode="contain"
-              />
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={{ width: '100%', height: '100%' }}
+                onPress={handleLayerPress}
+                activeOpacity={0.9}
+              >
+                <Animated.Image
+                  source={{ uri: layer.content }}
+                  style={[
+                    styles.layerImage,
+                    { 
+                      borderRadius: layer.type === 'logo' ? animatedBorderRadius : 0
+                    }
+                  ]}
+                  resizeMode={layer.type === 'logo' ? "cover" : "contain"}
+                />
+              </TouchableOpacity>
+            </Animated.View>
             {isSelected && (
-              <View
+              <Animated.View
                 style={{
                   position: 'absolute',
                   top: -3,
@@ -2500,7 +2578,7 @@ const PosterEditorScreen: React.FC<PosterEditorScreenProps> = ({ route }) => {
                   bottom: -3,
                   borderWidth: 3,
                   borderColor: '#667eea',
-                  borderRadius: layer.type === 'logo' ? 12 : 8,
+                  borderRadius: layer.type === 'logo' ? animatedSelectionBorderRadius : 8,
                   pointerEvents: 'none',
                 }}
               />
